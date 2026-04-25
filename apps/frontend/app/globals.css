@@ -1,0 +1,128 @@
+:root {
+  --bg: #FAF7F0;
+  --bg-2: #F4F0E6;
+  --surface: #FFFDF8;
+  --surface-2: #F4F0E6;
+  --ink: #1F1A12;
+  --ink-soft: #5C5246;
+  --ink-faint: #9A8E7F;
+  --border: #E8E1D2;
+  --border-soft: #F0EBDD;
+  --accent: #6B9D7C;
+  --accent-deep: #2F5C42;
+  --accent-soft: #E5EFE6;
+  --accent-fg: #FFFDF8;
+}
+
+[data-theme="warm"] {
+  --bg: #FBF5EC;
+  --accent: #C97B4F;
+  --accent-deep: #6B3A1E;
+  --accent-soft: #F5E4D5;
+}
+
+[data-theme="indigo"] {
+  --bg: #F6F4F9;
+  --bg-2: #EDEAF2;
+  --surface: #FFFFFF;
+  --surface-2: #EFECF5;
+  --border: #E4DFEC;
+  --border-soft: #EFEAF4;
+  --accent: #5B5FCB;
+  --accent-deep: #2C3070;
+  --accent-soft: #E5E5F5;
+}
+
+[data-density="compact"] {
+  font-size: 13px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faint);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+kbd {
+  font-family: var(--font-inter), sans-serif;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+textarea::placeholder,
+input::placeholder {
+  color: var(--ink-faint);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.serif {
+  font-family: var(--font-instrument-serif), Georgia, serif;
+}
+
+.mono {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+}

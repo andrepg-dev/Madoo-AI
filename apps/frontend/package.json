@@ -3,9 +3,23 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "echo \"frontend dev placeholder\"",
-    "build": "echo \"frontend build placeholder\"",
-    "lint": "echo \"frontend lint placeholder\"",
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "clean": "rm -rf .next dist .turbo"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.7",
+    "axios": "^1.7.9",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2"
   }
 }
