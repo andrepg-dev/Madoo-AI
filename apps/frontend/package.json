@@ -1,0 +1,11 @@
+{
+  "name": "@madoo/frontend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"frontend dev placeholder\"",
+    "build": "echo \"frontend build placeholder\"",
+    "lint": "echo \"frontend lint placeholder\"",
+    "clean": "rm -rf .next dist .turbo"
+  }
+}

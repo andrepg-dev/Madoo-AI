@@ -1,0 +1,11 @@
+{
+  "name": "@madoo/backend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"backend dev placeholder\"",
+    "build": "echo \"backend build placeholder\"",
+    "lint": "echo \"backend lint placeholder\"",
+    "clean": "rm -rf dist .turbo"
+  }
+}
