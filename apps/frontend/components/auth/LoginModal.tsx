@@ -5,22 +5,34 @@ import { Icon } from "@/components/icons/Icon";
 import { GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import { clearPendingPrompt, type StoredPrompt } from "@/lib/storage";
-import { useGoogleLogin } from "@/actions/auth";
+import { authApi, type AuthUser } from "@/actions/auth";
 import { useAuth } from "./AuthContext";
 
 export function LoginModal() {
-  const { loginOpen, closeLogin, finishLogin, pendingPromptForGate } = useAuth();
+  const { loginOpen, closeLogin, finishLogin, pendingPromptForGate } =
+    useAuth();
   const buttonRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const googleLogin = useGoogleLogin();
-  const submitting = googleLogin.isPending;
+  const [submitting, setSubmitting] = useState(false);
+
+  // Latest values read from inside the GSI callback. Using refs prevents the
+  // init effect from re-running mid-login (which would otherwise cancel the
+  // in-flight credential exchange and never call finishLogin).
+  const pendingRef = useRef<StoredPrompt | null>(pendingPromptForGate);
+  pendingRef.current = pendingPromptForGate;
+  const finishLoginRef =
+    useRef<(token: string, u: AuthUser) => void>(finishLogin);
+  finishLoginRef.current = finishLogin;
 
   useEffect(() => {
     if (!loginOpen) return;
     setError(null);
+    setSubmitting(false);
 
     if (!GOOGLE_CLIENT_ID) {
-      setError("Google sign-in is not configured. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID.");
+      setError(
+        "Google sign-in is not configured. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID.",
+      );
       return;
     }
 
@@ -28,22 +40,23 @@ export function LoginModal() {
 
     const handleCredential = async (resp: GsiCredentialResponse) => {
       if (cancelled) return;
-      const pending: StoredPrompt | null = pendingPromptForGate;
+      const pending = pendingRef.current;
+      setSubmitting(true);
       try {
-        const result = await googleLogin.mutateAsync({
+        const result = await authApi.loginWithGoogle({
           idToken: resp.credential,
           pendingPrompt: pending?.prompt,
           pendingTone: pending?.tone,
           pendingLength: pending?.length,
           pendingAudience: pending?.audience,
         });
-        if (cancelled) return;
         clearPendingPrompt();
-        finishLogin(result.token, result.user);
+        finishLoginRef.current(result.token, result.user);
       } catch (e) {
-        if (cancelled) return;
         const msg = e instanceof Error ? e.message : "Login failed";
         setError(msg);
+      } finally {
+        setSubmitting(false);
       }
     };
 
@@ -70,12 +83,14 @@ export function LoginModal() {
           });
         }
       })
-      .catch(() => setError("Couldn't load Google sign-in. Check your connection."));
+      .catch(() =>
+        setError("Couldn't load Google sign-in. Check your connection."),
+      );
 
     return () => {
       cancelled = true;
     };
-  }, [loginOpen, finishLogin, pendingPromptForGate, googleLogin]);
+  }, [loginOpen]);
 
   if (!loginOpen) return null;
 
@@ -150,11 +165,23 @@ export function LoginModal() {
 
         <h2
           className="serif"
-          style={{ fontSize: 26, fontWeight: 400, margin: "16px 0 6px", letterSpacing: -0.4 }}
+          style={{
+            fontSize: 26,
+            fontWeight: 400,
+            margin: "16px 0 6px",
+            letterSpacing: -0.4,
+          }}
         >
           Continue to Madoo AI
         </h2>
-        <p style={{ fontSize: 13.5, color: "var(--ink-soft)", marginTop: 0, lineHeight: 1.5 }}>
+        <p
+          style={{
+            fontSize: 13.5,
+            color: "var(--ink-soft)",
+            marginTop: 0,
+            lineHeight: 1.5,
+          }}
+        >
           {pendingPromptForGate?.prompt
             ? "We'll save your prompt and pick up right where you left off."
             : "Sign in to generate, save, and send beautiful emails."}
@@ -187,7 +214,13 @@ export function LoginModal() {
             minHeight: 44,
           }}
         >
-          <div ref={buttonRef} style={{ opacity: submitting ? 0.5 : 1, pointerEvents: submitting ? "none" : "auto" }} />
+          <div
+            ref={buttonRef}
+            style={{
+              opacity: submitting ? 0.5 : 1,
+              pointerEvents: submitting ? "none" : "auto",
+            }}
+          />
         </div>
 
         {error && (
