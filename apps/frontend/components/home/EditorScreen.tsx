@@ -1,6 +1,13 @@
 "use client";
 
-import { type ChangeEvent, useCallback, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Banner,
   Button,
@@ -18,6 +25,13 @@ export type GenParams = {
   tone: string;
   length?: string;
   audience?: string;
+};
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  kind: "text" | "code";
+  value: string;
 };
 
 export function EditorScreen({
@@ -50,6 +64,15 @@ export function EditorScreen({
   const [busy, setBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [variableDefaults, setVariableDefaults] = useState<Record<string, string>>({});
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [activeStreamingId, setActiveStreamingId] = useState<string | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [chatMessages]);
 
   const changedLines = useMemo(() => {
     if (!activeVariant || !previousVariant) return [];
@@ -71,11 +94,56 @@ export function EditorScreen({
       if (!instruction.trim() || busy) return;
       setBusy(true);
       setEditError(null);
+      const userText = instruction.trim();
+      const turnStamp = Date.now();
+      const userMessageId = `user-${turnStamp}`;
+      const assistantTextId = `assistant-text-${turnStamp}`;
+      const assistantCodeId = `assistant-code-${turnStamp}`;
+      setChatMessages((prev) => [
+        ...prev,
+        { id: userMessageId, role: "user", kind: "text", value: userText },
+      ]);
+      setActiveStreamingId(assistantTextId);
       try {
         await consumeEmailSseStream(
           `/api/emails/${emailId}/edit`,
           (ev) => {
             if (ev.type === "error") setEditError(ev.message);
+            if (ev.type === "assistant-chunk") {
+              setChatMessages((prev) => {
+                const idx = prev.findIndex((m) => m.id === assistantTextId);
+                if (idx === -1) {
+                  return [
+                    ...prev,
+                    { id: assistantTextId, role: "assistant", kind: "text", value: ev.value },
+                  ];
+                }
+                const next = [...prev];
+                next[idx] = {
+                  ...next[idx],
+                  value: `${next[idx].value}${ev.value}`,
+                };
+                return next;
+              });
+            }
+            if (ev.type === "code-chunk") {
+              setActiveStreamingId(assistantCodeId);
+              setChatMessages((prev) => {
+                const idx = prev.findIndex((m) => m.id === assistantCodeId);
+                if (idx === -1) {
+                  return [
+                    ...prev,
+                    { id: assistantCodeId, role: "assistant", kind: "code", value: ev.value },
+                  ];
+                }
+                const next = [...prev];
+                next[idx] = {
+                  ...next[idx],
+                  value: `${next[idx].value}${ev.value}`,
+                };
+                return next;
+              });
+            }
             if (ev.type === "done") {
               void qc.invalidateQueries({ queryKey: ["email", emailId] });
               void refetch().then((res) => {
@@ -86,7 +154,7 @@ export function EditorScreen({
           },
           undefined,
           JSON.stringify({
-            instruction,
+            instruction: userText,
             baseVariantId: activeVariant?.id,
           }),
         );
@@ -95,6 +163,7 @@ export function EditorScreen({
       } finally {
         setBusy(false);
         setAiPrompt("");
+        setActiveStreamingId(null);
       }
     },
     [activeVariant?.id, busy, emailId, qc, refetch],
@@ -294,6 +363,264 @@ export function EditorScreen({
                       <Button variant="secondary" size="sm" block disabled>
                         Map to contact field (Phase 2)
                       </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+          {chatMessages.length > 0 ? (
+            <div
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                padding: 10,
+                background: "var(--surface)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "var(--ink-faint)",
+                    letterSpacing: 1,
+                  }}
+                >
+                  CONVERSATION
+                </div>
+                {busy ? (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: 10,
+                      color: "var(--accent-deep)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "var(--accent)",
+                        animation: "pulse 1.2s ease-in-out infinite",
+                      }}
+                    />
+                    Streaming
+                  </div>
+                ) : null}
+              </div>
+              <div
+                ref={chatScrollRef}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  maxHeight: 320,
+                  overflowY: "auto",
+                  paddingRight: 2,
+                }}
+              >
+                {chatMessages.map((message) => {
+                  const isStreaming = busy && message.id === activeStreamingId;
+                  if (message.role === "user") {
+                    return (
+                      <div
+                        key={message.id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <div
+                          style={{
+                            maxWidth: "85%",
+                            background: "var(--accent)",
+                            color: "var(--accent-fg)",
+                            borderRadius: "12px 12px 4px 12px",
+                            padding: "8px 11px",
+                            fontSize: 12.5,
+                            lineHeight: 1.45,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {message.value}
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (message.kind === "code") {
+                    return (
+                      <div
+                        key={message.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            background: "var(--accent-soft)",
+                            color: "var(--accent-deep)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            marginTop: 2,
+                          }}
+                        >
+                          <Icon name="sparkle" size={11} />
+                        </div>
+                        <div
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            border: "1px solid var(--border)",
+                            borderRadius: 10,
+                            background: "var(--bg-2)",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "6px 10px",
+                              borderBottom: "1px solid var(--border)",
+                              background: "var(--surface)",
+                              fontSize: 10.5,
+                              fontWeight: 600,
+                              color: "var(--ink-soft)",
+                              letterSpacing: 0.4,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: "50%",
+                                  background: "var(--accent)",
+                                }}
+                              />
+                              Email component · TSX
+                            </span>
+                            <span style={{ color: "var(--ink-faint)", letterSpacing: 0 }}>
+                              {message.value.length} chars
+                            </span>
+                          </div>
+                          <pre
+                            style={{
+                              margin: 0,
+                              padding: "10px 12px",
+                              fontFamily:
+                                "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                              fontSize: 11.5,
+                              lineHeight: 1.5,
+                              color: "var(--ink)",
+                              whiteSpace: "pre",
+                              overflowX: "auto",
+                              maxHeight: 180,
+                              overflowY: "auto",
+                            }}
+                          >
+                            {message.value}
+                            {isStreaming ? (
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  width: 7,
+                                  height: 13,
+                                  background: "var(--accent)",
+                                  marginLeft: 2,
+                                  verticalAlign: "text-bottom",
+                                  animation: "blink 0.9s steps(2, end) infinite",
+                                }}
+                              />
+                            ) : null}
+                          </pre>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div
+                      key={message.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 6,
+                          background: "var(--accent-soft)",
+                          color: "var(--accent-deep)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          marginTop: 2,
+                        }}
+                      >
+                        <Icon name="sparkle" size={11} />
+                      </div>
+                      <div
+                        style={{
+                          maxWidth: "85%",
+                          background: "var(--bg-2)",
+                          color: "var(--ink)",
+                          borderRadius: "12px 12px 12px 4px",
+                          padding: "8px 11px",
+                          fontSize: 12.5,
+                          lineHeight: 1.5,
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          border: "1px solid var(--border-soft)",
+                        }}
+                      >
+                        {message.value}
+                        {isStreaming ? (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: 6,
+                              height: 12,
+                              background: "var(--accent)",
+                              marginLeft: 2,
+                              verticalAlign: "text-bottom",
+                              animation: "blink 0.9s steps(2, end) infinite",
+                            }}
+                          />
+                        ) : null}
+                      </div>
                     </div>
                   );
                 })}
