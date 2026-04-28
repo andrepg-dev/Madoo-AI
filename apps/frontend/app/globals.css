@@ -114,9 +114,21 @@ input::placeholder {
 
 button:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/*
+ * Los wrappers del Design System (Input/Textarea/Select) ya pintan el
+ * estado focus en el wrapper (border + halo). Si dejamos que el control
+ * nativo dibuje tambien su outline, queda un anillo doble desfasado.
+ */
+.madoo-input-wrapper :focus-visible,
+.madoo-textarea-wrapper :focus-visible,
+.madoo-select:focus-visible {
+  outline: none;
 }
 
 .serif {

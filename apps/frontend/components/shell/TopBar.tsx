@@ -1,20 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Icon } from "@/components/icons/Icon";
+import {
+  Avatar,
+  Button,
+  Icon,
+  IconButton,
+  Input,
+  type IconName,
+} from "@madoo/ui";
 import { useAuthStore } from "@/stores/auth";
 import { useMe } from "@/hooks/use-me";
 import { useLogout } from "@/hooks/use-logout";
-
-function initials(name: string | null | undefined, email: string | undefined): string {
-  if (name && name.trim()) {
-    const parts = name.trim().split(/\s+/);
-    const first = parts[0]?.[0] ?? "";
-    const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-    return (first + last).toUpperCase() || first.toUpperCase();
-  }
-  return (email?.[0] ?? "?").toUpperCase();
-}
 
 export function TopBar() {
   const { data: user, isPending: loading } = useMe();
@@ -57,72 +54,24 @@ export function TopBar() {
         flexShrink: 0,
       }}
     >
-      <div style={{ position: "relative", flex: 1, maxWidth: 360 }}>
-        <div
-          style={{
-            position: "absolute",
-            left: 12,
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: "var(--ink-faint)",
-          }}
-        >
-          <Icon name="search" size={14} />
-        </div>
-        <input
+      <div style={{ flex: 1, maxWidth: 360 }}>
+        <Input
+          variant="filled"
+          inputSize="md"
           placeholder="Search templates, drafts, anything…"
-          style={{
-            width: "100%",
-            height: 34,
-            padding: "0 12px 0 34px",
-            borderRadius: 8,
-            border: "1px solid var(--border)",
-            background: "var(--surface-2)",
-            fontSize: 13,
-            color: "var(--ink)",
-            outline: "none",
-            fontFamily: "inherit",
-          }}
+          startAdornment={<Icon name="search" size={14} />}
+          aria-label="Search"
         />
       </div>
       <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-        <button
-          type="button"
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 8,
-            border: "1px solid var(--border)",
-            background: "var(--surface)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "var(--ink-soft)",
-          }}
-        >
+        <IconButton variant="outline" size="md" aria-label="Notifications">
           <Icon name="bell" size={16} />
-        </button>
+        </IconButton>
 
         {mounted && !user && !loading && (
-          <button
-            type="button"
-            onClick={() => openLogin()}
-            style={{
-              height: 34,
-              padding: "0 14px",
-              borderRadius: 8,
-              border: "1px solid var(--border)",
-              background: "var(--surface)",
-              fontSize: 13,
-              fontWeight: 500,
-              color: "var(--ink)",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
+          <Button variant="secondary" size="md" onClick={() => openLogin()}>
             Sign in
-          </button>
+          </Button>
         )}
 
         {mounted && user && (
@@ -134,37 +83,22 @@ export function TopBar() {
               aria-expanded={open}
               title={user.email}
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
                 border: "none",
                 padding: 0,
-                background: user.avatarUrl
-                  ? "transparent"
-                  : "linear-gradient(135deg, #D6B98A, #A87E54)",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                fontWeight: 600,
+                background: "transparent",
                 cursor: "pointer",
-                overflow: "hidden",
+                borderRadius: "50%",
+                lineHeight: 0,
               }}
             >
-              {user.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name ?? user.email}
-                  width={32}
-                  height={32}
-                  referrerPolicy="no-referrer"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                initials(user.name, user.email)
-              )}
+              <Avatar
+                size="sm"
+                circle
+                tone="accent"
+                src={user.avatarUrl ?? undefined}
+                name={user.name ?? user.email}
+                alt={user.name ?? user.email}
+              />
             </button>
 
             {open && (
@@ -193,38 +127,14 @@ export function TopBar() {
                     marginBottom: 6,
                   }}
                 >
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      background: user.avatarUrl
-                        ? "transparent"
-                        : "linear-gradient(135deg, #D6B98A, #A87E54)",
-                      color: "#fff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      overflow: "hidden",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {user.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.name ?? user.email}
-                        width={36}
-                        height={36}
-                        referrerPolicy="no-referrer"
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
-                    ) : (
-                      initials(user.name, user.email)
-                    )}
-                  </div>
+                  <Avatar
+                    size="md"
+                    circle
+                    tone="accent"
+                    src={user.avatarUrl ?? undefined}
+                    name={user.name ?? user.email}
+                    alt={user.name ?? user.email}
+                  />
                   <div style={{ minWidth: 0 }}>
                     <div
                       style={{
@@ -252,16 +162,8 @@ export function TopBar() {
                   </div>
                 </div>
 
-                <MenuItem
-                  icon="settings"
-                  label="User settings"
-                  onClick={() => setOpen(false)}
-                />
-                <MenuItem
-                  icon="barChart"
-                  label="Usage"
-                  onClick={() => setOpen(false)}
-                />
+                <MenuItem icon="settings" label="User settings" onClick={() => setOpen(false)} />
+                <MenuItem icon="barChart" label="Usage" onClick={() => setOpen(false)} />
                 <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
                 <MenuItem
                   icon="logOut"
@@ -287,7 +189,7 @@ function MenuItem({
   onClick,
   danger,
 }: {
-  icon: React.ComponentProps<typeof Icon>["name"];
+  icon: IconName;
   label: string;
   onClick: () => void;
   danger?: boolean;
@@ -308,7 +210,7 @@ function MenuItem({
         borderRadius: 8,
         cursor: "pointer",
         fontSize: 13,
-        color: danger ? "#A23E2F" : "var(--ink)",
+        color: danger ? "var(--danger)" : "var(--ink)",
         textAlign: "left",
         fontFamily: "inherit",
       }}

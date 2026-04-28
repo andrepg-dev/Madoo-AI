@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import "@madoo/ui/tokens.css";
 import "./globals.css";
 import { AppShell } from "@/components/shell/AppShell";
 import { LoginModal } from "@/components/auth/LoginModal";

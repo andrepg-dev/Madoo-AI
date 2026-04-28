@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Icon } from "@/components/icons/Icon";
-import { PromptPill } from "./PromptPill";
+import {
+  Button,
+  Icon,
+  PromptPill,
+  SegmentedControl,
+  SuggestionChip,
+  Textarea,
+} from "@madoo/ui";
 import { TemplateCard } from "./TemplateCard";
 import { GeneratingScreen } from "./GeneratingScreen";
 import { EditorScreen, type GenParams } from "./EditorScreen";
@@ -98,6 +104,8 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
     );
   }
 
+  const categoryItems = CATEGORIES.map((c) => ({ value: c, label: c }));
+
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
       <section style={{ padding: "64px 48px 40px", maxWidth: 980, margin: "0 auto" }}>
@@ -148,8 +156,8 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             transition: "box-shadow 0.2s, border-color 0.2s",
           }}
         >
-          <div style={{ padding: "18px 20px 4px" }}>
-            <textarea
+          <div>
+            <Textarea
               ref={taRef}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -160,18 +168,9 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                 }
               }}
               placeholder="e.g. Announce our new pricing to existing customers — confident but not pushy, with a soft CTA to upgrade."
-              style={{
-                width: "100%",
-                minHeight: 96,
-                border: "none",
-                outline: "none",
-                resize: "none",
-                background: "transparent",
-                fontSize: 16,
-                fontFamily: "inherit",
-                color: "var(--ink)",
-                lineHeight: 1.55,
-              }}
+              variant="ghost"
+              noResize
+              rows={4}
             />
           </div>
 
@@ -188,61 +187,25 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             <PromptPill label="Tone" value={tone} options={PROMPT_TONES} onChange={setTone} />
             <PromptPill label="Length" value={length} options={PROMPT_LENGTHS} onChange={setLength} />
             <PromptPill label="Audience" value={audience} options={PROMPT_AUDIENCES} onChange={setAudience} />
-            <button
-              type="button"
+            <Button
+              variant="dashed"
+              size="sm"
+              leftIcon={<Icon name="plus" size={12} />}
               title="Add brand kit"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 10px",
-                borderRadius: 7,
-                border: "1px dashed var(--border)",
-                background: "transparent",
-                color: "var(--ink-faint)",
-                fontSize: 12.5,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
             >
-              <Icon name="plus" size={12} /> Brand kit
-            </button>
+              Brand kit
+            </Button>
             <div style={{ flex: 1 }} />
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="md"
               onClick={handleGenerate}
               disabled={!prompt.trim()}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "none",
-                background: prompt.trim() ? "var(--ink)" : "var(--surface-2)",
-                color: prompt.trim() ? "var(--bg)" : "var(--ink-faint)",
-                fontSize: 13.5,
-                fontWeight: 600,
-                cursor: prompt.trim() ? "pointer" : "not-allowed",
-                fontFamily: "inherit",
-                transition: "all 0.15s",
-              }}
+              leftIcon={<Icon name="sparkle" size={14} />}
+              shortcut="↵"
             >
-              <Icon name="sparkle" size={14} /> Generate email
-              <kbd
-                style={{
-                  marginLeft: 4,
-                  padding: "1px 6px",
-                  background: "rgba(255,255,255,0.12)",
-                  borderRadius: 4,
-                  fontSize: 10.5,
-                  fontFamily: "inherit",
-                  fontWeight: 500,
-                }}
-              >
-                ↵
-              </kbd>
-            </button>
+              Generate email
+            </Button>
           </div>
         </div>
 
@@ -256,32 +219,13 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           }}
         >
           {PROMPT_SUGGESTIONS.map((s) => (
-            <button
+            <SuggestionChip
               key={s}
-              type="button"
               onClick={() => useSuggestion(s)}
-              style={{
-                padding: "7px 12px",
-                borderRadius: 999,
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                fontSize: 12.5,
-                color: "var(--ink-soft)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--surface-2)";
-                e.currentTarget.style.color = "var(--ink)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "var(--surface)";
-                e.currentTarget.style.color = "var(--ink-soft)";
-              }}
+              leadingIcon={<Icon name="sparkle" size={10} />}
             >
-              <Icon name="sparkle" size={10} /> &nbsp;{s}
-            </button>
+              {s}
+            </SuggestionChip>
           ))}
         </div>
       </section>
@@ -309,40 +253,12 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               Hand-crafted designs. Edit anything with AI.
             </p>
           </div>
-          <div
-            style={{
-              display: "flex",
-              gap: 4,
-              padding: 4,
-              background: "var(--surface-2)",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              overflowX: "auto",
-            }}
-          >
-            {CATEGORIES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setActiveCat(c)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 7,
-                  border: "none",
-                  background: activeCat === c ? "var(--surface)" : "transparent",
-                  color: activeCat === c ? "var(--ink)" : "var(--ink-soft)",
-                  fontWeight: activeCat === c ? 600 : 500,
-                  fontSize: 12.5,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  whiteSpace: "nowrap",
-                  boxShadow: activeCat === c ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
-                }}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            items={categoryItems}
+            value={activeCat}
+            onChange={setActiveCat}
+            aria-label="Filter templates by category"
+          />
         </div>
 
         <div

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Badge, Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
 
 const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Home", icon: "home" },
@@ -50,19 +50,9 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
           M
         </div>
         <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: -0.2 }}>{brand}</div>
-        <div
-          style={{
-            marginLeft: "auto",
-            fontSize: 10,
-            padding: "2px 6px",
-            background: "var(--accent-soft)",
-            color: "var(--accent-deep)",
-            borderRadius: 4,
-            fontWeight: 600,
-          }}
-        >
+        <Badge tone="accent" style={{ marginLeft: "auto" }}>
           BETA
-        </div>
+        </Badge>
       </div>
 
       {NAV_ITEMS.map((it) => {
@@ -133,15 +123,7 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
         </button>
       ))}
 
-      <div
-        style={{
-          marginTop: "auto",
-          padding: 12,
-          background: "var(--surface-2)",
-          borderRadius: 10,
-          border: "1px solid var(--border)",
-        }}
-      >
+      <Card surface="secondary" padded style={{ marginTop: "auto" }}>
         <div
           style={{
             display: "flex",
@@ -157,36 +139,16 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
         <div style={{ fontSize: 11.5, color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
           7 of 10 generations left this month.
         </div>
-        <div
-          style={{
-            height: 4,
-            background: "var(--border)",
-            borderRadius: 999,
-            marginTop: 8,
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ width: "70%", height: "100%", background: "var(--accent)" }} />
-        </div>
-        <button
-          type="button"
-          style={{
-            width: "100%",
-            marginTop: 10,
-            padding: "7px 10px",
-            background: "var(--ink)",
-            color: "var(--bg)",
-            border: "none",
-            borderRadius: 6,
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
+        <ProgressBar
+          value={70}
+          variant="thin"
+          aria-label="Generations used this month"
+          style={{ marginTop: 8 }}
+        />
+        <Button variant="primary" size="sm" block style={{ marginTop: 10 }}>
           Upgrade to Pro
-        </button>
-      </div>
+        </Button>
+      </Card>
     </aside>
   );
 }

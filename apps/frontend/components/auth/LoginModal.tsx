@@ -1,8 +1,8 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { Banner, Modal } from "@madoo/ui";
 import { loginWithGoogle } from "@/actions/auth";
-import { Icon } from "@/components/icons/Icon";
 import { GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import { clearPendingPrompt, type StoredPrompt } from "@/lib/storage";
@@ -93,165 +93,104 @@ export function LoginModal() {
     };
   }, [loginOpen, qc]);
 
-  if (!loginOpen) return null;
-
   return (
-    <div
-      onClick={closeLogin}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(20,15,10,0.4)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 200,
-        padding: 24,
-      }}
-    >
+    <Modal open={loginOpen} onClose={closeLogin} size="sm">
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
-          width: "100%",
-          maxWidth: 420,
-          background: "var(--surface)",
-          borderRadius: 16,
-          boxShadow: "0 30px 80px -20px rgba(20,15,10,0.4)",
-          padding: 28,
-          position: "relative",
+          width: 44,
+          height: 44,
+          borderRadius: 11,
+          background: "var(--accent)",
+          color: "var(--accent-fg)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "var(--font-instrument-serif), serif",
+          fontStyle: "italic",
+          fontSize: 22,
+          fontWeight: 600,
         }}
       >
-        <button
-          type="button"
-          onClick={closeLogin}
-          aria-label="Close"
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 14,
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            border: "none",
-            background: "var(--surface-2)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--ink-soft)",
-          }}
-        >
-          <Icon name="x" size={14} />
-        </button>
-
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 11,
-            background: "var(--accent)",
-            color: "var(--accent-fg)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: "var(--font-instrument-serif), serif",
-            fontStyle: "italic",
-            fontSize: 22,
-            fontWeight: 600,
-          }}
-        >
-          M
-        </div>
-
-        <h2
-          className="serif"
-          style={{
-            fontSize: 26,
-            fontWeight: 400,
-            margin: "16px 0 6px",
-            letterSpacing: -0.4,
-          }}
-        >
-          Continue to Madoo AI
-        </h2>
-        <p
-          style={{
-            fontSize: 13.5,
-            color: "var(--ink-soft)",
-            marginTop: 0,
-            lineHeight: 1.5,
-          }}
-        >
-          {pendingPromptForGate?.prompt
-            ? "We'll save your prompt and pick up right where you left off."
-            : "Sign in to generate, save, and send beautiful emails."}
-        </p>
-
-        {pendingPromptForGate?.prompt && (
-          <div
-            style={{
-              marginTop: 16,
-              padding: 12,
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              borderRadius: 10,
-              fontSize: 12.5,
-              color: "var(--ink-soft)",
-              lineHeight: 1.5,
-              fontStyle: "italic",
-            }}
-          >
-            &quot;{pendingPromptForGate.prompt.slice(0, 180)}
-            {pendingPromptForGate.prompt.length > 180 ? "…" : ""}&quot;
-          </div>
-        )}
-
-        <div
-          style={{
-            marginTop: 22,
-            display: "flex",
-            justifyContent: "center",
-            minHeight: 44,
-          }}
-        >
-          <div
-            ref={buttonRef}
-            style={{
-              opacity: submitting ? 0.5 : 1,
-              pointerEvents: submitting ? "none" : "auto",
-            }}
-          />
-        </div>
-
-        {error && (
-          <div
-            style={{
-              marginTop: 14,
-              padding: 10,
-              background: "#FBE8E2",
-              color: "#A23E2F",
-              borderRadius: 8,
-              fontSize: 12.5,
-              lineHeight: 1.5,
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <div
-          style={{
-            marginTop: 18,
-            fontSize: 11,
-            color: "var(--ink-faint)",
-            textAlign: "center",
-            lineHeight: 1.5,
-          }}
-        >
-          By continuing you agree to our Terms and Privacy.
-        </div>
+        M
       </div>
-    </div>
+
+      <h2
+        className="serif"
+        style={{
+          fontSize: 26,
+          fontWeight: 400,
+          margin: "16px 0 6px",
+          letterSpacing: -0.4,
+        }}
+      >
+        Continue to Madoo AI
+      </h2>
+      <p
+        style={{
+          fontSize: 13.5,
+          color: "var(--ink-soft)",
+          marginTop: 0,
+          lineHeight: 1.5,
+        }}
+      >
+        {pendingPromptForGate?.prompt
+          ? "We'll save your prompt and pick up right where you left off."
+          : "Sign in to generate, save, and send beautiful emails."}
+      </p>
+
+      {pendingPromptForGate?.prompt && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: 12,
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            fontSize: 12.5,
+            color: "var(--ink-soft)",
+            lineHeight: 1.5,
+            fontStyle: "italic",
+          }}
+        >
+          &quot;{pendingPromptForGate.prompt.slice(0, 180)}
+          {pendingPromptForGate.prompt.length > 180 ? "…" : ""}&quot;
+        </div>
+      )}
+
+      <div
+        style={{
+          marginTop: 22,
+          display: "flex",
+          justifyContent: "center",
+          minHeight: 44,
+        }}
+      >
+        <div
+          ref={buttonRef}
+          style={{
+            opacity: submitting ? 0.5 : 1,
+            pointerEvents: submitting ? "none" : "auto",
+          }}
+        />
+      </div>
+
+      {error && (
+        <Banner tone="danger" style={{ marginTop: 14 }}>
+          {error}
+        </Banner>
+      )}
+
+      <div
+        style={{
+          marginTop: 18,
+          fontSize: 11,
+          color: "var(--ink-faint)",
+          textAlign: "center",
+          lineHeight: 1.5,
+        }}
+      >
+        By continuing you agree to our Terms and Privacy.
+      </div>
+    </Modal>
   );
 }
