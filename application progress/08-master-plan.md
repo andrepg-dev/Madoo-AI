@@ -316,7 +316,7 @@ NEXT_PUBLIC_SENTRY_DSN=
 
 ### Backend
 
-- [ ] Schema Prisma: `Email`, `EmailVariant`, `EmailGenerationRun`,
+- [x] Schema Prisma: `Email`, `EmailVariant`, `EmailGenerationRun`,
       `Template`. Cada uno con `workspaceId`.
       ```
       Email { id, workspaceId, prompt, tone, length, audience, status, currentVariantId }
@@ -324,9 +324,9 @@ NEXT_PUBLIC_SENTRY_DSN=
       EmailGenerationRun { id, emailId, model, inputTokens, outputTokens, cachedTokens, latencyMs, error?, createdAt }
       Template { id, workspaceId?, name, category, componentCode, variableSchema, accent, bg, isPublic, tier }
       ```
-- [ ] `EmailsModule` con CRUD básico (`POST /emails`, `GET /emails/:id`,
+- [x] `EmailsModule` con CRUD básico (`POST /emails`, `GET /emails/:id`,
       `GET /emails`, `DELETE /emails/:id`).
-- [ ] `GenerationModule`: servicio que envuelve Anthropic SDK con
+- [x] `GenerationModule`: servicio que envuelve Anthropic SDK con
       prompt caching (system prompt + few-shot de componentes React
       Email cacheados). Output **estructurado** (tool use forzado):
       ```ts
@@ -342,17 +342,17 @@ NEXT_PUBLIC_SENTRY_DSN=
         blocklist que el sandbox), defaults inline en props, exportar
         como `const Email = (...) => (...)`.
       - 4 templates seed como few-shot (los que migremos primero).
-- [ ] `POST /emails/:id/generate` (SSE): emite eventos
+- [x] `POST /emails/:id/generate` (SSE): emite eventos
       `meta` → `subject` → `code-chunk` (× N) → `done`. Cuando llega
       `done`: compila + renderiza + persiste `EmailVariant`
       (`componentCode`, `compiledHtml`, `variableSchema`) y
       `EmailGenerationRun`.
-- [ ] `POST /emails/:id/edit`: AI edit follow-up. Recibe la instrucción
+- [x] `POST /emails/:id/edit`: AI edit follow-up. Recibe la instrucción
       ("make it shorter") + el `componentCode` actual + el
       `variableSchema` como contexto. Claude regresa el nuevo
       `componentCode` (mismo schema de output). Se compila, valida
       (sandbox lo carga sin throw), persiste como nuevo `EmailVariant`.
-- [ ] `ReactToHtmlService` (referencia: el fragmento que ya tenemos
+- [x] `ReactToHtmlService` (referencia: el fragmento que ya tenemos
       probado en otro proyecto):
       - `validateCode(code)`: regex blocklist (`process.`, `require(`,
         `import(`, `eval(`, `Function(`, `globalThis`, `global.`,
@@ -369,44 +369,44 @@ NEXT_PUBLIC_SENTRY_DSN=
         `renderToStaticMarkup(React.createElement(Component, variables))`,
         prepende doctype XHTML 1.0 Transitional.
       - `compile(code, variables)`: shortcut que llama a los dos.
-- [ ] Validador de `variableSchema`: zod schema en `@madoo/shared`,
+- [x] Validador de `variableSchema`: zod schema en `@madoo/shared`,
       asegura que cada variable tiene `name` (camelCase, válida como
       ident JS), `default` (string), opcional `label`/`role`. Rechaza
       generaciones con schema inválido y reintenta una vez con feedback
       al modelo.
-- [ ] Migrar `PendingPrompt.consume()` para que emita un `Email` y
+- [x] Migrar `PendingPrompt.consume()` para que emita un `Email` y
       dispare `generate` automáticamente.
 
 ### Frontend
 
-- [ ] `actions/emails.ts` con `useCreateEmail`, `useEmail`,
+- [x] `actions/emails.ts` con `useCreateEmail`, `useEmail`,
       `useGenerateEmailStream` (SSE consumer custom),
       `useEditEmail`.
-- [ ] Reescribir `GeneratingScreen` para consumir el stream real
+- [x] Reescribir `GeneratingScreen` para consumir el stream real
       (mostrar subject cuando llega, indicador "compilando…" cuando
       llega `done` y el backend está renderizando).
-- [ ] `EditorScreen` lee de `Email + currentVariant`. Preview:
+- [x] `EditorScreen` lee de `Email + currentVariant`. Preview:
       `<iframe srcdoc={variant.compiledHtml} title="Email preview"
       sandbox="allow-same-origin">` (sin scripts, sin popups).
-- [ ] Quick edits laterales ("Make it shorter", "More casual tone",
+- [x] Quick edits laterales ("Make it shorter", "More casual tone",
       "Add urgency", etc.) → POST `/edit` con la instrucción + el
       `componentCode` actual. Mostrar diff sutil al cambiar variante
       (highlight del bloque que cambió).
-- [ ] Variantes v1/v2/v3 = los últimos 3 `EmailVariant` por email.
+- [x] Variantes v1/v2/v3 = los últimos 3 `EmailVariant` por email.
       Switch entre variantes recompila el `<iframe srcdoc>`.
-- [ ] Migrar los 12 templates de `TemplatePreview.tsx` a componentes
+- [x] Migrar los 12 templates de `TemplatePreview.tsx` a componentes
       React Email (`@react-email/components`):
-      - V1: 4 templates (launch, newsletter, sale, welcome) escritos a
+      - [x] V1: 4 templates (launch, newsletter, sale, welcome) escritos a
         mano y guardados como seed (`Template` rows, `isPublic: true`,
         `workspaceId: null`).
       - Cada template define `componentCode` + `variableSchema` +
         `accent` + `bg`.
       - Los 8 restantes se migran en sprints paralelos durante
         Fases 2-3.
-- [ ] El AI editor lateral muestra `variableSchema` como una lista de
+- [x] El AI editor lateral muestra `variableSchema` como una lista de
       variables editables (campo "Default value" + el botón "map to
       contact field" cuando se entre al ComposeModal).
-- [ ] Eliminar `generateSubject` / `generateBody` / `altSubject` de
+- [x] Eliminar `generateSubject` / `generateBody` / `altSubject` de
       `lib/data.ts`. Mover `MOCK_CAMPAIGNS`/`MOCK_CONTACTS` a fixtures
       de seed (no se usarán más en producción).
 
