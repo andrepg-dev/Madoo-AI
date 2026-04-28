@@ -38,6 +38,17 @@ select:focus-visible,
   outline-offset: 2px;
 }
 
+/*
+ * Los componentes del DS (Input/Textarea/Select) ya pintan el estado
+ * focus en el wrapper (border + halo). Si dejamos que el control nativo
+ * dibuje también su propio outline, queda un anillo doble desfasado.
+ */
+.madoo-input-wrapper :focus-visible,
+.madoo-textarea-wrapper :focus-visible,
+.madoo-select:focus-visible {
+  outline: none;
+}
+
 .madoo-serif {
   font-family: var(--font-serif);
 }
