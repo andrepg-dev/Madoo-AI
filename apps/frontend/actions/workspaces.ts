@@ -1,17 +1,14 @@
-import { z } from "zod";
+"use server";
+
+import { FetchWrapper } from "@/lib/api/fetch-wrapper";
 import { MyWorkspaceSchema, type MyWorkspace } from "@madoo/shared";
-import { FetchWrapper } from "@/lib/fetch";
+import { z } from "zod";
 
 export type { MyWorkspace } from "@madoo/shared";
 
 const MyWorkspacesResponseSchema = z.array(MyWorkspaceSchema);
 
-export const workspaceKeys = {
-  all: ["workspaces"] as const,
-  me: () => [...workspaceKeys.all, "me"] as const,
-};
-
 export async function getMyWorkspaces(): Promise<MyWorkspace[]> {
-  const raw = await FetchWrapper<unknown>("/workspaces/me");
+  const raw = await FetchWrapper<MyWorkspace[]>("/workspaces/me");
   return MyWorkspacesResponseSchema.parse(raw);
 }
