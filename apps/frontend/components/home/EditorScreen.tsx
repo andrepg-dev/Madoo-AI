@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Icon } from "@/components/icons/Icon";
+import {
+  Banner,
+  Button,
+  Icon,
+  IconButton,
+  SegmentedControl,
+  Textarea,
+} from "@madoo/ui";
 import { TEMPLATES, altSubject, generateBody, generateSubject, type Template } from "@/lib/data";
 
 export type GenParams = { prompt: string; tone: string; length?: string; audience?: string };
@@ -26,6 +33,8 @@ export function EditorScreen({
   const tpl = template || TEMPLATES[0];
   const body = generateBody(params?.prompt, params?.tone, variant);
 
+  const variantItems = subjects.map((_, i) => ({ value: String(i), label: `v${i + 1}` }));
+
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden", background: "var(--bg)" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -40,28 +49,18 @@ export function EditorScreen({
             background: "var(--surface)",
           }}
         >
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onBack}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 10px",
-              borderRadius: 7,
-              border: "1px solid var(--border)",
-              background: "var(--surface)",
-              fontSize: 12.5,
-              color: "var(--ink-soft)",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
+            leftIcon={
+              <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}>
+                <Icon name="arrow" size={12} />
+              </span>
+            }
           >
-            <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}>
-              <Icon name="arrow" size={12} />
-            </span>{" "}
             Back
-          </button>
+          </Button>
           <div style={{ width: 1, height: 20, background: "var(--border)" }} />
           <input
             value={subject}
@@ -78,68 +77,23 @@ export function EditorScreen({
               fontFamily: "inherit",
             }}
           />
-          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-            {subjects.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => {
-                  setVariant(i);
-                  setSubject(subjects[i]);
-                }}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 7,
-                  border: "1px solid var(--border)",
-                  background: variant === i ? "var(--ink)" : "var(--surface)",
-                  color: variant === i ? "var(--bg)" : "var(--ink-soft)",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                v{i + 1}
-              </button>
-            ))}
-            <button
-              type="button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 10px",
-                borderRadius: 7,
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                fontSize: 12.5,
-                color: "var(--ink-soft)",
-                cursor: "pointer",
-                fontFamily: "inherit",
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            <SegmentedControl
+              items={variantItems}
+              value={String(variant)}
+              onChange={(v) => {
+                const i = Number(v);
+                setVariant(i);
+                setSubject(subjects[i]);
               }}
-            >
-              <Icon name="copy" size={12} /> Copy
-            </button>
-            <button
-              type="button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "7px 12px",
-                borderRadius: 7,
-                border: "none",
-                background: "var(--ink)",
-                color: "var(--bg)",
-                fontSize: 12.5,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              <Icon name="send" size={12} /> Send test
-            </button>
+              aria-label="Subject variant"
+            />
+            <Button variant="secondary" size="sm" leftIcon={<Icon name="copy" size={12} />}>
+              Copy
+            </Button>
+            <Button variant="primary" size="sm" leftIcon={<Icon name="send" size={12} />}>
+              Send test
+            </Button>
           </div>
         </div>
 
@@ -326,19 +280,9 @@ export function EditorScreen({
             gap: 14,
           }}
         >
-          <div
-            style={{
-              background: "var(--accent-soft)",
-              borderRadius: 10,
-              padding: 12,
-              fontSize: 12.5,
-              lineHeight: 1.5,
-              color: "var(--accent-deep)",
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>✱ Suggestion</div>
+          <Banner tone="accent" title="Suggestion">
             Subject lines under 50 chars get 22% more opens. Try variant <b>v2</b>.
-          </div>
+          </Banner>
           <div>
             <div
               style={{
@@ -354,26 +298,16 @@ export function EditorScreen({
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {["Make it shorter", "More casual tone", "Add urgency", "Strengthen the CTA", "Translate to Spanish"].map(
                 (q) => (
-                  <button
+                  <Button
                     key={q}
-                    type="button"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 10px",
-                      borderRadius: 7,
-                      border: "1px solid var(--border)",
-                      background: "var(--surface)",
-                      fontSize: 12.5,
-                      color: "var(--ink)",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      textAlign: "left",
-                    }}
+                    variant="secondary"
+                    size="sm"
+                    block
+                    rightIcon={<Icon name="arrow" size={11} />}
+                    style={{ justifyContent: "space-between" }}
                   >
-                    {q} <Icon name="arrow" size={11} />
-                  </button>
+                    {q}
+                  </Button>
                 ),
               )}
             </div>
@@ -415,44 +349,22 @@ export function EditorScreen({
         </div>
         <div style={{ padding: 14, borderTop: "1px solid var(--border)" }}>
           <div style={{ position: "relative" }}>
-            <textarea
+            <Textarea
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
               placeholder="Tell AI what to change…"
-              style={{
-                width: "100%",
-                minHeight: 60,
-                padding: "10px 36px 10px 12px",
-                border: "1px solid var(--border)",
-                borderRadius: 10,
-                background: "var(--surface-2)",
-                fontSize: 13,
-                fontFamily: "inherit",
-                color: "var(--ink)",
-                outline: "none",
-                resize: "none",
-              }}
+              variant="filled"
+              noResize
+              rows={3}
             />
-            <button
-              type="button"
-              style={{
-                position: "absolute",
-                right: 6,
-                bottom: 6,
-                width: 28,
-                height: 28,
-                borderRadius: 7,
-                border: "none",
-                background: "var(--ink)",
-                color: "var(--bg)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
+            <IconButton
+              variant="solid"
+              size="sm"
+              aria-label="Send AI instruction"
+              style={{ position: "absolute", right: 6, bottom: 6 }}
             >
               <Icon name="arrowUp" size={14} />
-            </button>
+            </IconButton>
           </div>
         </div>
       </aside>

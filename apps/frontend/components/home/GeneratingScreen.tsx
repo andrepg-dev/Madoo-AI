@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@madoo/ui";
 
 const STEPS = [
   "Reading your prompt…",
