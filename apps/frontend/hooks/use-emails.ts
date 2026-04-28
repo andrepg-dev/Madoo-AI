@@ -30,6 +30,7 @@ export type StreamEmailEvent =
       warning?: string;
     }
   | { type: "subject"; value: string }
+  | { type: "assistant-chunk"; value: string }
   | { type: "code-chunk"; value: string }
   | { type: "step"; message: string }
   | {

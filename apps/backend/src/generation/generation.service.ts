@@ -8,6 +8,7 @@ import { ConfigService } from "@nestjs/config";
 import type { MessageEvent } from "@nestjs/common";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
+  Message,
   MessageCreateParams,
   MessageParam,
   Tool,
@@ -66,6 +67,7 @@ const FEW_SHOT_TEXT = [
   `Sale:\n${SEED_TEMPLATES.sale.componentCode}`,
   `Welcome:\n${SEED_TEMPLATES.welcome.componentCode}`,
 ].join("\n\n");
+
 
 @Injectable()
 export class GenerationService {
@@ -302,13 +304,10 @@ export class GenerationService {
         },
       ];
 
-      const response = await this.anthropic.messages.create({
-        model: this.model,
-        max_tokens: 16384,
-        system: systemBlocks,
-        tools: [EMIT_EMAIL_TOOL],
-        tool_choice: { type: "tool", name: "emit_email" },
-        messages: modelMessages,
+      const response = await this.runStream({
+        modelMessages,
+        systemBlocks,
+        emit,
       });
 
       const u = response.usage;
@@ -364,8 +363,6 @@ export class GenerationService {
             model: this.model,
           });
           emit({ type: "subject", value: input.subject });
-          const chunks = input.componentCode.match(/[\s\S]{1,700}/g) ?? [input.componentCode];
-          for (const chunk of chunks) emit({ type: "code-chunk", value: chunk });
           emit({ type: "step", message: "Rendering HTML preview…" });
           compiledHtml = this.reactToHtml.compile(input.componentCode, {});
           validated = true;
@@ -379,13 +376,8 @@ export class GenerationService {
             maxAttempts: 2,
             warning: "Invalid component/schema. Retrying once with validator feedback.",
           });
-          const retry = await this.anthropic.messages.create({
-            model: this.model,
-            max_tokens: 16384,
-            system: systemBlocks,
-            tools: [EMIT_EMAIL_TOOL],
-            tool_choice: { type: "tool", name: "emit_email" },
-            messages: [
+          const retry = await this.runStream({
+            modelMessages: [
               ...modelMessages,
               {
                 role: "user",
@@ -397,6 +389,8 @@ export class GenerationService {
                 ].join("\n"),
               },
             ],
+            systemBlocks,
+            emit,
           });
           const retryTool = retry.content.find(
             (b) => b.type === "tool_use" && b.name === "emit_email",
@@ -484,5 +478,53 @@ export class GenerationService {
       });
       throw e;
     }
+  }
+
+  private async runStream(args: {
+    modelMessages: MessageParam[];
+    systemBlocks: MessageCreateParams["system"];
+    emit: (p: Record<string, unknown>) => void;
+  }): Promise<Message> {
+    if (!this.anthropic) {
+      throw new InternalServerErrorException("ANTHROPIC_API_KEY is not configured.");
+    }
+
+    const stream = this.anthropic.messages.stream({
+      model: this.model,
+      max_tokens: 16384,
+      system: args.systemBlocks,
+      tools: [EMIT_EMAIL_TOOL],
+      messages: args.modelMessages,
+    });
+
+    let lastComponentCode = "";
+    let subjectEmitted = false;
+
+    stream.on("text", (delta: string) => {
+      if (delta) args.emit({ type: "assistant-chunk", value: delta });
+    });
+
+    stream.on("inputJson", (_partial: string, snapshot: unknown) => {
+      if (!snapshot || typeof snapshot !== "object") return;
+      const view = snapshot as { subject?: unknown; componentCode?: unknown };
+      if (
+        !subjectEmitted &&
+        typeof view.subject === "string" &&
+        view.subject.length > 0
+      ) {
+        args.emit({ type: "subject", value: view.subject });
+        subjectEmitted = true;
+      }
+      if (
+        typeof view.componentCode === "string" &&
+        view.componentCode.length > lastComponentCode.length
+      ) {
+        const delta = view.componentCode.slice(lastComponentCode.length);
+        lastComponentCode = view.componentCode;
+        if (delta) args.emit({ type: "code-chunk", value: delta });
+      }
+    });
+
+    return (await stream.finalMessage()) as unknown as Message;
   }
 }
