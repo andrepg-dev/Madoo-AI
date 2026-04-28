@@ -1,8 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Icon } from "@/components/icons/Icon";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Icon,
+  IconButton,
+  Input,
+  Tag,
+  type BadgeTone,
+} from "@madoo/ui";
 import { MOCK_CONTACTS, SEGMENTS } from "@/lib/data";
+
+type ContactStatus = "active" | "unsubscribed" | "bounced";
+
+const STATUS_TONE: Record<ContactStatus, BadgeTone> = {
+  active: "success",
+  unsubscribed: "neutral",
+  bounced: "danger",
+};
 
 export function ContactsScreen() {
   const [activeSegment, setActiveSegment] = useState("All contacts");
@@ -50,23 +67,9 @@ export function ContactsScreen() {
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "var(--ink-faint)" }}>
             SEGMENTS
           </div>
-          <button
-            type="button"
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 5,
-              border: "none",
-              background: "var(--surface-2)",
-              color: "var(--ink-soft)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
+          <IconButton variant="soft" size="sm" aria-label="New segment">
             <Icon name="plus" size={12} />
-          </button>
+          </IconButton>
         </div>
         {SEGMENTS.map((s) => {
           const active = activeSegment === s.name;
@@ -146,23 +149,9 @@ export function ContactsScreen() {
           >
             Describe a group in plain words and AI builds the filter.
           </div>
-          <button
-            type="button"
-            style={{
-              marginTop: 8,
-              padding: "5px 10px",
-              background: "var(--accent)",
-              color: "var(--accent-fg)",
-              border: "none",
-              borderRadius: 6,
-              fontSize: 11.5,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
+          <Button variant="accent" size="sm" style={{ marginTop: 8 }}>
             Try it →
-          </button>
+          </Button>
         </div>
       </aside>
 
@@ -202,94 +191,29 @@ export function ContactsScreen() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button
-                type="button"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  background: "var(--surface)",
-                  fontSize: 13,
-                  color: "var(--ink)",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
+              <Button variant="secondary" size="md">
                 Import CSV
-              </button>
-              <button
-                type="button"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "var(--ink)",
-                  color: "var(--bg)",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                <Icon name="plus" size={12} /> Add contact
-              </button>
+              </Button>
+              <Button variant="primary" size="md" leftIcon={<Icon name="plus" size={12} />}>
+                Add contact
+              </Button>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 18 }}>
-            <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
-              <div
-                style={{
-                  position: "absolute",
-                  left: 10,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "var(--ink-faint)",
-                }}
-              >
-                <Icon name="search" size={13} />
-              </div>
-              <input
+            <div style={{ flex: 1, maxWidth: 320 }}>
+              <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search contacts…"
-                style={{
-                  width: "100%",
-                  height: 32,
-                  padding: "0 12px 0 30px",
-                  borderRadius: 7,
-                  border: "1px solid var(--border)",
-                  background: "var(--surface-2)",
-                  fontSize: 12.5,
-                  color: "var(--ink)",
-                  outline: "none",
-                  fontFamily: "inherit",
-                }}
+                variant="filled"
+                inputSize="sm"
+                startAdornment={<Icon name="search" size={13} />}
+                aria-label="Search contacts"
               />
             </div>
-            <button
-              type="button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 10px",
-                borderRadius: 7,
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                fontSize: 12,
-                color: "var(--ink-soft)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              <Icon name="sliders" size={12} /> Filter
-            </button>
+            <Button variant="secondary" size="sm" leftIcon={<Icon name="sliders" size={12} />}>
+              Filter
+            </Button>
             {selected.size > 0 && (
               <div
                 style={{
@@ -302,37 +226,12 @@ export function ContactsScreen() {
                 }}
               >
                 <span>{selected.size} selected</span>
-                <button
-                  type="button"
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: 6,
-                    border: "1px solid var(--border)",
-                    background: "var(--surface)",
-                    fontSize: 12,
-                    color: "var(--ink)",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
+                <Button variant="secondary" size="sm">
                   Add tag
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "var(--ink)",
-                    color: "var(--bg)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
+                </Button>
+                <Button variant="primary" size="sm">
                   Send campaign →
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -351,11 +250,10 @@ export function ContactsScreen() {
                 }}
               >
                 <th style={{ padding: "10px 16px 10px 32px", textAlign: "left", width: 30 }}>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selected.size === filtered.length && filtered.length > 0}
                     onChange={toggleAll}
-                    style={{ accentColor: "var(--ink)", cursor: "pointer" }}
+                    aria-label="Select all contacts"
                   />
                 </th>
                 {["Name", "Tags", "Joined", "Engagement", "Status"].map((h) => (
@@ -386,11 +284,10 @@ export function ContactsScreen() {
                   }}
                 >
                   <td style={{ padding: "12px 16px 12px 32px" }}>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selected.has(c.id)}
                       onChange={() => toggleOne(c.id)}
-                      style={{ accentColor: "var(--ink)", cursor: "pointer" }}
+                      aria-label={`Select ${c.name}`}
                     />
                   </td>
                   <td style={{ padding: "12px 16px" }}>
@@ -400,20 +297,9 @@ export function ContactsScreen() {
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                       {c.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          style={{
-                            padding: "2px 7px",
-                            borderRadius: 4,
-                            background: "var(--surface-2)",
-                            fontSize: 10.5,
-                            color: "var(--ink-soft)",
-                            fontWeight: 500,
-                            textTransform: "capitalize",
-                          }}
-                        >
+                        <Tag key={tag} tone="neutral" size="sm" sans>
                           {tag}
-                        </span>
+                        </Tag>
                       ))}
                     </div>
                   </td>
@@ -449,32 +335,9 @@ export function ContactsScreen() {
                     </div>
                   </td>
                   <td style={{ padding: "12px 16px" }}>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        padding: "2px 8px",
-                        borderRadius: 999,
-                        fontSize: 11,
-                        fontWeight: 500,
-                        background:
-                          c.status === "active" ? "#E5EFE6" : c.status === "unsubscribed" ? "#F4F0E6" : "#FBE8E2",
-                        color:
-                          c.status === "active" ? "#2F5C42" : c.status === "unsubscribed" ? "#5C5246" : "#A23E2F",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 5,
-                          height: 5,
-                          borderRadius: "50%",
-                          background:
-                            c.status === "active" ? "#2F5C42" : c.status === "unsubscribed" ? "#5C5246" : "#A23E2F",
-                        }}
-                      />
+                    <Badge tone={STATUS_TONE[c.status as ContactStatus]} dot>
                       {c.status}
-                    </span>
+                    </Badge>
                   </td>
                 </tr>
               ))}

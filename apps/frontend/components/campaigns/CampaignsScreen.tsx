@@ -2,23 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Icon } from "@/components/icons/Icon";
+import { Badge, Button, Card, Icon, SegmentedControl, type BadgeTone } from "@madoo/ui";
 import { MOCK_CAMPAIGNS, type CampaignStatus } from "@/lib/data";
 import { ComposeModal } from "./ComposeModal";
 
-const FILTERS: { id: "all" | CampaignStatus; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "draft", label: "Drafts" },
-  { id: "scheduled", label: "Scheduled" },
-  { id: "sending", label: "Sending" },
-  { id: "sent", label: "Sent" },
+const FILTERS: { value: "all" | CampaignStatus; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "draft", label: "Drafts" },
+  { value: "scheduled", label: "Scheduled" },
+  { value: "sending", label: "Sending" },
+  { value: "sent", label: "Sent" },
 ];
 
-const STATUS_STYLES: Record<CampaignStatus, { bg: string; fg: string; dot: string }> = {
-  sent: { bg: "#E5EFE6", fg: "#2F5C42", dot: "#2F5C42" },
-  sending: { bg: "#FFF1D6", fg: "#7A5A1E", dot: "#D69E2E" },
-  scheduled: { bg: "#E5E5F5", fg: "#3B2F8C", dot: "#5B5FCB" },
-  draft: { bg: "#F4F0E6", fg: "#5C5246", dot: "#9A8E7F" },
+const STATUS_TONE: Record<CampaignStatus, BadgeTone> = {
+  sent: "success",
+  sending: "warn",
+  scheduled: "info",
+  draft: "neutral",
 };
 
 export function CampaignsScreen() {
@@ -52,26 +52,14 @@ export function CampaignsScreen() {
                 Plan, send, and track everything you ship.
               </p>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="md"
               onClick={() => setShowCompose(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 9,
-                border: "none",
-                background: "var(--ink)",
-                color: "var(--bg)",
-                fontSize: 13.5,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
+              leftIcon={<Icon name="sparkle" size={13} />}
             >
-              <Icon name="sparkle" size={13} /> New campaign
-            </button>
+              New campaign
+            </Button>
           </div>
 
           <div
@@ -88,15 +76,7 @@ export function CampaignsScreen() {
               { label: "Avg. open rate", value: "58.2%", delta: "+3.1%" },
               { label: "Avg. click rate", value: "14.6%", delta: "+0.8%" },
             ].map((s) => (
-              <div
-                key={s.label}
-                style={{
-                  padding: 18,
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                }}
-              >
+              <Card key={s.label} padded style={{ padding: 18 }}>
                 <div
                   style={{
                     fontSize: 11.5,
@@ -122,63 +102,25 @@ export function CampaignsScreen() {
                   >
                     {s.value}
                   </div>
-                  <div style={{ fontSize: 11.5, color: "var(--accent-deep)", fontWeight: 600 }}>{s.delta}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--accent-deep)", fontWeight: 600 }}>
+                    {s.delta}
+                  </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 4,
-              marginTop: 28,
-              padding: 4,
-              background: "var(--surface-2)",
-              borderRadius: 9,
-              border: "1px solid var(--border)",
-              alignSelf: "flex-start",
-              width: "fit-content",
-            }}
-          >
-            {FILTERS.map((f) => {
-              const active = filter === f.id;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setFilter(f.id)}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: active ? "var(--surface)" : "transparent",
-                    color: active ? "var(--ink)" : "var(--ink-soft)",
-                    fontWeight: active ? 600 : 500,
-                    fontSize: 12.5,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    boxShadow: active ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
-                  }}
-                >
-                  {f.label}
-                </button>
-              );
-            })}
+          <div style={{ marginTop: 28, width: "fit-content" }}>
+            <SegmentedControl
+              items={FILTERS}
+              value={filter}
+              onChange={(v) => setFilter(v as "all" | CampaignStatus)}
+              aria-label="Filter campaigns by status"
+            />
           </div>
 
-          <div
-            style={{
-              marginTop: 16,
-              marginBottom: 60,
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              overflow: "hidden",
-            }}
-          >
+          <Card style={{ marginTop: 16, marginBottom: 60, overflow: "hidden" }}>
             {filtered.map((c, i) => {
-              const ss = STATUS_STYLES[c.status];
               const openRate = c.recipients ? Math.round((c.opens / c.recipients) * 100) : 0;
               const clickRate = c.recipients ? Math.round((c.clicks / c.recipients) * 100) : 0;
               return (
@@ -198,27 +140,10 @@ export function CampaignsScreen() {
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          padding: "2px 8px",
-                          borderRadius: 999,
-                          fontSize: 10.5,
-                          fontWeight: 600,
-                          background: ss.bg,
-                          color: ss.fg,
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        <div
-                          style={{ width: 5, height: 5, borderRadius: "50%", background: ss.dot }}
-                        />
-                        {c.status}
-                      </span>
+                    <div style={{ marginBottom: 4 }}>
+                      <Badge tone={STATUS_TONE[c.status]} dot>
+                        {c.status.toUpperCase()}
+                      </Badge>
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>{c.name}</div>
                     <div style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 2 }}>
@@ -259,7 +184,7 @@ export function CampaignsScreen() {
                 </div>
               );
             })}
-          </div>
+          </Card>
         </div>
       </div>
 

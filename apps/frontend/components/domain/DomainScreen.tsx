@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Icon } from "@/components/icons/Icon";
+import { Badge, Button, Card, Icon, Input, Tag } from "@madoo/ui";
 
 const RECORDS = [
   { type: "TXT", host: "@", value: "v=spf1 include:mailmint.io ~all", label: "SPF", ok: true },
@@ -27,15 +27,7 @@ export function DomainScreen() {
           Verify your domain so emails come from you, not us. Better deliverability, fewer spam folders.
         </p>
 
-        <div
-          style={{
-            marginTop: 24,
-            padding: 22,
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-          }}
-        >
+        <Card padded style={{ marginTop: 24, padding: 22 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div
               style={{
@@ -53,58 +45,19 @@ export function DomainScreen() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 17, fontWeight: 600, color: "var(--ink)" }}>{domain}</div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 12.5,
-                  color: verified ? "var(--accent-deep)" : "var(--ink-soft)",
-                  marginTop: 4,
-                  fontWeight: 500,
-                }}
-              >
-                <div
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: verified ? "var(--accent)" : "#D69E2E",
-                  }}
-                />
-                {verified ? "3 of 4 records verified · ready to send" : "Pending verification"}
+              <div style={{ marginTop: 4 }}>
+                <Badge tone={verified ? "success" : "warn"} dot>
+                  {verified ? "3 of 4 records verified · ready to send" : "Pending verification"}
+                </Badge>
               </div>
             </div>
-            <button
-              type="button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 12px",
-                borderRadius: 7,
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                fontSize: 12.5,
-                color: "var(--ink)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              <Icon name="refresh" size={12} /> Re-check
-            </button>
+            <Button variant="secondary" size="sm" leftIcon={<Icon name="refresh" size={12} />}>
+              Re-check
+            </Button>
           </div>
-        </div>
+        </Card>
 
-        <div
-          style={{
-            marginTop: 16,
-            padding: 22,
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-          }}
-        >
+        <Card padded style={{ marginTop: 16, padding: 22 }}>
           <div
             style={{
               display: "flex",
@@ -119,24 +72,9 @@ export function DomainScreen() {
                 Add these to your domain provider (Cloudflare, Namecheap, GoDaddy…)
               </div>
             </div>
-            <button
-              type="button"
-              style={{
-                padding: "6px 12px",
-                borderRadius: 7,
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                fontSize: 12,
-                color: "var(--ink-soft)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Icon name="copy" size={11} /> Copy all
-            </button>
+            <Button variant="secondary" size="sm" leftIcon={<Icon name="copy" size={11} />}>
+              Copy all
+            </Button>
           </div>
           <div style={{ border: "1px solid var(--border)", borderRadius: 9, overflow: "hidden" }}>
             <div
@@ -172,19 +110,9 @@ export function DomainScreen() {
                 }}
               >
                 <div>
-                  <span
-                    className="mono"
-                    style={{
-                      padding: "2px 7px",
-                      borderRadius: 4,
-                      background: "var(--surface-2)",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "var(--ink)",
-                    }}
-                  >
+                  <Tag tone="neutral" size="sm">
                     {r.type}
-                  </span>
+                  </Tag>
                 </div>
                 <div>
                   <div className="mono" style={{ fontSize: 12, color: "var(--ink)" }}>
@@ -208,44 +136,16 @@ export function DomainScreen() {
                   {r.label}
                 </div>
                 <div>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      background: r.ok ? "#E5EFE6" : "#FFF1D6",
-                      color: r.ok ? "#2F5C42" : "#7A5A1E",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: "50%",
-                        background: r.ok ? "#2F5C42" : "#D69E2E",
-                      }}
-                    />
+                  <Badge tone={r.ok ? "success" : "warn"} dot>
                     {r.ok ? "Verified" : "Pending"}
-                  </span>
+                  </Badge>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
-        <div
-          style={{
-            marginTop: 16,
-            padding: 22,
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-          }}
-        >
+        <Card padded style={{ marginTop: 16, padding: 22 }}>
           <div style={{ fontSize: 14, fontWeight: 600 }}>Sender identity</div>
           <div
             style={{
@@ -258,66 +158,16 @@ export function DomainScreen() {
             How recipients see you in their inbox.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "var(--ink-faint)",
-                  marginBottom: 6,
-                  letterSpacing: 0.3,
-                  textTransform: "uppercase",
-                }}
-              >
-                From name
-              </div>
-              <input
-                defaultValue="Acme Brand"
-                style={{
-                  width: "100%",
-                  height: 36,
-                  padding: "0 12px",
-                  borderRadius: 7,
-                  border: "1px solid var(--border)",
-                  background: "var(--surface-2)",
-                  fontSize: 13,
-                  color: "var(--ink)",
-                  outline: "none",
-                  fontFamily: "inherit",
-                }}
-              />
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "var(--ink-faint)",
-                  marginBottom: 6,
-                  letterSpacing: 0.3,
-                  textTransform: "uppercase",
-                }}
-              >
-                From email
-              </div>
-              <input
-                defaultValue="hello@acme.co"
-                style={{
-                  width: "100%",
-                  height: 36,
-                  padding: "0 12px",
-                  borderRadius: 7,
-                  border: "1px solid var(--border)",
-                  background: "var(--surface-2)",
-                  fontSize: 13,
-                  color: "var(--ink)",
-                  outline: "none",
-                  fontFamily: "inherit",
-                }}
-              />
-            </div>
+            <Input label="From name" defaultValue="Acme Brand" variant="filled" inputSize="md" />
+            <Input
+              label="From email"
+              defaultValue="hello@acme.co"
+              variant="filled"
+              inputSize="md"
+              type="email"
+            />
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

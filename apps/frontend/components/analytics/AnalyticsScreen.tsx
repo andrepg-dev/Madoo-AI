@@ -1,10 +1,20 @@
-import { Icon } from "@/components/icons/Icon";
+"use client";
+
+import { useState } from "react";
+import { Card, Icon, ProgressBar, SegmentedControl } from "@madoo/ui";
 import { MOCK_CAMPAIGNS } from "@/lib/data";
+
+const RANGES = [
+  { value: "7", label: "7 days" },
+  { value: "30", label: "30 days" },
+  { value: "all", label: "All time" },
+];
 
 export function AnalyticsScreen() {
   const campaign = MOCK_CAMPAIGNS[0];
   const openData = [12, 22, 38, 64, 78, 88, 94, 96, 98, 99, 100];
   const hoursLabels = ["0h", "2h", "4h", "6h", "8h", "12h", "24h", "48h", "3d", "5d", "7d"];
+  const [range, setRange] = useState("7");
 
   const path = `M 0 ${200 - openData[0] * 1.8} ${openData
     .map((v, i) => `L ${(i / (openData.length - 1)) * 600} ${200 - v * 1.8}`)
@@ -49,16 +59,10 @@ export function AnalyticsScreen() {
             { label: "Clicks", value: "412", sub: "14.7% click rate", accent: "#A87E54" },
             { label: "Unsubscribed", value: "8", sub: "0.3% rate", accent: "#A23E2F" },
           ].map((s) => (
-            <div
+            <Card
               key={s.label}
-              style={{
-                padding: 22,
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                position: "relative",
-                overflow: "hidden",
-              }}
+              padded
+              style={{ position: "relative", overflow: "hidden", paddingTop: 22 }}
             >
               <div
                 style={{
@@ -94,19 +98,11 @@ export function AnalyticsScreen() {
                 {s.value}
               </div>
               <div style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 6 }}>{s.sub}</div>
-            </div>
+            </Card>
           ))}
         </div>
 
-        <div
-          style={{
-            marginTop: 24,
-            padding: 24,
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-          }}
-        >
+        <Card padded style={{ marginTop: 24, padding: 24 }}>
           <div
             style={{
               display: "flex",
@@ -121,35 +117,13 @@ export function AnalyticsScreen() {
                 Cumulative opens since send
               </div>
             </div>
-            <div
-              style={{
-                display: "flex",
-                gap: 4,
-                padding: 3,
-                background: "var(--surface-2)",
-                borderRadius: 7,
-                fontSize: 11.5,
-              }}
-            >
-              {["7 days", "30 days", "All time"].map((p, i) => (
-                <button
-                  key={p}
-                  type="button"
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: 5,
-                    border: "none",
-                    background: i === 0 ? "var(--surface)" : "transparent",
-                    color: i === 0 ? "var(--ink)" : "var(--ink-soft)",
-                    fontWeight: i === 0 ? 600 : 500,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              items={RANGES}
+              value={range}
+              onChange={setRange}
+              variant="minimal"
+              aria-label="Time range"
+            />
           </div>
 
           <div style={{ position: "relative", height: 220 }}>
@@ -203,19 +177,12 @@ export function AnalyticsScreen() {
               ))}
             </svg>
           </div>
-        </div>
+        </Card>
 
         <div
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}
         >
-          <div
-            style={{
-              padding: 22,
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-            }}
-          >
+          <Card padded style={{ padding: 22 }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Top clicked links</div>
             {[
               { url: "acme.co/whats-new", clicks: 187, pct: 45 },
@@ -244,27 +211,11 @@ export function AnalyticsScreen() {
                     {l.clicks} · {l.pct}%
                   </span>
                 </div>
-                <div
-                  style={{
-                    height: 4,
-                    background: "var(--surface-2)",
-                    borderRadius: 999,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={{ width: `${l.pct}%`, height: "100%", background: "var(--accent)" }} />
-                </div>
+                <ProgressBar value={l.pct} variant="thin" aria-label={`${l.url} share of clicks`} />
               </div>
             ))}
-          </div>
-          <div
-            style={{
-              padding: 22,
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-            }}
-          >
+          </Card>
+          <Card padded style={{ padding: 22 }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Where they read it</div>
             {[
               { client: "Apple Mail", pct: 42, n: 706 },
@@ -292,19 +243,10 @@ export function AnalyticsScreen() {
                     {c.n} · {c.pct}%
                   </span>
                 </div>
-                <div
-                  style={{
-                    height: 4,
-                    background: "var(--surface-2)",
-                    borderRadius: 999,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={{ width: `${c.pct}%`, height: "100%", background: "var(--accent)" }} />
-                </div>
+                <ProgressBar value={c.pct} variant="thin" aria-label={`${c.client} share`} />
               </div>
             ))}
-          </div>
+          </Card>
         </div>
       </div>
     </div>
