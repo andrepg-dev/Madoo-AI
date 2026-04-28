@@ -20,6 +20,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   pendingPrompts PendingPrompt[]
+  memberships    Membership[]
 
   @@index([email])
 }
@@ -37,4 +38,36 @@ model PendingPrompt {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, consumed])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members Membership[]
+
+  @@index([slug])
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role     @default(OWNER)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
 }

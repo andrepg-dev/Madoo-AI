@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { authApi, type GoogleLoginResponse } from "@/actions/auth";
 import { Icon } from "@/components/icons/Icon";
 import { GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import { clearPendingPrompt, type StoredPrompt } from "@/lib/storage";
-import { authApi, type AuthUser } from "@/actions/auth";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 
 export function LoginModal() {
@@ -15,13 +15,9 @@ export function LoginModal() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Latest values read from inside the GSI callback. Using refs prevents the
-  // init effect from re-running mid-login (which would otherwise cancel the
-  // in-flight credential exchange and never call finishLogin).
   const pendingRef = useRef<StoredPrompt | null>(pendingPromptForGate);
   pendingRef.current = pendingPromptForGate;
-  const finishLoginRef =
-    useRef<(token: string, u: AuthUser) => void>(finishLogin);
+  const finishLoginRef = useRef<typeof finishLogin>(finishLogin);
   finishLoginRef.current = finishLogin;
 
   useEffect(() => {
@@ -43,7 +39,7 @@ export function LoginModal() {
       const pending = pendingRef.current;
       setSubmitting(true);
       try {
-        const result = await authApi.loginWithGoogle({
+        const result: GoogleLoginResponse = await authApi.loginWithGoogle({
           idToken: resp.credential,
           pendingPrompt: pending?.prompt,
           pendingTone: pending?.tone,
@@ -51,7 +47,12 @@ export function LoginModal() {
           pendingAudience: pending?.audience,
         });
         clearPendingPrompt();
-        finishLoginRef.current(result.token, result.user);
+        finishLoginRef.current({
+          token: result.token,
+          user: result.user,
+          workspaces: result.workspaces,
+          defaultWorkspaceId: result.defaultWorkspaceId,
+        });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Login failed";
         setError(msg);

@@ -1,5 +1,6 @@
 const TOKEN_KEY = "madoo.auth.token";
 const PENDING_PROMPT_KEY = "madoo.pendingPrompt";
+const WORKSPACE_KEY = "madoo.workspace.id";
 
 export type StoredPrompt = {
   prompt: string;
@@ -38,4 +39,17 @@ export function readPendingPrompt(): StoredPrompt | null {
 
 export function clearPendingPrompt() {
   window.localStorage.removeItem(PENDING_PROMPT_KEY);
+}
+
+export function getWorkspaceId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(WORKSPACE_KEY);
+}
+
+export function setWorkspaceId(id: string) {
+  window.localStorage.setItem(WORKSPACE_KEY, id);
+}
+
+export function clearWorkspaceId() {
+  window.localStorage.removeItem(WORKSPACE_KEY);
 }

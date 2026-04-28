@@ -1,56 +1,58 @@
-import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
+import { WORKSPACE_HEADER } from "@madoo/shared";
 import { API_URL } from "./env";
-import { clearToken, getToken } from "./storage";
+import { clearToken, getToken, getWorkspaceId } from "./storage";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public data: unknown,
+  ) {
     super(message);
     this.name = "ApiError";
   }
 }
 
-export const http = axios.create({
-  baseURL: API_URL,
-  headers: { "Content-Type": "application/json" },
-});
+type Headers = Record<string, string>;
 
-http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getToken();
-  if (token && config.headers) {
-    config.headers.set("Authorization", `Bearer ${token}`);
+export async function FetchWrapper<T>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const headers: Headers = { ...(options.headers as Headers | undefined) };
+
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  const method = (options.method ?? "GET").toUpperCase();
+  if (!isFormData && (method === "POST" || method === "PATCH" || method === "PUT")) {
+    headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
   }
-  return config;
-});
 
-http.interceptors.response.use(
-  (res: AxiosResponse) => res,
-  (error: AxiosError<{ message?: string | string[] }>) => {
-    const status = error.response?.status ?? 0;
-    const data = error.response?.data;
-    const raw = data?.message;
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const workspaceId = getWorkspaceId();
+  if (workspaceId && !headers[WORKSPACE_HEADER]) {
+    headers[WORKSPACE_HEADER] = workspaceId;
+  }
+
+  const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+
+  if (!res.ok) {
+    const errorResponse = await res.json().catch(() => null);
+    const raw = (errorResponse as { message?: string | string[] } | null)?.message;
     const message = Array.isArray(raw)
       ? raw.join(", ")
-      : raw || error.message || `Request failed (${status})`;
+      : raw || `Request failed (${res.status})`;
 
-    if (status === 401 && typeof window !== "undefined") {
+    if (res.status === 401 && typeof window !== "undefined") {
       clearToken();
     }
-    return Promise.reject(new ApiError(status, message));
-  },
-);
 
-async function unwrap<T>(p: Promise<{ data: T }>): Promise<T> {
-  const res = await p;
-  return res.data;
+    throw new ApiError(res.status, message, errorResponse);
+  }
+
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
 }
-
-export const fetcher = {
-  get: <T>(url: string, config?: AxiosRequestConfig) => unwrap<T>(http.get(url, config)),
-  post: <T, B = unknown>(url: string, body?: B, config?: AxiosRequestConfig) =>
-    unwrap<T>(http.post(url, body, config)),
-  put: <T, B = unknown>(url: string, body?: B, config?: AxiosRequestConfig) =>
-    unwrap<T>(http.put(url, body, config)),
-  patch: <T, B = unknown>(url: string, body?: B, config?: AxiosRequestConfig) =>
-    unwrap<T>(http.patch(url, body, config)),
-  delete: <T>(url: string, config?: AxiosRequestConfig) => unwrap<T>(http.delete(url, config)),
-};

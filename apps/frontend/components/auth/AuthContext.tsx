@@ -1,9 +1,25 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { authKeys, useMe, type AuthUser } from "@/actions/auth";
-import { clearToken, getToken, setToken, type StoredPrompt } from "@/lib/storage";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { MyWorkspace } from "@madoo/shared";
+import { authApi, authKeys, type AuthUser } from "@/actions/auth";
+import { workspaceKeys } from "@/actions/workspaces";
+import {
+  clearToken,
+  clearWorkspaceId,
+  getToken,
+  setToken,
+  setWorkspaceId,
+  type StoredPrompt,
+} from "@/lib/storage";
+
+type FinishLoginPayload = {
+  token: string;
+  user: AuthUser;
+  workspaces: MyWorkspace[];
+  defaultWorkspaceId: string;
+};
 
 type AuthState = {
   user: AuthUser | null;
@@ -12,7 +28,7 @@ type AuthState = {
   pendingPromptForGate: StoredPrompt | null;
   openLogin: (pending?: StoredPrompt | null) => void;
   closeLogin: () => void;
-  finishLogin: (token: string, user: AuthUser) => void;
+  finishLogin: (payload: FinishLoginPayload) => void;
   logout: () => void;
 };
 
@@ -26,7 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [pendingPromptForGate, setPendingPromptForGate] = useState<StoredPrompt | null>(null);
 
-  const meQuery = useMe({ enabled: hasToken });
+  const meQuery = useQuery<AuthUser>({
+    queryKey: authKeys.me(),
+    queryFn: () => authApi.me(),
+    enabled: hasToken,
+    retry: false,
+    staleTime: 1000 * 60 * 5,
+  });
 
   useEffect(() => {
     if (meQuery.isError) clearToken();
@@ -42,10 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const finishLogin = useCallback(
-    (token: string, u: AuthUser) => {
+    ({ token, user: u, workspaces, defaultWorkspaceId }: FinishLoginPayload) => {
       setToken(token);
+      setWorkspaceId(defaultWorkspaceId);
       setHasToken(true);
       qc.setQueryData(authKeys.me(), u);
+      qc.setQueryData(workspaceKeys.me(), workspaces);
       setLoginOpen(false);
     },
     [qc],
@@ -53,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     clearToken();
+    clearWorkspaceId();
     setHasToken(false);
     qc.removeQueries({ queryKey: authKeys.me() });
     qc.clear();

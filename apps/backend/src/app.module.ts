@@ -4,6 +4,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
 import { PromptsModule } from "./prompts/prompts.module";
+import { WorkspacesModule } from "./workspaces/workspaces.module";
 import { HealthController } from "./health.controller";
 
 @Module({
@@ -12,6 +13,7 @@ import { HealthController } from "./health.controller";
     PrismaModule,
     AuthModule,
     UsersModule,
+    WorkspacesModule,
     PromptsModule,
   ],
   controllers: [HealthController],

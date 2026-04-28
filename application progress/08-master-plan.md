@@ -285,17 +285,17 @@ NEXT_PUBLIC_SENTRY_DSN=
 > Salir de esta fase con tenancy decidido, infra de cola levantada, y
 > `packages/shared` poblado.
 
-- [ ] Confirmar la decisión de Workspace + Membership con el equipo.
-- [ ] Migración Prisma: agregar `Workspace`, `Membership`, `Role`. Cada
+- [x] Confirmar la decisión de Workspace + Membership con el equipo.
+- [x] Migración Prisma: agregar `Workspace`, `Membership`, `Role`. Cada
       `User` que se loguea por primera vez con Google crea un workspace
       "Personal" y un membership OWNER.
-- [ ] Endpoint `GET /api/v1/workspaces/me` que devuelva el workspace
+- [x] Endpoint `GET /api/v1/workspaces/me` que devuelva el workspace
       activo del user (single-workspace en V1).
-- [ ] Frontend: `useWorkspace()` hook + `<WorkspaceProvider>`.
+- [x] Frontend: `useWorkspace()` hook + `<WorkspaceProvider>`.
       Inyectar `X-Workspace-Id` en el axios request interceptor.
-- [ ] Backend: `@CurrentWorkspace()` decorator + guard que extrae el
+- [x] Backend: `@CurrentWorkspace()` decorator + guard que extrae el
       workspace del header y verifica membership.
-- [ ] Agregar Redis a `docker-compose.yml`:
+- [x] Agregar Redis a `docker-compose.yml`:
       ```yaml
       redis:
         image: redis:7-alpine
@@ -303,10 +303,10 @@ NEXT_PUBLIC_SENTRY_DSN=
         ports: ["6379:6379"]
         volumes: ["madoo-redis-data:/data"]
       ```
-- [ ] Crear `packages/shared` con `package.json` (workspace
+- [x] Crear `packages/shared` con `package.json` (workspace
       `@madoo/shared`), `tsconfig`, exports de tipos + zod schemas
       vacíos. Wirear en `apps/frontend` y `apps/backend`.
-- [ ] Definir el primer schema compartido en `@madoo/shared`:
+- [x] Definir el primer schema compartido en `@madoo/shared`:
       `WorkspaceSchema`, `UserSchema`.
 
 ## Fase 1 — Generación AI real (cierra el loop "describir → email")

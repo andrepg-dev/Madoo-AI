@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { AuthService } from "./auth.service";
@@ -6,11 +6,13 @@ import { AuthController } from "./auth.controller";
 import { GoogleTokenVerifier } from "./google-token.verifier";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { UsersModule } from "../users/users.module";
+import { WorkspacesModule } from "../workspaces/workspaces.module";
 
 @Module({
   imports: [
     ConfigModule,
     UsersModule,
+    forwardRef(() => WorkspacesModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

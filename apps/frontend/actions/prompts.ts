@@ -1,58 +1,40 @@
-"use client";
+import { z } from "zod";
+import {
+  CreatePendingPromptSchema,
+  PendingPromptSchema,
+  type CreatePendingPromptInput,
+  type PendingPrompt,
+} from "@madoo/shared";
+import { FetchWrapper } from "@/lib/fetch";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetcher } from "@/lib/fetch";
+export type { PendingPrompt, CreatePendingPromptInput } from "@madoo/shared";
 
-export type PendingPrompt = {
-  id: string;
-  userId: string;
-  prompt: string;
-  tone: string | null;
-  length: string | null;
-  audience: string | null;
-  consumed: boolean;
-  createdAt: string;
-};
-
-export type CreatePendingPromptInput = {
-  prompt: string;
-  tone?: string;
-  length?: string;
-  audience?: string;
-};
+const PendingPromptListSchema = z.array(PendingPromptSchema);
 
 export const promptKeys = {
   all: ["prompts"] as const,
   pending: () => [...promptKeys.all, "pending"] as const,
 };
 
-export const promptsApi = {
-  listPending: () => fetcher.get<PendingPrompt[]>("/prompts/pending"),
-  createPending: (body: CreatePendingPromptInput) =>
-    fetcher.post<PendingPrompt, CreatePendingPromptInput>("/prompts/pending", body),
-  consumePending: (id: string) =>
-    fetcher.post<PendingPrompt>(`/prompts/pending/${id}/consume`),
-};
-
-export function usePendingPrompts() {
-  return useQuery<PendingPrompt[]>({
-    queryKey: promptKeys.pending(),
-    queryFn: () => promptsApi.listPending(),
-  });
+export async function listPendingPrompts(): Promise<PendingPrompt[]> {
+  const raw = await FetchWrapper<unknown>("/prompts/pending");
+  return PendingPromptListSchema.parse(raw);
 }
 
-export function useCreatePendingPrompt() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: CreatePendingPromptInput) => promptsApi.createPending(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: promptKeys.pending() }),
+export async function createPendingPrompt(
+  input: CreatePendingPromptInput,
+): Promise<PendingPrompt> {
+  const body = CreatePendingPromptSchema.parse(input);
+  const raw = await FetchWrapper<unknown>("/prompts/pending", {
+    method: "POST",
+    body: JSON.stringify(body),
   });
+  return PendingPromptSchema.parse(raw);
 }
 
-export function useConsumePendingPrompt() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => promptsApi.consumePending(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: promptKeys.pending() }),
+export async function consumePendingPrompt(id: string): Promise<PendingPrompt> {
+  const raw = await FetchWrapper<unknown>(`/prompts/pending/${id}/consume`, {
+    method: "POST",
   });
+  return PendingPromptSchema.parse(raw);
 }

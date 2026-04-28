@@ -5,8 +5,16 @@ import { PrismaService } from "../prisma/prisma.service";
 import { GoogleTokenVerifier } from "./google-token.verifier";
 import { GoogleLoginDto } from "./dto/google-login.dto";
 import { toUserDto, type UserDto } from "../users/dto/user.dto";
+import { WorkspacesService } from "../workspaces/workspaces.service";
+import { toMyWorkspaceDto, type MyWorkspaceDto } from "../workspaces/dto/workspace.dto";
 
-export type AuthResult = { token: string; user: UserDto; pendingPromptId: string | null };
+export type AuthResult = {
+  token: string;
+  user: UserDto;
+  pendingPromptId: string | null;
+  workspaces: MyWorkspaceDto[];
+  defaultWorkspaceId: string;
+};
 
 @Injectable()
 export class AuthService {
@@ -15,6 +23,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly verifier: GoogleTokenVerifier,
     private readonly config: ConfigService,
+    private readonly workspaces: WorkspacesService,
   ) {}
 
   async loginWithGoogle(dto: GoogleLoginDto): Promise<AuthResult> {
@@ -44,6 +53,16 @@ export class AuthService {
       },
     });
 
+    await this.workspaces.ensurePersonalWorkspace({
+      userId: user.id,
+      displayName: user.name,
+      email: user.email,
+    });
+
+    const memberships = await this.workspaces.listForUser(user.id);
+    const workspaces = memberships.map((row) => toMyWorkspaceDto(row, row.membership));
+    const defaultWorkspaceId = workspaces[0]!.id;
+
     let pendingPromptId: string | null = null;
     if (dto.pendingPrompt && dto.pendingPrompt.trim()) {
       const pp = await this.prisma.pendingPrompt.create({
@@ -66,6 +85,12 @@ export class AuthService {
       },
     );
 
-    return { token, user: toUserDto(user), pendingPromptId };
+    return {
+      token,
+      user: toUserDto(user),
+      pendingPromptId,
+      workspaces,
+      defaultWorkspaceId,
+    };
   }
 }

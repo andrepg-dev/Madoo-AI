@@ -1,58 +1,33 @@
-"use client";
+import {
+  GoogleLoginInputSchema,
+  GoogleLoginResponseSchema,
+  UserSchema,
+  type GoogleLoginInput,
+  type GoogleLoginResponse,
+  type User,
+} from "@madoo/shared";
+import { FetchWrapper } from "@/lib/fetch";
 
-import { useMutation, useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { fetcher } from "@/lib/fetch";
-import { getToken } from "@/lib/storage";
-
-export type AuthUser = {
-  id: string;
-  email: string;
-  name: string | null;
-  avatarUrl: string | null;
-  emailVerified: boolean;
-  createdAt: string;
-};
-
-export type GoogleLoginInput = {
-  idToken: string;
-  pendingPrompt?: string;
-  pendingTone?: string;
-  pendingLength?: string;
-  pendingAudience?: string;
-};
-
-export type GoogleLoginResponse = {
-  token: string;
-  user: AuthUser;
-  pendingPromptId: string | null;
-};
+export type AuthUser = User;
+export type { GoogleLoginInput, GoogleLoginResponse };
 
 export const authKeys = {
   all: ["auth"] as const,
   me: () => [...authKeys.all, "me"] as const,
 };
 
-export const authApi = {
-  loginWithGoogle: (body: GoogleLoginInput) =>
-    fetcher.post<GoogleLoginResponse, GoogleLoginInput>("/auth/google", body),
-  me: () => fetcher.get<AuthUser>("/auth/me"),
-};
-
-export function useGoogleLogin() {
-  return useMutation({
-    mutationFn: (body: GoogleLoginInput) => authApi.loginWithGoogle(body),
+export async function loginWithGoogle(
+  input: GoogleLoginInput,
+): Promise<GoogleLoginResponse> {
+  const body = GoogleLoginInputSchema.parse(input);
+  const raw = await FetchWrapper<unknown>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify(body),
   });
+  return GoogleLoginResponseSchema.parse(raw);
 }
 
-export function useMe(
-  options?: Omit<UseQueryOptions<AuthUser>, "queryKey" | "queryFn">,
-) {
-  return useQuery<AuthUser>({
-    queryKey: authKeys.me(),
-    queryFn: () => authApi.me(),
-    enabled: typeof window !== "undefined" && Boolean(getToken()),
-    retry: false,
-    staleTime: 1000 * 60 * 5,
-    ...options,
-  });
+export async function getMe(): Promise<AuthUser> {
+  const raw = await FetchWrapper<unknown>("/auth/me");
+  return UserSchema.parse(raw);
 }
