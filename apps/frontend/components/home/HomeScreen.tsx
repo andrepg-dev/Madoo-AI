@@ -6,8 +6,9 @@ import { PromptPill } from "./PromptPill";
 import { TemplateCard } from "./TemplateCard";
 import { GeneratingScreen } from "./GeneratingScreen";
 import { EditorScreen, type GenParams } from "./EditorScreen";
-import { useAuth } from "@/components/auth/AuthContext";
+import { useMe } from "@/hooks/use-me";
 import { readPendingPrompt, clearPendingPrompt, savePendingPrompt } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth";
 import {
   CATEGORIES,
   PROMPT_AUDIENCES,
@@ -21,7 +22,8 @@ import {
 type Screen = "home" | "generating" | "editor";
 
 export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
-  const { user, loading, openLogin } = useAuth();
+  const { data: user, isPending: loading } = useMe();
+  const openLogin = useAuthStore((s) => s.openLogin);
   const [screen, setScreen] = useState<Screen>("home");
   const [genParams, setGenParams] = useState<GenParams | null>(null);
   const [activeTemplate, setActiveTemplate] = useState<Template | null>(null);

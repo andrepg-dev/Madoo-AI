@@ -1,24 +1,26 @@
 "use client";
 
-import { authApi, type GoogleLoginResponse } from "@/actions/auth";
+import { useQueryClient } from "@tanstack/react-query";
+import { loginWithGoogle } from "@/actions/auth";
 import { Icon } from "@/components/icons/Icon";
 import { GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import { clearPendingPrompt, type StoredPrompt } from "@/lib/storage";
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "./AuthContext";
+import { useAuthStore } from "@/stores/auth";
+import { useWorkspaceStore } from "@/stores/workspace";
 
 export function LoginModal() {
-  const { loginOpen, closeLogin, finishLogin, pendingPromptForGate } =
-    useAuth();
+  const qc = useQueryClient();
+  const loginOpen = useAuthStore((s) => s.loginOpen);
+  const closeLogin = useAuthStore((s) => s.closeLogin);
+  const pendingPromptForGate = useAuthStore((s) => s.pendingPromptForGate);
   const buttonRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const pendingRef = useRef<StoredPrompt | null>(pendingPromptForGate);
   pendingRef.current = pendingPromptForGate;
-  const finishLoginRef = useRef<typeof finishLogin>(finishLogin);
-  finishLoginRef.current = finishLogin;
 
   useEffect(() => {
     if (!loginOpen) return;
@@ -39,7 +41,7 @@ export function LoginModal() {
       const pending = pendingRef.current;
       setSubmitting(true);
       try {
-        const result: GoogleLoginResponse = await authApi.loginWithGoogle({
+        const result = await loginWithGoogle({
           idToken: resp.credential,
           pendingPrompt: pending?.prompt,
           pendingTone: pending?.tone,
@@ -47,12 +49,10 @@ export function LoginModal() {
           pendingAudience: pending?.audience,
         });
         clearPendingPrompt();
-        finishLoginRef.current({
-          token: result.token,
-          user: result.user,
-          workspaces: result.workspaces,
-          defaultWorkspaceId: result.defaultWorkspaceId,
-        });
+        qc.setQueryData(["me"], result.user);
+        qc.setQueryData(["workspaces", "me"], result.workspaces);
+        useWorkspaceStore.getState().setActiveWorkspaceId(result.defaultWorkspaceId);
+        useAuthStore.getState().closeLogin();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Login failed";
         setError(msg);
@@ -91,7 +91,7 @@ export function LoginModal() {
     return () => {
       cancelled = true;
     };
-  }, [loginOpen]);
+  }, [loginOpen, qc]);
 
   if (!loginOpen) return null;
 

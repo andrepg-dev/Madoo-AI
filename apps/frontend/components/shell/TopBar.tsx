@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons/Icon";
-import { useAuth } from "@/components/auth/AuthContext";
+import { useAuthStore } from "@/stores/auth";
+import { useMe } from "@/hooks/use-me";
+import { useLogout } from "@/hooks/use-logout";
 
 function initials(name: string | null | undefined, email: string | undefined): string {
   if (name && name.trim()) {
@@ -15,7 +17,9 @@ function initials(name: string | null | undefined, email: string | undefined): s
 }
 
 export function TopBar() {
-  const { user, loading, openLogin, logout } = useAuth();
+  const { data: user, isPending: loading } = useMe();
+  const openLogin = useAuthStore((s) => s.openLogin);
+  const { mutate: logout } = useLogout();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);

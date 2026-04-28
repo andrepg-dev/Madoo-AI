@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/shell/AppShell";
-import { AuthProvider } from "@/components/auth/AuthContext";
 import { LoginModal } from "@/components/auth/LoginModal";
 import { QueryProvider } from "@/components/providers/QueryProvider";
-import { WorkspaceProvider } from "@/components/workspace/WorkspaceContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -44,12 +42,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         <QueryProvider>
-          <AuthProvider>
-            <WorkspaceProvider>
-              <AppShell>{children}</AppShell>
-              <LoginModal />
-            </WorkspaceProvider>
-          </AuthProvider>
+          <AppShell>{children}</AppShell>
+          <LoginModal />
         </QueryProvider>
       </body>
     </html>
