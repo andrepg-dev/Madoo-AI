@@ -1,0 +1,85 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+  Sse,
+  UseGuards,
+} from "@nestjs/common";
+import type { MessageEvent } from "@nestjs/common";
+import { Observable } from "rxjs";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { CurrentUser } from "../auth/current-user.decorator";
+import {
+  WorkspaceGuard,
+  type WorkspaceScopedRequest,
+} from "../workspaces/workspace.guard";
+import { EmailsService } from "./emails.service";
+import { GenerationService } from "../generation/generation.service";
+import { CreateEmailSchema, EditEmailSchema } from "@madoo/shared";
+
+@Controller({ path: "emails", version: "1" })
+@UseGuards(JwtAuthGuard, WorkspaceGuard)
+export class EmailsController {
+  constructor(
+    private readonly emails: EmailsService,
+    private readonly generation: GenerationService,
+  ) {}
+
+  @Post()
+  async create(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Body() body: unknown,
+  ) {
+    const dto = CreateEmailSchema.parse(body);
+    return this.emails.create(req.workspace.id, user.sub, dto);
+  }
+
+  @Get()
+  list(@Req() req: WorkspaceScopedRequest, @CurrentUser() user: { sub: string }) {
+    return this.emails.list(req.workspace.id, user.sub);
+  }
+
+  @Get(":id")
+  getOne(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+  ) {
+    return this.emails.getById(id, req.workspace.id, user.sub);
+  }
+
+  @Delete(":id")
+  async remove(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+  ) {
+    await this.emails.remove(id, req.workspace.id, user.sub);
+    return { ok: true };
+  }
+
+  @Post(":id/generate")
+  @Sse()
+  generate(
+    @Req() req: WorkspaceScopedRequest,
+    @Param("id") id: string,
+  ): Observable<MessageEvent> {
+    return this.generation.generateEmailStream(id, req.workspace.id);
+  }
+
+  @Post(":id/edit")
+  @Sse()
+  edit(
+    @Req() req: WorkspaceScopedRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Observable<MessageEvent> {
+    const dto = EditEmailSchema.parse(body);
+    return this.generation.editEmailStream(id, req.workspace.id, dto);
+  }
+}

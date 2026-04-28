@@ -9,6 +9,8 @@ export const PendingPromptSchema = z.object({
   audience: z.string().nullable(),
   consumed: z.boolean(),
   createdAt: z.string().datetime(),
+  /** Present after consume when a workspace Email row was created from this prompt */
+  emailId: z.string().optional(),
 });
 export type PendingPrompt = z.infer<typeof PendingPromptSchema>;
 

@@ -35,7 +35,8 @@ model PendingPrompt {
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourcedEmail Email?
 
   @@index([userId, consumed])
 }
@@ -53,9 +54,127 @@ model Workspace {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members Membership[]
+  members            Membership[]
+  emails             Email[]
+  emailVariants      EmailVariant[]
+  templates          Template[]
+  emailGenerationRuns EmailGenerationRun[]
 
   @@index([slug])
+}
+
+enum EmailStatus {
+  DRAFT
+  GENERATING
+  READY
+  ERROR
+}
+
+enum GenerationRunKind {
+  INITIAL
+  EDIT
+}
+
+enum GenerationRunStatus {
+  STARTED
+  STREAMING
+  COMPLETED
+  FAILED
+}
+
+model Email {
+  id          String      @id @default(cuid())
+  workspaceId String
+  status      EmailStatus @default(DRAFT)
+
+  prompt   String
+  tone     String?
+  length   String?
+  audience String?
+
+  title      String?
+  templateId String?
+
+  sourcePendingPromptId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace           Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template              Template?           @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sourcePendingPrompt   PendingPrompt?      @relation(fields: [sourcePendingPromptId], references: [id])
+  variants              EmailVariant[]
+  generationRuns        EmailGenerationRun[]
+
+  @@index([workspaceId, createdAt])
+}
+
+model EmailVariant {
+  id String @id @default(cuid())
+
+  workspaceId String
+  emailId     String
+  seq         Int
+
+  subject        String
+  componentCode  String @db.Text
+  compiledHtml   String @db.Text
+  variableSchema Json
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email     Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@unique([emailId, seq])
+  @@index([workspaceId, emailId])
+}
+
+model EmailGenerationRun {
+  id String @id @default(cuid())
+
+  workspaceId String
+  emailId     String
+  kind        GenerationRunKind
+
+  status GenerationRunStatus @default(STARTED)
+
+  inputTokens       Int?
+  outputTokens      Int?
+  cacheCreationInputTokens  Int?
+  cacheReadInputTokens      Int?
+  latencyMs                 Int?
+
+  errorMessage String? @db.Text
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email     Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId, createdAt])
+}
+
+model Template {
+  id String @id @default(cuid())
+
+  workspaceId String
+  slug        String
+  name        String
+  category    String?
+  description String?
+
+  componentCode String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  emails    Email[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId])
 }
 
 model Membership {

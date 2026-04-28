@@ -4,3 +4,4 @@ export * from "./workspace";
 export * from "./headers";
 export * from "./auth";
 export * from "./prompts";
+export * from "./emails";
