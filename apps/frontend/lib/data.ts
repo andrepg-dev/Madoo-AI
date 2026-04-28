@@ -1,3 +1,5 @@
+import type { TemplateSlug } from "@madoo/shared";
+
 export type TemplatePreviewKey =
   | "launch"
   | "editorial"
@@ -144,35 +146,18 @@ export const PROMPT_TONES = ["Friendly", "Professional", "Bold", "Witty", "Urgen
 export const PROMPT_LENGTHS = ["Short", "Medium", "Long"];
 export const PROMPT_AUDIENCES = ["Existing customers", "New signups", "Free users", "Lapsed users", "Internal team"];
 
-export function generateSubject(prompt?: string) {
-  if (!prompt) return "Something new for you.";
-  const p = prompt.toLowerCase();
-  if (p.includes("pricing")) return "A small change to our pricing.";
-  if (p.includes("welcome") || p.includes("onboard")) return "Welcome — here's where to start.";
-  if (p.includes("sale") || p.includes("off") || p.includes("black friday")) return "40% off ends Sunday.";
-  if (p.includes("re-engage") || p.includes("haven't")) return "It's been a minute.";
-  if (p.includes("launch") || p.includes("announce")) return "Something new is shipping today.";
-  return "A note from our team.";
-}
-
-export function altSubject(prompt: string | undefined, i: number) {
-  const base = generateSubject(prompt);
-  if (i === 1) return base.replace(".", " →");
-  return "✱ " + base.toLowerCase();
-}
-
-export function generateBody(_prompt?: string, tone: string = "Friendly", _variant = 0) {
-  const intros: Record<string, string> = {
-    Friendly: "Hey there,",
-    Professional: "Hello,",
-    Bold: "Listen —",
-    Witty: "Quick one:",
-    Urgent: "Heads up —",
-  };
-  const intro = intros[tone] || intros.Friendly;
-  return [
-    `${intro} we wanted to write you directly about something we've been working on.`,
-    "It's a small change, but the kind that adds up. We rebuilt the part of the product you use most — and it's faster, calmer, and a little more thoughtful.",
-    "Take a look when you have a minute. We'd love to hear what you think.",
-  ];
-}
+/** Maps gallery previews to workspace Template.slug seeds. */
+export const TEMPLATE_PREVIEW_SEED_SLUG: Partial<Record<TemplatePreviewKey, TemplateSlug>> = {
+  launch: "launch",
+  editorial: "newsletter",
+  sale: "sale",
+  welcome: "welcome",
+  minimal: "minimal",
+  event: "event",
+  digest: "digest",
+  thanks: "thanks",
+  feature: "feature",
+  survey: "survey",
+  reengage: "reengage",
+  referral: "referral",
+};

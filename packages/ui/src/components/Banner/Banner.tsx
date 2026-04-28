@@ -5,7 +5,7 @@ import "./Banner.css";
 
 export type BannerTone = "accent" | "info" | "success" | "warn" | "danger";
 
-export interface BannerProps extends HTMLAttributes<HTMLDivElement> {
+export interface BannerProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   tone?: BannerTone;
   title?: ReactNode;
   icon?: ReactNode;

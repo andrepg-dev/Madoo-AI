@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import {
   Banner,
   Button,
@@ -9,31 +9,106 @@ import {
   SegmentedControl,
   Textarea,
 } from "@madoo/ui";
-import { TEMPLATES, altSubject, generateBody, generateSubject, type Template } from "@/lib/data";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEmail, consumeEmailSseStream } from "@/hooks/use-emails";
+import type { EmailVariantDto } from "@madoo/shared";
 
-export type GenParams = { prompt: string; tone: string; length?: string; audience?: string };
+export type GenParams = {
+  prompt: string;
+  tone: string;
+  length?: string;
+  audience?: string;
+};
 
 export function EditorScreen({
-  params,
-  template,
+  emailId,
+  genSummary,
   onBack,
 }: {
-  params: GenParams | null;
-  template?: Template | null;
+  emailId: string;
+  genSummary: GenParams | null;
   onBack: () => void;
 }) {
-  const subjects = useMemo(
-    () => [generateSubject(params?.prompt), altSubject(params?.prompt, 1), altSubject(params?.prompt, 2)],
-    [params],
-  );
-  const [variant, setVariant] = useState(0);
-  const [subject, setSubject] = useState(subjects[0]);
+  const qc = useQueryClient();
+  const { data: email, isLoading, refetch, isError } = useEmail(emailId);
+
+  const variants = useMemo(() => {
+    const list = email?.variants ?? [];
+    return [...list].sort((a, b) => a.seq - b.seq);
+  }, [email?.variants]);
+
+  const [variantIdx, setVariantIdx] = useState(0);
+  const activeVariant: EmailVariantDto | undefined = variants[variantIdx];
+  const previousVariant: EmailVariantDto | undefined = variantIdx > 0 ? variants[variantIdx - 1] : undefined;
+
+  const variantItems = variants.map((v, i) => ({
+    value: String(i),
+    label: `v${v.seq}`,
+  }));
+
   const [aiPrompt, setAiPrompt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [variableDefaults, setVariableDefaults] = useState<Record<string, string>>({});
 
-  const tpl = template || TEMPLATES[0];
-  const body = generateBody(params?.prompt, params?.tone, variant);
+  const changedLines = useMemo(() => {
+    if (!activeVariant || !previousVariant) return [];
+    const previous = new Set(
+      previousVariant.componentCode
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+    );
+    return activeVariant.componentCode
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !previous.has(line))
+      .slice(0, 4);
+  }, [activeVariant, previousVariant]);
 
-  const variantItems = subjects.map((_, i) => ({ value: String(i), label: `v${i + 1}` }));
+  const runEdit = useCallback(
+    async (instruction: string) => {
+      if (!instruction.trim() || busy) return;
+      setBusy(true);
+      setEditError(null);
+      try {
+        await consumeEmailSseStream(
+          `/api/emails/${emailId}/edit`,
+          (ev) => {
+            if (ev.type === "error") setEditError(ev.message);
+            if (ev.type === "done") {
+              void qc.invalidateQueries({ queryKey: ["email", emailId] });
+              void refetch().then((res) => {
+                const n = res.data?.variants?.length ?? 0;
+                if (n > 0) setVariantIdx(Math.min(n - 1, 2));
+              });
+            }
+          },
+          undefined,
+          JSON.stringify({
+            instruction,
+            baseVariantId: activeVariant?.id,
+          }),
+        );
+      } catch (e) {
+        setEditError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(false);
+        setAiPrompt("");
+      }
+    },
+    [activeVariant?.id, busy, emailId, qc, refetch],
+  );
+
+  if (isLoading || !email) {
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "var(--ink-soft)" }}>{isError ? "Could not load email." : "Loading…"}</p>
+      </div>
+    );
+  }
+
+  const subject = activeVariant?.subject ?? "No subject yet";
 
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden", background: "var(--bg)" }}>
@@ -63,8 +138,8 @@ export function EditorScreen({
           </Button>
           <div style={{ width: 1, height: 20, background: "var(--border)" }} />
           <input
+            readOnly
             value={subject}
-            onChange={(e) => setSubject(e.target.value)}
             style={{
               flex: 1,
               maxWidth: 460,
@@ -78,18 +153,25 @@ export function EditorScreen({
             }}
           />
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-            <SegmentedControl
-              items={variantItems}
-              value={String(variant)}
-              onChange={(v) => {
-                const i = Number(v);
-                setVariant(i);
-                setSubject(subjects[i]);
+            {variants.length > 0 ? (
+              <SegmentedControl
+                items={variantItems}
+                value={String(variantIdx)}
+                onChange={(v: string) => setVariantIdx(Number(v))}
+                aria-label="Variant"
+              />
+            ) : null}
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Icon name="copy" size={12} />}
+              onClick={() => {
+                if (activeVariant?.compiledHtml) {
+                  void navigator.clipboard.writeText(activeVariant.compiledHtml);
+                }
               }}
-              aria-label="Subject variant"
-            />
-            <Button variant="secondary" size="sm" leftIcon={<Icon name="copy" size={12} />}>
-              Copy
+            >
+              Copy HTML
             </Button>
             <Button variant="primary" size="sm" leftIcon={<Icon name="send" size={12} />}>
               Send test
@@ -97,141 +179,26 @@ export function EditorScreen({
           </div>
         </div>
 
-        <div
-          style={{ flex: 1, overflowY: "auto", padding: "32px 24px 60px", background: "var(--bg-2)" }}
-        >
-          <div
-            style={{
-              maxWidth: 600,
-              margin: "0 auto",
-              background: "var(--surface)",
-              borderRadius: 14,
-              overflow: "hidden",
-              boxShadow: "0 1px 0 rgba(0,0,0,0.02), 0 30px 60px -30px rgba(50,40,30,0.18)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <div style={{ background: tpl.bg, color: tpl.accent, fontFamily: "var(--font-inter), sans-serif" }}>
-              <div
-                style={{
-                  padding: "14px 24px",
-                  borderBottom: `1px solid ${tpl.accent}15`,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    background: tpl.accent,
-                    color: tpl.bg,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  A
-                </div>
-                <div style={{ fontSize: 12, lineHeight: 1.3 }}>
-                  <div style={{ fontWeight: 600 }}>Acme Brand</div>
-                  <div style={{ opacity: 0.6 }}>hello@acme.co</div>
-                </div>
-              </div>
-              <div style={{ padding: "32px 32px 12px" }}>
-                <div style={{ fontSize: 11, opacity: 0.5, letterSpacing: 1.5, fontWeight: 600 }}>
-                  {(tpl.category || "EMAIL").toUpperCase()}
-                </div>
-                <h1
-                  className="serif"
-                  style={{
-                    fontSize: 36,
-                    fontWeight: 400,
-                    lineHeight: 1.05,
-                    letterSpacing: -0.5,
-                    margin: "8px 0 0",
-                  }}
-                >
-                  {subject}
-                </h1>
-              </div>
-              <div style={{ padding: "0 32px 24px" }}>
-                <div
-                  style={{
-                    aspectRatio: "16/9",
-                    background: `linear-gradient(135deg, ${tpl.accent}30, ${tpl.accent}10)`,
-                    borderRadius: 8,
-                    marginTop: 12,
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 14,
-                      border: `1px dashed ${tpl.accent}40`,
-                      borderRadius: 4,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 11,
-                      fontFamily: "var(--font-jetbrains-mono), monospace",
-                      opacity: 0.6,
-                    }}
-                  >
-                    hero image
-                  </div>
-                </div>
-                {body.map((p, i) => (
-                  <p
-                    key={i}
-                    style={{
-                      fontSize: 15,
-                      lineHeight: 1.65,
-                      margin: "20px 0 0",
-                      color: tpl.accent,
-                      opacity: 0.92,
-                    }}
-                  >
-                    {p}
-                  </p>
-                ))}
-                <div style={{ marginTop: 28 }}>
-                  <a
-                    style={{
-                      display: "inline-block",
-                      padding: "12px 22px",
-                      background: tpl.accent,
-                      color: tpl.bg,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      borderRadius: 8,
-                      textDecoration: "none",
-                    }}
-                  >
-                    Read more →
-                  </a>
-                </div>
-                <div
-                  style={{
-                    marginTop: 32,
-                    paddingTop: 18,
-                    borderTop: `1px solid ${tpl.accent}15`,
-                    fontSize: 11.5,
-                    opacity: 0.55,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  You&apos;re getting this because you signed up at acme.co. <u>Unsubscribe</u> · <u>Preferences</u>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "32px 24px 60px", background: "var(--bg-2)" }}>
+          {activeVariant?.compiledHtml ? (
+            <iframe
+              title="Email preview"
+              srcDoc={activeVariant.compiledHtml}
+              sandbox="allow-same-origin"
+              style={{
+                display: "block",
+                width: "100%",
+                maxWidth: 640,
+                minHeight: 480,
+                margin: "0 auto",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                background: "#fff",
+              }}
+            />
+          ) : (
+            <p style={{ textAlign: "center", color: "var(--ink-soft)" }}>No preview yet.</p>
+          )}
         </div>
       </div>
 
@@ -280,8 +247,61 @@ export function EditorScreen({
             gap: 14,
           }}
         >
+          {genSummary ? (
+            <Banner tone="accent" title="Brief">
+              {genSummary.prompt.slice(0, 220)}
+              {genSummary.prompt.length > 220 ? "…" : ""}
+            </Banner>
+          ) : null}
+          {editError ? (
+            <Banner tone="danger" title="Edit failed">
+              {editError}
+            </Banner>
+          ) : null}
+          {changedLines.length > 0 ? (
+            <Banner tone="accent" title="Variant diff">
+              {changedLines.join(" · ")}
+            </Banner>
+          ) : null}
+          {activeVariant?.variableSchema?.variables?.length ? (
+            <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-faint)", marginBottom: 8 }}>
+                VARIABLE SCHEMA
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {activeVariant.variableSchema.variables.map((variable) => {
+                  const currentDefault = variableDefaults[variable.name] ?? variable.default;
+                  return (
+                    <div key={variable.name} style={{ display: "grid", gap: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>
+                        {variable.label ?? variable.name}
+                      </div>
+                      <input
+                        value={currentDefault}
+                        onChange={(e) =>
+                          setVariableDefaults((prev) => ({ ...prev, [variable.name]: e.target.value }))
+                        }
+                        placeholder="Default value"
+                        style={{
+                          height: 32,
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                          padding: "0 10px",
+                          fontSize: 12.5,
+                          fontFamily: "inherit",
+                        }}
+                      />
+                      <Button variant="secondary" size="sm" block disabled>
+                        Map to contact field (Phase 2)
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           <Banner tone="accent" title="Suggestion">
-            Subject lines under 50 chars get 22% more opens. Try variant <b>v2</b>.
+            Subject lines under ~50 characters often improve opens. Try variant <b>v2</b> after an edit.
           </Banner>
           <div>
             <div
@@ -296,53 +316,25 @@ export function EditorScreen({
               QUICK EDITS
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {["Make it shorter", "More casual tone", "Add urgency", "Strengthen the CTA", "Translate to Spanish"].map(
-                (q) => (
-                  <Button
-                    key={q}
-                    variant="secondary"
-                    size="sm"
-                    block
-                    rightIcon={<Icon name="arrow" size={11} />}
-                    style={{ justifyContent: "space-between" }}
-                  >
-                    {q}
-                  </Button>
-                ),
-              )}
-            </div>
-          </div>
-          <div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: 1,
-                color: "var(--ink-faint)",
-                marginBottom: 8,
-              }}
-            >
-              LAYOUT
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-              {["Single column", "Two column", "Hero + grid", "Minimal"].map((l, i) => (
-                <button
-                  key={l}
-                  type="button"
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: 7,
-                    border: i === 0 ? "1.5px solid var(--ink)" : "1px solid var(--border)",
-                    background: "var(--surface)",
-                    fontSize: 11.5,
-                    color: "var(--ink)",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    fontWeight: i === 0 ? 600 : 500,
-                  }}
+              {[
+                "Make it shorter",
+                "More casual tone",
+                "Add urgency",
+                "Strengthen the CTA",
+                "Translate to Spanish",
+              ].map((q) => (
+                <Button
+                  key={q}
+                  variant="secondary"
+                  size="sm"
+                  block
+                  disabled={busy}
+                  rightIcon={<Icon name="arrow" size={11} />}
+                  style={{ justifyContent: "space-between" }}
+                  onClick={() => void runEdit(q)}
                 >
-                  {l}
-                </button>
+                  {q}
+                </Button>
               ))}
             </div>
           </div>
@@ -351,17 +343,20 @@ export function EditorScreen({
           <div style={{ position: "relative" }}>
             <Textarea
               value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAiPrompt(e.target.value)}
               placeholder="Tell AI what to change…"
               variant="filled"
               noResize
               rows={3}
+              disabled={busy}
             />
             <IconButton
               variant="solid"
               size="sm"
               aria-label="Send AI instruction"
               style={{ position: "absolute", right: 6, bottom: 6 }}
+              disabled={busy || !aiPrompt.trim()}
+              onClick={() => void runEdit(aiPrompt)}
             >
               <Icon name="arrowUp" size={14} />
             </IconButton>

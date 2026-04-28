@@ -1,27 +1,98 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Icon } from "@madoo/ui";
+import { consumeEmailSseStream, type StreamEmailEvent } from "@/hooks/use-emails";
 
-const STEPS = [
+const FALLBACK_STEPS = [
   "Reading your prompt…",
   "Studying your audience…",
-  "Drafting subject lines…",
-  "Composing the body…",
-  "Designing the layout…",
+  "Drafting React Email layout…",
+  "Calling Claude Sonnet…",
+  "Rendering HTML preview…",
 ];
 
-export function GeneratingScreen({ prompt, onDone }: { prompt: string; onDone: () => void }) {
+export function GeneratingScreen({
+  emailId,
+  prompt,
+  onDone,
+}: {
+  emailId: string;
+  prompt: string;
+  onDone: () => void;
+}) {
+  const qc = useQueryClient();
   const [step, setStep] = useState(0);
+  const [stepLabel, setStepLabel] = useState(FALLBACK_STEPS[0]);
+  const [liveSubject, setLiveSubject] = useState<string | null>(null);
+  const [codeBytes, setCodeBytes] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const startedRef = useRef(false);
+  const onDoneRef = useRef(onDone);
 
   useEffect(() => {
-    if (step < STEPS.length - 1) {
-      const t = setTimeout(() => setStep((s) => s + 1), 700);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(onDone, 800);
-    return () => clearTimeout(t);
-  }, [step, onDone]);
+    onDoneRef.current = onDone;
+  }, [onDone]);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    let highestStep = 0;
+
+    void (async () => {
+      try {
+        await consumeEmailSseStream(
+          `/api/emails/${emailId}/generate`,
+          (ev: StreamEmailEvent) => {
+            if (ev.type === "step") {
+              setStepLabel(ev.message);
+              highestStep = Math.min(FALLBACK_STEPS.length - 1, highestStep + 1);
+              setStep(highestStep);
+              return;
+            }
+            if (ev.type === "subject") {
+              setLiveSubject(ev.value);
+              return;
+            }
+            if (ev.type === "code-chunk") {
+              setCodeBytes((v) => v + ev.value.length);
+              return;
+            }
+            if (ev.type === "token_usage") {
+              setStepLabel("Finishing up…");
+              return;
+            }
+            if (ev.type === "done") {
+              void qc.invalidateQueries({ queryKey: ["email", emailId] });
+              setStep(FALLBACK_STEPS.length - 1);
+              setStepLabel("Done");
+              setTimeout(() => onDoneRef.current(), 400);
+              return;
+            }
+            if (ev.type === "error") {
+              setError(ev.message);
+            }
+          },
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+      }
+    })();
+
+    // Sin cleanup intencionalmente. En dev React Strict Mode dispara el
+    // ciclo setup → cleanup → setup; un `AbortController` aquí mataría
+    // la única petición SSE antes de tiempo (y `startedRef` evita
+    // disparar una segunda). Si el usuario navega fuera del componente,
+    // los setState sobre un componente desmontado son no-op en React 18 y
+    // el stream se libera cuando el reader queda sin consumidor.
+  }, [emailId, qc]);
+
+  const labels = FALLBACK_STEPS.map((fallback, i) =>
+    i === step ? stepLabel : i < step ? fallback : fallback,
+  );
 
   return (
     <div
@@ -70,9 +141,17 @@ export function GeneratingScreen({ prompt, onDone }: { prompt: string; onDone: (
           <span style={{ fontStyle: "italic" }}>Crafting</span> your email
         </h2>
         <p style={{ fontSize: 14, color: "var(--ink-soft)", marginTop: 8, fontStyle: "italic" }}>
-          &quot;{prompt.slice(0, 90)}
-          {prompt.length > 90 ? "…" : ""}&quot;
+          &quot;{(liveSubject ?? prompt).slice(0, 90)}
+          {(liveSubject ?? prompt).length > 90 ? "…" : ""}&quot;
         </p>
+        {codeBytes > 0 ? (
+          <p style={{ marginTop: 6, color: "var(--ink-faint)", fontSize: 12 }}>
+            Streaming code… {codeBytes} chars
+          </p>
+        ) : null}
+        {error ? (
+          <p style={{ marginTop: 16, color: "#b42318", fontSize: 14 }}>{error}</p>
+        ) : null}
         <div
           style={{
             marginTop: 28,
@@ -82,9 +161,9 @@ export function GeneratingScreen({ prompt, onDone }: { prompt: string; onDone: (
             textAlign: "left",
           }}
         >
-          {STEPS.map((s, i) => (
+          {labels.map((s, i) => (
             <div
-              key={s}
+              key={`${s}-${i}`}
               style={{
                 display: "flex",
                 alignItems: "center",

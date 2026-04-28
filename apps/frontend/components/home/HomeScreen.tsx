@@ -15,12 +15,14 @@ import { EditorScreen, type GenParams } from "./EditorScreen";
 import { useMe } from "@/hooks/use-me";
 import { readPendingPrompt, clearPendingPrompt, savePendingPrompt } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
+import { createEmail } from "@/actions/emails";
 import {
   CATEGORIES,
   PROMPT_AUDIENCES,
   PROMPT_LENGTHS,
   PROMPT_SUGGESTIONS,
   PROMPT_TONES,
+  TEMPLATE_PREVIEW_SEED_SLUG,
   TEMPLATES,
   type Template,
 } from "@/lib/data";
@@ -32,7 +34,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
   const openLogin = useAuthStore((s) => s.openLogin);
   const [screen, setScreen] = useState<Screen>("home");
   const [genParams, setGenParams] = useState<GenParams | null>(null);
-  const [activeTemplate, setActiveTemplate] = useState<Template | null>(null);
+  const [activeEmailId, setActiveEmailId] = useState<string | null>(null);
 
   const [prompt, setPrompt] = useState("");
   const [tone, setTone] = useState("Friendly");
@@ -44,13 +46,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
 
   const filtered = activeCat === "All" ? TEMPLATES : TEMPLATES.filter((t) => t.category === activeCat);
 
-  const startGeneration = (p: { prompt: string; tone: string; length: string; audience: string }) => {
-    setGenParams(p);
-    setActiveTemplate(null);
-    setScreen("generating");
-  };
-
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     const trimmed = prompt.trim();
     if (!trimmed) return;
     if (!user) {
@@ -59,7 +55,19 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
       openLogin(pending);
       return;
     }
-    startGeneration({ prompt: trimmed, tone, length, audience });
+    try {
+      const email = await createEmail({
+        prompt: trimmed,
+        tone,
+        length,
+        audience,
+      });
+      setGenParams({ prompt: trimmed, tone, length, audience });
+      setActiveEmailId(email.id);
+      setScreen("generating");
+    } catch {
+      /* surfaced via global error handling later */
+    }
   };
 
   useEffect(() => {
@@ -72,18 +80,68 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
     if (pending.length) setLength(pending.length);
     if (pending.audience) setAudience(pending.audience);
     clearPendingPrompt();
-    startGeneration({
-      prompt: pending.prompt,
-      tone: pending.tone ?? tone,
-      length: pending.length ?? length,
-      audience: pending.audience ?? audience,
-    });
-  }, [user, loading]);
 
-  const onSelectTemplate = (t: Template) => {
-    setActiveTemplate(t);
-    setGenParams({ prompt: `Use the "${t.name}" template`, tone: "Friendly" });
-    setScreen("editor");
+    const run = async () => {
+      try {
+        const email = await createEmail({
+          prompt: pending.prompt,
+          tone: pending.tone ?? tone,
+          length: pending.length ?? length,
+          audience: pending.audience ?? audience,
+        });
+        setGenParams({
+          prompt: pending.prompt,
+          tone: pending.tone ?? tone,
+          length: pending.length ?? length,
+          audience: pending.audience ?? audience,
+        });
+        setActiveEmailId(email.id);
+        setScreen("generating");
+      } catch {
+        autoTriggerRef.current = false;
+      }
+    };
+
+    void run();
+  }, [user, loading, tone, length, audience]);
+
+  const onSelectTemplate = async (t: Template) => {
+    if (!user) {
+      savePendingPrompt({
+        prompt: `Use the "${t.name}" template`,
+        tone: "Friendly",
+        length: "Medium",
+        audience: "Existing customers",
+      });
+      openLogin({
+        prompt: `Use the "${t.name}" template`,
+        tone: "Friendly",
+        length: "Medium",
+        audience: "Existing customers",
+      });
+      return;
+    }
+
+    try {
+      const slug = TEMPLATE_PREVIEW_SEED_SLUG[t.preview];
+      const email = await createEmail({
+        prompt: `Use the "${t.name}" layout — ${t.category}`,
+        tone: "Friendly",
+        length: "Medium",
+        audience: "Existing customers",
+        ...(slug ? { templateSlug: slug } : {}),
+      });
+      setGenParams({
+        prompt: `Use the "${t.name}" layout`,
+        tone: "Friendly",
+        length: "Medium",
+        audience: "Existing customers",
+      });
+      setActiveEmailId(email.id);
+      setScreen("generating");
+    } catch {
+      /* noop */
+    }
   };
 
   const useSuggestion = (s: string) => {
@@ -91,15 +149,26 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
     taRef.current?.focus();
   };
 
-  if (screen === "generating" && genParams) {
-    return <GeneratingScreen prompt={genParams.prompt} onDone={() => setScreen("editor")} />;
+  if (screen === "generating" && genParams && activeEmailId) {
+    return (
+      <GeneratingScreen
+        emailId={activeEmailId}
+        prompt={genParams.prompt}
+        onDone={() => setScreen("editor")}
+      />
+    );
   }
-  if (screen === "editor") {
+
+  if (screen === "editor" && activeEmailId && genParams) {
     return (
       <EditorScreen
-        params={genParams}
-        template={activeTemplate}
-        onBack={() => setScreen("home")}
+        emailId={activeEmailId}
+        genSummary={genParams}
+        onBack={() => {
+          setActiveEmailId(null);
+          setGenParams(null);
+          setScreen("home");
+        }}
       />
     );
   }
@@ -164,7 +233,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  handleGenerate();
+                  void handleGenerate();
                 }
               }}
               placeholder="e.g. Announce our new pricing to existing customers — confident but not pushy, with a soft CTA to upgrade."
@@ -199,7 +268,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             <Button
               variant="primary"
               size="md"
-              onClick={handleGenerate}
+              onClick={() => void handleGenerate()}
               disabled={!prompt.trim()}
               leftIcon={<Icon name="sparkle" size={14} />}
               shortcut="↵"
@@ -269,7 +338,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           }}
         >
           {filtered.map((t) => (
-            <TemplateCard key={t.id} template={t} onClick={() => onSelectTemplate(t)} />
+            <TemplateCard key={t.id} template={t} onClick={() => void onSelectTemplate(t)} />
           ))}
         </div>
       </section>

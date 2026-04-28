@@ -2,13 +2,19 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { Banner, Modal } from "@madoo/ui";
-import { loginWithGoogle } from "@/actions/auth";
 import { GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import { clearPendingPrompt, type StoredPrompt } from "@/lib/storage";
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { useWorkspaceStore } from "@/stores/workspace";
+import type { MyWorkspace, User } from "@madoo/shared";
+
+type LoginResult = {
+  user: User;
+  workspaces: MyWorkspace[];
+  defaultWorkspaceId: string;
+};
 
 export function LoginModal() {
   const qc = useQueryClient();
@@ -41,13 +47,33 @@ export function LoginModal() {
       const pending = pendingRef.current;
       setSubmitting(true);
       try {
-        const result = await loginWithGoogle({
-          idToken: resp.credential,
-          pendingPrompt: pending?.prompt,
-          pendingTone: pending?.tone,
-          pendingLength: pending?.length,
-          pendingAudience: pending?.audience,
+        const response = await fetch("/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idToken: resp.credential,
+            pendingPrompt: pending?.prompt,
+            pendingTone: pending?.tone,
+            pendingLength: pending?.length,
+            pendingAudience: pending?.audience,
+          }),
         });
+        const payload = (await response.json().catch(() => null)) as
+          | LoginResult
+          | { message?: string | string[] }
+          | null;
+        if (!response.ok) {
+          const raw = payload && "message" in payload ? payload.message : null;
+          const msg = Array.isArray(raw)
+            ? raw.join(", ")
+            : raw ?? `Login failed (${response.status})`;
+          throw new Error(msg);
+        }
+
+        const result = payload as LoginResult;
+        if (!result?.user || !result.defaultWorkspaceId) {
+          throw new Error("Invalid login response.");
+        }
         clearPendingPrompt();
         qc.setQueryData(["me"], result.user);
         qc.setQueryData(["workspaces", "me"], result.workspaces);
