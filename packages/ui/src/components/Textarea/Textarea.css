@@ -23,6 +23,17 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
+/*
+ * Ghost variant queda sin chrome de focus: se asume embebida dentro
+ * de otro contenedor (composer card, panel, toolbar) que es el que
+ * debe indicar el estado focus. Si pintamos border + halo aca, queda
+ * un anillo flotando dentro del card padre.
+ */
+.madoo-textarea-wrapper--ghost:focus-within {
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .madoo-textarea-wrapper--invalid {
   border-color: var(--danger);
 }
