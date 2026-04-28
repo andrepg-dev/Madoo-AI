@@ -1,31 +1,3 @@
-import { IsString, IsNotEmpty, IsOptional, MaxLength } from "class-validator";
+import type { GoogleLoginInput } from "@madoo/shared";
 
-export class GoogleLoginDto {
-  @IsString()
-  @IsNotEmpty()
-  idToken!: string;
-
-  /**
-   * Optional pending prompt to attach to the user upon first sign-in.
-   * Captured client-side when the unauthenticated user tries to send a prompt.
-   */
-  @IsOptional()
-  @IsString()
-  @MaxLength(8000)
-  pendingPrompt?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  pendingTone?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  pendingLength?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(128)
-  pendingAudience?: string;
-}
+export type GoogleLoginDto = GoogleLoginInput;

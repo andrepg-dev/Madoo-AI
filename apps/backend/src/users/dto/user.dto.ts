@@ -1,21 +1,15 @@
+import { UserSchema, type User as SharedUser } from "@madoo/shared";
 import type { User } from "@prisma/client";
 
-export type UserDto = {
-  id: string;
-  email: string;
-  name: string | null;
-  avatarUrl: string | null;
-  emailVerified: boolean;
-  createdAt: string;
-};
+export type UserDto = SharedUser;
 
 export function toUserDto(user: User): UserDto {
-  return {
+  return UserSchema.parse({
     id: user.id,
     email: user.email,
     name: user.name,
     avatarUrl: user.avatarUrl,
     emailVerified: user.emailVerified,
     createdAt: user.createdAt.toISOString(),
-  };
+  });
 }

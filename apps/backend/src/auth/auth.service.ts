@@ -1,20 +1,20 @@
+import {
+  GoogleLoginResponseSchema,
+  type GoogleLoginResponse,
+} from "@madoo/shared";
 import { Injectable } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
+import { JwtService } from "@nestjs/jwt";
 import { PrismaService } from "../prisma/prisma.service";
-import { GoogleTokenVerifier } from "./google-token.verifier";
-import { GoogleLoginDto } from "./dto/google-login.dto";
-import { toUserDto, type UserDto } from "../users/dto/user.dto";
+import { toUserDto } from "../users/dto/user.dto";
+import {
+  toMyWorkspaceDto
+} from "../workspaces/dto/workspace.dto";
 import { WorkspacesService } from "../workspaces/workspaces.service";
-import { toMyWorkspaceDto, type MyWorkspaceDto } from "../workspaces/dto/workspace.dto";
+import { GoogleLoginDto } from "./dto/google-login.dto";
+import { GoogleTokenVerifier } from "./google-token.verifier";
 
-export type AuthResult = {
-  token: string;
-  user: UserDto;
-  pendingPromptId: string | null;
-  workspaces: MyWorkspaceDto[];
-  defaultWorkspaceId: string;
-};
+export type AuthResult = GoogleLoginResponse;
 
 @Injectable()
 export class AuthService {
@@ -60,7 +60,9 @@ export class AuthService {
     });
 
     const memberships = await this.workspaces.listForUser(user.id);
-    const workspaces = memberships.map((row) => toMyWorkspaceDto(row, row.membership));
+    const workspaces = memberships.map((row) =>
+      toMyWorkspaceDto(row, row.membership),
+    );
     const defaultWorkspaceId = workspaces[0]!.id;
 
     let pendingPromptId: string | null = null;
@@ -85,12 +87,12 @@ export class AuthService {
       },
     );
 
-    return {
+    return GoogleLoginResponseSchema.parse({
       token,
       user: toUserDto(user),
       pendingPromptId,
       workspaces,
       defaultWorkspaceId,
-    };
+    });
   }
 }

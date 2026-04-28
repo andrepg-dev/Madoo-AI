@@ -1,28 +1,28 @@
-import type { Workspace, Membership, Role } from "@prisma/client";
+import {
+  MyWorkspaceSchema,
+  WorkspaceSchema,
+  type MyWorkspace,
+  type Workspace as SharedWorkspace,
+} from "@madoo/shared";
+import type { Membership, Workspace } from "@prisma/client";
 
-export type WorkspaceDto = {
-  id: string;
-  name: string;
-  slug: string;
-  createdAt: string;
-  updatedAt: string;
-};
+export type WorkspaceDto = SharedWorkspace;
 
-export type MyWorkspaceDto = WorkspaceDto & { role: Role };
+export type MyWorkspaceDto = MyWorkspace;
 
 export function toWorkspaceDto(w: Workspace): WorkspaceDto {
-  return {
+  return WorkspaceSchema.parse({
     id: w.id,
     name: w.name,
     slug: w.slug,
     createdAt: w.createdAt.toISOString(),
     updatedAt: w.updatedAt.toISOString(),
-  };
+  });
 }
 
 export function toMyWorkspaceDto(
   w: Workspace,
   m: Pick<Membership, "role">,
 ): MyWorkspaceDto {
-  return { ...toWorkspaceDto(w), role: m.role };
+  return MyWorkspaceSchema.parse({ ...toWorkspaceDto(w), role: m.role });
 }

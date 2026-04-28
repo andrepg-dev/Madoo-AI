@@ -1,3 +1,4 @@
+import { GoogleLoginInputSchema } from "@madoo/shared";
 import {
   Body,
   Controller,
@@ -24,7 +25,8 @@ export class AuthController {
   @Post("google")
   @HttpCode(HttpStatus.OK)
   async google(@Body() dto: GoogleLoginDto) {
-    return this.auth.loginWithGoogle(dto);
+    const input = GoogleLoginInputSchema.parse(dto);
+    return this.auth.loginWithGoogle(input);
   }
 
   @Get("me")

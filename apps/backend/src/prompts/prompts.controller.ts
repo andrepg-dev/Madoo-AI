@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { CreatePendingPromptSchema } from "@madoo/shared";
 import { PromptsService } from "./prompts.service";
 import { CreatePendingPromptDto } from "./dto/create-pending-prompt.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -11,7 +12,8 @@ export class PromptsController {
 
   @Post()
   create(@CurrentUser() user: { sub: string }, @Body() dto: CreatePendingPromptDto) {
-    return this.prompts.create(user.sub, dto);
+    const input = CreatePendingPromptSchema.parse(dto);
+    return this.prompts.create(user.sub, input);
   }
 
   @Get()
