@@ -1,0 +1,142 @@
+.madoo-btn {
+  --_btn-bg: var(--ink);
+  --_btn-fg: var(--bg);
+  --_btn-border: transparent;
+  --_btn-bg-hover: var(--ink);
+  --_btn-fg-hover: var(--bg);
+  --_btn-border-style: solid;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px var(--_btn-border-style) var(--_btn-border);
+  background: var(--_btn-bg);
+  color: var(--_btn-fg);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.madoo-btn:hover:not(:disabled) {
+  background: var(--_btn-bg-hover);
+  color: var(--_btn-fg-hover);
+}
+
+.madoo-btn:disabled,
+.madoo-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.madoo-btn--block {
+  width: 100%;
+}
+
+/* ── Sizes ───────────────────────────────────────────────────── */
+.madoo-btn--sm {
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  border-radius: 7px;
+  gap: 6px;
+}
+
+.madoo-btn--md {
+  padding: 8px 14px;
+  font-size: var(--font-size-md);
+  border-radius: var(--radius-md);
+}
+
+.madoo-btn--lg {
+  padding: 10px 16px;
+  font-size: var(--font-size-md);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Variants ────────────────────────────────────────────────── */
+.madoo-btn--primary {
+  --_btn-bg: var(--ink);
+  --_btn-fg: var(--bg);
+  --_btn-bg-hover: #2c241a;
+  --_btn-fg-hover: var(--bg);
+}
+
+.madoo-btn--accent {
+  --_btn-bg: var(--accent);
+  --_btn-fg: var(--accent-fg);
+  --_btn-bg-hover: var(--accent-deep);
+  --_btn-fg-hover: var(--accent-fg);
+}
+
+.madoo-btn--secondary {
+  --_btn-bg: var(--surface);
+  --_btn-fg: var(--ink);
+  --_btn-border: var(--border);
+  --_btn-bg-hover: var(--surface-2);
+  --_btn-fg-hover: var(--ink);
+}
+
+.madoo-btn--ghost {
+  --_btn-bg: transparent;
+  --_btn-fg: var(--ink-soft);
+  --_btn-border: transparent;
+  --_btn-bg-hover: var(--surface-2);
+  --_btn-fg-hover: var(--ink);
+}
+
+.madoo-btn--dashed {
+  --_btn-bg: transparent;
+  --_btn-fg: var(--ink-faint);
+  --_btn-border: var(--border);
+  --_btn-border-style: dashed;
+  --_btn-bg-hover: var(--surface-2);
+  --_btn-fg-hover: var(--ink-soft);
+}
+
+.madoo-btn--danger {
+  --_btn-bg: var(--danger);
+  --_btn-fg: #fff;
+  --_btn-bg-hover: #87311f;
+  --_btn-fg-hover: #fff;
+}
+
+/* ── Disabled-soft state (input vacio en HomeScreen) ─────────── */
+.madoo-btn--primary:disabled,
+.madoo-btn--accent:disabled {
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  opacity: 1;
+}
+
+/* ── Trailing kbd inside primary ─────────────────────────────── */
+.madoo-btn__kbd {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: inherit;
+}
+
+.madoo-btn--secondary .madoo-btn__kbd,
+.madoo-btn--ghost .madoo-btn__kbd,
+.madoo-btn--dashed .madoo-btn__kbd {
+  background: var(--surface-2);
+  color: var(--ink-faint);
+}

@@ -1,0 +1,30 @@
+.madoo-progress {
+  display: flex;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.madoo-progress--thin {
+  height: 3px;
+  border-radius: 0;
+}
+
+.madoo-progress--inline {
+  width: 100%;
+}
+
+.madoo-progress__fill {
+  background: var(--accent);
+  height: 100%;
+  transition: width var(--duration-slow) var(--ease-out);
+}
+
+.madoo-progress--success .madoo-progress__fill {
+  background: var(--success);
+}
+
+.madoo-progress--ink .madoo-progress__fill {
+  background: var(--ink);
+}

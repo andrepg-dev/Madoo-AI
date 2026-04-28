@@ -1,0 +1,53 @@
+.madoo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-sans);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  white-space: nowrap;
+}
+
+.madoo-badge--neutral {
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+
+.madoo-badge--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.madoo-badge--warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.madoo-badge--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.madoo-badge--info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.madoo-badge--solid {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.madoo-badge--dot::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
+}

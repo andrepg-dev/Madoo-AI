@@ -1,0 +1,47 @@
+.madoo-textarea-wrapper {
+  position: relative;
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.madoo-textarea-wrapper--filled {
+  background: var(--surface-2);
+}
+
+.madoo-textarea-wrapper--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.madoo-textarea-wrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.madoo-textarea-wrapper--invalid {
+  border-color: var(--danger);
+}
+
+.madoo-textarea {
+  flex: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: vertical;
+  padding: 12px 14px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  line-height: 1.55;
+  min-height: 96px;
+}
+
+.madoo-textarea--no-resize {
+  resize: none;
+}

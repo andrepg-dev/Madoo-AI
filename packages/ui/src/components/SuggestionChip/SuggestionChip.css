@@ -1,0 +1,39 @@
+.madoo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: var(--font-size-sm);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.madoo-chip:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.madoo-chip[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+.madoo-chip--accent {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  border-color: transparent;
+}
+
+.madoo-chip--accent:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+}

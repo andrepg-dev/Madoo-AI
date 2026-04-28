@@ -1,0 +1,110 @@
+.madoo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 15, 10, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: 24px;
+  animation: madoo-fade-in 0.2s ease-out;
+}
+
+.madoo-modal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+.madoo-modal--sm {
+  max-width: 380px;
+}
+
+.madoo-modal--md {
+  max-width: 480px;
+}
+
+.madoo-modal--lg {
+  max-width: 640px;
+}
+
+.madoo-modal--xl {
+  max-width: 820px;
+}
+
+.madoo-modal__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.madoo-modal__title-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.madoo-modal__eyebrow {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 1px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+.madoo-modal__title {
+  font-size: 16px;
+  font-weight: var(--font-weight-semibold);
+  margin: 2px 0 0;
+}
+
+.madoo-modal__description {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.madoo-modal__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: var(--surface-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.madoo-modal__close:hover {
+  background: var(--border);
+  color: var(--ink);
+}
+
+.madoo-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.madoo-modal__footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}

@@ -1,0 +1,74 @@
+.madoo-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+.madoo-banner--info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.madoo-banner--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.madoo-banner--warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.madoo-banner--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.madoo-banner__icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.madoo-banner--info .madoo-banner__icon {
+  background: var(--info);
+  color: var(--info-soft);
+}
+
+.madoo-banner--success .madoo-banner__icon {
+  background: var(--success);
+  color: var(--success-soft);
+}
+
+.madoo-banner--warn .madoo-banner__icon {
+  background: var(--warn);
+  color: var(--warn-soft);
+}
+
+.madoo-banner--danger .madoo-banner__icon {
+  background: var(--danger);
+  color: var(--danger-soft);
+}
+
+.madoo-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.madoo-banner__title {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 2px;
+}
