@@ -1,0 +1,81 @@
+/**
+ * Reset minimal + helpers compartidos por todos los componentes del DS.
+ * Equivalente a apps/frontend/app/globals.css pero alineado al paquete.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#storybook-root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
+}
+
+textarea::placeholder,
+input::placeholder {
+  color: var(--ink-faint);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.madoo-serif {
+  font-family: var(--font-serif);
+}
+
+.madoo-mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Animations compartidos ─────────────────────────────────── */
+@keyframes madoo-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes madoo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes madoo-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.madoo-fade-in {
+  animation: madoo-fade-in 0.4s ease-out;
+}

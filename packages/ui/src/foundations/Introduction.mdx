@@ -1,0 +1,74 @@
+import { Meta } from "@storybook/blocks";
+
+<Meta title="Foundations/Introduction" />
+
+# Madoo Design System
+
+Bienvenido al sistema de diseño de **Madoo AI**. Este paquete (`@madoo/ui`)
+expone los componentes, tokens y patrones de UI compartidos entre todas las
+aplicaciones del monorepo.
+
+## Filosofía
+
+- **Editorial + AI**: combinamos serif italica (Instrument Serif) para los
+  titulares con Inter para UI y JetBrains Mono para metadatos tecnicos.
+- **Calmado**: paleta beige cálida (`--bg`) con verdes profundos como acento.
+  Buscamos sentir "papel premium", nunca SaaS frio.
+- **Token-first**: cada color, radio o sombra esta en `tokens.css`. Los
+  componentes nunca usan literales — siempre `var(--ink)` etc.
+- **Themed**: soporta tres temas (`default`, `warm`, `indigo`) intercambiables
+  via `data-theme` en `<html>` o cualquier ancestro.
+
+## Como usar
+
+Instala el workspace package en cualquier app del monorepo:
+
+```jsonc
+// apps/<app>/package.json
+{
+  "dependencies": {
+    "@madoo/ui": "workspace:*"
+  }
+}
+```
+
+Luego importa los tokens una vez (idealmente en el root layout) y usa los
+componentes:
+
+```tsx
+import "@madoo/ui/tokens.css";
+import { Button, Input, Modal } from "@madoo/ui";
+
+export function Example() {
+  return (
+    <Button variant="primary" size="lg">
+      Generate email
+    </Button>
+  );
+}
+```
+
+## Estructura del paquete
+
+```
+packages/ui/
+├── src/
+│   ├── tokens/        ← tokens.css, fonts.css, base.css
+│   ├── components/    ← un folder por componente con CSS + stories
+│   └── lib/cx.ts      ← util de className merge
+└── .storybook/        ← config de Storybook
+```
+
+## Mapa de componentes
+
+| Categoría     | Componentes                                                       |
+| ------------- | ----------------------------------------------------------------- |
+| Acción        | `Button`, `IconButton`, `SuggestionChip`, `PromptPill`, `Kbd`     |
+| Forms         | `Input`, `Textarea`, `Select`, `Checkbox`                         |
+| Layout        | `Card`, `SelectableCard`, `Modal`, `SegmentedControl`             |
+| Feedback      | `Banner`, `Badge`, `Tag`, `Spinner`, `ProgressBar`                |
+| Identidad     | `Avatar`, `Icon`                                                  |
+
+> El objetivo es que la app `@madoo/frontend` pueda migrar componente por
+> componente sin re-pintar la UI: la paleta y la tipografia ya coinciden 1:1
+> con `apps/frontend/app/globals.css`.
