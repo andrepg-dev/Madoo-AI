@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Icon } from "@madoo/ui";
 import { consumeEmailSseStream, type StreamEmailEvent } from "@/hooks/use-emails";
+import { shortEmailId } from "@/lib/email-id";
 
 const FALLBACK_STEPS = [
   "Reading your prompt…",
@@ -143,6 +144,9 @@ export function GeneratingScreen({
         <p style={{ fontSize: 14, color: "var(--ink-soft)", marginTop: 8, fontStyle: "italic" }}>
           &quot;{(liveSubject ?? prompt).slice(0, 90)}
           {(liveSubject ?? prompt).length > 90 ? "…" : ""}&quot;
+        </p>
+        <p style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 6, fontFamily: "var(--font-jetbrains-mono)" }}>
+          {shortEmailId(emailId)}
         </p>
         {codeBytes > 0 ? (
           <p style={{ marginTop: 6, color: "var(--ink-faint)", fontSize: 12 }}>

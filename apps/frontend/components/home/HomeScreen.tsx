@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Button,
@@ -10,8 +11,6 @@ import {
   Textarea,
 } from "@madoo/ui";
 import { TemplateCard } from "./TemplateCard";
-import { GeneratingScreen } from "./GeneratingScreen";
-import { EditorScreen, type GenParams } from "./EditorScreen";
 import { useMe } from "@/hooks/use-me";
 import { readPendingPrompt, clearPendingPrompt, savePendingPrompt } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
@@ -27,14 +26,10 @@ import {
   type Template,
 } from "@/lib/data";
 
-type Screen = "home" | "generating" | "editor";
-
 export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
+  const router = useRouter();
   const { data: user, isPending: loading } = useMe();
   const openLogin = useAuthStore((s) => s.openLogin);
-  const [screen, setScreen] = useState<Screen>("home");
-  const [genParams, setGenParams] = useState<GenParams | null>(null);
-  const [activeEmailId, setActiveEmailId] = useState<string | null>(null);
 
   const [prompt, setPrompt] = useState("");
   const [tone, setTone] = useState("Friendly");
@@ -62,9 +57,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         length,
         audience,
       });
-      setGenParams({ prompt: trimmed, tone, length, audience });
-      setActiveEmailId(email.id);
-      setScreen("generating");
+      router.push(`/emails/${email.id}/generate`);
     } catch {
       /* surfaced via global error handling later */
     }
@@ -89,14 +82,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           length: pending.length ?? length,
           audience: pending.audience ?? audience,
         });
-        setGenParams({
-          prompt: pending.prompt,
-          tone: pending.tone ?? tone,
-          length: pending.length ?? length,
-          audience: pending.audience ?? audience,
-        });
-        setActiveEmailId(email.id);
-        setScreen("generating");
+        router.push(`/emails/${email.id}/generate`);
       } catch {
         autoTriggerRef.current = false;
       }
@@ -131,14 +117,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         audience: "Existing customers",
         ...(slug ? { templateSlug: slug } : {}),
       });
-      setGenParams({
-        prompt: `Use the "${t.name}" layout`,
-        tone: "Friendly",
-        length: "Medium",
-        audience: "Existing customers",
-      });
-      setActiveEmailId(email.id);
-      setScreen("generating");
+      router.push(`/emails/${email.id}/generate`);
     } catch {
       /* noop */
     }
@@ -148,30 +127,6 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
     setPrompt(s);
     taRef.current?.focus();
   };
-
-  if (screen === "generating" && genParams && activeEmailId) {
-    return (
-      <GeneratingScreen
-        emailId={activeEmailId}
-        prompt={genParams.prompt}
-        onDone={() => setScreen("editor")}
-      />
-    );
-  }
-
-  if (screen === "editor" && activeEmailId && genParams) {
-    return (
-      <EditorScreen
-        emailId={activeEmailId}
-        genSummary={genParams}
-        onBack={() => {
-          setActiveEmailId(null);
-          setGenParams(null);
-          setScreen("home");
-        }}
-      />
-    );
-  }
 
   const categoryItems = CATEGORIES.map((c) => ({ value: c, label: c }));
 

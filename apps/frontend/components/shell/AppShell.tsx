@@ -15,7 +15,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }}
       >
         <TopBar />
-        {children}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

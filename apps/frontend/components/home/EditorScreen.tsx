@@ -18,6 +18,7 @@ import {
 } from "@madoo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEmail, consumeEmailSseStream } from "@/hooks/use-emails";
+import { shortEmailId } from "@/lib/email-id";
 import type { EmailVariantDto } from "@madoo/shared";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
@@ -69,13 +70,68 @@ export function EditorScreen({
   const [variableDefaults, setVariableDefaults] = useState<Record<string, string>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [activeStreamingId, setActiveStreamingId] = useState<string | null>(null);
+  const [previewHeight, setPreviewHeight] = useState<number>(640);
   const panelScrollRef = useRef<HTMLDivElement | null>(null);
+  const previewObserverRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     const el = panelScrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [chatMessages]);
+
+  useEffect(() => {
+    setPreviewHeight(640);
+    previewObserverRef.current?.disconnect();
+    previewObserverRef.current = null;
+  }, [activeVariant?.id]);
+
+  const bindPreviewAutoHeight = useCallback((frame: HTMLIFrameElement | null) => {
+    if (!frame) return;
+    previewObserverRef.current?.disconnect();
+    previewObserverRef.current = null;
+
+    const doc = frame.contentDocument;
+    if (!doc) return;
+    const root = doc.documentElement;
+    const body = doc.body;
+    if (!root || !body) return;
+
+    const ensurePreviewResetStyles = () => {
+      const id = "madoo-email-preview-reset";
+      if (doc.getElementById(id)) return;
+      const style = doc.createElement("style");
+      style.id = id;
+      style.textContent = `
+        html { overflow-x: hidden; }
+        body { margin: 0; overflow-x: hidden; overflow-y: visible !important; }
+      `;
+      doc.head.appendChild(style);
+    };
+
+    ensurePreviewResetStyles();
+
+    const measure = () => {
+      const raw = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        root.scrollHeight,
+        root.clientHeight,
+      );
+      const nextHeight = Math.ceil(raw) + 24;
+      if (nextHeight > 0) {
+        setPreviewHeight((prev) => (Math.abs(prev - nextHeight) > 2 ? nextHeight : prev));
+      }
+    };
+
+    measure();
+    requestAnimationFrame(() => requestAnimationFrame(measure));
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    observer.observe(body);
+    previewObserverRef.current = observer;
+  }, []);
 
   const changedLines = useMemo(() => {
     if (!activeVariant || !previousVariant) return [];
@@ -233,6 +289,9 @@ export function EditorScreen({
           >
             Back
           </Button>
+          <div style={{ fontSize: 11, color: "var(--ink-faint)", fontFamily: "var(--font-jetbrains-mono)" }}>
+            {shortEmailId(emailId)}
+          </div>
           <div style={{ width: 1, height: 20, background: "var(--border)" }} />
           <input
             readOnly
@@ -276,21 +335,32 @@ export function EditorScreen({
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "32px 24px 60px", background: "var(--bg-2)" }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "32px 24px 60px",
+            background: "var(--bg-2)",
+          }}
+        >
           {activeVariant?.compiledHtml ? (
             <iframe
               title="Email preview"
+              onLoad={(e) => bindPreviewAutoHeight(e.currentTarget)}
               srcDoc={activeVariant.compiledHtml}
               sandbox="allow-same-origin"
               style={{
                 display: "block",
                 width: "100%",
                 maxWidth: 640,
-                minHeight: 480,
+                height: previewHeight,
                 margin: "0 auto",
                 border: "1px solid var(--border)",
                 borderRadius: 12,
                 background: "#fff",
+                overflow: "hidden",
+                verticalAlign: "top",
               }}
             />
           ) : (
