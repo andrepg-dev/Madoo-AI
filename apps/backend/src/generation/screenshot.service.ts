@@ -19,8 +19,17 @@ export class ScreenshotService {
       });
 
       const page = await browser.newPage();
+      // Evita timeouts prematuros al renderizar HTML con recursos externos o carga lenta.
+      page.setDefaultTimeout(60_000);
+      page.setDefaultNavigationTimeout(60_000);
+
       await page.setViewport({ width: 800, height: 600 });
-      await page.setContent(html, { waitUntil: "networkidle0" });
+      // `networkidle0` a veces no llega a cumplirse con emails que disparan requests
+      // (p.ej. fuentes externas). Usamos una condición más segura.
+      await page.setContent(html, { waitUntil: "domcontentloaded" });
+
+      // Pequeña pausa para que el layout termine de calcular antes de capturar.
+      await new Promise((r) => setTimeout(r, 250));
 
       const element = await page.$("table, body");
       if (!element) {
