@@ -12,6 +12,16 @@
   --accent-deep: #2F5C42;
   --accent-soft: #E5EFE6;
   --accent-fg: #FFFDF8;
+  --background: var(--surface);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --muted: var(--bg-2);
+  --muted-foreground: var(--ink-soft);
+  --input: var(--border);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-fg);
+  --radius: 0.625rem;
 }
 
 [data-theme="warm"] {
@@ -147,4 +157,16 @@ select:focus-visible {
 
 .mono {
   font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+.ai-conversation-markdown {
+  color: inherit;
+}
+
+.ai-conversation-markdown p {
+  margin: 0;
+}
+
+.ai-conversation-markdown p + p {
+  margin-top: 8px;
 }

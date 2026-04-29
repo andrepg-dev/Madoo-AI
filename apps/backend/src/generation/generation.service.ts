@@ -11,13 +11,17 @@ import type {
   Message,
   MessageCreateParams,
   MessageParam,
+  ThinkingConfigParam,
   Tool,
 } from "@anthropic-ai/sdk/resources/messages";
 import type {
+  EmailChatKind,
+  EmailChatRole,
   GenerationRunKind,
   GenerationRunStatus,
 } from "@prisma/client";
 import { Observable } from "rxjs";
+import { createHash } from "node:crypto";
 import { parseVariableSchemaJson } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReactToHtmlService } from "./react-to-html.service";
@@ -68,6 +72,13 @@ const FEW_SHOT_TEXT = [
   `Welcome:\n${SEED_TEMPLATES.welcome.componentCode}`,
 ].join("\n\n");
 
+const CHAT_HISTORY_LIMIT = 8;
+const CODE_CONTEXT_LIMIT = 24_000;
+
+function shortHash(input: string): string {
+  return createHash("sha256").update(input).digest("hex").slice(0, 16);
+}
+
 
 @Injectable()
 export class GenerationService {
@@ -84,6 +95,71 @@ export class GenerationService {
       this.config.get<string>("ANTHROPIC_MODEL") ??
       "claude-sonnet-4-20250514";
     this.anthropic = key ? new Anthropic({ apiKey: key }) : null;
+  }
+
+  /** Extended thinking (model-level). Off if `ANTHROPIC_EXTENDED_THINKING=false`. */
+  private extendedThinkingConfig(): ThinkingConfigParam | undefined {
+    const raw = this.config.get<string>("ANTHROPIC_EXTENDED_THINKING");
+    if (raw === "0" || raw === "false") {
+      return undefined;
+    }
+    return { type: "adaptive", display: "summarized" };
+  }
+
+  private shouldIncludeFullCode(instruction: string, hasSnapshot: boolean): boolean {
+    if (!hasSnapshot) return true;
+    const text = instruction.toLowerCase();
+    const forceCodeSignals = [
+      "refactor",
+      "rewrite",
+      "reescribe",
+      "reestructura",
+      "from scratch",
+      "full code",
+      "todo el codigo",
+      "cambia toda",
+      "new layout",
+      "nueva estructura",
+    ];
+    return forceCodeSignals.some((signal) => text.includes(signal));
+  }
+
+  private async loadRecentChatContext(emailId: string): Promise<string> {
+    const rows = await this.prisma.emailChatMessage.findMany({
+      where: { emailId },
+      orderBy: { createdAt: "desc" },
+      take: CHAT_HISTORY_LIMIT,
+    });
+    if (!rows.length) return "No previous chat context.";
+    return rows
+      .reverse()
+      .map((row) => {
+        const role = row.role.toLowerCase();
+        const kind = row.kind.toLowerCase();
+        const compact = row.content.replace(/\s+/g, " ").trim().slice(0, 500);
+        return `${role}/${kind}: ${compact}`;
+      })
+      .join("\n");
+  }
+
+  private async appendChatMessage(args: {
+    workspaceId: string;
+    emailId: string;
+    role: EmailChatRole;
+    kind: EmailChatKind;
+    content: string;
+  }): Promise<void> {
+    const content = args.content.trim();
+    if (!content) return;
+    await this.prisma.emailChatMessage.create({
+      data: {
+        workspaceId: args.workspaceId,
+        emailId: args.emailId,
+        role: args.role,
+        kind: args.kind,
+        content,
+      },
+    });
   }
 
   generateEmailStream(
@@ -221,6 +297,7 @@ export class GenerationService {
     const ctx = await this.loadGenerationContext(emailId, workspaceId);
 
     let baseCode = ctx.variants[0]?.componentCode ?? "";
+    let sourceVariantId = ctx.variants[0]?.id ?? null;
     if (body.baseVariantId) {
       const v = await this.prisma.emailVariant.findFirst({
         where: {
@@ -231,15 +308,56 @@ export class GenerationService {
       });
       if (!v) throw new BadRequestException("baseVariantId not found.");
       baseCode = v.componentCode;
+      sourceVariantId = v.id;
     }
 
+    const snapshot = await this.prisma.emailVfsSnapshot.upsert({
+      where: { emailId },
+      create: {
+        workspaceId,
+        emailId,
+        filePath: "Email.tsx",
+        componentCode: baseCode,
+        componentHash: shortHash(baseCode),
+        sourceVariantId: sourceVariantId ?? undefined,
+      },
+      update: {
+        componentCode: baseCode,
+        componentHash: shortHash(baseCode),
+        sourceVariantId: sourceVariantId ?? undefined,
+      },
+    });
+
+    const instruction = body.instruction.trim();
+    const includeFullCode = this.shouldIncludeFullCode(instruction, Boolean(snapshot?.id));
+    const recentChat = await this.loadRecentChatContext(emailId);
+
     const editPrompt = [
-      "Edit the following React Email TSX according to the instruction.",
-      `Instruction:\n${body.instruction.trim()}`,
-      baseCode ? `\nCurrent TSX:\n${baseCode.slice(0, 24000)}` : "",
+      "Edit the current React Email TSX according to the instruction.",
+      `Instruction:\n${instruction}`,
+      "",
+      "Conversation context (most recent first):",
+      recentChat,
+      "",
+      "Virtual File System:",
+      `- file: ${snapshot.filePath}`,
+      `- hash: ${snapshot.componentHash}`,
+      `- sourceVariantId: ${snapshot.sourceVariantId ?? "unknown"}`,
+      includeFullCode
+        ? ""
+        : "Use the virtual file state above. Only request a full rewrite when strictly necessary.",
+      includeFullCode ? `\nCurrent TSX:\n${snapshot.componentCode.slice(0, CODE_CONTEXT_LIMIT)}` : "",
     ].join("\n");
 
-    await this.executeAnthropicTurn({
+    await this.appendChatMessage({
+      workspaceId,
+      emailId,
+      role: "USER",
+      kind: "TEXT",
+      content: instruction,
+    });
+
+    const result = await this.executeAnthropicTurn({
       emailId,
       workspaceId,
       kind: "EDIT",
@@ -249,7 +367,32 @@ export class GenerationService {
           content: editPrompt,
         },
       ],
+      fullCodeForRetry: snapshot.componentCode,
       emit,
+    });
+
+    await this.prisma.emailVfsSnapshot.update({
+      where: { emailId },
+      data: {
+        componentCode: result.componentCode,
+        componentHash: shortHash(result.componentCode),
+        sourceVariantId: result.variantId,
+      },
+    });
+
+    await this.appendChatMessage({
+      workspaceId,
+      emailId,
+      role: "ASSISTANT",
+      kind: "THINKING",
+      content: result.thinkingText,
+    });
+    await this.appendChatMessage({
+      workspaceId,
+      emailId,
+      role: "ASSISTANT",
+      kind: "TEXT",
+      content: result.assistantText,
     });
   }
 
@@ -258,9 +401,15 @@ export class GenerationService {
     workspaceId: string;
     kind: GenerationRunKind;
     modelMessages: MessageParam[];
+    fullCodeForRetry?: string;
     emit: (p: Record<string, unknown>) => void;
-  }): Promise<void> {
-    const { emailId, workspaceId, kind, modelMessages, emit } = params;
+  }): Promise<{
+    assistantText: string;
+    thinkingText: string;
+    componentCode: string;
+    variantId: string;
+  }> {
+    const { emailId, workspaceId, kind, modelMessages, fullCodeForRetry, emit } = params;
 
     if (!this.anthropic) {
       throw new InternalServerErrorException("ANTHROPIC_API_KEY is not configured.");
@@ -309,6 +458,8 @@ export class GenerationService {
         systemBlocks,
         emit,
       });
+      let assistantText = response.assistantText;
+      let thinkingText = response.thinkingText;
 
       const u = response.usage;
       if (u) {
@@ -386,12 +537,17 @@ export class GenerationService {
                   "Return a corrected emit_email payload only.",
                   `Reason: ${lastErr.message}`,
                   "Keep the same intent and audience.",
+                  fullCodeForRetry
+                    ? `Current TSX (required for accurate retry):\n${fullCodeForRetry.slice(0, CODE_CONTEXT_LIMIT)}`
+                    : "",
                 ].join("\n"),
               },
             ],
             systemBlocks,
             emit,
           });
+          assistantText = retry.assistantText || assistantText;
+          thinkingText = retry.thinkingText || thinkingText;
           const retryTool = retry.content.find(
             (b) => b.type === "tool_use" && b.name === "emit_email",
           );
@@ -462,6 +618,12 @@ export class GenerationService {
         compiledHtml: variant.compiledHtml,
         seq: variant.seq,
       });
+      return {
+        assistantText,
+        thinkingText,
+        componentCode: input.componentCode,
+        variantId: variant.id,
+      };
     } catch (e) {
       await this.prisma.emailGenerationRun.update({
         where: { id: run.id },
@@ -484,14 +646,23 @@ export class GenerationService {
     modelMessages: MessageParam[];
     systemBlocks: MessageCreateParams["system"];
     emit: (p: Record<string, unknown>) => void;
-  }): Promise<Message> {
+  }): Promise<{
+    content: Message["content"];
+    usage: Message["usage"] | undefined;
+    assistantText: string;
+    thinkingText: string;
+  }> {
     if (!this.anthropic) {
       throw new InternalServerErrorException("ANTHROPIC_API_KEY is not configured.");
     }
 
+    const thinking = this.extendedThinkingConfig();
+    const maxTokens = thinking ? 20_000 : 16_384;
+
     const stream = this.anthropic.messages.stream({
       model: this.model,
-      max_tokens: 16384,
+      max_tokens: maxTokens,
+      ...(thinking ? { thinking } : {}),
       system: args.systemBlocks,
       tools: [EMIT_EMAIL_TOOL],
       messages: args.modelMessages,
@@ -499,9 +670,21 @@ export class GenerationService {
 
     let lastComponentCode = "";
     let subjectEmitted = false;
+    let thinkingText = "";
+    let assistantText = "";
+
+    stream.on("thinking", (delta: string) => {
+      if (delta) {
+        thinkingText += delta;
+        args.emit({ type: "thinking-chunk", value: delta });
+      }
+    });
 
     stream.on("text", (delta: string) => {
-      if (delta) args.emit({ type: "assistant-chunk", value: delta });
+      if (delta) {
+        assistantText += delta;
+        args.emit({ type: "assistant-chunk", value: delta });
+      }
     });
 
     stream.on("inputJson", (_partial: string, snapshot: unknown) => {
@@ -525,6 +708,12 @@ export class GenerationService {
       }
     });
 
-    return (await stream.finalMessage()) as unknown as Message;
+    const finalMessage = (await stream.finalMessage()) as unknown as Message;
+    return {
+      content: finalMessage.content,
+      usage: finalMessage.usage,
+      assistantText,
+      thinkingText,
+    };
   }
 }

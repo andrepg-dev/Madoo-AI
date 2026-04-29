@@ -59,6 +59,8 @@ model Workspace {
   emailVariants      EmailVariant[]
   templates          Template[]
   emailGenerationRuns EmailGenerationRun[]
+  emailChatMessages   EmailChatMessage[]
+  emailVfsSnapshots   EmailVfsSnapshot[]
 
   @@index([slug])
 }
@@ -80,6 +82,18 @@ enum GenerationRunStatus {
   STREAMING
   COMPLETED
   FAILED
+}
+
+enum EmailChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum EmailChatKind {
+  TEXT
+  THINKING
+  STATUS
 }
 
 model Email {
@@ -105,6 +119,8 @@ model Email {
   sourcePendingPrompt   PendingPrompt?      @relation(fields: [sourcePendingPromptId], references: [id])
   variants              EmailVariant[]
   generationRuns        EmailGenerationRun[]
+  chatMessages          EmailChatMessage[]
+  vfsSnapshot           EmailVfsSnapshot?
 
   @@index([workspaceId, createdAt])
 }
@@ -154,6 +170,44 @@ model EmailGenerationRun {
   email     Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
 
   @@index([emailId, createdAt])
+}
+
+model EmailChatMessage {
+  id String @id @default(cuid())
+
+  workspaceId String
+  emailId     String
+  role        EmailChatRole
+  kind        EmailChatKind @default(TEXT)
+  content     String        @db.Text
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email     Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId, createdAt])
+  @@index([workspaceId, emailId, role])
+}
+
+model EmailVfsSnapshot {
+  id String @id @default(cuid())
+
+  workspaceId String
+  emailId     String @unique
+
+  filePath       String @default("Email.tsx")
+  componentCode  String @db.Text
+  componentHash  String
+  sourceVariantId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email     Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, updatedAt])
 }
 
 model Template {

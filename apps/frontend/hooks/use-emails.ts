@@ -30,6 +30,8 @@ export type StreamEmailEvent =
       warning?: string;
     }
   | { type: "subject"; value: string }
+  /** Model extended-thinking stream (Anthropic Messages `thinking`). */
+  | { type: "thinking-chunk"; value: string }
   | { type: "assistant-chunk"; value: string }
   | { type: "code-chunk"; value: string }
   | { type: "step"; message: string }

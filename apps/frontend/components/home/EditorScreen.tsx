@@ -19,6 +19,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useEmail, consumeEmailSseStream } from "@/hooks/use-emails";
 import type { EmailVariantDto } from "@madoo/shared";
+import { Streamdown } from "streamdown";
+import "streamdown/styles.css";
 
 export type GenParams = {
   prompt: string;
@@ -30,7 +32,8 @@ export type GenParams = {
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
-  kind: "text" | "code";
+  /** `thinking` is streamed from Claude extended thinking (`thinking_delta`), not from parsed assistant text. */
+  kind: "text" | "code" | "thinking";
   value: string;
 };
 
@@ -66,10 +69,10 @@ export function EditorScreen({
   const [variableDefaults, setVariableDefaults] = useState<Record<string, string>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [activeStreamingId, setActiveStreamingId] = useState<string | null>(null);
-  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const panelScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const el = chatScrollRef.current;
+    const el = panelScrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [chatMessages]);
@@ -97,6 +100,7 @@ export function EditorScreen({
       const userText = instruction.trim();
       const turnStamp = Date.now();
       const userMessageId = `user-${turnStamp}`;
+      const assistantThinkingId = `assistant-thinking-${turnStamp}`;
       const assistantTextId = `assistant-text-${turnStamp}`;
       const assistantCodeId = `assistant-code-${turnStamp}`;
       setChatMessages((prev) => [
@@ -109,7 +113,31 @@ export function EditorScreen({
           `/api/emails/${emailId}/edit`,
           (ev) => {
             if (ev.type === "error") setEditError(ev.message);
+            if (ev.type === "thinking-chunk") {
+              setActiveStreamingId(assistantThinkingId);
+              setChatMessages((prev) => {
+                const idx = prev.findIndex((m) => m.id === assistantThinkingId);
+                if (idx === -1) {
+                  return [
+                    ...prev,
+                    {
+                      id: assistantThinkingId,
+                      role: "assistant",
+                      kind: "thinking",
+                      value: ev.value,
+                    },
+                  ];
+                }
+                const next = [...prev];
+                next[idx] = {
+                  ...next[idx],
+                  value: `${next[idx].value}${ev.value}`,
+                };
+                return next;
+              });
+            }
             if (ev.type === "assistant-chunk") {
+              setActiveStreamingId(assistantTextId);
               setChatMessages((prev) => {
                 const idx = prev.findIndex((m) => m.id === assistantTextId);
                 if (idx === -1) {
@@ -273,7 +301,7 @@ export function EditorScreen({
 
       <aside
         style={{
-          width: 320,
+          width: 390,
           borderLeft: "1px solid var(--border)",
           background: "var(--surface)",
           display: "flex",
@@ -307,6 +335,7 @@ export function EditorScreen({
           <div style={{ marginLeft: "auto", fontSize: 11, color: "var(--ink-faint)" }}>Live</div>
         </div>
         <div
+          ref={panelScrollRef}
           style={{
             flex: 1,
             overflowY: "auto",
@@ -369,21 +398,16 @@ export function EditorScreen({
               </div>
             </div>
           ) : null}
+          <Banner tone="accent" title="Suggestion">
+            Subject lines under ~50 characters often improve opens. Try variant <b>v2</b> after an edit.
+          </Banner>
           {chatMessages.length > 0 ? (
-            <div
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: 10,
-                padding: 10,
-                background: "var(--surface)",
-              }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  marginBottom: 8,
                 }}
               >
                 <div
@@ -421,14 +445,11 @@ export function EditorScreen({
                 ) : null}
               </div>
               <div
-                ref={chatScrollRef}
                 style={{
                   display: "flex",
                   flexDirection: "column",
                   gap: 10,
-                  maxHeight: 320,
-                  overflowY: "auto",
-                  paddingRight: 2,
+                  paddingRight: 4,
                 }}
               >
                 {chatMessages.map((message) => {
@@ -456,6 +477,75 @@ export function EditorScreen({
                           }}
                         >
                           {message.value}
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (message.kind === "thinking") {
+                    return (
+                      <div
+                        key={message.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            background: "var(--accent-soft)",
+                            color: "var(--accent-deep)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            marginTop: 2,
+                          }}
+                        >
+                          <Icon name="sparkle" size={11} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <details
+                            style={{
+                              border: "1px solid var(--border)",
+                              borderRadius: 8,
+                              background: "var(--surface)",
+                              padding: "6px 8px",
+                            }}
+                            open
+                          >
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: "var(--ink-soft)",
+                              }}
+                            >
+                              Thinking
+                            </summary>
+                            <div style={{ marginTop: 6 }}>
+                              <Streamdown className="ai-conversation-markdown">
+                                {message.value}
+                              </Streamdown>
+                              {isStreaming ? (
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    width: 6,
+                                    height: 12,
+                                    background: "var(--accent)",
+                                    marginLeft: 2,
+                                    verticalAlign: "text-bottom",
+                                    animation: "blink 0.9s steps(2, end) infinite",
+                                  }}
+                                />
+                              ) : null}
+                            </div>
+                          </details>
                         </div>
                       </div>
                     );
@@ -488,85 +578,40 @@ export function EditorScreen({
                         </div>
                         <div
                           style={{
-                            flex: 1,
-                            minWidth: 0,
+                            maxWidth: "85%",
+                            background: "var(--surface)",
+                            color: "var(--ink-soft)",
+                            borderRadius: "10px",
+                            padding: "8px 11px",
+                            fontSize: 12.5,
+                            lineHeight: 1.4,
                             border: "1px solid var(--border)",
-                            borderRadius: 10,
-                            background: "var(--bg-2)",
-                            overflow: "hidden",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
                           }}
                         >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              padding: "6px 10px",
-                              borderBottom: "1px solid var(--border)",
-                              background: "var(--surface)",
-                              fontSize: 10.5,
-                              fontWeight: 600,
-                              color: "var(--ink-soft)",
-                              letterSpacing: 0.4,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                              }}
-                            >
+                          {isStreaming ? (
+                            <>
                               <span
                                 style={{
-                                  display: "inline-block",
                                   width: 6,
                                   height: 6,
                                   borderRadius: "50%",
                                   background: "var(--accent)",
+                                  animation: "pulse 1.2s ease-in-out infinite",
                                 }}
                               />
-                              Email component · TSX
-                            </span>
-                            <span style={{ color: "var(--ink-faint)", letterSpacing: 0 }}>
-                              {message.value.length} chars
-                            </span>
-                          </div>
-                          <pre
-                            style={{
-                              margin: 0,
-                              padding: "10px 12px",
-                              fontFamily:
-                                "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-                              fontSize: 11.5,
-                              lineHeight: 1.5,
-                              color: "var(--ink)",
-                              whiteSpace: "pre",
-                              overflowX: "auto",
-                              maxHeight: 180,
-                              overflowY: "auto",
-                            }}
-                          >
-                            {message.value}
-                            {isStreaming ? (
-                              <span
-                                style={{
-                                  display: "inline-block",
-                                  width: 7,
-                                  height: 13,
-                                  background: "var(--accent)",
-                                  marginLeft: 2,
-                                  verticalAlign: "text-bottom",
-                                  animation: "blink 0.9s steps(2, end) infinite",
-                                }}
-                              />
-                            ) : null}
-                          </pre>
+                              Editando componente...
+                            </>
+                          ) : (
+                            "Componente actualizado."
+                          )}
                         </div>
                       </div>
                     );
                   }
+                  const markdownValue = message.value;
                   return (
                     <div
                       key={message.id}
@@ -601,12 +646,11 @@ export function EditorScreen({
                           padding: "8px 11px",
                           fontSize: 12.5,
                           lineHeight: 1.5,
-                          whiteSpace: "pre-wrap",
                           wordBreak: "break-word",
                           border: "1px solid var(--border-soft)",
                         }}
                       >
-                        {message.value}
+                        <Streamdown className="ai-conversation-markdown">{markdownValue}</Streamdown>
                         {isStreaming ? (
                           <span
                             style={{
@@ -627,22 +671,21 @@ export function EditorScreen({
               </div>
             </div>
           ) : null}
-          <Banner tone="accent" title="Suggestion">
-            Subject lines under ~50 characters often improve opens. Try variant <b>v2</b> after an edit.
-          </Banner>
-          <div>
+        </div>
+        <div style={{ padding: 14, borderTop: "1px solid var(--border)" }}>
+          <div style={{ marginBottom: 10 }}>
             <div
               style={{
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: 600,
-                letterSpacing: 1,
+                letterSpacing: 0.8,
                 color: "var(--ink-faint)",
-                marginBottom: 8,
+                marginBottom: 7,
               }}
             >
               QUICK EDITS
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {[
                 "Make it shorter",
                 "More casual tone",
@@ -654,10 +697,7 @@ export function EditorScreen({
                   key={q}
                   variant="secondary"
                   size="sm"
-                  block
                   disabled={busy}
-                  rightIcon={<Icon name="arrow" size={11} />}
-                  style={{ justifyContent: "space-between" }}
                   onClick={() => void runEdit(q)}
                 >
                   {q}
@@ -665,8 +705,6 @@ export function EditorScreen({
               ))}
             </div>
           </div>
-        </div>
-        <div style={{ padding: 14, borderTop: "1px solid var(--border)" }}>
           <div style={{ position: "relative" }}>
             <Textarea
               value={aiPrompt}
