@@ -25,6 +25,8 @@ import { createHash } from "node:crypto";
 import { parseVariableSchemaJson } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReactToHtmlService } from "./react-to-html.service";
+import { ScreenshotService } from "./screenshot.service";
+import { S3Service } from "../s3/s3.service";
 import { SEED_TEMPLATES } from "../templates/seed-templates";
 
 const EMIT_EMAIL_TOOL: Tool = {
@@ -89,6 +91,8 @@ export class GenerationService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly reactToHtml: ReactToHtmlService,
+    private readonly screenshot: ScreenshotService,
+    private readonly s3: S3Service,
   ) {
     const key = this.config.get<string>("ANTHROPIC_API_KEY");
     this.model =
@@ -588,6 +592,20 @@ export class GenerationService {
           variableSchema: variableSchema as object,
         },
       });
+
+      emit({ type: "step", message: "Generating preview screenshot…" });
+      try {
+        const buffer = await this.screenshot.screenshotHtml(compiledHtml);
+        const previewUrl = await this.s3.uploadBuffer(buffer, "image/png");
+        await this.prisma.emailVariant.update({
+          where: { id: variant.id },
+          data: { previewUrl },
+        });
+        emit({ type: "preview_url", value: previewUrl });
+      } catch (screenshotErr) {
+        // Non-fatal: log and continue without preview
+        console.warn("[GenerationService] preview screenshot failed:", screenshotErr);
+      }
 
       await this.prisma.email.update({
         where: { id: emailId },

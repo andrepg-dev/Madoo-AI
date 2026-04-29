@@ -12,9 +12,10 @@ import {
 } from "@madoo/ui";
 import { TemplateCard } from "./TemplateCard";
 import { useMe } from "@/hooks/use-me";
+import { useCreateEmail, useEmails } from "@/hooks/use-emails";
 import { readPendingPrompt, clearPendingPrompt, savePendingPrompt } from "@/lib/api";
+import { shortEmailId } from "@/lib/email-id";
 import { useAuthStore } from "@/stores/auth";
-import { createEmail } from "@/actions/emails";
 import {
   CATEGORIES,
   PROMPT_AUDIENCES,
@@ -29,6 +30,8 @@ import {
 export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
   const router = useRouter();
   const { data: user, isPending: loading } = useMe();
+  const { mutateAsync: createEmail, isPending: creatingEmail } = useCreateEmail();
+  const { data: emails = [], isLoading: loadingEmails } = useEmails(Boolean(user));
   const openLogin = useAuthStore((s) => s.openLogin);
 
   const [prompt, setPrompt] = useState("");
@@ -224,7 +227,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               variant="primary"
               size="md"
               onClick={() => void handleGenerate()}
-              disabled={!prompt.trim()}
+              disabled={!prompt.trim() || creatingEmail}
               leftIcon={<Icon name="sparkle" size={14} />}
               shortcut="↵"
             >
@@ -253,6 +256,126 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           ))}
         </div>
       </section>
+
+      {user ? (
+        <section style={{ padding: "0 48px 24px", maxWidth: 1280, margin: "0 auto" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <h3 className="serif" style={{ margin: 0, fontSize: 28, fontWeight: 400 }}>
+              Recent emails
+            </h3>
+            <div style={{ fontSize: 12, color: "var(--ink-faint)" }}>
+              {loadingEmails ? "Loading…" : `${emails.length} saved`}
+            </div>
+          </div>
+          {emails.length === 0 ? (
+            <div
+              style={{
+                border: "1px dashed var(--border)",
+                borderRadius: 14,
+                padding: "16px 18px",
+                color: "var(--ink-soft)",
+                background: "var(--surface)",
+                fontSize: 13,
+              }}
+            >
+              Your generated emails will appear here.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+              {emails.slice(0, 12).map((email) => {
+                const latest = email.variants[email.variants.length - 1];
+                const preview = latest?.previewUrl ?? null;
+                const goTo = email.status === "DRAFT" ? `/emails/${email.id}/generate` : `/emails/${email.id}/editor`;
+                return (
+                  <button
+                    key={email.id}
+                    type="button"
+                    onClick={() => router.push(goTo)}
+                    style={{
+                      textAlign: "left",
+                      border: "1px solid var(--border)",
+                      borderRadius: 14,
+                      padding: 0,
+                      background: "var(--surface)",
+                      cursor: "pointer",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* Preview thumbnail */}
+                    <div
+                      style={{
+                        width: "100%",
+                        height: 160,
+                        background: preview ? "transparent" : "var(--surface-raised)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                        borderBottom: "1px solid var(--border)",
+                      }}
+                    >
+                      {preview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={preview}
+                          alt={email.title ?? "Email preview"}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
+                        />
+                      ) : (
+                        <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth={1.5}>
+                          <rect x={2} y={4} width={20} height={16} rx={2} />
+                          <path d="M2 9h20" />
+                          <path d="M7 13h3m-3 3h6" />
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* Card info */}
+                    <div style={{ padding: "12px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <div style={{ fontSize: 11, color: "var(--ink-faint)", fontFamily: "var(--font-jetbrains-mono)" }}>
+                          {shortEmailId(email.id)}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            color: "var(--accent-deep)",
+                            background: "var(--accent-soft)",
+                            borderRadius: 999,
+                            padding: "3px 8px",
+                          }}
+                        >
+                          {email.status}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 6, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
+                        {email.title ?? latest?.subject ?? "Untitled email"}
+                      </div>
+                      <div style={{ marginTop: 4, fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.45 }}>
+                        {email.prompt.slice(0, 80)}
+                        {email.prompt.length > 80 ? "…" : ""}
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 11, color: "var(--ink-faint)" }}>
+                        {new Date(email.updatedAt).toLocaleString()}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section style={{ padding: "24px 48px 80px", maxWidth: 1280, margin: "0 auto" }}>
         <div

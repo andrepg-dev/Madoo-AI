@@ -133,9 +133,10 @@ model EmailVariant {
   seq         Int
 
   subject        String
-  componentCode  String @db.Text
-  compiledHtml   String @db.Text
+  componentCode  String  @db.Text
+  compiledHtml   String  @db.Text
   variableSchema Json
+  previewUrl     String? @db.Text
 
   createdAt DateTime @default(now())
 

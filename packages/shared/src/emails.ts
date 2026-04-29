@@ -102,6 +102,7 @@ export const EmailVariantDtoSchema = z.object({
   componentCode: z.string(),
   compiledHtml: z.string(),
   variableSchema: VariableSchemaRootSchema,
+  previewUrl: z.string().nullable().optional(),
   createdAt: z.string(),
 });
 

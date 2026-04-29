@@ -173,6 +173,7 @@ export class EmailsService {
       componentCode: v.componentCode,
       compiledHtml: v.compiledHtml,
       variableSchema: parseVariableSchemaJson(v.variableSchema),
+      previewUrl: v.previewUrl ?? null,
       createdAt: v.createdAt.toISOString(),
     }));
 
