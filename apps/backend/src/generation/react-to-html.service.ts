@@ -28,6 +28,8 @@ const BLOCKLIST: RegExp[] = [
   /\beval\s*\(/,
   /\bFunction\s*\(/,
   /\bnew\s+Function\b/,
+  /\bwhile\s*\(\s*true\s*\)/,
+  /\bfor\s*\(\s*;\s*;\s*\)/,
 ];
 
 const COMPILE_CACHE = new Map<string, React.ComponentType<Record<string, unknown>>>();
