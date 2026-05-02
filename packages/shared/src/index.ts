@@ -8,3 +8,4 @@ export * from "./emails";
 export * from "./contacts";
 export * from "./domains";
 export * from "./campaigns";
+export * from "./audit-log";
