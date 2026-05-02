@@ -167,13 +167,18 @@ export class EmailsService {
     const variantsAsc = [...row.variants].sort((a, b) => a.seq - b.seq);
 
     const variants: EmailVariantDto[] = variantsAsc.map((v) => ({
+      // Defensive normalization in case legacy/backfill rows contain malformed URLs.
+      // If URL is invalid, frontend should naturally fall back to placeholder.
       id: v.id,
       seq: v.seq,
       subject: v.subject,
       componentCode: v.componentCode,
       compiledHtml: v.compiledHtml,
       variableSchema: parseVariableSchemaJson(v.variableSchema),
-      previewUrl: v.previewUrl ?? null,
+      previewUrl:
+        typeof v.previewUrl === "string" && /^https?:\/\//i.test(v.previewUrl.trim())
+          ? v.previewUrl.trim()
+          : null,
       createdAt: v.createdAt.toISOString(),
     }));
 

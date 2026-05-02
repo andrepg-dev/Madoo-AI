@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Banner,
   Button,
@@ -14,31 +14,24 @@ import {
   Tag,
 } from "@madoo/ui";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
+import { useEmails } from "@/hooks/use-emails";
 import {
   CSV_FIELDS,
   DRAFT_EMAILS,
-  EMAIL_VARIABLES,
   PREVIEW_CONTACTS,
   SEGMENTS,
   TEMPLATES,
 } from "@/lib/data";
 
-type VarMap = Record<string, { field: string | null; fallback: string }>;
+type VarMap = Record<string, { field: string | null }>;
+const EMPTY_VARIABLES: Array<{ name: string; default: string; label?: string }> = [];
 
-const initialVarMap = (): VarMap =>
+const initialVarMap = (variableNames: string[]): VarMap =>
   Object.fromEntries(
-    EMAIL_VARIABLES.map((v) => [
-      v.token,
+    variableNames.map((name) => [
+      name,
       {
-        field: v.auto,
-        fallback:
-          v.token === "{Nombre}"
-            ? "friend"
-            : v.token === "{Empresa}"
-              ? "your team"
-              : v.token === "{Ciudad}"
-                ? "there"
-                : "recently",
+        field: null,
       },
     ]),
   );
@@ -57,18 +50,54 @@ export function ComposeModal({ onClose, onSend }: { onClose: () => void; onSend:
   const [audience, setAudience] = useState("All contacts");
   const [schedule, setSchedule] = useState<"now" | "later">("now");
   const [abTest, setAbTest] = useState(true);
-  const [varMap, setVarMap] = useState<VarMap>(initialVarMap);
+  const [varMap, setVarMap] = useState<VarMap>({});
   const [previewIdx, setPreviewIdx] = useState(0);
+  const emailsQuery = useEmails();
 
   const audCount = SEGMENTS.find((s) => s.name === audience)?.count || 0;
   const chosenEmail = DRAFT_EMAILS.find((e) => e.id === emailId) || DRAFT_EMAILS[0];
   const chosenTpl = TEMPLATES[chosenEmail.tplIdx];
+  const draftIndex = Math.max(
+    0,
+    DRAFT_EMAILS.findIndex((draft) => draft.id === chosenEmail.id),
+  );
+  const selectedEmail = emailsQuery.data?.[draftIndex] ?? emailsQuery.data?.[0];
+  const currentVariant =
+    selectedEmail && selectedEmail.variants.length > 0
+      ? selectedEmail.variants[selectedEmail.variants.length - 1]
+      : null;
+  const variableSpecs = useMemo(
+    () => currentVariant?.variableSchema.variables ?? EMPTY_VARIABLES,
+    [currentVariant],
+  );
 
   const previewOptions = PREVIEW_CONTACTS.map((c, i) => ({ value: String(i), label: c.name }));
   const fieldOptions = [
     { value: "", label: "— select field —" },
     ...CSV_FIELDS.map((f) => ({ value: f, label: f })),
   ];
+  const matchedCount = useMemo(
+    () => variableSpecs.filter((variable) => Boolean(varMap[variable.name]?.field)).length,
+    [variableSpecs, varMap],
+  );
+
+  useEffect(() => {
+    const names = variableSpecs.map((variable) => variable.name);
+    setVarMap((prev) => {
+      const next = initialVarMap(names);
+      for (const name of names) {
+        if (prev[name]) next[name] = { field: prev[name].field };
+      }
+      const prevNames = Object.keys(prev);
+      const nextNames = Object.keys(next);
+      if (prevNames.length !== nextNames.length) return next;
+      for (const name of nextNames) {
+        if (!(name in prev)) return next;
+        if (prev[name]?.field !== next[name]?.field) return next;
+      }
+      return prev;
+    });
+  }, [variableSpecs]);
 
   return (
     <Modal
@@ -294,10 +323,15 @@ export function ComposeModal({ onClose, onSend }: { onClose: () => void; onSend:
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <Banner tone="accent">
             <b>
-              {audCount.toLocaleString()} of {audCount.toLocaleString()}
+              {matchedCount.toLocaleString()} of {variableSpecs.length.toLocaleString()}
             </b>{" "}
-            contacts will receive the email. Variables are auto-matched — review below.
+            variables mapped. If a contact misses a mapped field, the component inline default is used.
           </Banner>
+          {!currentVariant && (
+            <Banner tone="warn">
+              No real email variant found yet. Generate an email first to map `variableSchema` values.
+            </Banner>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 14 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div
@@ -317,12 +351,12 @@ export function ComposeModal({ onClose, onSend }: { onClose: () => void; onSend:
                 <div></div>
                 <div>Contact field</div>
               </div>
-              {EMAIL_VARIABLES.map((v) => {
-                const m = varMap[v.token];
+              {variableSpecs.map((variable) => {
+                const m = varMap[variable.name];
                 const isMatched = !!m?.field;
                 return (
                   <div
-                    key={v.token}
+                    key={variable.name}
                     style={{
                       padding: 10,
                       background: "var(--surface-2)",
@@ -354,7 +388,7 @@ export function ComposeModal({ onClose, onSend }: { onClose: () => void; onSend:
                           width: "fit-content",
                         }}
                       >
-                        {v.token}
+                        {variable.name}
                       </div>
                       <div
                         style={{
@@ -367,18 +401,18 @@ export function ComposeModal({ onClose, onSend }: { onClose: () => void; onSend:
                       </div>
                       <Select
                         selectSize="sm"
-                        value={m?.field || ""}
+                        value={m?.field ?? ""}
                         onChange={(e) =>
                           setVarMap((prev) => ({
                             ...prev,
-                            [v.token]: {
-                              ...prev[v.token],
+                            [variable.name]: {
+                              ...prev[variable.name],
                               field: e.target.value || null,
                             },
                           }))
                         }
                         options={fieldOptions}
-                        aria-label={`Field for ${v.token}`}
+                        aria-label={`Field for ${variable.name}`}
                       />
                     </div>
                     <div
@@ -392,62 +426,17 @@ export function ComposeModal({ onClose, onSend }: { onClose: () => void; onSend:
                       }}
                     >
                       <span style={{ fontSize: 11, color: "var(--ink-faint)", fontWeight: 500 }}>
-                        If empty, use:
+                        Inline default:
                       </span>
-                      <div style={{ flex: 1 }}>
-                        <Input
-                          inputSize="sm"
-                          value={m?.fallback || ""}
-                          onChange={(e) =>
-                            setVarMap((prev) => ({
-                              ...prev,
-                              [v.token]: { ...prev[v.token], fallback: e.target.value },
-                            }))
-                          }
-                          placeholder="friend"
-                          aria-label={`Fallback for ${v.token}`}
-                        />
-                      </div>
-                      {isMatched && v.missing > 0 && (
-                        <Tag tone="warn" size="sm" sans>
-                          {v.missing} missing
-                        </Tag>
-                      )}
+                      <Tag tone="neutral" size="sm" sans>
+                        {variable.default || "(empty string)"}
+                      </Tag>
                       {!isMatched && (
                         <Tag tone="danger" size="sm" sans>
                           not mapped
                         </Tag>
                       )}
                     </div>
-                    {!isMatched && v.suggestions && (
-                      <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
-                        <span
-                          style={{
-                            fontSize: 10.5,
-                            color: "var(--ink-faint)",
-                            alignSelf: "center",
-                          }}
-                        >
-                          Try:
-                        </span>
-                        {v.suggestions.map((s) => (
-                          <Button
-                            key={s}
-                            variant="secondary"
-                            size="sm"
-                            className="mono"
-                            onClick={() =>
-                              setVarMap((prev) => ({
-                                ...prev,
-                                [v.token]: { ...prev[v.token], field: s },
-                              }))
-                            }
-                          >
-                            {s}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -485,18 +474,27 @@ export function ComposeModal({ onClose, onSend }: { onClose: () => void; onSend:
               >
                 {(() => {
                   const c = PREVIEW_CONTACTS[previewIdx];
-                  const resolve = (tok: string) => {
-                    const m = varMap[tok];
-                    if (!m?.field) return m?.fallback || tok;
-                    const v = (c.data as Record<string, string>)[tok];
-                    return v && v !== "—" ? v : m.fallback || tok;
-                  };
                   return (
                     <>
-                      <div style={{ fontWeight: 600 }}>Hi {resolve("{Nombre}")},</div>
-                      <div style={{ marginTop: 6, color: "var(--ink-soft)" }}>
-                        We noticed {resolve("{Empresa}")} has been growing fast. Folks in {resolve("{Ciudad}")} love
-                        what we shipped since your last order ({resolve("{Última_compra}")}).
+                      <div style={{ fontWeight: 600 }}>Preview values for {c.name}</div>
+                      <div style={{ marginTop: 6, color: "var(--ink-soft)", display: "flex", flexDirection: "column", gap: 4 }}>
+                        {variableSpecs.length === 0 ? (
+                          <span>No variables found in current variant.</span>
+                        ) : (
+                          variableSpecs.slice(0, 6).map((variable) => {
+                            const mappedField = varMap[variable.name]?.field;
+                            const mappedValue = mappedField
+                              ? (c.data as Record<string, string | undefined>)[mappedField]
+                              : undefined;
+                            const resolved =
+                              mappedValue && mappedValue !== "—" ? mappedValue : variable.default;
+                            return (
+                              <div key={variable.name}>
+                                <span className="mono">{variable.name}</span>: {resolved || "(empty string)"}
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     </>
                   );

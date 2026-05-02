@@ -230,6 +230,7 @@ export function EditorScreen({
             }
             if (ev.type === "done") {
               void qc.invalidateQueries({ queryKey: ["email", emailId] });
+              void qc.invalidateQueries({ queryKey: ["emails"] });
               void refetch().then((res) => {
                 const n = res.data?.variants?.length ?? 0;
                 if (n > 0) setVariantIdx(Math.min(n - 1, 2));

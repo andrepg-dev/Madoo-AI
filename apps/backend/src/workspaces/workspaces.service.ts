@@ -41,6 +41,22 @@ export class WorkspacesService {
     return ws;
   }
 
+  async createForUser(userId: string, name: string): Promise<Workspace> {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new ForbiddenException("Workspace name is required.");
+    }
+    const baseSlug = slugifyName(trimmed);
+    const slug = await this.uniqueSlug(baseSlug);
+    return this.prisma.workspace.create({
+      data: {
+        name: trimmed,
+        slug,
+        members: { create: { userId, role: "OWNER" } },
+      },
+    });
+  }
+
   async ensurePersonalWorkspace(params: {
     userId: string;
     displayName: string | null;
@@ -94,6 +110,14 @@ function slugifyEmail(email: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return cleaned || "user";
+}
+
+function slugifyName(name: string): string {
+  const cleaned = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return cleaned || "workspace";
 }
 
 function deriveNameFromEmail(email: string): string {

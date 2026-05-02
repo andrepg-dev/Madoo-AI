@@ -67,6 +67,7 @@ export function GeneratingScreen({
             }
             if (ev.type === "done") {
               void qc.invalidateQueries({ queryKey: ["email", emailId] });
+              void qc.invalidateQueries({ queryKey: ["emails"] });
               setStep(FALLBACK_STEPS.length - 1);
               setStepLabel("Done");
               setTimeout(() => onDoneRef.current(), 400);

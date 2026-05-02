@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
+import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
+import { readCookie, writeCookie, WORKSPACE_COOKIE } from "@/lib/cookies";
 
 const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Home", icon: "home" },
@@ -14,6 +18,17 @@ const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
 
 export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+
+  const workspacesQuery = useQuery({
+    queryKey: workspacesKeys.list(),
+    queryFn: () => workspacesApi.list(),
+  });
+
+  useEffect(() => {
+    setActiveWorkspaceId(readCookie(WORKSPACE_COOKIE));
+  }, []);
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname?.startsWith(href));
 
@@ -92,36 +107,54 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
       >
         WORKSPACE
       </div>
-      {["Acme Brand", "Side project"].map((w, i) => (
-        <button
-          key={w}
-          type="button"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "6px 10px",
-            borderRadius: 7,
-            border: "none",
-            background: "transparent",
-            color: "var(--ink-soft)",
-            fontSize: 13,
-            cursor: "pointer",
-            textAlign: "left",
-            fontFamily: "inherit",
-          }}
-        >
-          <div
-            style={{
-              width: 16,
-              height: 16,
-              borderRadius: 4,
-              background: i === 0 ? "var(--accent)" : "#D8C4B0",
+      {(workspacesQuery.data ?? []).map((workspace, i) => {
+        const active = workspace.id === activeWorkspaceId;
+        return (
+          <button
+            key={workspace.id}
+            type="button"
+            onClick={() => {
+              writeCookie(WORKSPACE_COOKIE, workspace.id);
+              setActiveWorkspaceId(workspace.id);
+              void queryClient.invalidateQueries();
             }}
-          />
-          {w}
-        </button>
-      ))}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 10px",
+              borderRadius: 7,
+              border: "none",
+              background: active ? "var(--surface-2)" : "transparent",
+              color: active ? "var(--ink)" : "var(--ink-soft)",
+              fontSize: 13,
+              cursor: "pointer",
+              textAlign: "left",
+              fontFamily: "inherit",
+              fontWeight: active ? 600 : 500,
+            }}
+          >
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: 4,
+                background: active ? "var(--accent)" : i % 2 === 0 ? "#D8C4B0" : "#CBB29A",
+              }}
+            />
+            <span
+              style={{
+                flex: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {workspace.name}
+            </span>
+          </button>
+        );
+      })}
 
       <Card surface="secondary" padded style={{ marginTop: "auto" }}>
         <div

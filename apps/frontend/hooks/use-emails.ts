@@ -26,6 +26,9 @@ export function useEmails(enabled = true) {
     queryKey: ["emails"],
     queryFn: fetchEmails,
     enabled,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }
 

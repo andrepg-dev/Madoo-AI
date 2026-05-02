@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Badge, Button, Card, Icon, SegmentedControl, type BadgeTone } from "@madoo/ui";
 import { MOCK_CAMPAIGNS, type CampaignStatus } from "@/lib/data";
 import { ComposeModal } from "./ComposeModal";
@@ -23,11 +23,19 @@ const STATUS_TONE: Record<CampaignStatus, BadgeTone> = {
 
 export function CampaignsScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [filter, setFilter] = useState<"all" | CampaignStatus>("all");
   const [showCompose, setShowCompose] = useState(false);
+  const consumedComposeParamRef = useRef(false);
 
   const filtered =
     filter === "all" ? MOCK_CAMPAIGNS : MOCK_CAMPAIGNS.filter((c) => c.status === filter);
+
+  useEffect(() => {
+    if (searchParams.get("compose") !== "1" || consumedComposeParamRef.current) return;
+    consumedComposeParamRef.current = true;
+    setShowCompose(true);
+  }, [searchParams]);
 
   return (
     <>

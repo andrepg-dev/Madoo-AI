@@ -76,9 +76,26 @@ const FEW_SHOT_TEXT = [
 
 const CHAT_HISTORY_LIMIT = 8;
 const CODE_CONTEXT_LIMIT = 24_000;
+const CODE_CONTEXT_HEAD_RATIO = 0.65;
 
 function shortHash(input: string): string {
   return createHash("sha256").update(input).digest("hex").slice(0, 16);
+}
+
+function buildCodeContextSnippet(code: string, maxChars: number): string {
+  if (code.length <= maxChars) return code;
+  const headSize = Math.max(1, Math.floor(maxChars * CODE_CONTEXT_HEAD_RATIO));
+  const tailSize = Math.max(1, maxChars - headSize);
+  const head = code.slice(0, headSize);
+  const tail = code.slice(-tailSize);
+  const omitted = code.length - head.length - tail.length;
+  return [
+    head,
+    "",
+    `/* ... TRUNCATED ${omitted} chars ... */`,
+    "",
+    tail,
+  ].join("\n");
 }
 
 
@@ -108,24 +125,6 @@ export class GenerationService {
       return undefined;
     }
     return { type: "adaptive", display: "summarized" };
-  }
-
-  private shouldIncludeFullCode(instruction: string, hasSnapshot: boolean): boolean {
-    if (!hasSnapshot) return true;
-    const text = instruction.toLowerCase();
-    const forceCodeSignals = [
-      "refactor",
-      "rewrite",
-      "reescribe",
-      "reestructura",
-      "from scratch",
-      "full code",
-      "todo el codigo",
-      "cambia toda",
-      "new layout",
-      "nueva estructura",
-    ];
-    return forceCodeSignals.some((signal) => text.includes(signal));
   }
 
   private async loadRecentChatContext(emailId: string): Promise<string> {
@@ -333,8 +332,8 @@ export class GenerationService {
     });
 
     const instruction = body.instruction.trim();
-    const includeFullCode = this.shouldIncludeFullCode(instruction, Boolean(snapshot?.id));
     const recentChat = await this.loadRecentChatContext(emailId);
+    const codeContext = buildCodeContextSnippet(snapshot.componentCode, CODE_CONTEXT_LIMIT);
 
     const editPrompt = [
       "Edit the current React Email TSX according to the instruction.",
@@ -347,10 +346,10 @@ export class GenerationService {
       `- file: ${snapshot.filePath}`,
       `- hash: ${snapshot.componentHash}`,
       `- sourceVariantId: ${snapshot.sourceVariantId ?? "unknown"}`,
-      includeFullCode
-        ? ""
-        : "Use the virtual file state above. Only request a full rewrite when strictly necessary.",
-      includeFullCode ? `\nCurrent TSX:\n${snapshot.componentCode.slice(0, CODE_CONTEXT_LIMIT)}` : "",
+      `- codeLength: ${snapshot.componentCode.length}`,
+      "",
+      "Current TSX (authoritative source of truth):",
+      codeContext,
     ].join("\n");
 
     await this.appendChatMessage({
@@ -542,7 +541,7 @@ export class GenerationService {
                   `Reason: ${lastErr.message}`,
                   "Keep the same intent and audience.",
                   fullCodeForRetry
-                    ? `Current TSX (required for accurate retry):\n${fullCodeForRetry.slice(0, CODE_CONTEXT_LIMIT)}`
+                    ? `Current TSX (required for accurate retry):\n${buildCodeContextSnippet(fullCodeForRetry, CODE_CONTEXT_LIMIT)}`
                     : "",
                 ].join("\n"),
               },
