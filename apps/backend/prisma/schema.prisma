@@ -157,6 +157,7 @@ model EmailGenerationRun {
   status GenerationRunStatus @default(STARTED)
 
   inputTokens       Int?
+  cachedTokens      Int?
   outputTokens      Int?
   cacheCreationInputTokens  Int?
   cacheReadInputTokens      Int?

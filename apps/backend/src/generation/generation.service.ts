@@ -621,6 +621,7 @@ export class GenerationService {
         data: {
           status: statusDone,
           inputTokens: usageTotals.input_tokens,
+          cachedTokens: usageTotals.cache_read_input_tokens,
           outputTokens: usageTotals.output_tokens,
           cacheCreationInputTokens: usageTotals.cache_creation_input_tokens,
           cacheReadInputTokens: usageTotals.cache_read_input_tokens,
