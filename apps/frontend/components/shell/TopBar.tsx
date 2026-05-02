@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   Avatar,
   Button,
@@ -19,6 +20,7 @@ import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
 import { readCookie, writeCookie, WORKSPACE_COOKIE } from "@/lib/cookies";
 
 export function TopBar() {
+  const router = useRouter();
   const { data: user, isPending: loading } = useMe();
   const openLogin = useAuthStore((s) => s.openLogin);
   const { mutate: logout } = useLogout();
@@ -271,7 +273,14 @@ export function TopBar() {
                 />
 
                 <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
-                <MenuItem icon="settings" label="User settings" onClick={() => setOpen(false)} />
+                <MenuItem
+                  icon="settings"
+                  label="User settings"
+                  onClick={() => {
+                    setOpen(false);
+                    router.push("/settings");
+                  }}
+                />
                 <MenuItem icon="barChart" label="Usage" onClick={() => setOpen(false)} />
                 <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
                 <MenuItem

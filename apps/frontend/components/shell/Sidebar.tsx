@@ -13,6 +13,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/campaigns", label: "Campaigns", icon: "send" },
   { href: "/contacts", label: "Contacts", icon: "inbox" },
   { href: "/analytics", label: "Analytics", icon: "bolt" },
+  { href: "/settings", label: "Settings", icon: "sliders" },
   { href: "/domain", label: "Domain", icon: "settings" },
 ];
 
