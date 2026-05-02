@@ -79,28 +79,6 @@ export const SEGMENTS: Segment[] = [
   { name: "New this week", count: 67, accent: "#5B5FCB" },
 ];
 
-export type CampaignStatus = "sent" | "sending" | "scheduled" | "draft";
-
-export type Campaign = {
-  id: number;
-  name: string;
-  subject: string;
-  status: CampaignStatus;
-  sentAt: string;
-  recipients: number;
-  opens: number;
-  clicks: number;
-  audience: string;
-};
-
-export const MOCK_CAMPAIGNS: Campaign[] = [
-  { id: 1, name: "Spring launch announcement", subject: "Something new is shipping today.", status: "sent", sentAt: "Apr 18, 10:00 AM", recipients: 2847, opens: 1681, clicks: 412, audience: "All contacts" },
-  { id: 2, name: "Welcome series — day 1", subject: "Welcome — here's where to start.", status: "sending", sentAt: "Sending now", recipients: 67, opens: 12, clicks: 4, audience: "New this week" },
-  { id: 3, name: "Re-engagement push", subject: "It's been a minute.", status: "scheduled", sentAt: "Apr 26, 9:00 AM", recipients: 184, opens: 0, clicks: 0, audience: "Lapsed (30d+)" },
-  { id: 4, name: "Pricing update notice", subject: "A small change to our pricing.", status: "draft", sentAt: "—", recipients: 412, opens: 0, clicks: 0, audience: "Pro customers" },
-  { id: 5, name: "February newsletter", subject: "The Weekly · Vol. 9", status: "sent", sentAt: "Feb 28, 9:00 AM", recipients: 2641, opens: 1320, clicks: 287, audience: "All contacts" },
-];
-
 export const DRAFT_EMAILS = [
   { id: "d1", name: "Spring launch announcement", subject: "Something new is shipping today.", tplIdx: 0, updated: "2 hours ago" },
   { id: "d2", name: "Pricing update notice", subject: "A small change to our pricing.", tplIdx: 3, updated: "Yesterday" },
