@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, Icon, ProgressBar, SegmentedControl } from "@madoo/ui";
-import { MOCK_CAMPAIGNS } from "@/lib/data";
+import type { EmailDto } from "@madoo/shared";
+import { campaignsApi, campaignsKeys } from "@/actions/campaigns";
+import { useEmails } from "@/hooks/use-emails";
 
 const RANGES = [
   { value: "7", label: "7 days" },
@@ -11,7 +14,30 @@ const RANGES = [
 ];
 
 export function AnalyticsScreen() {
-  const campaign = MOCK_CAMPAIGNS[0];
+  const campaignsQuery = useQuery({
+    queryKey: campaignsKeys.list(),
+    queryFn: campaignsApi.list,
+  });
+  const emailsQuery = useEmails(true);
+
+  const emailById = useMemo(() => {
+    const map = new Map<string, EmailDto>();
+    for (const mail of emailsQuery.data ?? []) {
+      map.set(mail.id, mail);
+    }
+    return map;
+  }, [emailsQuery.data]);
+
+  const focusCampaign = campaignsQuery.data?.[0];
+  const focusEmail = focusCampaign ? emailById.get(focusCampaign.emailId) : undefined;
+
+  const headline =
+    focusEmail?.title?.trim() ||
+    (focusEmail ? `${focusEmail.prompt.slice(0, 80)}${focusEmail.prompt.length > 80 ? "…" : ""}` : undefined);
+  const subjectLine =
+    focusEmail && focusEmail.variants.length > 0
+      ? focusEmail.variants[focusEmail.variants.length - 1]?.subject
+      : undefined;
   const openData = [12, 22, 38, 64, 78, 88, 94, 96, 98, 99, 100];
   const hoursLabels = ["0h", "2h", "4h", "6h", "8h", "12h", "24h", "48h", "3d", "5d", "7d"];
   const [range, setRange] = useState("7");
@@ -38,11 +64,21 @@ export function AnalyticsScreen() {
           className="serif"
           style={{ fontSize: 36, fontWeight: 400, margin: "6px 0 0", letterSpacing: -0.5 }}
         >
-          {campaign.name}
+          {campaignsQuery.isPending
+            ? "Analytics"
+            : headline ?? "Connect campaigns to see insights"}
         </h1>
         <div style={{ fontSize: 14, color: "var(--ink-soft)", marginTop: 6, fontStyle: "italic" }}>
-          &quot;{campaign.subject}&quot; · sent {campaign.sentAt} to{" "}
-          {campaign.recipients.toLocaleString()} contacts
+          {focusCampaign ? (
+            <>
+              &quot;{subjectLine ?? "—"}&quot;
+              {focusCampaign.sentAt ? <> · sent {new Date(focusCampaign.sentAt).toLocaleString()}</> : null}
+            </>
+          ) : (
+            <>
+              Open tracking and delivery webhooks still ship in phase 4 — chart below remains illustrative.
+            </>
+          )}
         </div>
 
         <div
