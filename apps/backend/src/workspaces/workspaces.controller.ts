@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, Post, UseGuards } from "@nestjs/common";
 import { WorkspacesService } from "./workspaces.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { CreateWorkspaceDto } from "./dto/create-workspace.dto";
 import { toMyWorkspaceDto, type MyWorkspaceDto } from "./dto/workspace.dto";
+import { UpdateWorkspaceMeDto } from "./dto/update-workspace-me.dto";
 
 @Controller({ path: "workspaces", version: "1" })
 @UseGuards(JwtAuthGuard)
@@ -23,5 +24,16 @@ export class WorkspacesController {
   ): Promise<MyWorkspaceDto> {
     const workspace = await this.workspaces.createForUser(current.sub, body.name);
     return toMyWorkspaceDto(workspace, { role: "OWNER" });
+  }
+
+  @Patch("me")
+  async updateMe(
+    @CurrentUser() current: { sub: string },
+    @Body() body: UpdateWorkspaceMeDto,
+  ): Promise<MyWorkspaceDto> {
+    const workspace = await this.workspaces.updatePrimaryWorkspaceForUser(current.sub, {
+      postalAddress: body.postalAddress,
+    });
+    return toMyWorkspaceDto(workspace, workspace.membership);
   }
 }

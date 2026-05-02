@@ -86,6 +86,23 @@ export class WorkspacesService {
     return workspace;
   }
 
+  async updatePrimaryWorkspaceForUser(
+    userId: string,
+    input: { postalAddress: string },
+  ): Promise<Workspace & { membership: Membership }> {
+    const membership = await this.prisma.membership.findFirst({
+      where: { userId },
+      include: { workspace: true },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!membership) throw new NotFoundException("Workspace not found.");
+    const updated = await this.prisma.workspace.update({
+      where: { id: membership.workspaceId },
+      data: { postalAddress: input.postalAddress.trim() },
+    });
+    return { ...updated, membership };
+  }
+
   private async uniqueSlug(base: string): Promise<string> {
     let candidate = base;
     let suffix = 1;
