@@ -6,4 +6,5 @@ export * from "./auth";
 export * from "./prompts";
 export * from "./emails";
 export * from "./contacts";
+export * from "./domains";
 export * from "./campaigns";
