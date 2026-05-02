@@ -2,8 +2,10 @@ import { z } from "zod";
 import {
   CreateWorkspaceInputSchema,
   MyWorkspaceSchema,
+  UpdateWorkspaceMeInputSchema,
   type CreateWorkspaceInput,
   type MyWorkspace,
+  type UpdateWorkspaceMeInput,
 } from "@madoo/shared";
 import { fetcher } from "@/lib/fetch";
 
@@ -27,6 +29,14 @@ export const workspacesApi = {
     );
     return MyWorkspaceSchema.parse(raw);
   },
+  updateMe: async (input: UpdateWorkspaceMeInput): Promise<MyWorkspace> => {
+    const body = UpdateWorkspaceMeInputSchema.parse(input);
+    const raw = await fetcher.patch<unknown, UpdateWorkspaceMeInput>(
+      "/workspaces/me",
+      body,
+    );
+    return MyWorkspaceSchema.parse(raw);
+  },
 };
 
-export type { MyWorkspace, CreateWorkspaceInput };
+export type { MyWorkspace, CreateWorkspaceInput, UpdateWorkspaceMeInput };
