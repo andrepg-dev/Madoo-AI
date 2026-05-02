@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { CampaignsScreen } from "@/components/campaigns/CampaignsScreen";
 
 export default function Page() {
-  return <CampaignsScreen />;
+  return (
+    <Suspense fallback={null}>
+      <CampaignsScreen />
+    </Suspense>
+  );
 }
