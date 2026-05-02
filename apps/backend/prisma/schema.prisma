@@ -51,6 +51,7 @@ model Workspace {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
+  postalAddress String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -67,8 +68,41 @@ model Workspace {
   segments            Segment[]
   suppressionEntries  SuppressionEntry[]
   contactImportJobs   ContactImportJob[]
+  domains             Domain[]
+  dnsChecks           DnsCheck[]
+  campaigns           Campaign[]
+  auditLogs           AuditLog[]
 
   @@index([slug])
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFIED
+}
+
+enum DnsCheckType {
+  SPF
+  DKIM
+  DMARC
+  RETURN_PATH
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+}
+
+enum CampaignDeliveryStatus {
+  PENDING
+  SENT
+  OPENED
+  CLICKED
+  BOUNCED
+  UNSUBSCRIBED
+  COMPLAINED
 }
 
 enum EmailStatus {
@@ -148,6 +182,7 @@ model Email {
   generationRuns        EmailGenerationRun[]
   chatMessages          EmailChatMessage[]
   vfsSnapshot           EmailVfsSnapshot?
+  campaigns             Campaign[]
 
   @@index([workspaceId, createdAt])
 }
@@ -273,6 +308,7 @@ model Contact {
 
   workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tags      ContactTag[]
+  deliveries CampaignDelivery[]
 
   @@unique([workspaceId, email])
   @@index([workspaceId, status])
@@ -317,6 +353,7 @@ model Segment {
   createdAt   DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
 
   @@index([workspaceId, createdAt])
 }
@@ -349,6 +386,98 @@ model ContactImportJob {
 
   @@index([workspaceId, status])
   @@index([workspaceId, createdAt])
+}
+
+model Domain {
+  id             String       @id @default(cuid())
+  workspaceId    String
+  hostname       String
+  status         DomainStatus @default(PENDING)
+  dkimPublicKey  String       @db.Text
+  dkimPrivateKey String?      @db.Text
+  verifiedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  checks    DnsCheck[]
+
+  @@unique([workspaceId, hostname])
+  @@index([workspaceId, status])
+}
+
+model DnsCheck {
+  id          String       @id @default(cuid())
+  workspaceId String
+  domainId    String
+  type        DnsCheckType
+  hostname    String
+  expected    String       @db.Text
+  actual      String?      @db.Text
+  ok          Boolean
+  checkedAt   DateTime     @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  domain    Domain    @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, domainId, type, checkedAt])
+}
+
+model Campaign {
+  id           String         @id @default(cuid())
+  workspaceId  String
+  emailId      String
+  segmentId    String
+  status       CampaignStatus @default(DRAFT)
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  fromName     String
+  fromEmail    String
+  replyTo      String?
+  abTest       Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  workspace  Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email      Email              @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  segment    Segment            @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  deliveries CampaignDelivery[]
+
+  @@index([workspaceId, status, createdAt])
+}
+
+model CampaignDelivery {
+  id             String                 @id @default(cuid())
+  campaignId     String
+  contactId      String
+  messageId      String?
+  status         CampaignDeliveryStatus @default(PENDING)
+  sentAt         DateTime?
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  bouncedAt      DateTime?
+  unsubscribedAt DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
+  @@index([contactId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  action      String
+  actorUserId String
+  payload     Json
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, action, createdAt])
 }
 
 model Membership {
