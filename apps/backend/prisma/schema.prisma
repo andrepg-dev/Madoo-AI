@@ -61,6 +61,12 @@ model Workspace {
   emailGenerationRuns EmailGenerationRun[]
   emailChatMessages   EmailChatMessage[]
   emailVfsSnapshots   EmailVfsSnapshot[]
+  contacts            Contact[]
+  tags                Tag[]
+  contactTags         ContactTag[]
+  segments            Segment[]
+  suppressionEntries  SuppressionEntry[]
+  contactImportJobs   ContactImportJob[]
 
   @@index([slug])
 }
@@ -94,6 +100,27 @@ enum EmailChatKind {
   TEXT
   THINKING
   STATUS
+}
+
+enum ContactStatus {
+  ACTIVE
+  UNSUBSCRIBED
+  BOUNCED
+  COMPLAINED
+}
+
+enum SuppressionReason {
+  UNSUBSCRIBED
+  HARD_BOUNCE
+  COMPLAINED
+}
+
+enum ContactImportJobStatus {
+  UPLOADED
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
 model Email {
@@ -231,6 +258,97 @@ model Template {
 
   @@unique([workspaceId, slug])
   @@index([workspaceId])
+}
+
+model Contact {
+  id          String        @id @default(cuid())
+  workspaceId String
+  email       String
+  firstName   String?
+  lastName    String?
+  status      ContactStatus @default(ACTIVE)
+  customFields Json         @default("{}")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tags      ContactTag[]
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, status])
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts  ContactTag[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model ContactTag {
+  id          String   @id @default(cuid())
+  workspaceId String
+  contactId   String
+  tagId       String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact   Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, tagId])
+  @@index([workspaceId, contactId])
+  @@index([workspaceId, tagId])
+}
+
+model Segment {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  query       Json
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+}
+
+model SuppressionEntry {
+  id          String            @id @default(cuid())
+  workspaceId String
+  email       String
+  reason      SuppressionReason
+  createdAt   DateTime          @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, reason])
+}
+
+model ContactImportJob {
+  id            String                 @id @default(cuid())
+  workspaceId   String
+  status        ContactImportJobStatus @default(UPLOADED)
+  totalRows     Int                    @default(0)
+  processedRows Int                    @default(0)
+  errors        Json                   @default("[]")
+  filePath      String
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
 }
 
 model Membership {

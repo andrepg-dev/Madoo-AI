@@ -29,3 +29,9 @@ export const MyWorkspaceSchema = WorkspaceSchema.extend({
 });
 
 export type MyWorkspace = z.infer<typeof MyWorkspaceSchema>;
+
+export const CreateWorkspaceInputSchema = z.object({
+  name: z.string().min(1).max(80),
+});
+
+export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceInputSchema>;

@@ -7,6 +7,9 @@ import { PromptsModule } from "./prompts/prompts.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
 import { EmailsModule } from "./emails/emails.module";
 import { TemplatesModule } from "./templates/templates.module";
+import { ContactsModule } from "./contacts/contacts.module";
+import { TagsModule } from "./tags/tags.module";
+import { SegmentsModule } from "./segments/segments.module";
 import { HealthController } from "./health.controller";
 
 @Module({
@@ -19,6 +22,9 @@ import { HealthController } from "./health.controller";
     PromptsModule,
     EmailsModule,
     TemplatesModule,
+    ContactsModule,
+    TagsModule,
+    SegmentsModule,
   ],
   controllers: [HealthController],
 })
