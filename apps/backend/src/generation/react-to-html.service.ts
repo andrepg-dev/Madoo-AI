@@ -22,6 +22,7 @@ const BLOCKLIST: RegExp[] = [
   /\brequire\s*\(\s*['"]tls['"]\s*\)/,
   /\brequire\s*\(\s*['"]http['"]\s*\)/,
   /\brequire\s*\(\s*['"]https['"]\s*\)/,
+  /\bprocess\./,
   /\bprocess\.deref\b/,
   /\bimport\s+[^;]*['"]fs['"]/,
   /\beval\s*\(/,
