@@ -5,6 +5,7 @@ import "./globals.css";
 import { AppShell } from "@/components/shell/AppShell";
 import { LoginModal } from "@/components/auth/LoginModal";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { ToastProvider } from "@/components/providers/ToastProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,8 +44,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         <QueryProvider>
-          <AppShell>{children}</AppShell>
-          <LoginModal />
+          <ToastProvider>
+            <AppShell>{children}</AppShell>
+            <LoginModal />
+          </ToastProvider>
         </QueryProvider>
       </body>
     </html>
