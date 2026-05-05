@@ -13,6 +13,10 @@ import {
   type SendBatchItem,
   type SendingProvider,
 } from "../sending/sending-provider.interface";
+import {
+  collectTrackableHrefs,
+  rewriteAnchorsAndInjectPixel,
+} from "../tracking/html-tracking";
 import { CAMPAIGN_SEND_JOB, CAMPAIGN_SEND_QUEUE, type CampaignSendJobPayload } from "./campaign-send.types";
 
 const CHUNK_SIZE = 200;
@@ -90,6 +94,14 @@ export class CampaignSendProcessor extends WorkerHost {
       const secret = this.config.get<string>("JWT_SECRET") ?? "";
       const senderDomain = this.config.get<string>("SENDING_DOMAIN") ?? "madooai.com";
       const fromEmail = campaign.fromEmail || `hello@${senderDomain}`;
+      const trackingBaseUrl =
+        this.config.get<string>("TRACKING_URL") ??
+        `${this.config.get<string>("BACKEND_URL") ?? `http://localhost:${this.config.get<string>("PORT") ?? "4000"}`}/api/v1`;
+
+      const trackedLinkCache = await this.loadTrackedLinkCache(
+        job.data.workspaceId,
+        campaign.id,
+      );
 
       const maxPerSecond = Number(
         this.config.get<string>("CAMPAIGN_SEND_RATE_PER_SECOND") ??
@@ -112,7 +124,7 @@ export class CampaignSendProcessor extends WorkerHost {
         ),
       );
 
-      const batch: SendBatchItem[] = chunk.map((contact, idx) => {
+      const prepared = chunk.map((contact, idx) => {
         const delivery = deliveries[idx];
         const customFields = toStringMap(contact.customFields);
         const variables = variableSchema.reduce<Record<string, string>>((acc, variable) => {
@@ -138,6 +150,31 @@ export class CampaignSendProcessor extends WorkerHost {
         }, {});
 
         const renderedHtml = this.reactToHtml.renderComponent(component, variables);
+        const composedHtml = `${renderedHtml}${buildComplianceFooter(campaign.workspace, contact, delivery.id)}`;
+        return { contact, delivery, composedHtml };
+      });
+
+      const newUrls = new Set<string>();
+      for (const item of prepared) {
+        for (const href of collectTrackableHrefs(item.composedHtml)) {
+          if (!trackedLinkCache.has(href)) newUrls.add(href);
+        }
+      }
+      if (newUrls.size > 0) {
+        for (const url of newUrls) {
+          const created = await this.prisma.trackedLink.create({
+            data: {
+              workspaceId: job.data.workspaceId,
+              campaignId: campaign.id,
+              url,
+            },
+            select: { id: true, url: true },
+          });
+          trackedLinkCache.set(created.url, created.id);
+        }
+      }
+
+      const batch: SendBatchItem[] = prepared.map(({ contact, delivery, composedHtml }) => {
         const deliveryId = delivery.id;
         const unsubscribeToken = encodeUnsubscribeToken(
           {
@@ -149,9 +186,12 @@ export class CampaignSendProcessor extends WorkerHost {
         );
         const unsubscribeUrl = `${appUrl}/unsubscribe/${unsubscribeToken}`;
 
-        // TODO(phase4): Inject tracking pixel before provider send.
-        // TODO(phase4): Rewrite anchor hrefs to tracking redirect endpoints.
-        const html = `${renderedHtml}${buildComplianceFooter(campaign.workspace, contact, delivery.id)}`;
+        const html = rewriteAnchorsAndInjectPixel(composedHtml, {
+          deliveryId,
+          secret,
+          trackingBaseUrl,
+          resolveLinkId: (url) => trackedLinkCache.get(url) ?? null,
+        });
 
         return {
           from: `${campaign.fromName} <${fromEmail}>`,
@@ -169,6 +209,7 @@ export class CampaignSendProcessor extends WorkerHost {
       await this.applyRateLimit(maxPerSecond, batch.length);
 
       const result = await this.sender.sendBatch(batch);
+      const sentAt = new Date();
       await this.prisma.$transaction(
         deliveries.map((delivery, idx) =>
           this.prisma.campaignDelivery.update({
@@ -176,7 +217,7 @@ export class CampaignSendProcessor extends WorkerHost {
             data: {
               messageId: result.messageIds[idx] ?? null,
               status: "SENT",
-              sentAt: new Date(),
+              sentAt,
             },
           }),
         ),
@@ -201,6 +242,19 @@ export class CampaignSendProcessor extends WorkerHost {
       });
       throw error;
     }
+  }
+
+  private async loadTrackedLinkCache(
+    workspaceId: string,
+    campaignId: string,
+  ): Promise<Map<string, string>> {
+    const rows = await this.prisma.trackedLink.findMany({
+      where: { workspaceId, campaignId },
+      select: { id: true, url: true },
+    });
+    const map = new Map<string, string>();
+    for (const row of rows) map.set(row.url, row.id);
+    return map;
   }
 
   private async applyRateLimit(maxPerSecond: number, batchSize: number): Promise<void> {
