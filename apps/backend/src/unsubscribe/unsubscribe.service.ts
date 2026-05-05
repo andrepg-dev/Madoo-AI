@@ -46,9 +46,21 @@ export class UnsubscribeService {
           reason: "UNSUBSCRIBED",
         },
       }),
+      this.prisma.campaignDelivery.update({
+        where: { id: payload.deliveryId },
+        data: { status: "UNSUBSCRIBED", unsubscribedAt: new Date() },
+      }),
+      this.prisma.event.create({
+        data: {
+          workspaceId: contact.workspaceId,
+          campaignId: payload.campaignId,
+          contactId: contact.id,
+          deliveryId: payload.deliveryId,
+          type: "UNSUBSCRIBED",
+        },
+      }),
     ]);
 
-    // Event(type=unsubscribed) will be persisted when Event schema lands.
     return { ok: true };
   }
 }
