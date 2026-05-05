@@ -1,11 +1,13 @@
 "use client";
 
+import { billingApi, billingKeys } from "@/actions/billing";
 import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
 import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
+import { PLAN_DISPLAY_NAMES, PLAN_LIMITS, type Plan } from "@madoo/shared";
 import { Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
@@ -19,12 +21,19 @@ const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
 
 export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
   const workspacesQuery = useQuery({
     queryKey: workspacesKeys.list(),
     queryFn: () => workspacesApi.list(),
+  });
+
+  const billingQuery = useQuery({
+    queryKey: billingKeys.overview(),
+    queryFn: () => billingApi.overview(),
+    staleTime: 60_000,
   });
 
   useEffect(() => {
@@ -154,32 +163,62 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
         );
       })}
 
-      <Card surface="secondary" padded style={{ marginTop: "auto" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 11,
-            fontWeight: 600,
-            color: "var(--accent-deep)",
-          }}
-        >
-          <Icon name="bolt" size={12} /> Free plan
-        </div>
-        <div style={{ fontSize: 11.5, color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
-          7 of 10 generations left this month.
-        </div>
-        <ProgressBar
-          value={70}
-          variant="thin"
-          aria-label="Generations used this month"
-          style={{ marginTop: 8 }}
-        />
-        <Button variant="primary" size="sm" block style={{ marginTop: 10 }}>
-          Upgrade to Pro
-        </Button>
-      </Card>
+      <BillingCard
+        plan={billingQuery.data?.subscription.plan ?? "FREE"}
+        used={billingQuery.data?.usage.contacts.used ?? 0}
+        limit={billingQuery.data?.usage.contacts.limit ?? PLAN_LIMITS.FREE.contacts}
+        onClick={() => router.push("/settings/billing")}
+      />
     </aside>
+  );
+}
+
+function BillingCard({
+  plan,
+  used,
+  limit,
+  onClick,
+}: {
+  plan: Plan;
+  used: number;
+  limit: number;
+  onClick: () => void;
+}) {
+  const usagePct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const showUpgrade = plan !== "GROWTH";
+
+  return (
+    <Card surface="secondary" padded style={{ marginTop: "auto" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 11,
+          fontWeight: 600,
+          color: "var(--accent-deep)",
+        }}
+      >
+        <Icon name="bolt" size={12} /> {PLAN_DISPLAY_NAMES[plan]} plan
+      </div>
+      <div style={{ fontSize: 11.5, color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
+        {used.toLocaleString()} of {limit.toLocaleString()} contacts used.
+      </div>
+      <ProgressBar
+        value={usagePct}
+        variant="thin"
+        aria-label="Contacts used"
+        style={{ marginTop: 8 }}
+      />
+      {showUpgrade ? (
+        <Button variant="primary" size="sm" block style={{ marginTop: 10 }} onClick={onClick}>
+          {plan === "FREE" ? "Upgrade to Starter" : "Upgrade to Growth"}
+        </Button>
+      ) : (
+        <Button variant="ghost" size="sm" block style={{ marginTop: 10 }} onClick={onClick}>
+          Manage billing
+        </Button>
+      )}
+    </Card>
   );
 }
