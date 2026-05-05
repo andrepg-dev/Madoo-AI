@@ -72,6 +72,8 @@ model Workspace {
   dnsChecks           DnsCheck[]
   campaigns           Campaign[]
   auditLogs           AuditLog[]
+  events              Event[]
+  trackedLinks        TrackedLink[]
 
   @@index([slug])
 }
@@ -103,6 +105,15 @@ enum CampaignDeliveryStatus {
   BOUNCED
   UNSUBSCRIBED
   COMPLAINED
+}
+
+enum EventType {
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  COMPLAINED
+  UNSUBSCRIBED
 }
 
 enum EmailStatus {
@@ -442,6 +453,8 @@ model Campaign {
   email      Email              @relation(fields: [emailId], references: [id], onDelete: Cascade)
   segment    Segment            @relation(fields: [segmentId], references: [id], onDelete: Cascade)
   deliveries CampaignDelivery[]
+  events     Event[]
+  trackedLinks TrackedLink[]
 
   @@index([workspaceId, status, createdAt])
 }
@@ -462,9 +475,44 @@ model CampaignDelivery {
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  events   Event[]
 
   @@index([campaignId, status])
   @@index([contactId])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  workspaceId String
+  campaignId  String
+  contactId   String?
+  deliveryId  String?
+  type        EventType
+  data        Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign  Campaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  delivery  CampaignDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, type, createdAt])
+  @@index([workspaceId, type, createdAt])
+  @@index([deliveryId, type])
+}
+
+model TrackedLink {
+  id          String   @id @default(cuid())
+  workspaceId String
+  campaignId  String
+  url         String   @db.Text
+  clicks      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([workspaceId, campaignId, clicks])
 }
 
 model AuditLog {
