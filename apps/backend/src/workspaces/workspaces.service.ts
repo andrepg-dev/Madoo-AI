@@ -32,6 +32,17 @@ export class WorkspacesService {
     return m;
   }
 
+  async assertOwner(
+    userId: string,
+    workspaceId: string,
+  ): Promise<Membership> {
+    const m = await this.assertMembership(userId, workspaceId);
+    if (m.role !== "OWNER" && m.role !== "ADMIN") {
+      throw new ForbiddenException("Owner or admin role required.");
+    }
+    return m;
+  }
+
   async findByIdForUser(userId: string, workspaceId: string) {
     const ws = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },

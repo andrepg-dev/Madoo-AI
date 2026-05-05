@@ -5,6 +5,7 @@ import { SegmentQuerySchema, parseVariableSchemaJson, type CampaignRecipient } f
 import type { Queue } from "bullmq";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
+import { BillingService } from "../billing/billing.service";
 import { ReactToHtmlService } from "../generation/react-to-html.service";
 import {
   SENDING_PROVIDER,
@@ -28,6 +29,7 @@ export class CampaignsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspaces: WorkspacesService,
+    private readonly billing: BillingService,
     private readonly reactToHtml: ReactToHtmlService,
     private readonly config: ConfigService,
     @Inject(SENDING_PROVIDER) private readonly sender: SendingProvider,
@@ -281,6 +283,7 @@ export class CampaignsService {
     if (audienceCount <= 0) {
       throw new BadRequestException("Campaign audience is empty.");
     }
+    await this.billing.assertCanSendCampaign(workspaceId, audienceCount);
 
     const payload: CampaignSendJobPayload = {
       workspaceId,

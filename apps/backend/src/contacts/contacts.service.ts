@@ -12,6 +12,7 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
+import { BillingService } from "../billing/billing.service";
 import { buildPrismaWhere } from "../segments/segment-query";
 import { toContactDto, type ContactDto } from "./dto/contact.dto";
 import { toContactImportJobDto, type ContactImportJobDto } from "./dto/contact-import-job.dto";
@@ -68,6 +69,7 @@ export class ContactsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspaces: WorkspacesService,
+    private readonly billing: BillingService,
     @InjectQueue(CONTACTS_IMPORT_QUEUE) private readonly importQueue: Queue,
   ) {}
 
@@ -77,6 +79,7 @@ export class ContactsService {
     dto: CreateContactDto,
   ): Promise<ContactDto> {
     await this.workspaces.assertMembership(userId, workspaceId);
+    await this.billing.assertCanAddContacts(workspaceId, 1);
     const created = await this.prisma.contact.create({
       include: CONTACT_WITH_TAGS_INCLUDE,
       data: {
@@ -272,6 +275,10 @@ export class ContactsService {
         throw new BadRequestException(`Column '${column}' does not exist in CSV.`);
       }
     }
+
+    // Plan-limit pre-check using a worst-case estimate (every row is a brand
+    // new contact). The processor re-checks per chunk for tighter accuracy.
+    await this.billing.assertCanAddContacts(workspaceId, parsed.data.length);
 
     await this.prisma.contactImportJob.update({
       where: { id: importJob.id },
