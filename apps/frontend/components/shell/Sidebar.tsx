@@ -1,12 +1,12 @@
 "use client";
 
+import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
+import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
+import { Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
-import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
-import { readCookie, writeCookie, WORKSPACE_COOKIE } from "@/lib/cookies";
 
 const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Home", icon: "home" },
@@ -66,9 +66,6 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
           M
         </div>
         <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: -0.2 }}>{brand}</div>
-        <Badge tone="accent" style={{ marginLeft: "auto" }}>
-          BETA
-        </Badge>
       </div>
 
       {NAV_ITEMS.map((it) => {

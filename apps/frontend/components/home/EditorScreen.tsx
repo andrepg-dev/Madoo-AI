@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  type ChangeEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { consumeEmailSseStream, useEmail } from "@/hooks/use-emails";
+import { shortEmailId } from "@/lib/email-id";
+import type { EmailVariantDto } from "@madoo/shared";
 import {
   Banner,
   Button,
@@ -17,9 +12,14 @@ import {
   Textarea,
 } from "@madoo/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEmail, consumeEmailSseStream } from "@/hooks/use-emails";
-import { shortEmailId } from "@/lib/email-id";
-import type { EmailVariantDto } from "@madoo/shared";
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
 
@@ -318,19 +318,7 @@ export function EditorScreen({
                 aria-label="Variant"
               />
             ) : null}
-            <Button
-              variant="secondary"
-              size="sm"
-              leftIcon={<Icon name="copy" size={12} />}
-              onClick={() => {
-                if (activeVariant?.compiledHtml) {
-                  void navigator.clipboard.writeText(activeVariant.compiledHtml);
-                }
-              }}
-            >
-              Copy HTML
-            </Button>
-            <Button variant="primary" size="sm" leftIcon={<Icon name="send" size={12} />}>
+            <Button variant="primary" size="sm" leftIcon={<Icon name="send" size={12} />} className="ml-12">
               Send test
             </Button>
           </div>
