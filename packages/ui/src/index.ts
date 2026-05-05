@@ -26,9 +26,11 @@ export * from "./components/ProgressBar";
 export * from "./components/PromptPill";
 export * from "./components/SegmentedControl";
 export * from "./components/Select";
+export * from "./components/Skeleton";
 export * from "./components/Spinner";
 export * from "./components/SuggestionChip";
 export * from "./components/Tag";
 export * from "./components/Textarea";
+export * from "./components/Toast";
 
 export { cx } from "./lib/cx";

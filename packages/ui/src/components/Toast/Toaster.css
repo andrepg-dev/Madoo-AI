@@ -1,0 +1,74 @@
+.madoo-toaster {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.madoo-toast {
+  pointer-events: auto;
+  min-width: 240px;
+  max-width: 360px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+  background: var(--surface, #fff);
+  color: var(--ink, #1a1a1a);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  animation: madoo-toast-in 160ms ease-out;
+}
+
+.madoo-toast--success {
+  border-color: rgba(36, 132, 96, 0.45);
+  background: rgba(232, 248, 240, 0.96);
+  color: #1f5c43;
+}
+
+.madoo-toast--danger {
+  border-color: rgba(180, 60, 50, 0.4);
+  background: rgba(252, 232, 228, 0.96);
+  color: #802018;
+}
+
+.madoo-toast--warn {
+  border-color: rgba(196, 132, 36, 0.4);
+  background: rgba(252, 244, 224, 0.96);
+  color: #6c4a14;
+}
+
+.madoo-toast__title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.madoo-toast__body {
+  font-size: 12.5px;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+@keyframes madoo-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .madoo-toast {
+    animation: none;
+  }
+}
