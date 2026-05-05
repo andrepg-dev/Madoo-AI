@@ -16,6 +16,9 @@ import { DomainsModule } from "./domains/domains.module";
 import { CampaignsModule } from "./campaigns/campaigns.module";
 import { UnsubscribeModule } from "./unsubscribe/unsubscribe.module";
 import { AuditLogsModule } from "./audit-logs/audit-logs.module";
+import { TrackingModule } from "./tracking/tracking.module";
+import { AnalyticsModule } from "./analytics/analytics.module";
+import { WebhooksModule } from "./webhooks/webhooks.module";
 import { HealthController } from "./health.controller";
 
 @Module({
@@ -42,6 +45,9 @@ import { HealthController } from "./health.controller";
     CampaignsModule,
     UnsubscribeModule,
     AuditLogsModule,
+    TrackingModule,
+    AnalyticsModule,
+    WebhooksModule,
   ],
   controllers: [HealthController],
 })
