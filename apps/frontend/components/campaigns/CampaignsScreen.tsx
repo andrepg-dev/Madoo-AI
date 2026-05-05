@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Campaign, CampaignStatus, EmailDto } from "@madoo/shared";
 import { Badge, Banner, Button, Card, Icon, SegmentedControl, type BadgeTone } from "@madoo/ui";
 import { auditLogKeys } from "@/actions/audit-log";
+import { analyticsApi, analyticsKeys } from "@/actions/analytics";
 import { campaignsApi, campaignsKeys } from "@/actions/campaigns";
 import { segmentsApi, segmentsKeys } from "@/actions/segments";
 import { useEmails } from "@/hooks/use-emails";
@@ -71,6 +72,7 @@ export function CampaignsScreen() {
       void queryClient.invalidateQueries({ queryKey: campaignsKeys.detail(campaignId) });
       void queryClient.invalidateQueries({ queryKey: campaignsKeys.recipients(campaignId) });
       void queryClient.invalidateQueries({ queryKey: auditLogKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: analyticsKeys.all });
       void queryClient.invalidateQueries({
         predicate: (q) =>
           typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("workspaces"),
@@ -93,6 +95,24 @@ export function CampaignsScreen() {
   });
 
   const emailsQuery = useEmails(true);
+
+  const overviewQuery = useQuery({
+    queryKey: analyticsKeys.overview(),
+    queryFn: analyticsApi.overview,
+    staleTime: 30_000,
+  });
+
+  const ratesByCampaign = useMemo(() => {
+    const map = new Map<string, { openRate: number; clickRate: number; recipients: number }>();
+    for (const row of overviewQuery.data?.recentCampaigns ?? []) {
+      map.set(row.campaignId, {
+        openRate: row.openRate,
+        clickRate: row.clickRate,
+        recipients: row.totalRecipients,
+      });
+    }
+    return map;
+  }, [overviewQuery.data]);
 
   const segmentNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -332,17 +352,29 @@ export function CampaignsScreen() {
                         {segmentNameById.get(c.segmentId) ?? "Audience"}
                       </div>
                       <div style={{ fontSize: 11.5, color: "var(--ink-faint)", marginTop: 2 }}>
-                        Recipient counts unlock with tracking (phase 4)
+                        {ratesByCampaign.get(c.id)?.recipients
+                          ? `${ratesByCampaign.get(c.id)!.recipients.toLocaleString()} recipients`
+                          : c.status === "sent"
+                            ? "—"
+                            : "Not sent yet"}
                       </div>
                     </div>
                     <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>{campaignTiming(c)}</div>
                     <div>
-                      <div style={{ fontSize: 12, color: "var(--ink-faint)" }}>—</div>
-                      <div style={{ fontSize: 11, color: "var(--ink-faint)" }}>opens · phase 4</div>
+                      <div style={{ fontSize: 12, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>
+                        {c.status === "sent" && ratesByCampaign.has(c.id)
+                          ? `${(ratesByCampaign.get(c.id)!.openRate * 100).toFixed(1)}%`
+                          : "—"}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--ink-faint)" }}>open rate</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, color: "var(--ink-faint)" }}>—</div>
-                      <div style={{ fontSize: 11, color: "var(--ink-faint)" }}>clicks · phase 4</div>
+                      <div style={{ fontSize: 12, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>
+                        {c.status === "sent" && ratesByCampaign.has(c.id)
+                          ? `${(ratesByCampaign.get(c.id)!.clickRate * 100).toFixed(1)}%`
+                          : "—"}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--ink-faint)" }}>click rate</div>
                     </div>
                     <div style={{ justifySelf: "end" }}>
                       {draftOrScheduled ? (
