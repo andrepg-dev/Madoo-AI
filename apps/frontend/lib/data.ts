@@ -1,5 +1,17 @@
 import type { TemplateSlug } from "@madoo/shared";
 
+/**
+ * UI-only constants: template gallery, prompt presets, ComposeModal preview
+ * fixtures.
+ *
+ * Everything that used to live here as fake data (MOCK_CONTACTS, SEGMENTS,
+ * DRAFT_EMAILS, EMAIL_VARIABLES, MOCK_CAMPAIGNS) has been removed — those
+ * surfaces are now driven by the real backend. The two preview helpers
+ * `CSV_FIELDS` and `PREVIEW_CONTACTS` are interim placeholders used inside
+ * the variable-mapping step of the ComposeModal until that step is rewired
+ * to read columns from the real contact list.
+ */
+
 export type TemplatePreviewKey =
   | "launch"
   | "editorial"
@@ -48,59 +60,8 @@ export const PROMPT_SUGGESTIONS = [
   "Re-engage users who haven't logged in for 30 days",
 ];
 
-export type Contact = {
-  id: number;
-  name: string;
-  email: string;
-  tags: string[];
-  joined: string;
-  status: "active" | "unsubscribed" | "bounced";
-  opens: number;
-};
-
-export const MOCK_CONTACTS: Contact[] = [
-  { id: 1, name: "Sofia Martinez", email: "sofia@acme.co", tags: ["customer", "pro"], joined: "Apr 12", status: "active", opens: 24 },
-  { id: 2, name: "James Liu", email: "james@startup.io", tags: ["lead"], joined: "Apr 14", status: "active", opens: 8 },
-  { id: 3, name: "Priya Shah", email: "priya@design.studio", tags: ["customer"], joined: "Apr 02", status: "active", opens: 41 },
-  { id: 4, name: "Marco Rossi", email: "marco@trattoria.it", tags: ["customer", "lapsed"], joined: "Mar 18", status: "unsubscribed", opens: 3 },
-  { id: 5, name: "Aisha Khan", email: "aisha@fintech.co", tags: ["lead", "enterprise"], joined: "Apr 20", status: "active", opens: 12 },
-  { id: 6, name: "David Park", email: "d.park@consulting.com", tags: ["customer"], joined: "Feb 09", status: "active", opens: 67 },
-  { id: 7, name: "Lena Becker", email: "lena@studio.de", tags: ["lead"], joined: "Apr 18", status: "active", opens: 5 },
-  { id: 8, name: "Tom Reilly", email: "tom@agency.co", tags: ["customer", "pro"], joined: "Jan 27", status: "bounced", opens: 0 },
-];
-
-export type Segment = { name: string; count: number; accent: string };
-
-export const SEGMENTS: Segment[] = [
-  { name: "All contacts", count: 2847, accent: "#1F1A12" },
-  { name: "Pro customers", count: 412, accent: "#2F5C42" },
-  { name: "Free users", count: 1893, accent: "#A87E54" },
-  { name: "Lapsed (30d+)", count: 184, accent: "#A23E2F" },
-  { name: "New this week", count: 67, accent: "#5B5FCB" },
-];
-
-export const DRAFT_EMAILS = [
-  { id: "d1", name: "Spring launch announcement", subject: "Something new is shipping today.", tplIdx: 0, updated: "2 hours ago" },
-  { id: "d2", name: "Pricing update notice", subject: "A small change to our pricing.", tplIdx: 3, updated: "Yesterday" },
-  { id: "d3", name: "Welcome series — day 1", subject: "Welcome — here's where to start.", tplIdx: 4, updated: "3 days ago" },
-  { id: "d4", name: "February newsletter", subject: "The Weekly · Vol. 9", tplIdx: 6, updated: "1 week ago" },
-];
-
-export type EmailVariable = {
-  token: string;
-  auto: string | null;
-  confidence: "high" | "medium" | "low";
-  missing: number;
-  suggestions?: string[];
-};
-
-export const EMAIL_VARIABLES: EmailVariable[] = [
-  { token: "{Nombre}", auto: "first_name", confidence: "high", missing: 0 },
-  { token: "{Empresa}", auto: "company", confidence: "high", missing: 12 },
-  { token: "{Ciudad}", auto: null, confidence: "low", missing: 46, suggestions: ["city", "location", "country"] },
-  { token: "{Última_compra}", auto: "last_order_date", confidence: "medium", missing: 8 },
-];
-
+/** Placeholder column list for ComposeModal step 3 until variable mapping is
+ * rewired against the real contact schema. */
 export const CSV_FIELDS = [
   "first_name",
   "last_name",
@@ -114,6 +75,7 @@ export const CSV_FIELDS = [
   "signup_date",
 ];
 
+/** Placeholder preview-recipient set used by ComposeModal's preview pane. */
 export const PREVIEW_CONTACTS = [
   { name: "Sofia Martinez", data: { "{Nombre}": "Sofia", "{Empresa}": "Acme Co", "{Ciudad}": "Madrid", "{Última_compra}": "Apr 12" } },
   { name: "James Liu", data: { "{Nombre}": "James", "{Empresa}": "Startup.io", "{Ciudad}": "—", "{Última_compra}": "Apr 14" } },
