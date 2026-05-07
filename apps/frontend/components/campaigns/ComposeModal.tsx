@@ -15,7 +15,6 @@ import {
   Select,
   Tag,
 } from "@madoo/ui";
-import type { Segment } from "@madoo/shared";
 import { CSV_FIELDS, PREVIEW_CONTACTS } from "@/lib/data";
 import { useEmails } from "@/hooks/use-emails";
 import { useWorkspaces } from "@/hooks/use-workspaces";
@@ -27,6 +26,7 @@ import { auditLogKeys } from "@/actions/audit-log";
 import { domainsApi, domainsKeys } from "@/actions/domains";
 
 const SEGMENT_ACCENTS = ["#1F1A12", "#2F5C42", "#A87E54", "#A23E2F", "#5B5FCB"] as const;
+const ALL_CONTACTS_ID = "__all__";
 
 function defaultLocalDate(): string {
   const d = new Date();
@@ -95,7 +95,7 @@ export function ComposeModal({
 
   const [step, setStep] = useState(1);
   const [emailId, setEmailId] = useState(preSelectedEmailId ?? "");
-  const [segmentId, setSegmentId] = useState("");
+  const [segmentId, setSegmentId] = useState(ALL_CONTACTS_ID);
   const [schedule, setSchedule] = useState<"now" | "later">("now");
   const [abTest, setAbTest] = useState(false);
   const [fromName, setFromName] = useState("Madoo");
@@ -149,11 +149,12 @@ export function ComposeModal({
   const previewQuery = useQuery({
     queryKey: segmentsKeys.preview(segmentId),
     queryFn: () => segmentsApi.preview(segmentId),
-    enabled: Boolean(segmentId),
+    enabled: Boolean(segmentId) && segmentId !== ALL_CONTACTS_ID,
     staleTime: 30_000,
   });
 
   const audCount = previewQuery.data?.count ?? 0;
+  const isAllContacts = segmentId === ALL_CONTACTS_ID;
 
   useEffect(() => {
     if (resumeId || preSelectedEmailId) return;
@@ -210,9 +211,6 @@ export function ComposeModal({
 
   const segmentRow = segmentsQuery.data?.find((item) => item.id === segmentId) ?? segmentsQuery.data?.[0];
 
-  function segmentAccent(row: Segment, index: number): string {
-    return SEGMENT_ACCENTS[index % SEGMENT_ACCENTS.length]!;
-  }
 
   const variableSpecs = useMemo(
     () => currentVariant?.variableSchema.variables ?? EMPTY_VARIABLES,
@@ -266,6 +264,18 @@ export function ComposeModal({
   const persistDraftCampaign = async (): Promise<void> => {
     if (!segmentId || !emailId || !selectedEmail) throw new Error("Select an email and a segment.");
 
+    let resolvedSegmentId = segmentId;
+    if (segmentId === ALL_CONTACTS_ID) {
+      const existing = segmentsQuery.data?.find((s) => s.name === "All contacts");
+      if (existing) {
+        resolvedSegmentId = existing.id;
+      } else {
+        const created = await segmentsApi.create({ name: "All contacts", query: {} });
+        resolvedSegmentId = created.id;
+        void queryClient.invalidateQueries({ queryKey: segmentsKeys.list() });
+      }
+    }
+
     let scheduledFor: string | undefined;
     try {
       scheduledFor = scheduleToIso(schedule, scheduledDate, scheduledTime);
@@ -275,7 +285,7 @@ export function ComposeModal({
 
     const payload = {
       emailId,
-      segmentId,
+      segmentId: resolvedSegmentId,
       fromName: fromName.trim(),
       fromEmail: fromEmail.trim().toLowerCase(),
       abTest,
@@ -617,17 +627,15 @@ export function ComposeModal({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {segmentsQuery.isPending ? <Banner tone="info">Loading segments…</Banner> : null}
           {segmentsQuery.isError ? <Banner tone="danger">Unable to load segments. Try refreshing the page.</Banner> : null}
-          {!segmentsQuery.isPending && !segmentsQuery.isError && (segmentsQuery.data ?? []).length === 0 ? (
-            <Banner tone="warn">
-              No segments yet.{" "}
-              <Link href="/segments" prefetch={false} style={{ fontWeight: 600, color: "inherit", textDecoration: "underline" }} onClick={onClose}>
-                Create a segment
-              </Link>{" "}
-              first, then come back to send a campaign.
-            </Banner>
-          ) : null}
-          {(segmentsQuery.data ?? []).map((s, idx) => {
-            const accent = segmentAccent(s, idx);
+          {/* All contacts virtual entry */}
+          {[
+            { id: ALL_CONTACTS_ID, name: "All contacts", accent: "var(--accent)" },
+            ...(segmentsQuery.data ?? []).map((s, idx) => ({
+              id: s.id,
+              name: s.name,
+              accent: SEGMENT_ACCENTS[idx % SEGMENT_ACCENTS.length]!,
+            })),
+          ].map((s) => {
             const selected = segmentId === s.id;
             return (
               <button
@@ -653,18 +661,20 @@ export function ComposeModal({
                     width: 10,
                     height: 10,
                     borderRadius: 3,
-                    background: accent,
+                    background: s.accent,
                     flexShrink: 0,
                   }}
                 />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>{s.name}</div>
                   <div style={{ fontSize: 12, color: "var(--ink-faint)", marginTop: 2 }}>
-                    {selected && previewQuery.isFetching
-                      ? "Counting contacts…"
-                      : selected && previewQuery.data
-                        ? `${previewQuery.data.count.toLocaleString()} contacts`
-                        : "Select for live count"}
+                    {s.id === ALL_CONTACTS_ID
+                      ? "Every active contact in your workspace"
+                      : selected && previewQuery.isFetching
+                        ? "Counting contacts…"
+                        : selected && previewQuery.data
+                          ? `${previewQuery.data.count.toLocaleString()} contacts`
+                          : "Select for live count"}
                   </div>
                 </div>
                 {selected ? (
@@ -914,7 +924,7 @@ export function ComposeModal({
               selected={schedule === "now"}
               onClick={() => setSchedule("now")}
               title="Send now"
-              description={`Goes out immediately to ${audCount.toLocaleString()} contacts`}
+              description={isAllContacts ? "Goes out immediately to all your contacts" : `Goes out immediately to ${audCount.toLocaleString()} contacts`}
             />
             <SelectableCard
               padded
@@ -1043,7 +1053,7 @@ export function ComposeModal({
             [
               ["Email", emailHeadline],
               ["Subject", currentVariant?.subject ?? "—"],
-              ["Audience", `${segmentRow?.name ?? "—"} (${audCount.toLocaleString()} contacts)`],
+              ["Audience", isAllContacts ? "All contacts" : `${segmentRow?.name ?? "—"} (${audCount.toLocaleString()} contacts)`],
               ["Schedule", scheduleLabel()],
               ["A/B test", abTest ? "Flagged — routing later" : "No"],
               ["From", `${fromName.trim()} <${fromEmail.trim().toLowerCase()}>`],
