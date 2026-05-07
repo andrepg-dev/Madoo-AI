@@ -6,6 +6,7 @@ import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
 import { PLAN_DISPLAY_NAMES, PLAN_LIMITS, type Plan } from "@madoo/shared";
 import { Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -56,24 +57,7 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px 16px" }}>
-        <div
-          className="serif"
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 7,
-            background: "var(--accent)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--accent-fg)",
-            fontSize: 13,
-            fontWeight: 600,
-            fontStyle: "italic",
-          }}
-        >
-          M
-        </div>
+        <Image src="/madoo-transparent.png" alt="Madoo logo" width={26} height={26} style={{ borderRadius: 7 }} />
         <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: -0.2 }}>{brand}</div>
       </div>
 
@@ -165,8 +149,8 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
 
       <BillingCard
         plan={billingQuery.data?.subscription.plan ?? "FREE"}
-        used={billingQuery.data?.usage.contacts.used ?? 0}
-        limit={billingQuery.data?.usage.contacts.limit ?? PLAN_LIMITS.FREE.contacts}
+        genUsed={billingQuery.data?.usage.aiGenerations.used ?? 0}
+        genLimit={billingQuery.data?.usage.aiGenerations.limit ?? PLAN_LIMITS.FREE.aiGenerations}
         onClick={() => router.push("/settings/billing")}
       />
     </aside>
@@ -175,16 +159,17 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
 
 function BillingCard({
   plan,
-  used,
-  limit,
+  genUsed,
+  genLimit,
   onClick,
 }: {
   plan: Plan;
-  used: number;
-  limit: number;
+  genUsed: number;
+  genLimit: number;
   onClick: () => void;
 }) {
-  const usagePct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const genUnlimited = genLimit === -1;
+  const genPct = genUnlimited ? 0 : Math.min(100, Math.round((genUsed / genLimit) * 100));
   const showUpgrade = plan !== "GROWTH";
 
   return (
@@ -202,12 +187,12 @@ function BillingCard({
         <Icon name="bolt" size={12} /> {PLAN_DISPLAY_NAMES[plan]} plan
       </div>
       <div style={{ fontSize: 11.5, color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
-        {used.toLocaleString()} of {limit.toLocaleString()} contacts used.
+        {genUsed.toLocaleString()} of {genUnlimited ? "∞" : genLimit.toLocaleString()} AI generations.
       </div>
       <ProgressBar
-        value={usagePct}
+        value={genPct}
         variant="thin"
-        aria-label="Contacts used"
+        aria-label="AI generations used"
         style={{ marginTop: 8 }}
       />
       {showUpgrade ? (
