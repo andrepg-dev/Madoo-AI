@@ -324,20 +324,25 @@ export function EditorScreen({
               />
             ) : null}
             {isPrebuiltTemplate ? (
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Icon name="check" size={12} />}
-                disabled={!activeVariant || saveTemplateMutation.isPending || saveTemplateMutation.isSuccess}
-                onClick={() =>
-                  saveTemplateMutation.mutate(undefined, {
-                    onSuccess: () =>
-                      router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`),
-                  })
-                }
-              >
-                {saveTemplateMutation.isPending ? "Saving…" : "Save template"}
-              </Button>
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--ink-faint)" }}>
+                  <Icon name="bolt" size={11} /> 1 credit
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Icon name="check" size={12} />}
+                  disabled={!activeVariant || saveTemplateMutation.isPending || saveTemplateMutation.isSuccess}
+                  onClick={() =>
+                    saveTemplateMutation.mutate(undefined, {
+                      onSuccess: () =>
+                        router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`),
+                    })
+                  }
+                >
+                  {saveTemplateMutation.isPending ? "Saving…" : "Save template"}
+                </Button>
+              </>
             ) : (
               <Button
                 variant="primary"

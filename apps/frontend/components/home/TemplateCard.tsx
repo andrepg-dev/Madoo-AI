@@ -111,8 +111,15 @@ export function TemplateCard({ template, onClick }: { template: Template; onClic
           </div>
           <div style={{ fontSize: 11.5, color: "var(--ink-faint)", marginTop: 2 }}>{template.category}</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--ink-faint)" }}>
-          <Icon name="star" size={11} /> {(4.6 + (template.id.charCodeAt(0) % 4) * 0.05).toFixed(1)}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {!isPremium && (
+            <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--ink-faint)" }}>
+              <Icon name="bolt" size={11} /> 1 credit
+            </div>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--ink-faint)" }}>
+            <Icon name="star" size={11} /> {(4.6 + (template.id.charCodeAt(0) % 4) * 0.05).toFixed(1)}
+          </div>
         </div>
       </div>
     </div>
