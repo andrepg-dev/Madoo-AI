@@ -34,6 +34,7 @@ export class BillingController {
       workspace.id,
       current.sub,
       body.plan,
+      body.interval ?? "MONTHLY",
     );
   }
 

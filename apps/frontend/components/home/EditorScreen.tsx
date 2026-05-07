@@ -2,16 +2,19 @@
 
 import { consumeEmailSseStream, useEmail } from "@/hooks/use-emails";
 import { shortEmailId } from "@/lib/email-id";
+import { templatesApi } from "@/actions/templates";
 import type { EmailVariantDto } from "@madoo/shared";
 import {
   Banner,
   Button,
   Icon,
   IconButton,
+  Input,
+  Modal,
   SegmentedControl,
   Textarea,
 } from "@madoo/ui";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type ChangeEvent,
   useCallback,
@@ -67,6 +70,19 @@ export function EditorScreen({
   const [aiPrompt, setAiPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [savedOk, setSavedOk] = useState(false);
+
+  const saveTemplate = useMutation({
+    mutationFn: () => templatesApi.saveFromVariant(activeVariant!.id, templateName.trim()),
+    onSuccess: () => {
+      setSaveModalOpen(false);
+      setTemplateName("");
+      setSavedOk(true);
+      setTimeout(() => setSavedOk(false), 3000);
+    },
+  });
   const [variableDefaults, setVariableDefaults] = useState<Record<string, string>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [activeStreamingId, setActiveStreamingId] = useState<string | null>(null);
@@ -318,9 +334,24 @@ export function EditorScreen({
                 aria-label="Variant"
               />
             ) : null}
-            <Button variant="primary" size="sm" leftIcon={<Icon name="send" size={12} />} className="ml-12">
-              Send test
-            </Button>
+            {savedOk ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--accent-deep)" }}>
+                <Icon name="check" size={13} stroke={2.4} /> Saved as template
+              </div>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Icon name="star" size={12} />}
+                disabled={!activeVariant}
+                onClick={() => {
+                  setTemplateName(activeVariant?.subject ?? "");
+                  setSaveModalOpen(true);
+                }}
+              >
+                Save template
+              </Button>
+            )}
           </div>
         </div>
 
@@ -787,6 +818,45 @@ export function EditorScreen({
           </div>
         </div>
       </aside>
+
+      <Modal
+        open={saveModalOpen}
+        onClose={() => setSaveModalOpen(false)}
+        title="Save as template"
+        description="Give this email a name. It will appear in your template gallery."
+        size="sm"
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Input
+            label="Template name"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder="e.g. Welcome email"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && templateName.trim()) saveTemplate.mutate();
+            }}
+          />
+          {saveTemplate.isError ? (
+            <Banner tone="danger">
+              {saveTemplate.error instanceof Error ? saveTemplate.error.message : "Failed to save template."}
+            </Banner>
+          ) : null}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button variant="ghost" size="md" onClick={() => setSaveModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              disabled={!templateName.trim() || saveTemplate.isPending}
+              onClick={() => saveTemplate.mutate()}
+            >
+              {saveTemplate.isPending ? "Saving…" : "Save template"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

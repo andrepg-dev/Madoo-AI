@@ -24,6 +24,7 @@ import { Observable } from "rxjs";
 import { createHash } from "node:crypto";
 import { parseVariableSchemaJson } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import { BillingService } from "../billing/billing.service";
 import { ReactToHtmlService } from "./react-to-html.service";
 import { ScreenshotService } from "./screenshot.service";
 import { S3Service } from "../s3/s3.service";
@@ -107,6 +108,7 @@ export class GenerationService {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly billing: BillingService,
     private readonly reactToHtml: ReactToHtmlService,
     private readonly screenshot: ScreenshotService,
     private readonly s3: S3Service,
@@ -261,6 +263,7 @@ export class GenerationService {
     workspaceId: string,
     emit: (p: Record<string, unknown>) => void,
   ): Promise<void> {
+    await this.billing.assertCanGenerate(workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     const ctx = await this.loadGenerationContext(emailId, workspaceId);
 

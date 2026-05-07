@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+  PLAN_DISPLAY_NAMES,
   PLAN_LIMITS,
   type BillingOverviewDto,
   type Plan,
@@ -24,9 +25,9 @@ import type {
   StripeSubscriptionStatus,
 } from "./stripe-types";
 
-const PLAN_TO_PRICE_ENV: Record<Exclude<Plan, "FREE">, string> = {
-  STARTER: "STRIPE_PRICE_STARTER",
-  GROWTH: "STRIPE_PRICE_GROWTH",
+const PLAN_TO_PRICE_ENV: Record<Exclude<Plan, "FREE">, Record<"MONTHLY" | "ANNUAL", string>> = {
+  STARTER: { MONTHLY: "STRIPE_PRICE_STARTER", ANNUAL: "STRIPE_PRICE_STARTER_ANNUAL" },
+  GROWTH: { MONTHLY: "STRIPE_PRICE_GROWTH", ANNUAL: "STRIPE_PRICE_GROWTH_ANNUAL" },
 };
 
 @Injectable()
@@ -61,9 +62,24 @@ export class BillingService {
   ): Promise<BillingOverviewDto> {
     await this.workspaces.assertMembership(userId, workspaceId);
     const subscription = await this.ensureSubscription(workspaceId);
-    const used = await this.prisma.contact.count({ where: { workspaceId } });
     const plan = subscription.plan as Plan;
-    const limit = PLAN_LIMITS[plan].contacts;
+    const limits = PLAN_LIMITS[plan];
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [contactsUsed, generationsUsed] = await Promise.all([
+      this.prisma.contact.count({ where: { workspaceId } }),
+      this.prisma.emailGenerationRun.count({
+        where: {
+          workspaceId,
+          kind: "INITIAL",
+          status: { not: "FAILED" },
+          createdAt: { gte: startOfMonth },
+        },
+      }),
+    ]);
+
     return {
       subscription: {
         plan,
@@ -73,10 +89,35 @@ export class BillingService {
         hasStripeCustomer: Boolean(subscription.stripeCustomerId),
       },
       usage: {
-        contacts: { used, limit },
+        contacts: { used: contactsUsed, limit: limits.contacts },
+        aiGenerations: { used: generationsUsed, limit: limits.aiGenerations },
       },
-      limits: { contacts: limit },
+      limits: { contacts: limits.contacts, aiGenerations: limits.aiGenerations },
     };
+  }
+
+  async assertCanGenerate(workspaceId: string): Promise<void> {
+    const subscription = await this.ensureSubscription(workspaceId);
+    const plan = subscription.plan as Plan;
+    const limit = PLAN_LIMITS[plan].aiGenerations;
+    if (limit === -1) return;
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const used = await this.prisma.emailGenerationRun.count({
+      where: {
+        workspaceId,
+        kind: "INITIAL",
+        status: { not: "FAILED" },
+        createdAt: { gte: startOfMonth },
+      },
+    });
+
+    if (used >= limit) {
+      throw new ForbiddenException(
+        `AI generation limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limit} generations per month (used ${used}). Upgrade to generate more.`,
+      );
+    }
   }
 
   /**
@@ -88,6 +129,7 @@ export class BillingService {
     workspaceId: string,
     userId: string,
     targetPlan: Exclude<Plan, "FREE">,
+    interval: "MONTHLY" | "ANNUAL" = "MONTHLY",
   ): Promise<{ url: string }> {
     await this.workspaces.assertOwner(userId, workspaceId);
     if (!this.stripe.isEnabled()) {
@@ -96,10 +138,11 @@ export class BillingService {
       );
     }
 
-    const priceId = this.config.get<string>(PLAN_TO_PRICE_ENV[targetPlan]);
+    const priceEnvKey = PLAN_TO_PRICE_ENV[targetPlan][interval];
+    const priceId = this.config.get<string>(priceEnvKey);
     if (!priceId) {
       throw new ServiceUnavailableException(
-        `Stripe price id for ${targetPlan} is not configured.`,
+        `Stripe price id for ${targetPlan} (${interval}) is not configured.`,
       );
     }
 
@@ -123,9 +166,9 @@ export class BillingService {
             customer_creation: "always",
           }),
       client_reference_id: workspaceId,
-      metadata: { workspaceId, plan: targetPlan },
+      metadata: { workspaceId, plan: targetPlan, interval },
       subscription_data: {
-        metadata: { workspaceId, plan: targetPlan },
+        metadata: { workspaceId, plan: targetPlan, interval },
       },
       allow_promotion_codes: true,
     })) as unknown as StripeCheckoutSession;
@@ -271,6 +314,8 @@ export class BillingService {
       sub,
       this.config.get<string>("STRIPE_PRICE_STARTER"),
       this.config.get<string>("STRIPE_PRICE_GROWTH"),
+      this.config.get<string>("STRIPE_PRICE_STARTER_ANNUAL"),
+      this.config.get<string>("STRIPE_PRICE_GROWTH_ANNUAL"),
     );
     const plan: Plan =
       sub.status === "canceled" || sub.status === "incomplete_expired"
@@ -343,11 +388,15 @@ function parsePlanFromPrice(
   sub: StripeSubscription,
   starter: string | undefined,
   growth: string | undefined,
+  starterAnnual?: string | undefined,
+  growthAnnual?: string | undefined,
 ): Plan | null {
   for (const item of sub.items.data) {
     const id = item.price.id;
     if (starter && id === starter) return "STARTER";
     if (growth && id === growth) return "GROWTH";
+    if (starterAnnual && id === starterAnnual) return "STARTER";
+    if (growthAnnual && id === growthAnnual) return "GROWTH";
   }
   return null;
 }

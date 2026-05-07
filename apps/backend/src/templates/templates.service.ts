@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { SEED_TEMPLATE_SLUGS, SEED_TEMPLATES } from "./seed-templates";
 
@@ -23,6 +23,37 @@ export class TemplatesService {
         update: {},
       });
     }
+  }
+
+  async saveFromVariant(
+    workspaceId: string,
+    variantId: string,
+    name: string,
+  ): Promise<{ id: string; name: string; slug: string }> {
+    const variant = await this.prisma.emailVariant.findFirst({
+      where: { id: variantId, workspaceId },
+      select: { componentCode: true },
+    });
+    if (!variant) throw new NotFoundException("Variant not found in workspace.");
+
+    const base = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 48);
+    const suffix = Math.random().toString(36).slice(2, 6);
+    const slug = `${base}-${suffix}`;
+
+    const template = await this.prisma.template.create({
+      data: {
+        workspaceId,
+        slug,
+        name,
+        componentCode: variant.componentCode,
+      },
+      select: { id: true, name: true, slug: true },
+    });
+    return template;
   }
 
   async listForWorkspace(workspaceId: string) {

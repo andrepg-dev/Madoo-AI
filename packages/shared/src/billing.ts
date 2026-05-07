@@ -15,12 +15,13 @@ export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
 
 export type PlanLimits = {
   contacts: number;
+  aiGenerations: number; // -1 = unlimited
 };
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  FREE: { contacts: 100 },
-  STARTER: { contacts: 1000 },
-  GROWTH: { contacts: 5000 },
+  FREE: { contacts: 100, aiGenerations: 5 },
+  STARTER: { contacts: 1000, aiGenerations: 100 },
+  GROWTH: { contacts: 5000, aiGenerations: -1 },
 };
 
 export const PLAN_PRICES: Record<Plan, number> = {
@@ -28,6 +29,14 @@ export const PLAN_PRICES: Record<Plan, number> = {
   STARTER: 19,
   GROWTH: 49,
 };
+
+export const PLAN_PRICES_ANNUAL: Record<Plan, number> = {
+  FREE: 0,
+  STARTER: 15,
+  GROWTH: 39,
+};
+
+export type BillingInterval = "MONTHLY" | "ANNUAL";
 
 export const PLAN_DISPLAY_NAMES: Record<Plan, string> = {
   FREE: "Free",
@@ -49,6 +58,10 @@ export const BillingUsageSchema = z.object({
     used: z.number().int().nonnegative(),
     limit: z.number().int().nonnegative(),
   }),
+  aiGenerations: z.object({
+    used: z.number().int().nonnegative(),
+    limit: z.number().int(), // -1 = unlimited
+  }),
 });
 export type BillingUsageDto = z.infer<typeof BillingUsageSchema>;
 
@@ -57,12 +70,14 @@ export const BillingOverviewSchema = z.object({
   usage: BillingUsageSchema,
   limits: z.object({
     contacts: z.number().int().nonnegative(),
+    aiGenerations: z.number().int(), // -1 = unlimited
   }),
 });
 export type BillingOverviewDto = z.infer<typeof BillingOverviewSchema>;
 
 export const CreateCheckoutSessionInputSchema = z.object({
   plan: z.enum(["STARTER", "GROWTH"]),
+  interval: z.enum(["MONTHLY", "ANNUAL"]).default("MONTHLY"),
 });
 export type CreateCheckoutSessionInput = z.infer<
   typeof CreateCheckoutSessionInputSchema

@@ -1,40 +1,144 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Banner, Button, Card, ProgressBar, Skeleton } from "@madoo/ui";
+import { Banner, Button, Card, Icon, ProgressBar, Skeleton } from "@madoo/ui";
 import {
   PLAN_DISPLAY_NAMES,
   PLAN_LIMITS,
   PLAN_PRICES,
+  PLAN_PRICES_ANNUAL,
+  type BillingInterval,
   type Plan,
 } from "@madoo/shared";
 import { billingApi, billingKeys } from "@/actions/billing";
 import { ApiError } from "@/lib/api/fetch-wrapper";
 import { useWorkspaceStore } from "@/stores/workspace";
 
-const UPGRADE_PLANS: Array<{ plan: Exclude<Plan, "FREE">; tagline: string; perks: string[] }> = [
+type PaidPlan = Exclude<Plan, "FREE">;
+
+const PLAN_FEATURES: Record<Plan | "SCALE", { label: string; included: boolean; header?: boolean }[]> = {
+  FREE: [
+    { label: "100 contacts", included: true },
+    { label: "2,000 emails / month", included: true },
+    { label: "5 AI generations / month", included: true },
+    { label: "12 starter templates", included: true },
+    { label: "Send from Madoo subdomain", included: true },
+    { label: "Open & click tracking", included: true },
+    { label: "Custom sending domain", included: false },
+    { label: "A/B testing", included: false },
+    { label: "Priority support", included: false },
+  ],
+  STARTER: [
+    { label: "1,000 contacts", included: true },
+    { label: "15,000 emails / month", included: true },
+    { label: "100 AI generations / month", included: true },
+    { label: "Full template library", included: true },
+    { label: "Custom sending domain (SPF/DKIM)", included: true },
+    { label: "Open, click & device analytics", included: true },
+    { label: "A/B test subject lines", included: true },
+    { label: "Variable mapping & fallbacks", included: true },
+    { label: 'Remove "Sent with Madoo" footer', included: false },
+  ],
+  GROWTH: [
+    { label: "5,000 contacts", included: true },
+    { label: "100,000 emails / month", included: true },
+    { label: "Unlimited AI generations", included: true },
+    { label: "Premium template gallery", included: true },
+    { label: "Advanced analytics & cohorts", included: true },
+    { label: "A/B test everything", included: true },
+    { label: "Smart segments (AI-powered)", included: true },
+    { label: "White-label sending", included: true },
+    { label: "Priority support (4h response)", included: true },
+  ],
+  SCALE: [
+    { label: "Everything in Growth, plus:", included: true, header: true },
+    { label: "75,000+ contacts", included: true },
+    { label: "Dedicated IP & warm-up", included: true },
+    { label: "Custom AI fine-tuned to your brand", included: true },
+    { label: "Multi-workspace & team roles", included: true },
+    { label: "SSO (Google, Okta, SAML)", included: true },
+    { label: "API access & webhooks", included: true },
+    { label: "Dedicated success manager", included: true },
+    { label: "99.9% SLA + onboarding call", included: true },
+  ],
+};
+
+const FAQ_ITEMS = [
   {
-    plan: "STARTER",
-    tagline: "For solo founders sending the first 1,000 contacts.",
-    perks: [
-      "Up to 1,000 contacts",
-      "Unlimited AI generations",
-      "Verified domain + open & click analytics",
-    ],
+    q: "What counts as an AI generation?",
+    a: "Each new email created from a prompt is one generation. Edits and revisions on the same email don't count — iterate freely.",
   },
   {
-    plan: "GROWTH",
-    tagline: "For growing teams scaling email marketing.",
-    perks: [
-      "Up to 5,000 contacts",
-      "Priority send queue",
-      "All Starter features",
-    ],
+    q: "Can I switch plans anytime?",
+    a: "Yes. Upgrade and you're billed prorated; downgrade and the new rate kicks in next cycle. No fees, no calls.",
+  },
+  {
+    q: "What if I exceed my contact limit?",
+    a: "We'll email you at 80% and 100%. You can upgrade — we never block your campaigns mid-send.",
+  },
+  {
+    q: "How does annual billing work?",
+    a: "Annual plans are billed upfront for the full year at a 20% discount. You can switch back to monthly at renewal.",
+  },
+  {
+    q: "How does deliverability work?",
+    a: "We sign every email with SPF, DKIM, and DMARC, send through warmed IPs, and monitor reputation 24/7.",
   },
 ];
+
+function FaqItem({ item, first }: { item: (typeof FAQ_ITEMS)[number]; first: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderTop: first ? "none" : "1px solid var(--border-soft)" }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%",
+          padding: "18px 22px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          textAlign: "left",
+          fontSize: 14,
+          fontWeight: 600,
+          color: "var(--ink)",
+          gap: 16,
+        }}
+      >
+        {item.q}
+        <div
+          style={{
+            flexShrink: 0,
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.2s",
+            color: "var(--ink-soft)",
+          }}
+        >
+          <Icon name="chevronDown" size={16} />
+        </div>
+      </button>
+      {open && (
+        <div
+          style={{
+            padding: "0 22px 18px",
+            fontSize: 13.5,
+            color: "var(--ink-soft)",
+            lineHeight: 1.6,
+          }}
+        >
+          {item.a}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function BillingPage() {
   const qc = useQueryClient();
@@ -42,6 +146,7 @@ export default function BillingPage() {
   const searchParams = useSearchParams();
   const upgraded = searchParams?.get("upgraded") === "1";
   const canceled = searchParams?.get("canceled") === "1";
+  const [billing, setBilling] = useState<BillingInterval>("MONTHLY");
 
   useEffect(() => {
     hydrateWorkspaceId();
@@ -53,8 +158,8 @@ export default function BillingPage() {
   });
 
   const checkout = useMutation({
-    mutationFn: (plan: Exclude<Plan, "FREE">) =>
-      billingApi.createCheckoutSession({ plan }),
+    mutationFn: (input: { plan: PaidPlan; interval: BillingInterval }) =>
+      billingApi.createCheckoutSession(input),
     onSuccess: (data) => {
       window.location.href = data.url;
     },
@@ -67,9 +172,6 @@ export default function BillingPage() {
     },
   });
 
-  // Refresh once when the user returns from a successful checkout — the
-  // webhook may already have flipped the plan, but a re-fetch makes sure
-  // the UI is consistent even if there's a small delay.
   useEffect(() => {
     if (upgraded) {
       void qc.invalidateQueries({ queryKey: billingKeys.all });
@@ -82,6 +184,11 @@ export default function BillingPage() {
   const limit = data?.usage.contacts.limit ?? PLAN_LIMITS[currentPlan].contacts;
   const usagePct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
 
+  const genUsed = data?.usage.aiGenerations.used ?? 0;
+  const genLimit = data?.usage.aiGenerations.limit ?? PLAN_LIMITS[currentPlan].aiGenerations;
+  const genUnlimited = genLimit === -1;
+  const genPct = genUnlimited ? 0 : Math.min(100, Math.round((genUsed / genLimit) * 100));
+
   const errorMessage =
     checkout.error instanceof ApiError
       ? checkout.error.message
@@ -89,9 +196,44 @@ export default function BillingPage() {
         ? portal.error.message
         : null;
 
+  const plans: Array<{
+    id: Plan | "SCALE";
+    name: string;
+    tagline: string;
+    highlight: boolean;
+    badge?: string;
+    cta: string;
+    scaleOnly?: boolean;
+  }> = [
+    { id: "FREE", name: "Free", tagline: "Try it without a card.", highlight: false, cta: "Get started" },
+    {
+      id: "STARTER",
+      name: "Starter",
+      tagline: "For founders shipping their first launches.",
+      highlight: false,
+      cta: "Upgrade to Starter",
+    },
+    {
+      id: "GROWTH",
+      name: "Growth",
+      tagline: "When sending is part of how you grow.",
+      highlight: true,
+      badge: "Most popular",
+      cta: "Upgrade to Growth",
+    },
+    {
+      id: "SCALE",
+      name: "Scale",
+      tagline: "Big lists, big sends, big expectations.",
+      highlight: false,
+      cta: "Talk to sales",
+      scaleOnly: true,
+    },
+  ];
+
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
-      <div style={{ padding: "32px 40px 60px", maxWidth: 920, margin: "0 auto" }}>
+      <div style={{ padding: "32px 40px 80px", maxWidth: 1180, margin: "0 auto" }}>
         <Link
           href="/settings"
           style={{
@@ -105,33 +247,26 @@ export default function BillingPage() {
         >
           ← Back to settings
         </Link>
-        <h1
-          className="serif"
-          style={{ fontSize: 32, fontWeight: 400, margin: "12px 0 6px", letterSpacing: -0.4 }}
-        >
-          Billing & plan
-        </h1>
-        <p style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 24 }}>
-          Pick the plan that matches the size of your audience. Upgrade and downgrade anytime.
-        </p>
 
+        {/* ALERTS */}
         {upgraded ? (
-          <Banner tone="success" style={{ marginBottom: 16 }}>
+          <Banner tone="success" style={{ marginTop: 12, marginBottom: 0 }}>
             Subscription updated. The new plan should appear within a few seconds.
           </Banner>
         ) : null}
         {canceled ? (
-          <Banner tone="warn" style={{ marginBottom: 16 }}>
+          <Banner tone="warn" style={{ marginTop: 12, marginBottom: 0 }}>
             Checkout was cancelled. Your plan is unchanged.
           </Banner>
         ) : null}
         {errorMessage ? (
-          <Banner tone="danger" style={{ marginBottom: 16 }}>
+          <Banner tone="danger" style={{ marginTop: 12, marginBottom: 0 }}>
             {errorMessage}
           </Banner>
         ) : null}
 
-        <Card padded style={{ marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* CURRENT PLAN CARD */}
+        <Card padded style={{ marginTop: 20, marginBottom: 32, display: "flex", flexDirection: "column", gap: 14 }}>
           {overview.isPending ? (
             <div style={{ display: "grid", gap: 12 }}>
               <Skeleton variant="text" width={120} height={11} />
@@ -156,17 +291,15 @@ export default function BillingPage() {
                   </div>
                   <div
                     className="serif"
-                    style={{ fontSize: 28, fontWeight: 400, marginTop: 4, letterSpacing: -0.3 }}
+                    style={{ fontSize: 26, fontWeight: 400, marginTop: 4, letterSpacing: -0.3 }}
                   >
                     {PLAN_DISPLAY_NAMES[currentPlan]}
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 2 }}>
                     {PLAN_PRICES[currentPlan] === 0
-                      ? "No subscription — upgrade to send to a larger audience."
+                      ? "Free forever — upgrade to unlock more contacts and features."
                       : `$${PLAN_PRICES[currentPlan]}/mo`}
-                    {data?.subscription.cancelAtPeriodEnd
-                      ? " · Cancels at period end."
-                      : ""}
+                    {data?.subscription.cancelAtPeriodEnd ? " · Cancels at period end." : ""}
                   </div>
                 </div>
                 {data?.subscription.hasStripeCustomer ? (
@@ -180,100 +313,475 @@ export default function BillingPage() {
                   </Button>
                 ) : null}
               </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--ink-soft)",
-                  marginBottom: 6,
-                }}
-              >
-                <span>Contacts</span>
-                <span>
-                  {used.toLocaleString()} / {limit.toLocaleString()}
-                </span>
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--ink-soft)",
+                    marginBottom: 6,
+                  }}
+                >
+                  <span>Contacts</span>
+                  <span>
+                    {used.toLocaleString()} / {limit.toLocaleString()}
+                  </span>
+                </div>
+                <ProgressBar value={usagePct} aria-label="Contact usage" />
               </div>
-            <ProgressBar value={usagePct} aria-label="Contact usage" />
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--ink-soft)",
+                    marginBottom: 6,
+                  }}
+                >
+                  <span>AI generations this month</span>
+                  <span>
+                    {genUsed.toLocaleString()} / {genUnlimited ? "∞" : genLimit.toLocaleString()}
+                  </span>
+                </div>
+                {genUnlimited ? (
+                  <ProgressBar value={0} aria-label="AI generations (unlimited)" />
+                ) : (
+                  <ProgressBar value={genPct} aria-label="AI generation usage" />
+                )}
+              </div>
             </>
           )}
         </Card>
 
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: 1,
-            textTransform: "uppercase",
-            color: "var(--ink-faint)",
-            marginBottom: 12,
-          }}
-        >
-          Available plans
+        {/* PRICING HEADER */}
+        <div style={{ textAlign: "center", maxWidth: 580, margin: "0 auto" }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 12px",
+              background: "var(--accent-soft)",
+              color: "var(--accent-deep)",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <Icon name="sparkle" size={12} /> Pricing that grows with you
+          </div>
+          <h1
+            className="serif"
+            style={{
+              fontSize: 44,
+              fontWeight: 400,
+              lineHeight: 1.05,
+              letterSpacing: -0.8,
+              margin: "16px 0 0",
+              color: "var(--ink)",
+            }}
+          >
+            Send beautiful emails{" "}
+            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>at any scale.</span>
+          </h1>
+          <p style={{ fontSize: 15, color: "var(--ink-soft)", marginTop: 12, lineHeight: 1.55 }}>
+            Start free. Upgrade when your list does. Cancel anytime — really.
+          </p>
+
+          {/* BILLING TOGGLE */}
+          <div
+            style={{
+              display: "inline-flex",
+              marginTop: 24,
+              padding: 4,
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: 999,
+              gap: 4,
+            }}
+          >
+            <button
+              onClick={() => setBilling("MONTHLY")}
+              style={{
+                padding: "8px 18px",
+                borderRadius: 999,
+                border: "none",
+                background: billing === "MONTHLY" ? "var(--ink)" : "transparent",
+                color: billing === "MONTHLY" ? "var(--bg)" : "var(--ink-soft)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBilling("ANNUAL")}
+              style={{
+                padding: "8px 18px",
+                borderRadius: 999,
+                border: "none",
+                background: billing === "ANNUAL" ? "var(--ink)" : "transparent",
+                color: billing === "ANNUAL" ? "var(--bg)" : "var(--ink-soft)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              Annual
+              <span
+                style={{
+                  padding: "2px 7px",
+                  borderRadius: 4,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 0.3,
+                  background: billing === "ANNUAL" ? "var(--accent)" : "var(--accent-soft)",
+                  color: billing === "ANNUAL" ? "var(--accent-fg)" : "var(--accent-deep)",
+                }}
+              >
+                SAVE 20%
+              </span>
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {overview.isPending
-            ? Array.from({ length: 2 }).map((_, idx) => (
-                <Card key={`plan-skeleton-${idx}`} padded style={{ display: "grid", gap: 12 }}>
-                  <Skeleton width="45%" height={24} />
-                  <Skeleton width="75%" height={12} />
-                  <Skeleton width="35%" height={30} />
-                  <Skeleton width="100%" height={12} />
-                  <Skeleton width="100%" height={12} />
-                  <Skeleton width="100%" height={36} />
-                </Card>
-              ))
-            : null}
-          {!overview.isPending ? UPGRADE_PLANS.map((option) => {
-            const isCurrent = option.plan === currentPlan;
+        {/* PLAN GRID */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 14,
+            marginTop: 36,
+            alignItems: "stretch",
+          }}
+        >
+          {plans.map((plan) => {
+            const isCurrent = plan.id === currentPlan;
+            const isHighlight = plan.highlight;
+            const isScale = plan.scaleOnly;
+            const monthlyPrice =
+              plan.id === "FREE"
+                ? 0
+                : plan.id === "SCALE"
+                  ? 199
+                  : PLAN_PRICES[plan.id as Plan];
+            const annualPrice =
+              plan.id === "FREE"
+                ? 0
+                : plan.id === "SCALE"
+                  ? 159
+                  : PLAN_PRICES_ANNUAL[plan.id as Plan];
+            const displayPrice = billing === "ANNUAL" ? annualPrice : monthlyPrice;
+            const features = PLAN_FEATURES[plan.id];
+
             return (
-              <Card
-                key={option.plan}
-                padded
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
+              <div
+                key={plan.id}
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  flexDirection: "column",
+                  background: isHighlight ? "var(--ink)" : "var(--surface)",
+                  color: isHighlight ? "var(--bg)" : "var(--ink)",
+                  border: isHighlight ? "1px solid var(--ink)" : "1px solid var(--border)",
+                  borderRadius: 18,
+                  padding: "28px 20px 22px",
+                  transform: isHighlight ? "translateY(-6px)" : "none",
+                  boxShadow: isHighlight
+                    ? "0 20px 44px -16px rgba(20,15,10,0.3)"
+                    : "0 1px 0 rgba(0,0,0,0.02)",
+                }}
               >
-                <div
-                  className="serif"
-                  style={{ fontSize: 22, fontWeight: 400, letterSpacing: -0.3 }}
-                >
-                  {PLAN_DISPLAY_NAMES[option.plan]}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--ink-soft)" }}>{option.tagline}</div>
-                <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.5 }}>
-                  ${PLAN_PRICES[option.plan]}
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-soft)" }}>/mo</span>
-                </div>
-                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 6 }}>
-                  {option.perks.map((perk) => (
-                    <li key={perk} style={{ fontSize: 13, color: "var(--ink)" }}>
-                      · {perk}
-                    </li>
-                  ))}
-                </ul>
-                <div style={{ marginTop: "auto" }}>
-                  <Button
-                    variant={isCurrent ? "ghost" : "primary"}
-                    size="md"
-                    block
-                    disabled={isCurrent || checkout.isPending}
-                    onClick={() => {
-                      if (isCurrent) return;
-                      checkout.mutate(option.plan);
+                {plan.badge && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -11,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      padding: "4px 12px",
+                      borderRadius: 999,
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      letterSpacing: 0.5,
+                      background: "var(--accent)",
+                      color: "var(--accent-fg)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      textTransform: "uppercase",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {isCurrent
-                      ? "Current plan"
-                      : checkout.isPending
-                        ? "Opening checkout…"
-                        : `Upgrade to ${PLAN_DISPLAY_NAMES[option.plan]}`}
-                  </Button>
+                    <Icon name="star" size={9} stroke={2} /> {plan.badge}
+                  </div>
+                )}
+
+                <div className="serif" style={{ fontSize: 28, fontWeight: 400, letterSpacing: -0.3, lineHeight: 1 }}>
+                  {plan.name}
                 </div>
-              </Card>
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    color: isHighlight ? "rgba(250,247,240,0.65)" : "var(--ink-soft)",
+                    marginTop: 6,
+                    lineHeight: 1.4,
+                    minHeight: 34,
+                  }}
+                >
+                  {plan.tagline}
+                </div>
+
+                {/* PRICE */}
+                <div
+                  style={{
+                    marginTop: 16,
+                    paddingBottom: 16,
+                    borderBottom: isHighlight ? "1px solid rgba(255,255,255,0.1)" : "1px solid var(--border)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.65 }}>$</div>
+                    <div className="serif" style={{ fontSize: 50, fontWeight: 400, letterSpacing: -1.5, lineHeight: 1 }}>
+                      {displayPrice}
+                    </div>
+                    <div style={{ fontSize: 12, color: isHighlight ? "rgba(250,247,240,0.55)" : "var(--ink-faint)", fontWeight: 500 }}>
+                      /mo
+                    </div>
+                  </div>
+                  {billing === "ANNUAL" && monthlyPrice > 0 ? (
+                    <div style={{ fontSize: 11.5, color: isHighlight ? "rgba(250,247,240,0.5)" : "var(--ink-faint)", marginTop: 3 }}>
+                      <s>${monthlyPrice}/mo</s> — billed annually
+                    </div>
+                  ) : monthlyPrice === 0 ? (
+                    <div style={{ fontSize: 11.5, color: isHighlight ? "rgba(250,247,240,0.5)" : "var(--ink-faint)", marginTop: 3 }}>
+                      Free forever, no card needed
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* CTA */}
+                {isCurrent ? (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      padding: "10px 14px",
+                      borderRadius: 9,
+                      border: isHighlight ? "1px solid rgba(255,255,255,0.2)" : "1px solid var(--border)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      textAlign: "center",
+                      color: isHighlight ? "rgba(250,247,240,0.7)" : "var(--ink-soft)",
+                    }}
+                  >
+                    Current plan
+                  </div>
+                ) : isScale ? (
+                  <a
+                    href="mailto:sales@madoo.ai"
+                    style={{
+                      marginTop: 14,
+                      padding: "10px 14px",
+                      borderRadius: 9,
+                      border: "none",
+                      background: "var(--ink)",
+                      color: "var(--bg)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      textDecoration: "none",
+                    }}
+                  >
+                    Talk to sales <Icon name="arrow" size={12} />
+                  </a>
+                ) : plan.id === "FREE" ? (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      padding: "10px 14px",
+                      borderRadius: 9,
+                      border: "1px solid var(--border)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      textAlign: "center",
+                      color: "var(--ink-soft)",
+                    }}
+                  >
+                    Default plan
+                  </div>
+                ) : (
+                  <button
+                    style={{
+                      marginTop: 14,
+                      padding: "10px 14px",
+                      borderRadius: 9,
+                      border: "none",
+                      background: isHighlight ? "var(--accent)" : "var(--ink)",
+                      color: isHighlight ? "var(--accent-fg)" : "var(--bg)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: checkout.isPending ? "not-allowed" : "pointer",
+                      fontFamily: "inherit",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      opacity: checkout.isPending ? 0.6 : 1,
+                    }}
+                    disabled={checkout.isPending}
+                    onClick={() => checkout.mutate({ plan: plan.id as PaidPlan, interval: billing })}
+                  >
+                    {checkout.isPending ? "Opening checkout…" : plan.cta}
+                    {!checkout.isPending && <Icon name="arrow" size={12} />}
+                  </button>
+                )}
+
+                {/* FEATURE LIST */}
+                <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {features.map((f, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 8,
+                        fontSize: 12.5,
+                        lineHeight: 1.4,
+                        color: f.header
+                          ? isHighlight
+                            ? "rgba(250,247,240,0.95)"
+                            : "var(--ink)"
+                          : f.included
+                            ? isHighlight
+                              ? "rgba(250,247,240,0.88)"
+                              : "var(--ink-soft)"
+                            : isHighlight
+                              ? "rgba(250,247,240,0.35)"
+                              : "var(--ink-faint)",
+                        fontWeight: f.header ? 600 : 500,
+                        textDecoration: f.included || f.header ? "none" : "line-through",
+                        paddingTop: f.header && i > 0 ? 4 : 0,
+                      }}
+                    >
+                      {!f.header && (
+                        <div
+                          style={{
+                            flexShrink: 0,
+                            marginTop: 2,
+                            color: f.included
+                              ? isHighlight
+                                ? "var(--accent)"
+                                : "var(--accent-deep)"
+                              : "inherit",
+                          }}
+                        >
+                          {f.included ? (
+                            <Icon name="check" size={13} stroke={2.4} />
+                          ) : (
+                            <Icon name="x" size={11} />
+                          )}
+                        </div>
+                      )}
+                      <span>{f.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             );
-          }) : null}
+          })}
+        </div>
+
+        {/* TRUST STRIP */}
+        <div
+          style={{
+            marginTop: 44,
+            padding: "22px 28px",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 20,
+            flexWrap: "wrap",
+          }}
+        >
+          {[
+            { icon: "check" as const, label: "14-day money-back guarantee" },
+            { icon: "lock" as const, label: "SOC 2 Type II + GDPR" },
+            { icon: "bolt" as const, label: "99.9% uptime SLA" },
+            { icon: "sparkle" as const, label: "Cancel in one click" },
+          ].map((t) => (
+            <div
+              key={t.label}
+              style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--ink)", fontWeight: 500 }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 7,
+                  background: "var(--accent-soft)",
+                  color: "var(--accent-deep)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Icon name={t.icon} size={14} />
+              </div>
+              {t.label}
+            </div>
+          ))}
+        </div>
+
+        {/* FAQ */}
+        <div style={{ marginTop: 52 }}>
+          <div style={{ textAlign: "center", maxWidth: 540, margin: "0 auto 24px" }}>
+            <h2
+              className="serif"
+              style={{ fontSize: 34, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}
+            >
+              Common questions
+            </h2>
+            <p style={{ fontSize: 14, color: "var(--ink-soft)", marginTop: 6 }}>
+              Still wondering?{" "}
+              <a href="mailto:hello@madoo.ai" style={{ color: "var(--accent-deep)", fontWeight: 600, textDecoration: "none" }}>
+                Talk to a human →
+              </a>
+            </p>
+          </div>
+          <div
+            style={{
+              maxWidth: 720,
+              margin: "0 auto",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              overflow: "hidden",
+            }}
+          >
+            {FAQ_ITEMS.map((item, i) => (
+              <FaqItem key={i} item={item} first={i === 0} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
