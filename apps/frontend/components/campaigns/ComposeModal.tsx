@@ -81,9 +81,11 @@ const STEP_TITLES = [
 export function ComposeModal({
   onClose,
   resumeCampaignId,
+  preSelectedEmailId,
 }: {
   onClose: () => void;
   resumeCampaignId?: string | null;
+  preSelectedEmailId?: string | null;
 }) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -92,7 +94,7 @@ export function ComposeModal({
   const resumeHydratedId = useRef<string | null>(null);
 
   const [step, setStep] = useState(1);
-  const [emailId, setEmailId] = useState("");
+  const [emailId, setEmailId] = useState(preSelectedEmailId ?? "");
   const [segmentId, setSegmentId] = useState("");
   const [schedule, setSchedule] = useState<"now" | "later">("now");
   const [abTest, setAbTest] = useState(false);
@@ -154,11 +156,11 @@ export function ComposeModal({
   const audCount = previewQuery.data?.count ?? 0;
 
   useEffect(() => {
-    if (resumeId) return;
+    if (resumeId || preSelectedEmailId) return;
     const first = emailsQuery.data?.[0];
     if (!first?.id || emailId) return;
     setEmailId(first.id);
-  }, [emailsQuery.data, emailId, resumeId]);
+  }, [emailsQuery.data, emailId, resumeId, preSelectedEmailId]);
 
   useEffect(() => {
     if (resumeId) return;
@@ -614,6 +616,16 @@ export function ComposeModal({
       {step === 2 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {segmentsQuery.isPending ? <Banner tone="info">Loading segments…</Banner> : null}
+          {segmentsQuery.isError ? <Banner tone="danger">Unable to load segments. Try refreshing the page.</Banner> : null}
+          {!segmentsQuery.isPending && !segmentsQuery.isError && (segmentsQuery.data ?? []).length === 0 ? (
+            <Banner tone="warn">
+              No segments yet.{" "}
+              <Link href="/segments" prefetch={false} style={{ fontWeight: 600, color: "inherit", textDecoration: "underline" }} onClick={onClose}>
+                Create a segment
+              </Link>{" "}
+              first, then come back to send a campaign.
+            </Banner>
+          ) : null}
           {(segmentsQuery.data ?? []).map((s, idx) => {
             const accent = segmentAccent(s, idx);
             const selected = segmentId === s.id;

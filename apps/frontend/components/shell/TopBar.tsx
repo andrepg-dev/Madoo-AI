@@ -7,7 +7,6 @@ import {
   Avatar,
   Button,
   Icon,
-  IconButton,
   Input,
   Modal,
   type IconName,
@@ -18,6 +17,7 @@ import { useLogout } from "@/hooks/use-logout";
 import { ApiError } from "@/lib/api/fetch-wrapper";
 import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
 import { readCookie, writeCookie, WORKSPACE_COOKIE } from "@/lib/cookies";
+import { SetupGuide } from "./SetupGuide";
 
 export function TopBar() {
   const router = useRouter();
@@ -105,9 +105,7 @@ export function TopBar() {
         />
       </div>
       <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-        <IconButton variant="outline" size="md" aria-label="Notifications">
-          <Icon name="bell" size={16} />
-        </IconButton>
+        <SetupGuide />
 
         {mounted && !user && !loading && (
           <Button variant="secondary" size="md" onClick={() => openLogin()}>

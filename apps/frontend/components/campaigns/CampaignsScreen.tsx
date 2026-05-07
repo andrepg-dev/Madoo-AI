@@ -150,6 +150,7 @@ export function CampaignsScreen() {
     const p = new URLSearchParams(searchParams.toString());
     p.delete("compose");
     p.delete("edit");
+    p.delete("emailId");
     const q = p.toString();
     router.replace(q ? `/campaigns?${q}` : "/campaigns");
   };
@@ -420,6 +421,7 @@ export function CampaignsScreen() {
         <ComposeModal
           key={searchParams.get("edit") ?? "compose-new"}
           resumeCampaignId={searchParams.get("edit")}
+          preSelectedEmailId={searchParams.get("emailId")}
           onClose={closeCompose}
         />
       ) : null}
