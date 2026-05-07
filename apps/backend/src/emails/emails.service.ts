@@ -15,6 +15,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 import { TemplatesService } from "../templates/templates.service";
+import { ReactToHtmlService } from "../generation/react-to-html.service";
 
 @Injectable()
 export class EmailsService {
@@ -22,6 +23,7 @@ export class EmailsService {
     private readonly prisma: PrismaService,
     private readonly workspaces: WorkspacesService,
     private readonly templates: TemplatesService,
+    private readonly reactToHtml: ReactToHtmlService,
   ) {}
 
   async assertEmailInWorkspace(emailId: string, workspaceId: string): Promise<void> {
@@ -57,7 +59,30 @@ export class EmailsService {
         },
       });
       if (!tpl) throw new BadRequestException("Unknown template slug for this workspace.");
-      templateId = tpl.id;
+      const compiledHtml = this.reactToHtml.compile(tpl.componentCode);
+      const email = await this.prisma.email.create({
+        data: {
+          workspaceId,
+          prompt: dto.prompt.trim(),
+          tone: dto.tone ?? null,
+          length: dto.length ?? null,
+          audience: dto.audience ?? null,
+          templateId: tpl.id,
+          status: "READY",
+        },
+      });
+      await this.prisma.emailVariant.create({
+        data: {
+          workspaceId,
+          emailId: email.id,
+          seq: 1,
+          subject: tpl.name,
+          componentCode: tpl.componentCode,
+          compiledHtml,
+          variableSchema: { variables: [] },
+        },
+      });
+      return this.toDto(email.id);
     }
 
     const email = await this.prisma.email.create({

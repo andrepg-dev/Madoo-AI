@@ -123,7 +123,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         audience: "Existing customers",
         ...(slug ? { templateSlug: slug } : {}),
       });
-      router.push(`/emails/${email.id}/generate`);
+      router.push(slug ? `/emails/${email.id}/editor` : `/emails/${email.id}/generate`);
     } catch (err) {
       setTemplateError(err instanceof Error ? err.message : "Failed to start from template. Please try again.");
     }
