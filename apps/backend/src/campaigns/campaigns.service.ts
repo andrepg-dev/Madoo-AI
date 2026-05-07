@@ -212,7 +212,7 @@ export class CampaignsService {
     });
     const html = `${htmlBody}${buildComplianceFooter(workspace, testContact, deliveryId)}`;
 
-    const senderDomain = this.config.get<string>("SENDING_DOMAIN") ?? "madoo.app";
+    const senderDomain = this.config.get<string>("SENDING_DOMAIN") ?? "madooai.com";
     const fromEmail = campaign.fromEmail || `hello@${senderDomain}`;
     const result = await this.sender.sendBatch([
       {
@@ -345,25 +345,49 @@ export class CampaignsService {
     }
   }
 
+  async enqueueScheduledCampaigns(): Promise<void> {
+    const due = await this.prisma.campaign.findMany({
+      where: { status: "SCHEDULED", scheduledFor: { lte: new Date() } },
+      select: { id: true, workspaceId: true },
+    });
+    for (const campaign of due) {
+      const updated = await this.prisma.campaign.updateMany({
+        where: { id: campaign.id, status: "SCHEDULED" },
+        data: { status: "SENDING" },
+      });
+      if (updated.count === 0) continue;
+      const payload: CampaignSendJobPayload = {
+        workspaceId: campaign.workspaceId,
+        campaignId: campaign.id,
+        actorUserId: "scheduler",
+      };
+      await this.sendQueue.add(CAMPAIGN_SEND_JOB, payload, {
+        jobId: `${campaign.workspaceId}-${campaign.id}`,
+        removeOnComplete: true,
+        removeOnFail: 20,
+      });
+    }
+  }
+
   private async assertCampaignFromEmailUsesVerifiedDomain(
     workspaceId: string,
     fromEmail: string,
   ): Promise<void> {
+    const madooDomain = (this.config.get<string>("SENDING_DOMAIN") ?? "madooai.com").toLowerCase();
+    const fromDomain = fromEmail.split("@")[1]?.toLowerCase();
+    if (fromDomain === madooDomain) return;
+
     const verified = await this.prisma.domain.findMany({
       where: { workspaceId, status: "VERIFIED" },
       select: { hostname: true },
     });
-    if (verified.length === 0) {
-      throw new BadRequestException(
-        "A verified sending domain is required before sending. Verify a domain in Domains.",
-      );
-    }
-    const fromDomain = fromEmail.split("@")[1]?.toLowerCase();
     const allowed = new Set(verified.map((d) => d.hostname.toLowerCase()));
     if (!fromDomain || !allowed.has(fromDomain)) {
       const list = verified.map((d) => d.hostname).join(", ");
       throw new BadRequestException(
-        `Campaign "From" address (${fromEmail}) must use a verified domain. Verified: ${list}.`,
+        list
+          ? `Campaign "From" address (${fromEmail}) must use a verified domain. Verified: ${list}.`
+          : "A verified sending domain is required before sending. Verify a domain in Domains.",
       );
     }
   }

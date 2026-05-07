@@ -99,8 +99,8 @@ export function ComposeModal({
   const [schedule, setSchedule] = useState<"now" | "later">("now");
   const [abTest, setAbTest] = useState(false);
   const [fromName, setFromName] = useState("Madoo");
-  const [fromEmail, setFromEmail] = useState("");
-  const [fromEmailEdited, setFromEmailEdited] = useState(false);
+  const [fromEmailPrefix, setFromEmailPrefix] = useState("noreply");
+  const [fromEmailDomain, setFromEmailDomain] = useState("madooai.com");
   const [scheduledDate, setScheduledDate] = useState(() => defaultLocalDate());
   const [scheduledTime, setScheduledTime] = useState("09:00");
   const [campaignDraftId, setCampaignDraftId] = useState<string | null>(null);
@@ -140,11 +140,13 @@ export function ComposeModal({
     [domainsQuery.data],
   );
 
-  useEffect(() => {
-    if (fromEmailEdited) return;
-    if (!verifiedDomain) return;
-    setFromEmail(`hello@${verifiedDomain.hostname}`);
-  }, [verifiedDomain, fromEmailEdited]);
+  const domainOptions = useMemo(() => {
+    const opts: Array<{ label: string; value: string }> = [{ label: "madooai.com", value: "madooai.com" }];
+    if (verifiedDomain) opts.push({ label: verifiedDomain.hostname, value: verifiedDomain.hostname });
+    return opts;
+  }, [verifiedDomain]);
+
+  const fromEmail = `${fromEmailPrefix}@${fromEmailDomain}`;
 
   const previewQuery = useQuery({
     queryKey: segmentsKeys.preview(segmentId),
@@ -183,8 +185,9 @@ export function ComposeModal({
     setEmailId(row.emailId);
     setSegmentId(row.segmentId);
     setFromName(row.fromName);
-    setFromEmail(row.fromEmail);
-    setFromEmailEdited(true);
+    const [resumePrefix = "noreply", resumeDomain = "madooai.com"] = row.fromEmail.split("@");
+    setFromEmailPrefix(resumePrefix);
+    setFromEmailDomain(resumeDomain);
     setAbTest(row.abTest);
     if (row.scheduledFor) {
       setSchedule("later");
@@ -390,6 +393,22 @@ export function ComposeModal({
           >
             {step === 4 ? (savingDraft ? "Saving…" : "Continue") : "Continue"}
           </Button>
+        ) : schedule === "later" ? (
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Icon name="send" size={12} />}
+            onClick={() => {
+              void queryClient.invalidateQueries({ queryKey: campaignsKeys.list() });
+              void queryClient.invalidateQueries({
+                predicate: (q) =>
+                  typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("workspaces"),
+              });
+              onClose();
+            }}
+          >
+            Done — scheduled
+          </Button>
         ) : (
           <>
             <Button
@@ -422,17 +441,12 @@ export function ComposeModal({
                 !campaignDraftId ||
                 resumeBlocked ||
                 isPostalAddressMissing ||
-                schedule !== "now" ||
                 savingDraft ||
                 testMutation.isPending ||
                 queueSendMutation.isPending
               }
               title={
-                schedule !== "now"
-                  ? "Scheduled sends stay as drafts until automated delivery is enabled."
-                  : isPostalAddressMissing
-                    ? postalBlockTooltip
-                    : undefined
+                isPostalAddressMissing ? postalBlockTooltip : undefined
               }
               onClick={() => campaignDraftId && queueSendMutation.mutate(campaignDraftId)}
             >
@@ -899,25 +913,47 @@ export function ComposeModal({
       {step === 4 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Input label="From name" value={fromName} onChange={(e) => setFromName(e.target.value)} />
-          <Input
-            label="From email"
-            type="email"
-            value={fromEmail}
-            onChange={(e) => {
-              setFromEmail(e.target.value);
-              setFromEmailEdited(true);
-            }}
-            placeholder={
-              verifiedDomain
-                ? `hello@${verifiedDomain.hostname}`
-                : "noreply@your-verified-domain.com"
-            }
-            hint={
-              verifiedDomain
-                ? `Must use a verified domain. Verified: ${verifiedDomain.hostname}`
-                : "No verified domain yet. Verify one in Domains before sending."
-            }
-          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-soft)" }}>
+              From email
+            </label>
+            <div style={{ display: "flex", alignItems: "stretch", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", background: "var(--surface)" }}>
+              <input
+                type="text"
+                value={fromEmailPrefix}
+                onChange={(e) => setFromEmailPrefix(e.target.value.replace(/[@\s]/g, ""))}
+                placeholder="noreply"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  border: "none",
+                  outline: "none",
+                  padding: "10px 12px",
+                  background: "transparent",
+                  fontSize: 14,
+                  color: "var(--ink)",
+                }}
+              />
+              <div style={{ display: "flex", alignItems: "center", padding: "0 4px 0 0", gap: 0, borderLeft: "1px solid var(--border)", background: "var(--surface-subtle, var(--surface))" }}>
+                <span style={{ padding: "0 6px", color: "var(--ink-soft)", fontSize: 14, userSelect: "none" }}>@</span>
+                <Select
+                  selectSize="sm"
+                  value={fromEmailDomain}
+                  onChange={(e) => setFromEmailDomain(e.target.value)}
+                  options={domainOptions}
+                  aria-label="From email domain"
+                />
+              </div>
+            </div>
+            {!verifiedDomain && (
+              <div style={{ marginTop: 4, fontSize: 12, color: "var(--ink-soft)" }}>
+                Want to send from your own domain?{" "}
+                <Link href="/domain" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                  Set up a custom domain
+                </Link>
+              </div>
+            )}
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <SelectableCard
               padded
@@ -949,12 +985,14 @@ export function ComposeModal({
                 label="Date"
                 type="date"
                 value={scheduledDate}
+                min={defaultLocalDate()}
                 onChange={(e) => setScheduledDate(e.target.value)}
               />
               <Input
                 label="Time"
                 type="time"
                 value={scheduledTime}
+                min={scheduledDate === defaultLocalDate() ? new Date().toTimeString().slice(0, 5) : undefined}
                 onChange={(e) => setScheduledTime(e.target.value)}
               />
             </div>
