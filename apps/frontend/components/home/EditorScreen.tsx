@@ -10,6 +10,7 @@ import {
   IconButton,
   SegmentedControl,
   Textarea,
+  useToast,
 } from "@madoo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -50,6 +51,7 @@ export function EditorScreen({
 }) {
   const qc = useQueryClient();
   const router = useRouter();
+  const { toast } = useToast();
   const { data: email, isLoading, refetch, isError } = useEmail(emailId);
 
   const variants = useMemo(() => {
@@ -337,6 +339,12 @@ export function EditorScreen({
                     saveTemplateMutation.mutate(undefined, {
                       onSuccess: () =>
                         router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`),
+                      onError: (err) =>
+                        toast({
+                          tone: "danger",
+                          title: "Cannot save template",
+                          body: err instanceof Error ? err.message : "Something went wrong.",
+                        }),
                     })
                   }
                 >
