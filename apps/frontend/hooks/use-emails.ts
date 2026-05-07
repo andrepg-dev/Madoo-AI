@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createEmail, fetchEmail, fetchEmails, type CreateEmailInput } from "@/actions/emails";
+import { createEmail, fetchEmail, fetchEmails, saveEmailTemplate, type CreateEmailInput } from "@/actions/emails";
 
 export function useCreateEmail() {
   const qc = useQueryClient();
@@ -18,6 +18,16 @@ export function useEmail(emailId: string | null) {
     queryKey: ["email", emailId],
     queryFn: () => fetchEmail(emailId!),
     enabled: !!emailId,
+  });
+}
+
+export function useSaveTemplate(emailId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => saveEmailTemplate(emailId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["email", emailId] });
+    },
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { consumeEmailSseStream, useEmail } from "@/hooks/use-emails";
+import { consumeEmailSseStream, useEmail, useSaveTemplate } from "@/hooks/use-emails";
 import { shortEmailId } from "@/lib/email-id";
 import type { EmailVariantDto } from "@madoo/shared";
 import {
@@ -65,6 +65,9 @@ export function EditorScreen({
     value: String(i),
     label: `v${v.seq}`,
   }));
+
+  const isPrebuiltTemplate = Boolean(email?.templateId);
+  const saveTemplateMutation = useSaveTemplate(emailId);
 
   const [aiPrompt, setAiPrompt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -320,15 +323,32 @@ export function EditorScreen({
                 aria-label="Variant"
               />
             ) : null}
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Icon name="send" size={12} />}
-              disabled={!activeVariant}
-              onClick={() => router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`)}
-            >
-              Send campaign
-            </Button>
+            {isPrebuiltTemplate ? (
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Icon name="check" size={12} />}
+                disabled={!activeVariant || saveTemplateMutation.isPending || saveTemplateMutation.isSuccess}
+                onClick={() =>
+                  saveTemplateMutation.mutate(undefined, {
+                    onSuccess: () =>
+                      router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`),
+                  })
+                }
+              >
+                {saveTemplateMutation.isPending ? "Saving…" : "Save template"}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Icon name="send" size={12} />}
+                disabled={!activeVariant}
+                onClick={() => router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`)}
+              >
+                Send campaign
+              </Button>
+            )}
           </div>
         </div>
 

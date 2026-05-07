@@ -16,6 +16,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 import { TemplatesService } from "../templates/templates.service";
 import { ReactToHtmlService } from "../generation/react-to-html.service";
+import { BillingService } from "../billing/billing.service";
 
 @Injectable()
 export class EmailsService {
@@ -24,6 +25,7 @@ export class EmailsService {
     private readonly workspaces: WorkspacesService,
     private readonly templates: TemplatesService,
     private readonly reactToHtml: ReactToHtmlService,
+    private readonly billing: BillingService,
   ) {}
 
   async assertEmailInWorkspace(emailId: string, workspaceId: string): Promise<void> {
@@ -119,6 +121,25 @@ export class EmailsService {
     await this.workspaces.assertMembership(userId, workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     await this.prisma.email.delete({ where: { id: emailId } });
+  }
+
+  async saveTemplate(emailId: string, workspaceId: string, userId: string): Promise<void> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    const email = await this.prisma.email.findFirst({
+      where: { id: emailId, workspaceId },
+      select: { id: true, templateId: true },
+    });
+    if (!email) throw new NotFoundException("Email not found.");
+    if (!email.templateId) throw new BadRequestException("Email is not a pre-built template email.");
+    await this.billing.assertCanGenerate(workspaceId);
+    await this.prisma.emailGenerationRun.create({
+      data: {
+        workspaceId,
+        emailId,
+        kind: "INITIAL",
+        status: "COMPLETED",
+      },
+    });
   }
 
   async updateStatus(emailId: string, status: EmailStatus): Promise<void> {

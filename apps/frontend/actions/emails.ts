@@ -32,3 +32,7 @@ export async function fetchEmails(): Promise<EmailDto[]> {
   const raw = await FetchWrapper<unknown>("/emails");
   return EmailListDtoSchema.parse(raw);
 }
+
+export async function saveEmailTemplate(emailId: string): Promise<void> {
+  await FetchWrapper<unknown>(`/emails/${emailId}/save`, { method: "POST" });
+}

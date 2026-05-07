@@ -22,6 +22,26 @@ The old flow routed every template click through `/emails/[id]/generate`, which 
 
 - In `onSelectTemplate`, navigate to `/emails/${email.id}/editor` when a `slug` was resolved, `/emails/${email.id}/generate` otherwise (fallback for templates without a seed slug)
 
+## "Save template" button (added on top of original change)
+
+### Backend
+
+- `apps/backend/src/emails/emails.module.ts` — added `BillingModule` to imports
+- `apps/backend/src/emails/emails.service.ts` — injected `BillingService`; added `saveTemplate(emailId, workspaceId, userId)`:
+  - asserts membership + email exists in workspace + email has `templateId`
+  - calls `billing.assertCanGenerate(workspaceId)` (enforces plan quota)
+  - creates `EmailGenerationRun { kind: "INITIAL", status: "COMPLETED" }` to record usage
+- `apps/backend/src/emails/emails.controller.ts` — added `POST /:id/save` endpoint (before `/:id/generate`)
+
+### Frontend
+
+- `apps/frontend/actions/emails.ts` — added `saveEmailTemplate(emailId)`
+- `apps/frontend/hooks/use-emails.ts` — added `useSaveTemplate(emailId)` mutation
+- `apps/frontend/components/home/EditorScreen.tsx`:
+  - `isPrebuiltTemplate = Boolean(email?.templateId)` — detects template-based email
+  - `useSaveTemplate(emailId)` — mutation hook
+  - Header button: if `isPrebuiltTemplate`, shows "Save template" (calls mutation → on success navigates to campaigns); otherwise shows "Send campaign" as before
+
 ## Result
 
 - Template click → `POST /v1/emails` (with `templateSlug`) → instant READY email with variant → redirect to `/editor`

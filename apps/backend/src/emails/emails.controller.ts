@@ -63,6 +63,16 @@ export class EmailsController {
     return { ok: true };
   }
 
+  @Post(":id/save")
+  async saveTemplate(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+  ) {
+    await this.emails.saveTemplate(id, req.workspace.id, user.sub);
+    return { ok: true };
+  }
+
   @Post(":id/generate")
   @Sse()
   generate(
