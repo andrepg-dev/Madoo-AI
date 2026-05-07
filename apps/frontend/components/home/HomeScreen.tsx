@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  Banner,
   Button,
   Icon,
   PromptPill,
@@ -39,6 +40,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
   const [length, setLength] = useState("Medium");
   const [audience, setAudience] = useState("Existing customers");
   const [activeCat, setActiveCat] = useState("All");
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const autoTriggerRef = useRef(false);
 
@@ -111,6 +113,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
       return;
     }
 
+    setTemplateError(null);
     try {
       const slug = TEMPLATE_PREVIEW_SEED_SLUG[t.preview];
       const email = await createEmail({
@@ -121,8 +124,8 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         ...(slug ? { templateSlug: slug } : {}),
       });
       router.push(`/emails/${email.id}/generate`);
-    } catch {
-      /* noop */
+    } catch (err) {
+      setTemplateError(err instanceof Error ? err.message : "Failed to start from template. Please try again.");
     }
   };
 
@@ -407,6 +410,12 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             aria-label="Filter templates by category"
           />
         </div>
+
+        {templateError ? (
+          <Banner tone="danger" style={{ marginBottom: 16 }}>
+            {templateError}
+          </Banner>
+        ) : null}
 
         <div
           style={{

@@ -63,6 +63,8 @@ export function ContactsScreen() {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | ContactStatus>("all");
   const [tagPresenceFilter, setTagPresenceFilter] = useState<"all" | "tagged" | "untagged">("all");
+  const [deleteTargetIds, setDeleteTargetIds] = useState<string[] | null>(null);
+  const [hoverContactId, setHoverContactId] = useState<string | null>(null);
 
   const segmentsQuery = useQuery({
     queryKey: segmentsKeys.list(),
@@ -194,6 +196,17 @@ export function ContactsScreen() {
       setIsTagModalOpen(false);
       setSelectedTagIds([]);
       setNewTagName("");
+    },
+  });
+
+  const deleteContactsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => contactsApi.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: contactsKeys.all });
+      setSelected(new Set());
+      setDeleteTargetIds(null);
     },
   });
 
@@ -494,6 +507,13 @@ export function ContactsScreen() {
                 <Button variant="primary" size="sm" onClick={openCampaignComposer}>
                   Send campaign →
                 </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setDeleteTargetIds([...selected])}
+                >
+                  Delete
+                </Button>
               </div>
             )}
           </div>
@@ -537,7 +557,7 @@ export function ContactsScreen() {
                       aria-label="Select all contacts"
                     />
                   </th>
-                  {["Name", "Tags", "Joined", "Engagement", "Status"].map((h) => (
+                  {["Name", "Tags", "Joined", "Engagement", "Status", ""].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -559,6 +579,8 @@ export function ContactsScreen() {
                 {rows.map((contact) => (
                   <tr
                     key={contact.id}
+                    onMouseEnter={() => setHoverContactId(contact.id)}
+                    onMouseLeave={() => setHoverContactId(null)}
                     style={{
                       borderBottom: "1px solid var(--border-soft)",
                       background: selected.has(contact.id) ? "var(--accent-soft)" : "transparent",
@@ -630,6 +652,18 @@ export function ContactsScreen() {
                       <Badge tone={STATUS_TONE[contact.status]} dot>
                         {contact.status}
                       </Badge>
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      {hoverContactId === contact.id ? (
+                        <IconButton
+                          variant="soft"
+                          size="sm"
+                          aria-label={`Delete ${contact.name}`}
+                          onClick={() => setDeleteTargetIds([contact.id])}
+                        >
+                          <Icon name="x" size={13} />
+                        </IconButton>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -1110,6 +1144,40 @@ export function ContactsScreen() {
             </div>
           )}
         </div>
+      </Modal>
+
+      <Modal
+        open={deleteTargetIds !== null}
+        onClose={() => { if (!deleteContactsMutation.isPending) setDeleteTargetIds(null); }}
+        size="sm"
+        title="Delete contacts"
+        description={`Permanently delete ${deleteTargetIds?.length ?? 0} contact${(deleteTargetIds?.length ?? 0) !== 1 ? "s" : ""}? This cannot be undone.`}
+      >
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setDeleteTargetIds(null)}
+            disabled={deleteContactsMutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={deleteContactsMutation.isPending}
+            onClick={() => {
+              if (deleteTargetIds) deleteContactsMutation.mutate(deleteTargetIds);
+            }}
+          >
+            {deleteContactsMutation.isPending ? "Deleting…" : "Delete"}
+          </Button>
+        </div>
+        {deleteContactsMutation.error ? (
+          <div style={{ color: "#b04c2e", fontSize: 12, marginTop: 8 }}>
+            {toErrorMessage(deleteContactsMutation.error)}
+          </div>
+        ) : null}
       </Modal>
     </div>
   );

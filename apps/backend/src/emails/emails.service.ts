@@ -14,12 +14,14 @@ import {
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
+import { TemplatesService } from "../templates/templates.service";
 
 @Injectable()
 export class EmailsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspaces: WorkspacesService,
+    private readonly templates: TemplatesService,
   ) {}
 
   async assertEmailInWorkspace(emailId: string, workspaceId: string): Promise<void> {
@@ -48,6 +50,7 @@ export class EmailsService {
       if (!tpl) throw new BadRequestException("Unknown template for this workspace.");
     }
     if (dto.templateSlug) {
+      await this.templates.ensureSeedForWorkspace(workspaceId);
       const tpl = await this.prisma.template.findUnique({
         where: {
           workspaceId_slug: { workspaceId, slug: dto.templateSlug },

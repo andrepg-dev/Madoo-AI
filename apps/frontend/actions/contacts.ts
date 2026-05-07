@@ -132,4 +132,7 @@ export const contactsApi = {
     );
     return ContactSchema.parse(raw);
   },
+  delete: async (contactId: string): Promise<void> => {
+    await fetcher.delete<{ ok: boolean }>(`/contacts/${contactId}`);
+  },
 };
