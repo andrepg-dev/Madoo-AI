@@ -20,7 +20,12 @@ export class TemplatesService {
           description: meta.description,
           componentCode: meta.componentCode,
         },
-        update: {},
+        update: {
+          name: meta.name,
+          category: meta.category,
+          description: meta.description,
+          componentCode: meta.componentCode,
+        },
       });
     }
   }

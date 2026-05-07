@@ -37,21 +37,21 @@ export type Template = {
 };
 
 export const TEMPLATES: Template[] = [
-  { id: "launch-bright", name: "Bright Launch", category: "Product Launch", tier: "free", accent: "#0E1F1A", bg: "#F2EFE8", preview: "launch" },
+  { id: "launch-bright", name: "Bright Launch", category: "Launch", tier: "free", accent: "#0E1F1A", bg: "#F2EFE8", preview: "launch" },
   { id: "editorial", name: "The Editorial", category: "Newsletter", tier: "premium", accent: "#1A1A1A", bg: "#FAF7F0", preview: "editorial" },
   { id: "sale-bold", name: "Bold Drop", category: "Promotion", tier: "free", accent: "#FF5C2B", bg: "#FFF1EB", preview: "sale" },
-  { id: "minimal-update", name: "Minimal Update", category: "Changelog", tier: "free", accent: "#0A0A0A", bg: "#FFFFFF", preview: "minimal" },
+  { id: "minimal-update", name: "Minimal Update", category: "Launch", tier: "free", accent: "#0A0A0A", bg: "#FFFFFF", preview: "minimal" },
   { id: "welcome-soft", name: "Soft Welcome", category: "Onboarding", tier: "premium", accent: "#2C5F4F", bg: "#EFF4F0", preview: "welcome" },
   { id: "event-card", name: "Event Invite", category: "Event", tier: "premium", accent: "#3B2F8C", bg: "#F0EEFA", preview: "event" },
   { id: "digest", name: "Weekly Digest", category: "Newsletter", tier: "free", accent: "#1A1A1A", bg: "#FFFCF5", preview: "digest" },
   { id: "thanks", name: "Thank You Note", category: "Transactional", tier: "free", accent: "#7A3E2D", bg: "#FBF3EC", preview: "thanks" },
-  { id: "feature-spot", name: "Feature Spotlight", category: "Product", tier: "premium", accent: "#0E5C4A", bg: "#EAF3EE", preview: "feature" },
+  { id: "feature-spot", name: "Feature Spotlight", category: "Launch", tier: "premium", accent: "#0E5C4A", bg: "#EAF3EE", preview: "feature" },
   { id: "survey", name: "Quick Survey", category: "Engagement", tier: "free", accent: "#1A1A1A", bg: "#F5F4F0", preview: "survey" },
-  { id: "reengage", name: "Come Back", category: "Re-engagement", tier: "premium", accent: "#A23E2F", bg: "#FBEEE9", preview: "reengage" },
+  { id: "reengage", name: "Come Back", category: "Engagement", tier: "premium", accent: "#A23E2F", bg: "#FBEEE9", preview: "reengage" },
   { id: "referral", name: "Refer a Friend", category: "Growth", tier: "premium", accent: "#1A4D8A", bg: "#EAF1F8", preview: "referral" },
 ];
 
-export const CATEGORIES = ["All", "Product Launch", "Newsletter", "Promotion", "Onboarding", "Event", "Transactional"];
+export const CATEGORIES = ["All", "Launch", "Newsletter", "Promotion", "Onboarding", "Event", "Transactional", "Engagement", "Growth"];
 
 export const PROMPT_SUGGESTIONS = [
   "Announce our new pricing plans to existing customers",
