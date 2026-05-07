@@ -258,10 +258,10 @@ ANTHROPIC_MODEL=claude-sonnet-4-6
 # Fase 3
 RESEND_API_KEY=
 APP_URL=http://localhost:3000
-SENDING_DOMAIN=madoo.app
+SENDING_DOMAIN=madooai.com
 
 # Fase 4
-TRACKING_HOST=https://t.madoo.app   # opcional, separar pixel/click
+TRACKING_HOST=https://t.madooai.com   # opcional, separar pixel/click
 
 # Fase 5
 STRIPE_SECRET_KEY=

@@ -5,7 +5,7 @@ export function buildDomainDnsRecords(hostname: string, dkimPublicKey: string): 
     {
       type: "TXT",
       host: "@",
-      value: "v=spf1 include:_spf.madoo.app ~all",
+      value: "v=spf1 include:_spf.madooai.com ~all",
       label: "SPF",
     },
     {
@@ -23,7 +23,7 @@ export function buildDomainDnsRecords(hostname: string, dkimPublicKey: string): 
     {
       type: "CNAME",
       host: "mail",
-      value: "return.madoo.app",
+      value: "return.madooai.com",
       label: "Return-Path",
     },
   ];
