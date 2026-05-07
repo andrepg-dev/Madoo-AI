@@ -32,6 +32,9 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Madoo AI — Generate beautiful emails with AI",
   description: "Describe it in plain words. Madoo AI writes, designs, and ships it.",
+  icons: {
+    icon: "/icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
