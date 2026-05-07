@@ -752,6 +752,98 @@ export default function BillingPage() {
           ))}
         </div>
 
+        {/* MIGRATION CTA */}
+        <div
+          style={{
+            marginTop: 28,
+            padding: "28px 32px",
+            background: "var(--ink)",
+            color: "var(--bg)",
+            borderRadius: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 24,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: 0.5,
+                color: "var(--accent)",
+                textTransform: "uppercase",
+              }}
+            >
+              <Icon name="sparkle" size={12} /> The Madoo switch
+            </div>
+            <div
+              className="serif"
+              style={{ fontSize: 28, fontWeight: 400, marginTop: 6, lineHeight: 1.1, letterSpacing: -0.3 }}
+            >
+              Coming from Mailchimp or Klaviyo?
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                color: "rgba(250,247,240,0.7)",
+                marginTop: 6,
+                lineHeight: 1.5,
+                maxWidth: 520,
+              }}
+            >
+              We migrate your lists, templates, and automations free of charge. Most teams are sending from Madoo
+              within 48 hours.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <a
+              href="mailto:hello@madoo.ai?subject=Feature comparison"
+              style={{
+                padding: "11px 18px",
+                borderRadius: 9,
+                border: "1px solid rgba(255,255,255,0.2)",
+                background: "transparent",
+                color: "var(--bg)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              Compare features
+            </a>
+            <a
+              href="mailto:hello@madoo.ai?subject=Migration call"
+              style={{
+                padding: "11px 18px",
+                borderRadius: 9,
+                border: "none",
+                background: "var(--accent)",
+                color: "var(--accent-fg)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                textDecoration: "none",
+              }}
+            >
+              Book migration call <Icon name="arrow" size={12} />
+            </a>
+          </div>
+        </div>
+
         {/* FAQ */}
         <div style={{ marginTop: 52 }}>
           <div style={{ textAlign: "center", maxWidth: 540, margin: "0 auto 24px" }}>
