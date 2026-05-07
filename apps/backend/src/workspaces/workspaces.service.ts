@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import type { Membership, Workspace } from "@prisma/client";
+import { PLAN_DISPLAY_NAMES, PLAN_LIMITS, type Plan } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -57,6 +58,30 @@ export class WorkspacesService {
     if (!trimmed) {
       throw new ForbiddenException("Workspace name is required.");
     }
+
+    const [ownedCount, subs] = await Promise.all([
+      this.prisma.membership.count({ where: { userId, role: "OWNER" } }),
+      this.prisma.billingSubscription.findMany({
+        where: { workspace: { members: { some: { userId, role: "OWNER" } } } },
+        select: { plan: true },
+      }),
+    ]);
+
+    const PLAN_RANK: Record<string, number> = { FREE: 0, STARTER: 1, GROWTH: 2 };
+    const bestPlan = subs
+      .map((s) => s.plan as string)
+      .reduce(
+        (best, plan) => ((PLAN_RANK[plan] ?? 0) > (PLAN_RANK[best] ?? 0) ? plan : best),
+        "FREE",
+      ) as Plan;
+
+    const wsLimit = PLAN_LIMITS[bestPlan].workspaces;
+    if (wsLimit !== -1 && ownedCount >= wsLimit) {
+      throw new ForbiddenException(
+        `Workspace limit: ${PLAN_DISPLAY_NAMES[bestPlan]} plan allows ${wsLimit} workspace${wsLimit === 1 ? "" : "s"}. Upgrade to create more.`,
+      );
+    }
+
     const baseSlug = slugifyName(trimmed);
     const slug = await this.uniqueSlug(baseSlug);
     return this.prisma.workspace.create({

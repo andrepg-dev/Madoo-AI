@@ -21,6 +21,7 @@ type PaidPlan = Exclude<Plan, "FREE">;
 
 const PLAN_FEATURES: Record<Plan | "SCALE", { label: string; included: boolean; header?: boolean }[]> = {
   FREE: [
+    { label: "1 workspace", included: true },
     { label: "100 contacts", included: true },
     { label: "2,000 emails / month", included: true },
     { label: "5 AI generations / month", included: true },
@@ -32,6 +33,7 @@ const PLAN_FEATURES: Record<Plan | "SCALE", { label: string; included: boolean; 
     { label: "Priority support", included: false },
   ],
   STARTER: [
+    { label: "Up to 5 workspaces", included: true },
     { label: "1,000 contacts", included: true },
     { label: "15,000 emails / month", included: true },
     { label: "100 AI generations / month", included: true },
@@ -43,6 +45,7 @@ const PLAN_FEATURES: Record<Plan | "SCALE", { label: string; included: boolean; 
     { label: 'Remove "Sent with Madoo" footer', included: false },
   ],
   GROWTH: [
+    { label: "Unlimited workspaces", included: true },
     { label: "5,000 contacts", included: true },
     { label: "100,000 emails / month", included: true },
     { label: "Unlimited AI generations", included: true },

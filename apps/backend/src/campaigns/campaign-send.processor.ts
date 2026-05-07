@@ -51,7 +51,11 @@ export class CampaignSendProcessor extends WorkerHost {
           },
         },
         workspace: {
-          select: { name: true, postalAddress: true },
+          select: {
+            name: true,
+            postalAddress: true,
+            billingSubscription: { select: { plan: true } },
+          },
         },
       },
     });
@@ -150,7 +154,8 @@ export class CampaignSendProcessor extends WorkerHost {
         }, {});
 
         const renderedHtml = this.reactToHtml.renderComponent(component, variables);
-        const composedHtml = `${renderedHtml}${buildComplianceFooter(campaign.workspace, contact, delivery.id)}`;
+        const plan = campaign.workspace.billingSubscription?.plan ?? "FREE";
+        const composedHtml = `${renderedHtml}${buildComplianceFooter(campaign.workspace, contact, delivery.id, plan === "FREE")}`;
         return { contact, delivery, composedHtml };
       });
 

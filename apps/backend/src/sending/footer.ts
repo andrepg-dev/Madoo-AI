@@ -14,6 +14,7 @@ export function buildComplianceFooter(
   workspace: FooterWorkspace,
   contact: FooterContact,
   deliveryId: string,
+  showMadooBranding = false,
 ): string {
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   const secret = process.env.JWT_SECRET ?? "";
@@ -28,6 +29,9 @@ export function buildComplianceFooter(
   );
   const unsubscribeUrl = `${appUrl}/unsubscribe/${token}`;
   const postalAddress = workspace.postalAddress?.trim() || "Postal address required";
+  const brandingLine = showMadooBranding
+    ? ` &middot; Sent with <a href="https://madoo.ai" style="color:#7c6f63;text-decoration:underline;">Madoo</a>`
+    : "";
   return [
     "<hr style=\"margin-top:24px;border:none;border-top:1px solid #e4ddd4\"/>",
     `<p style="font-size:12px;line-height:1.6;color:#7c6f63;margin-top:12px;">`,
@@ -36,6 +40,7 @@ export function buildComplianceFooter(
     escapeHtml(postalAddress),
     "<br/>",
     `<a href="${unsubscribeUrl}" style="color:#7c6f63;text-decoration:underline;">Unsubscribe</a>`,
+    brandingLine,
     "</p>",
   ].join("");
 }

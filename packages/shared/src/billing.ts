@@ -16,12 +16,13 @@ export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
 export type PlanLimits = {
   contacts: number;
   aiGenerations: number; // -1 = unlimited
+  workspaces: number;    // -1 = unlimited
 };
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  FREE: { contacts: 100, aiGenerations: 5 },
-  STARTER: { contacts: 1000, aiGenerations: 100 },
-  GROWTH: { contacts: 5000, aiGenerations: -1 },
+  FREE:    { contacts: 100,   aiGenerations: 5,   workspaces: 1  },
+  STARTER: { contacts: 1_000, aiGenerations: 100, workspaces: 5  },
+  GROWTH:  { contacts: 5_000, aiGenerations: -1,  workspaces: -1 },
 };
 
 export const PLAN_PRICES: Record<Plan, number> = {
