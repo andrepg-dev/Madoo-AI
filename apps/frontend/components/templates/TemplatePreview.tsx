@@ -15,7 +15,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
     overflow: "hidden",
     position: "relative",
   };
-  const serif: React.CSSProperties = { fontFamily: "var(--font-instrument-serif), Georgia, serif" };
+  const serif: React.CSSProperties = { fontFamily: "" };
 
   if (preview === "launch") {
     return (
