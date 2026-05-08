@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { billingApi, billingKeys } from "@/actions/billing";
+import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
+import { useLogout } from "@/hooks/use-logout";
+import { useMe } from "@/hooks/use-me";
+import { ApiError } from "@/lib/api/fetch-wrapper";
+import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
+import { useAuthStore } from "@/stores/auth";
+import { PLAN_LIMITS } from "@madoo/shared";
 import {
   Avatar,
   Button,
@@ -12,16 +17,11 @@ import {
   Modal,
   type IconName,
 } from "@madoo/ui";
-import { useAuthStore } from "@/stores/auth";
-import { useMe } from "@/hooks/use-me";
-import { useLogout } from "@/hooks/use-logout";
-import { ApiError } from "@/lib/api/fetch-wrapper";
-import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
-import { readCookie, writeCookie, WORKSPACE_COOKIE } from "@/lib/cookies";
-import { billingApi, billingKeys } from "@/actions/billing";
-import { PLAN_LIMITS } from "@madoo/shared";
-import { SetupGuide } from "./SetupGuide";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { CommandPalette } from "./CommandPalette";
+import { SetupGuide } from "./SetupGuide";
 
 export function TopBar() {
   const router = useRouter();
@@ -448,7 +448,10 @@ export function TopBar() {
                     router.push("/settings");
                   }}
                 />
-                <MenuItem icon="barChart" label="Usage" onClick={() => setOpen(false)} />
+                <MenuItem icon="barChart" label="Usage & Billing" onClick={() => {
+                  setOpen(false);
+                  router.push("/settings/billing");
+                }} />
                 <div style={{ height: 1, background: "var(--border)", margin: "6px 0" }} />
                 <MenuItem
                   icon="logOut"
