@@ -165,6 +165,7 @@ export function EditorScreen({
         ...prev,
         { id: userMessageId, role: "user", kind: "text", value: userText },
       ]);
+      setAiPrompt("");
       setActiveStreamingId(assistantTextId);
       try {
         await consumeEmailSseStream(
@@ -249,7 +250,6 @@ export function EditorScreen({
         setEditError(e instanceof Error ? e.message : String(e));
       } finally {
         setBusy(false);
-        setAiPrompt("");
         setActiveStreamingId(null);
       }
     },
@@ -776,6 +776,29 @@ export function EditorScreen({
             <Textarea
               value={aiPrompt}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAiPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const isMod = e.metaKey || e.ctrlKey;
+                  if (isMod) {
+                    // Cmd + Enter (Mac) or Ctrl + Enter (Win): Newline
+                    e.preventDefault();
+                    const { selectionStart, selectionEnd, value } = e.currentTarget;
+                    setAiPrompt(
+                      value.substring(0, selectionStart) + "\n" + value.substring(selectionEnd),
+                    );
+                    const target = e.currentTarget;
+                    setTimeout(() => {
+                      target.selectionStart = target.selectionEnd = selectionStart + 1;
+                    }, 0);
+                  } else if (!e.shiftKey) {
+                    // Plain Enter: Send
+                    e.preventDefault();
+                    if (!busy && aiPrompt.trim()) {
+                      void runEdit(aiPrompt);
+                    }
+                  }
+                }
+              }}
               placeholder="Tell AI what to change…"
               variant="filled"
               noResize

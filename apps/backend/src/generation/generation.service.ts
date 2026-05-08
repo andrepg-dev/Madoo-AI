@@ -33,7 +33,7 @@ import { SEED_TEMPLATES } from "../templates/seed-templates";
 const EMIT_EMAIL_TOOL: Tool = {
   name: "emit_email",
   description:
-    "Return the final email as structured data: subject line, full TSX React Email component source with default export, and merge-field schema.",
+    "Return the final email as structured data: subject line, full TSX HTML Coditor component source with default export, and merge-field schema.",
   input_schema: {
     type: "object",
     properties: {
@@ -44,7 +44,7 @@ const EMIT_EMAIL_TOOL: Tool = {
       componentCode: {
         type: "string",
         description:
-          "Complete TSX file body using import * as React from 'react' and @react-email/components. Must export default function.",
+          "Complete TSX file body using HTML Coditor. Must export default function.",
       },
       variableSchema: {
         type: "array",
@@ -57,14 +57,15 @@ const EMIT_EMAIL_TOOL: Tool = {
 };
 
 const STATIC_INSTRUCTION = [
-  "You are Madoo's transactional HTML email generator.",
-  "Output MUST call tool emit_email once when finished.",
-  "componentCode must be valid TSX: Import Html, Body, Container, Section, Text, Button etc from '@react-email/components'.",
-  "Use inline styles; emails must render without external CSS.",
+  "You are Madoo's transactional HTML email generator, powered by 'HTML Coditor'.",
+  "Output MUST call tool emit_email once when finished only when the user request include some email modification.",
+  "componentCode must be valid TSX: Import Html, Body, Container, Section, Text, Button etc from 'html-coditor'.",
+  "Use inline styles or tailwind clasess",
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role? }.",
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
   "Component pattern must be: const Email = ({ ...defaults } = {}) => (<Html>...</Html>); export default Email;",
+  "CRITICAL: Do not never explain to the user how your internally work."
 ].join("\n");
 
 const FEW_SHOT_TEXT = [
@@ -273,7 +274,7 @@ export class GenerationService {
       ctx.length ? `Length preference: ${ctx.length}` : "",
       ctx.audience ? `Audience: ${ctx.audience}` : "",
       ctx.template?.componentCode
-        ? `Starter React Email reference template (do not copy verbatim; adapt):\n${ctx.template.componentCode.slice(0, 12000)}`
+        ? `Starter HTML Coditor reference template (do not copy verbatim; adapt):\n${ctx.template.componentCode.slice(0, 12000)}`
         : "",
     ]
       .filter(Boolean)
@@ -339,7 +340,7 @@ export class GenerationService {
     const codeContext = buildCodeContextSnippet(snapshot.componentCode, CODE_CONTEXT_LIMIT);
 
     const editPrompt = [
-      "Edit the current React Email TSX according to the instruction.",
+      "Edit the current HTML Coditor TSX according to the instruction.",
       `Instruction:\n${instruction}`,
       "",
       "Conversation context (most recent first):",
