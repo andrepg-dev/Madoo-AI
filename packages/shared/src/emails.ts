@@ -118,6 +118,7 @@ export const EmailDtoSchema = z.object({
   audience: z.string().nullable(),
   title: z.string().nullable(),
   templateId: z.string().nullable(),
+  templateSavedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   variants: z.array(EmailVariantDtoSchema),
@@ -132,3 +133,23 @@ export const EditEmailSchema = z.object({
 });
 
 export type EditEmailInput = z.infer<typeof EditEmailSchema>;
+
+export const TemplateSeedPreviewDtoSchema = z.object({
+  slug: TemplateSlugSchema,
+  name: z.string(),
+  componentCode: z.string(),
+  compiledHtml: z.string(),
+  variableSchema: VariableSchemaRootSchema,
+});
+
+export type TemplateSeedPreviewDto = z.infer<typeof TemplateSeedPreviewDtoSchema>;
+
+export const CreateEmailFromTemplateSchema = z.object({
+  templateSlug: TemplateSlugSchema,
+  prompt: z.string().min(1),
+  tone: z.string().optional(),
+  length: z.string().optional(),
+  audience: z.string().optional(),
+});
+
+export type CreateEmailFromTemplateInput = z.infer<typeof CreateEmailFromTemplateSchema>;

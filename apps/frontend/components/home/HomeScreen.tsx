@@ -116,14 +116,23 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
     setTemplateError(null);
     try {
       const slug = TEMPLATE_PREVIEW_SEED_SLUG[t.preview];
+      if (slug) {
+        const params = new URLSearchParams({
+          prompt: `Use the "${t.name}" layout — ${t.category}`,
+          tone: "Friendly",
+          length: "Medium",
+          audience: "Existing customers",
+        });
+        router.push(`/templates/${encodeURIComponent(slug)}/preview?${params.toString()}`);
+        return;
+      }
       const email = await createEmail({
         prompt: `Use the "${t.name}" layout — ${t.category}`,
         tone: "Friendly",
         length: "Medium",
         audience: "Existing customers",
-        ...(slug ? { templateSlug: slug } : {}),
       });
-      router.push(slug ? `/emails/${email.id}/editor` : `/emails/${email.id}/generate`);
+      router.push(`/emails/${email.id}/generate`);
     } catch (err) {
       setTemplateError(err instanceof Error ? err.message : "Failed to start from template. Please try again.");
     }

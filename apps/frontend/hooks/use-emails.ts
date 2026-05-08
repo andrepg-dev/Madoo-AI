@@ -1,12 +1,30 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createEmail, fetchEmail, fetchEmails, saveEmailTemplate, type CreateEmailInput } from "@/actions/emails";
+import {
+  createEmail,
+  createEmailFromTemplate,
+  fetchEmail,
+  fetchEmails,
+  saveEmailTemplate,
+  type CreateEmailFromTemplateInput,
+  type CreateEmailInput,
+} from "@/actions/emails";
 
 export function useCreateEmail() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateEmailInput) => createEmail(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["emails"] });
+    },
+  });
+}
+
+export function useCreateEmailFromTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateEmailFromTemplateInput) => createEmailFromTemplate(input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["emails"] });
     },
