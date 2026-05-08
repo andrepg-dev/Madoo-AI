@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
-import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google";
-import "@madoo/ui/tokens.css";
-import "./globals.css";
-import { AppShell } from "@/components/shell/AppShell";
 import { LoginModal } from "@/components/auth/LoginModal";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
+import { AppShell } from "@/components/shell/AppShell";
+import "@madoo/ui/tokens.css";
+import { Analytics } from "@vercel/analytics/next";
+import type { Metadata } from "next";
+import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,13 +32,18 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Madoo AI — Generate beautiful emails with AI",
-  description: "Describe it in plain words. Madoo AI writes, designs, and ships it.",
+  description:
+    "Describe it in plain words. Madoo AI writes, designs, and ships it.",
   icons: {
     icon: "/icon.png",
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
@@ -53,6 +59,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </ToastProvider>
         </QueryProvider>
       </body>
+      
+        <Analytics />
     </html>
   );
 }

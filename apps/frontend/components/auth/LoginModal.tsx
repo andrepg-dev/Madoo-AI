@@ -1,14 +1,14 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { Banner, Modal } from "@madoo/ui";
 import { GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import { clearPendingPrompt, type StoredPrompt } from "@/lib/storage";
-import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { useWorkspaceStore } from "@/stores/workspace";
 import type { MyWorkspace, User } from "@madoo/shared";
+import { Banner, Modal } from "@madoo/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 
 type LoginResult = {
   user: User;
@@ -66,7 +66,7 @@ export function LoginModal() {
           const raw = payload && "message" in payload ? payload.message : null;
           const msg = Array.isArray(raw)
             ? raw.join(", ")
-            : raw ?? `Login failed (${response.status})`;
+            : (raw ?? `Login failed (${response.status})`);
           throw new Error(msg);
         }
 
@@ -77,7 +77,9 @@ export function LoginModal() {
         clearPendingPrompt();
         qc.setQueryData(["me"], result.user);
         qc.setQueryData(["workspaces", "me"], result.workspaces);
-        useWorkspaceStore.getState().setActiveWorkspaceId(result.defaultWorkspaceId);
+        useWorkspaceStore
+          .getState()
+          .setActiveWorkspaceId(result.defaultWorkspaceId);
         useAuthStore.getState().closeLogin();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Login failed";
