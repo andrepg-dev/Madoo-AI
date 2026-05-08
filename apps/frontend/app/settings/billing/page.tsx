@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -143,7 +143,7 @@ function FaqItem({ item, first }: { item: (typeof FAQ_ITEMS)[number]; first: boo
   );
 }
 
-export default function BillingPage() {
+function BillingPageContent() {
   const qc = useQueryClient();
   const hydrateWorkspaceId = useWorkspaceStore((s) => s.hydrateWorkspaceId);
   const searchParams = useSearchParams();
@@ -880,5 +880,13 @@ export default function BillingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense>
+      <BillingPageContent />
+    </Suspense>
   );
 }
