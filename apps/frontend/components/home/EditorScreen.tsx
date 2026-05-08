@@ -1,6 +1,6 @@
 "use client";
 
-import { consumeEmailSseStream, useEmail, useSaveTemplate } from "@/hooks/use-emails";
+import { consumeEmailSseStream, useEmail } from "@/hooks/use-emails";
 import { shortEmailId } from "@/lib/email-id";
 import type { EmailVariantDto } from "@madoo/shared";
 import {
@@ -10,7 +10,6 @@ import {
   IconButton,
   SegmentedControl,
   Textarea,
-  useToast,
 } from "@madoo/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -51,7 +50,6 @@ export function EditorScreen({
 }) {
   const qc = useQueryClient();
   const router = useRouter();
-  const { toast } = useToast();
   const { data: email, isLoading, refetch, isError } = useEmail(emailId);
 
   const variants = useMemo(() => {
@@ -67,9 +65,6 @@ export function EditorScreen({
     value: String(i),
     label: `v${v.seq}`,
   }));
-
-  const isPrebuiltTemplate = Boolean(email?.templateId);
-  const saveTemplateMutation = useSaveTemplate(emailId);
 
   const [aiPrompt, setAiPrompt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -325,43 +320,15 @@ export function EditorScreen({
                 aria-label="Variant"
               />
             ) : null}
-            {isPrebuiltTemplate ? (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--ink-faint)" }}>
-                  <Icon name="bolt" size={11} /> 1 credit
-                </div>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  leftIcon={<Icon name="check" size={12} />}
-                  disabled={!activeVariant || saveTemplateMutation.isPending || saveTemplateMutation.isSuccess}
-                  onClick={() =>
-                    saveTemplateMutation.mutate(undefined, {
-                      onSuccess: () =>
-                        router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`),
-                      onError: (err) =>
-                        toast({
-                          tone: "danger",
-                          title: "Cannot save template",
-                          body: err instanceof Error ? err.message : "Something went wrong.",
-                        }),
-                    })
-                  }
-                >
-                  {saveTemplateMutation.isPending ? "Saving…" : "Save template"}
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Icon name="send" size={12} />}
-                disabled={!activeVariant}
-                onClick={() => router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`)}
-              >
-                Send campaign
-              </Button>
-            )}
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Icon name="send" size={12} />}
+              disabled={!activeVariant}
+              onClick={() => router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`)}
+            >
+              Send campaign
+            </Button>
           </div>
         </div>
 

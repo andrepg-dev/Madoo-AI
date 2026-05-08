@@ -19,7 +19,7 @@ import {
 } from "../workspaces/workspace.guard";
 import { EmailsService } from "./emails.service";
 import { GenerationService } from "../generation/generation.service";
-import { CreateEmailSchema, EditEmailSchema } from "@madoo/shared";
+import { CreateEmailFromTemplateSchema, CreateEmailSchema, EditEmailSchema } from "@madoo/shared";
 
 @Controller({ path: "emails", version: "1" })
 @UseGuards(JwtAuthGuard, WorkspaceGuard)
@@ -37,6 +37,16 @@ export class EmailsController {
   ) {
     const dto = CreateEmailSchema.parse(body);
     return this.emails.create(req.workspace.id, user.sub, dto);
+  }
+
+  @Post("from-template")
+  async createFromTemplate(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Body() body: unknown,
+  ) {
+    const dto = CreateEmailFromTemplateSchema.parse(body);
+    return this.emails.createFromTemplate(req.workspace.id, user.sub, dto);
   }
 
   @Get()

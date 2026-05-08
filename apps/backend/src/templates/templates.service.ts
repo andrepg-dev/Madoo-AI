@@ -1,10 +1,36 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import type { TemplateSeedPreviewDto, TemplateSlug } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import { ReactToHtmlService } from "../generation/react-to-html.service";
 import { SEED_TEMPLATE_SLUGS, SEED_TEMPLATES } from "./seed-templates";
 
 @Injectable()
 export class TemplatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reactToHtml: ReactToHtmlService,
+  ) {}
+
+  /**
+   * Render a seed template's variant data without persisting an Email row.
+   * Used by the prebuilt-template preview UI before the user pays the credit
+   * to save it.
+   */
+  async previewSeed(workspaceId: string, slug: TemplateSlug): Promise<TemplateSeedPreviewDto> {
+    await this.ensureSeedForWorkspace(workspaceId);
+    const tpl = await this.prisma.template.findUnique({
+      where: { workspaceId_slug: { workspaceId, slug } },
+    });
+    if (!tpl) throw new NotFoundException("Unknown template slug for this workspace.");
+    const compiledHtml = this.reactToHtml.compile(tpl.componentCode);
+    return {
+      slug,
+      name: tpl.name,
+      componentCode: tpl.componentCode,
+      compiledHtml,
+      variableSchema: { variables: [] },
+    };
+  }
 
   /** Inserts gallery seed templates when missing (idempotent per workspace slug). */
   async ensureSeedForWorkspace(workspaceId: string): Promise<void> {

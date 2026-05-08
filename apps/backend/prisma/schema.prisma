@@ -179,8 +179,9 @@ model Email {
   length   String?
   audience String?
 
-  title      String?
-  templateId String?
+  title           String?
+  templateId      String?
+  templateSavedAt DateTime?
 
   sourcePendingPromptId String? @unique
 
