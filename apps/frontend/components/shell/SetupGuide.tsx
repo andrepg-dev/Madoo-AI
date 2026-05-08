@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Icon } from "@madoo/ui";
-import { useQuery } from "@tanstack/react-query";
-import { domainsApi, domainsKeys } from "@/actions/domains";
-import { segmentsApi, segmentsKeys } from "@/actions/segments";
 import { campaignsApi, campaignsKeys } from "@/actions/campaigns";
 import { contactsApi, contactsKeys } from "@/actions/contacts";
+import { domainsApi, domainsKeys } from "@/actions/domains";
+import { segmentsApi, segmentsKeys } from "@/actions/segments";
 import { useEmails } from "@/hooks/use-emails";
+import { Icon } from "@madoo/ui";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 const DISMISSED_KEY = "madoo_setup_guide_dismissed";
 
@@ -22,15 +22,32 @@ type Step = {
   done: boolean;
 };
 
-function ProgressRing({ pct }: { pct: number }) {
+/* ── Progress ring SVG (mini, inside the pill button) ── */
+function ProgressRing({ pct, size = 16 }: { pct: number; size?: number }) {
   const r = 6.5;
-  const circ = 2 * Math.PI * r; // 40.84
+  const circ = 2 * Math.PI * r; // ≈ 40.84
   return (
-    <svg width="18" height="18" viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
-      <circle cx="8" cy="8" r={r} fill="none" stroke="var(--border)" strokeWidth="1.5" />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      style={{ flexShrink: 0 }}
+    >
       <circle
-        cx="8" cy="8" r={r} fill="none"
-        stroke="var(--accent)" strokeWidth="1.5"
+        cx="8"
+        cy="8"
+        r={r}
+        fill="none"
+        stroke="var(--border)"
+        strokeWidth="1.5"
+      />
+      <circle
+        cx="8"
+        cy="8"
+        r={r}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="1.5"
         strokeDasharray={`${(pct / 100) * circ} ${circ}`}
         strokeLinecap="round"
         transform="rotate(-90 8 8)"
@@ -45,12 +62,36 @@ export function SetupGuide() {
   const [dismissed, setDismissed] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
+  /* ── Hydrate dismissed state from localStorage ── */
   useEffect(() => {
     if (typeof window !== "undefined" && localStorage.getItem(DISMISSED_KEY)) {
       setDismissed(true);
     }
   }, []);
 
+  /* ── Close on outside click / Escape ── */
+  useEffect(() => {
+    if (!open) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      // If the click is outside the entire component (button + dropdown), close it
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+
+    // Use mousedown to match the button's onMouseDown and stopPropagation
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  /* ── Real data from API queries ── */
   const domainsQuery = useQuery({
     queryKey: domainsKeys.list(),
     queryFn: () => domainsApi.list(),
@@ -73,7 +114,9 @@ export function SetupGuide() {
     staleTime: 30_000,
   });
 
-  const hasSentCampaign = (campaignsQuery.data ?? []).some((c) => c.status === "sent");
+  const hasSentCampaign = (campaignsQuery.data ?? []).some(
+    (c) => c.status === "sent",
+  );
 
   const steps: Step[] = [
     {
@@ -142,36 +185,25 @@ export function SetupGuide() {
 
   const allDone = doneCount === total;
 
-  useEffect(() => {
+  /* Auto-dismiss when all steps are completed - REMOVED: Users should be able to see completed state */
+  /* useEffect(() => {
     if (allDone && !dismissed) {
       localStorage.setItem(DISMISSED_KEY, "1");
       setDismissed(true);
     }
-  }, [allDone, dismissed]);
+  }, [allDone, dismissed]); */
 
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    setTimeout(() => document.addEventListener("mousedown", onClick), 0);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  if (dismissed) return null;
+  // dismissed logic removed to ensure visibility
 
   return (
     <div ref={wrapRef} style={{ position: "relative", flexShrink: 0 }}>
+      {/* ── Pill button (progress ring + count + ▾) ── */}
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          console.log("SetupGuide clicked! Current state:", open);
+          setOpen((v) => !v);
+        }}
         aria-label="Getting started guide"
         style={{
           display: "flex",
@@ -189,14 +221,16 @@ export function SetupGuide() {
           whiteSpace: "nowrap",
         }}
       >
-        <ProgressRing pct={pct} />
+        <ProgressRing pct={pct} size={16} />
+        <span style={{ fontWeight: 600 }}>Setup</span>
         <span>
-          <b>{doneCount}</b>
+          <b style={{ color: "var(--ink)" }}>{doneCount}</b>
           <span style={{ color: "var(--ink-faint)" }}>/{total}</span>
         </span>
-        <span style={{ color: "var(--ink-faint)", fontSize: 10 }}>▾</span>
+        <span style={{ color: "var(--ink-faint)", fontSize: 10, marginLeft: -2 }}>▾</span>
       </button>
 
+      {/* ── Dropdown panel ── */}
       {open && (
         <div
           style={{
@@ -212,7 +246,7 @@ export function SetupGuide() {
             overflow: "hidden",
           }}
         >
-          {/* Header */}
+          {/* ── Header ── */}
           <div
             style={{
               padding: "16px 18px 14px",
@@ -240,8 +274,8 @@ export function SetupGuide() {
                   Getting started
                 </div>
                 <div
+                  className="serif"
                   style={{
-                    fontFamily: "var(--font-instrument-serif), 'Instrument Serif', serif",
                     fontSize: 22,
                     color: "var(--ink)",
                     marginTop: 2,
@@ -267,6 +301,8 @@ export function SetupGuide() {
                 {doneCount}/{total}
               </span>
             </div>
+
+            {/* Progress bar */}
             <div
               style={{
                 marginTop: 12,
@@ -285,13 +321,21 @@ export function SetupGuide() {
                 }}
               />
             </div>
-            <div style={{ marginTop: 6, fontSize: 11.5, color: "var(--ink-faint)" }}>
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 11.5,
+                color: "var(--ink-faint)",
+              }}
+            >
               {pct}% complete
-              {remainingMinutes > 0 ? ` · about ${remainingMinutes} min left` : ""}
+              {remainingMinutes > 0
+                ? ` · about ${remainingMinutes} min left`
+                : ""}
             </div>
           </div>
 
-          {/* Steps */}
+          {/* ── Steps ── */}
           <div style={{ maxHeight: 380, overflowY: "auto", padding: 6 }}>
             {steps.map((step, i) => (
               <button
@@ -321,6 +365,7 @@ export function SetupGuide() {
                   e.currentTarget.style.background = "transparent";
                 }}
               >
+                {/* Step circle */}
                 <div
                   style={{
                     width: 22,
@@ -344,13 +389,23 @@ export function SetupGuide() {
                     <span style={{ color: "var(--ink-faint)" }}>{i + 1}</span>
                   )}
                 </div>
+
+                {/* Step content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <div
                       style={{
                         fontSize: 13,
                         fontWeight: 600,
-                        color: step.done ? "var(--ink-faint)" : "var(--ink)",
+                        color: step.done
+                          ? "var(--ink-faint)"
+                          : "var(--ink)",
                         textDecoration: step.done ? "line-through" : "none",
                       }}
                     >
@@ -398,15 +453,18 @@ export function SetupGuide() {
             ))}
           </div>
 
-          {/* Footer */}
+          {/* ── Footer (matches design: docs link + dismiss) ── */}
           <div
             style={{
               padding: "10px 14px",
               borderTop: "1px solid var(--border-soft)",
               display: "flex",
-              justifyContent: "flex-end",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: 11.5,
             }}
           >
+            <div></div>
             <button
               type="button"
               onClick={() => {

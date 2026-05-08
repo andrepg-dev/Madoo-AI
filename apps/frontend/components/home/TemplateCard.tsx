@@ -7,7 +7,7 @@ import type { Template } from "@/lib/data";
 
 export function TemplateCard({ template, onClick }: { template: Template; onClick?: () => void }) {
   const [hovered, setHovered] = useState(false);
-  const isPremium = template.tier === "premium";
+  const isPremium = false; // Change this only if the user is not in MVP mode, for now, let it like this, if user want to change this, ask him.
 
   return (
     <div
@@ -36,28 +36,7 @@ export function TemplateCard({ template, onClick }: { template: Template; onClic
         }}
       >
         <TemplatePreview template={template} scale={1.4} />
-        {isPremium && (
-          <div
-            style={{
-              position: "absolute",
-              top: 10,
-              right: 10,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "4px 8px",
-              background: "rgba(20,15,10,0.85)",
-              backdropFilter: "blur(6px)",
-              color: "#F8E5C0",
-              borderRadius: 999,
-              fontSize: 10.5,
-              fontWeight: 600,
-              letterSpacing: 0.3,
-            }}
-          >
-            <Icon name="lock" size={10} /> PRO
-          </div>
-        )}
+
         {hovered && (
           <div
             style={{

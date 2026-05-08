@@ -170,3 +170,14 @@ select:focus-visible {
 .ai-conversation-markdown p + p {
   margin-top: 8px;
 }
+
+@media (max-width: 1100px) {
+  .topbar-pill {
+    display: none !important;
+  }
+}
+@media (max-width: 920px) {
+  .topbar-credits {
+    display: none !important;
+  }
+}

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mailmint AI — Generate beautiful emails with AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF7F0;
+    --bg-2: #F4F0E6;
+    --surface: #FFFDF8;
+    --surface-2: #F4F0E6;
+    --ink: #1F1A12;
+    --ink-soft: #5C5246;
+    --ink-faint: #9A8E7F;
+    --border: #E8E1D2;
+    --border-soft: #F0EBDD;
+    --accent: #6B9D7C;
+    --accent-deep: #2F5C42;
+    --accent-soft: #E5EFE6;
+    --accent-fg: #FFFDF8;
+  }
+  [data-theme="warm"] {
+    --bg: #FBF5EC;
+    --accent: #C97B4F;
+    --accent-deep: #6B3A1E;
+    --accent-soft: #F5E4D5;
+  }
+  [data-theme="indigo"] {
+    --bg: #F6F4F9;
+    --bg-2: #EDEAF2;
+    --surface: #FFFFFF;
+    --surface-2: #EFECF5;
+    --border: #E4DFEC;
+    --border-soft: #EFEAF4;
+    --accent: #5B5FCB;
+    --accent-deep: #2C3070;
+    --accent-soft: #E5E5F5;
+  }
+  [data-density="compact"] { font-size: 13px; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg); color: var(--ink);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+  }
+  #root { height: 100vh; display: flex; flex-direction: column; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  kbd { font-family: 'Inter', sans-serif; }
+  @keyframes pulse { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+  textarea::placeholder, input::placeholder { color: var(--ink-faint); }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 1100px) {
+    .topbar-pill { display: none !important; }
+  }
+  @media (max-width: 920px) {
+    .topbar-credits { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" src="extra-screens.jsx"></script>
+<script type="text/babel" src="pricing.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const DEFAULTS = /*EDITMODE-BEGIN*/{
+  "brand": "Madoo AI",
+  "theme": "indigo",
+  "density": "cozy",
+  "heroHeadline": "What email do you want to send today?",
+  "showSuggestions": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [values, setKey] = useTweaks(DEFAULTS);
+  const [screen, setScreen] = useState('home'); // home | generating | editor
+  const [navItem, setNavItem] = useState('home');
+  const [genParams, setGenParams] = useState(null);
+  const [activeTemplate, setActiveTemplate] = useState(null);
+  const [showCompose, setShowCompose] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setPaletteOpen(true); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = values.theme === 'default' ? '' : values.theme;
+    document.documentElement.dataset.density = values.density;
+  }, [values.theme, values.density]);
+
+  const onGenerate = (params) => {
+    setGenParams(params);
+    setActiveTemplate(null);
+    setScreen('generating');
+  };
+  const onSelectTemplate = (t) => {
+    setActiveTemplate(t);
+    setGenParams({ prompt: `Use the "${t.name}" template`, tone: 'Friendly' });
+    setScreen('editor');
+  };
+
+  return (
+    <>
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+        <Sidebar active={navItem} onNav={(id) => { setNavItem(id); setScreen(id); }} brand={values.brand}/>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          <TopBar onOpenPalette={() => setPaletteOpen(true)} onNav={(id) => { setScreen(id); setNavItem(id); }}/>
+          {screen === 'home' && <HomeScreen onGenerate={onGenerate} onSelectTemplate={onSelectTemplate} brand={values.brand}/>}
+          {screen === 'generating' && <GeneratingScreen params={genParams} onDone={() => setScreen('editor')}/>}
+          {screen === 'editor' && <EditorScreen params={genParams} template={activeTemplate} onBack={() => { setScreen('home'); setNavItem('home'); }}/>}
+          {screen === 'contacts' && <ContactsScreen/>}
+          {screen === 'campaigns' && <CampaignsScreen onCompose={() => setShowCompose(true)}/>}
+          {screen === 'analytics' && <AnalyticsScreen/>}
+          {screen === 'domain' && <DomainScreen/>}
+          {screen === 'pricing' && <PricingScreen/>}
+        </div>
+      </div>
+      {showCompose && <ComposeModal onClose={() => setShowCompose(false)} onSend={() => { setShowCompose(false); setScreen('analytics'); setNavItem('analytics'); }}/>}
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} onNav={(id) => { setScreen(id); setNavItem(id); }}/>}
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Brand">
+          <TweakText label="Product name" value={values.brand} onChange={v => setKey('brand', v)}/>
+        </TweakSection>
+        <TweakSection title="Theme">
+          <TweakRadio label="Color theme" value={values.theme} onChange={v => setKey('theme', v)} options={[
+            { value: 'default', label: 'Mint (default)' },
+            { value: 'warm', label: 'Warm clay' },
+            { value: 'indigo', label: 'Cool indigo' },
+          ]}/>
+          <TweakRadio label="Density" value={values.density} onChange={v => setKey('density', v)} options={[
+            { value: 'cozy', label: 'Cozy' }, { value: 'compact', label: 'Compact' },
+          ]}/>
+        </TweakSection>
+        <TweakSection title="Content">
+          <TweakToggle label="Show prompt suggestions" value={values.showSuggestions} onChange={v => setKey('showSuggestions', v)}/>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -144,7 +144,7 @@ export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, on
                   {
                     onSuccess: (email) => {
                       void qc.invalidateQueries({ queryKey: billingKeys.overview() });
-                      router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(email.id)}`);
+                      router.push(`/emails/${encodeURIComponent(email.id)}/editor`);
                     },
                     onError: (err) =>
                       toast({
