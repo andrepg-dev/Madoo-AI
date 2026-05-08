@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Icon } from "@madoo/ui";
-import { useQuery } from "@tanstack/react-query";
-import { domainsApi, domainsKeys } from "@/actions/domains";
-import { segmentsApi, segmentsKeys } from "@/actions/segments";
 import { campaignsApi, campaignsKeys } from "@/actions/campaigns";
 import { contactsApi, contactsKeys } from "@/actions/contacts";
+import { domainsApi, domainsKeys } from "@/actions/domains";
+import { segmentsApi, segmentsKeys } from "@/actions/segments";
 import { useEmails } from "@/hooks/use-emails";
+import { Icon } from "@madoo/ui";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 const DISMISSED_KEY = "madoo_setup_guide_dismissed";
 
@@ -185,27 +185,23 @@ export function SetupGuide() {
 
   const allDone = doneCount === total;
 
-  /* Auto-dismiss when all steps are completed */
-  useEffect(() => {
+  /* Auto-dismiss when all steps are completed - REMOVED: Users should be able to see completed state */
+  /* useEffect(() => {
     if (allDone && !dismissed) {
       localStorage.setItem(DISMISSED_KEY, "1");
       setDismissed(true);
     }
-  }, [allDone, dismissed]);
+  }, [allDone, dismissed]); */
 
-  if (dismissed) {
-    console.log("SetupGuide is dismissed, not rendering.");
-    return null;
-  }
+  // dismissed logic removed to ensure visibility
 
   return (
     <div ref={wrapRef} style={{ position: "relative", flexShrink: 0 }}>
       {/* ── Pill button (progress ring + count + ▾) ── */}
       <button
         type="button"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          console.log("SetupGuide button mousedown. Current open state:", open);
+        onClick={(e) => {
+          console.log("SetupGuide clicked! Current state:", open);
           setOpen((v) => !v);
         }}
         aria-label="Getting started guide"
@@ -226,11 +222,12 @@ export function SetupGuide() {
         }}
       >
         <ProgressRing pct={pct} size={16} />
+        <span style={{ fontWeight: 600 }}>Setup</span>
         <span>
-          <b>{doneCount}</b>
+          <b style={{ color: "var(--ink)" }}>{doneCount}</b>
           <span style={{ color: "var(--ink-faint)" }}>/{total}</span>
         </span>
-        <span style={{ color: "var(--ink-faint)", fontSize: 10 }}>▾</span>
+        <span style={{ color: "var(--ink-faint)", fontSize: 10, marginLeft: -2 }}>▾</span>
       </button>
 
       {/* ── Dropdown panel ── */}
@@ -467,20 +464,7 @@ export function SetupGuide() {
               fontSize: 11.5,
             }}
           >
-            <a
-              href="https://docs.madoo.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: "var(--ink-soft)",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              📚 Read the docs
-            </a>
+            <div></div>
             <button
               type="button"
               onClick={() => {

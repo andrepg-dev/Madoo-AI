@@ -133,6 +133,8 @@ export function TopBar() {
           flexShrink: 0,
           borderBottom: "1px solid var(--border-soft)",
           minWidth: 0,
+          position: "relative",
+          zIndex: 100,
         }}
       >
         {/* ── Workspace breadcrumb ── */}
