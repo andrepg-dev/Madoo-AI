@@ -52,7 +52,6 @@ export default function RootLayout({
       className={`${inter.variable} ${instrumentSerif.variable} ${jetbrains.variable}`}
     >
       <body>
-        <Analytics />
         <QueryProvider>
           <ToastProvider>
             <AppShell>{children}</AppShell>
@@ -60,6 +59,8 @@ export default function RootLayout({
           </ToastProvider>
         </QueryProvider>
       </body>
+      
+        <Analytics />
     </html>
   );
 }
