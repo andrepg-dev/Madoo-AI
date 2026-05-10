@@ -1,10 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Banner, Button, Card, Icon, ProgressBar, Skeleton } from "@madoo/ui";
+import { billingApi, billingKeys } from "@/actions/billing";
+import { ApiError } from "@/lib/api/fetch-wrapper";
+import { useWorkspaceStore } from "@/stores/workspace";
 import {
   PLAN_DISPLAY_NAMES,
   PLAN_LIMITS,
@@ -13,9 +11,11 @@ import {
   type BillingInterval,
   type Plan,
 } from "@madoo/shared";
-import { billingApi, billingKeys } from "@/actions/billing";
-import { ApiError } from "@/lib/api/fetch-wrapper";
-import { useWorkspaceStore } from "@/stores/workspace";
+import { Banner, Button, Card, Icon, ProgressBar, Skeleton } from "@madoo/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 type PaidPlan = Exclude<Plan, "FREE">;
 
@@ -208,31 +208,31 @@ function BillingPageContent() {
     cta: string;
     scaleOnly?: boolean;
   }> = [
-    { id: "FREE", name: "Free", tagline: "Try it without a card.", highlight: false, cta: "Get started" },
-    {
-      id: "STARTER",
-      name: "Starter",
-      tagline: "For founders shipping their first launches.",
-      highlight: false,
-      cta: "Upgrade to Starter",
-    },
-    {
-      id: "GROWTH",
-      name: "Growth",
-      tagline: "When sending is part of how you grow.",
-      highlight: true,
-      badge: "Most popular",
-      cta: "Upgrade to Growth",
-    },
-    {
-      id: "SCALE",
-      name: "Scale",
-      tagline: "Big lists, big sends, big expectations.",
-      highlight: false,
-      cta: "Talk to sales",
-      scaleOnly: true,
-    },
-  ];
+      { id: "FREE", name: "Free", tagline: "Try it without a card.", highlight: false, cta: "Get started" },
+      {
+        id: "STARTER",
+        name: "Starter",
+        tagline: "For founders shipping their first launches.",
+        highlight: false,
+        cta: "Upgrade to Starter",
+      },
+      {
+        id: "GROWTH",
+        name: "Growth",
+        tagline: "When sending is part of how you grow.",
+        highlight: true,
+        badge: "Most popular",
+        cta: "Upgrade to Growth",
+      },
+      {
+        id: "SCALE",
+        name: "Scale",
+        tagline: "Big lists, big sends, big expectations.",
+        highlight: false,
+        cta: "Talk to sales",
+        scaleOnly: true,
+      },
+    ];
 
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
