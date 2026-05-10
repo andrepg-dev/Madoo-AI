@@ -12,11 +12,7 @@ services:
     volumes:
       - madoo-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-madoo} -d ${POSTGRES_DB:-madoo}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-madoo} -d ${POSTGRES_DB:-madoo}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -37,7 +33,7 @@ services:
 
   backend:
     build:
-      context: .
+      context: ../../
       dockerfile: apps/backend/Dockerfile
     container_name: madoo-backend
     restart: unless-stopped
@@ -60,3 +56,4 @@ services:
 volumes:
   madoo-postgres-data:
   madoo-redis-data:
+
