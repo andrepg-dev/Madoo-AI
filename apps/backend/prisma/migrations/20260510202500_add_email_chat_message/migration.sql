@@ -1,3 +1,19 @@
+-- CreateEnum
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'EmailChatRole') THEN
+        CREATE TYPE "EmailChatRole" AS ENUM ('USER', 'ASSISTANT', 'SYSTEM');
+    END IF;
+END $$;
+
+-- CreateEnum
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'EmailChatKind') THEN
+        CREATE TYPE "EmailChatKind" AS ENUM ('TEXT', 'THINKING', 'STATUS');
+    END IF;
+END $$;
+
 -- CreateTable
 CREATE TABLE "EmailChatMessage" (
     "id" TEXT NOT NULL,
