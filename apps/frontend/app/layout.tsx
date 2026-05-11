@@ -57,7 +57,7 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1024,
         height: 516,
-        alt: "Madoo AI — create emails from a simple prompt",
+        alt: "Madoo AI — The world's first AI email template generator",
       },
     ],
   },
