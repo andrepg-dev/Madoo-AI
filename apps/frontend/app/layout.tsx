@@ -30,12 +30,42 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
+const siteTitle = "Madoo AI — Generate beautiful emails with AI";
+const siteDescription =
+  "Describe it in plain words. Madoo AI writes, designs, and ships it.";
+
+const metadataBaseUrl = (() => {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (process.env.VERCEL_URL)
+    return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+})();
+
 export const metadata: Metadata = {
-  title: "Madoo AI — Generate beautiful emails with AI",
-  description:
-    "Describe it in plain words. Madoo AI writes, designs, and ships it.",
+  metadataBase: new URL(metadataBaseUrl),
+  title: siteTitle,
+  description: siteDescription,
   icons: {
     icon: "/icon.png",
+  },
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1024,
+        height: 516,
+        alt: "Madoo AI — create emails from a simple prompt",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: ["/og-image.png"],
   },
 };
 

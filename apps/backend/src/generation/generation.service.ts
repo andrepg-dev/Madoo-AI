@@ -39,7 +39,8 @@ const EMIT_EMAIL_TOOL: Tool = {
     properties: {
       subject: {
         type: "string",
-        description: "Email subject line",
+        description:
+          "Recipient-facing email subject only, aligned with the user brief. Never mention environment variables, .env, API keys, secrets, or deployment/infrastructure setup.",
       },
       componentCode: {
         type: "string",
@@ -65,6 +66,7 @@ const STATIC_INSTRUCTION = [
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
   "Component pattern must be: const Email = ({ ...defaults } = {}) => (<Html>...</Html>); export default Email;",
+  "Subject line (emit_email.subject) must be normal marketing or transactional copy for the recipient. Never base it on environment variables, .env files, API keys, secrets, or other developer/deployment configuration topics—even if the user brief drifts there.",
   "CRITICAL: Do not never explain to the user how your internally work."
 ].join("\n");
 
