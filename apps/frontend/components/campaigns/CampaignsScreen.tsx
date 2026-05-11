@@ -201,13 +201,14 @@ export function CampaignsScreen() {
   return (
     <>
       <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
-        <div style={{ padding: "32px 40px 16px", maxWidth: 1280, margin: "0 auto" }}>
+        <div className="madoo-screen-pad" style={{ maxWidth: 1280, margin: "0 auto" }}>
           <div
             style={{
               display: "flex",
               alignItems: "flex-end",
               justifyContent: "space-between",
               gap: 16,
+              flexWrap: "wrap",
             }}
           >
             <div>
@@ -236,11 +237,10 @@ export function CampaignsScreen() {
           </div>
 
           <div
+            className="madoo-grid-metrics"
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 12,
               marginTop: 24,
+              gap: 12,
             }}
           >
             {[
@@ -317,6 +317,7 @@ export function CampaignsScreen() {
                     role="button"
                     tabIndex={0}
                     aria-label={`Open campaign details: ${emailHeadline(email)}`}
+                    className="madoo-campaign-row"
                     style={{
                       display: "grid",
                       gridTemplateColumns: "minmax(0, 1fr) 148px 128px 110px 90px minmax(150px, auto)",

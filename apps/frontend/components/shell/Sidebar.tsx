@@ -3,6 +3,7 @@
 import { billingApi, billingKeys } from "@/actions/billing";
 import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
 import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
+import { useSidebarStore } from "@/stores/sidebar";
 import { PLAN_DISPLAY_NAMES, PLAN_LIMITS, type Plan } from "@madoo/shared";
 import { Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +26,8 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const sidebarOpen = useSidebarStore((s) => s.open);
+  const setSidebarOpen = useSidebarStore((s) => s.setOpen);
 
   const workspacesQuery = useQuery({
     queryKey: workspacesKeys.list(),
@@ -45,6 +48,8 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
 
   return (
     <aside
+      className="madoo-sidebar"
+      data-open={sidebarOpen ? "true" : "false"}
       style={{
         width: 220,
         borderRight: "1px solid var(--border)",
@@ -54,6 +59,7 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
         gap: 4,
         background: "var(--surface)",
         flexShrink: 0,
+        overflowY: "auto",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px 16px" }}>

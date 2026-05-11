@@ -157,7 +157,7 @@ export function AnalyticsScreen() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
-      <div style={{ padding: "32px 40px 60px", maxWidth: 1280, margin: "0 auto" }}>
+      <div className="madoo-screen-pad" style={{ maxWidth: 1280, margin: "0 auto" }}>
         <div
           style={{
             fontSize: 12,
@@ -177,6 +177,7 @@ export function AnalyticsScreen() {
             alignItems: "flex-end",
             gap: 16,
             marginTop: 6,
+            flexWrap: "wrap",
           }}
         >
           <div>
@@ -249,10 +250,8 @@ export function AnalyticsScreen() {
         ) : null}
 
         <div
+          className="madoo-grid-metrics"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 12,
             marginTop: 28,
           }}
         >
@@ -563,6 +562,7 @@ export function AnalyticsScreen() {
                     key={row.campaignId}
                     type="button"
                     onClick={() => setSelection(row.campaignId)}
+                    className="madoo-analytics-row"
                     style={{
                       display: "grid",
                       gridTemplateColumns: "minmax(0, 1fr) 100px 100px 100px",

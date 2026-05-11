@@ -267,8 +267,8 @@ export function EditorScreen({
   const subject = activeVariant?.subject ?? "No subject yet";
 
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden", background: "var(--bg)" }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div className="madoo-editor-shell" style={{ flex: 1, display: "flex", overflow: "hidden", background: "var(--bg)" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         <div
           style={{
             height: 52,
@@ -367,6 +367,7 @@ export function EditorScreen({
       </div>
 
       <aside
+        className="madoo-editor-aside"
         style={{
           width: 390,
           borderLeft: "1px solid var(--border)",

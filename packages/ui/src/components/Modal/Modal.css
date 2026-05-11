@@ -107,4 +107,34 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .madoo-modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .madoo-modal,
+  .madoo-modal--sm,
+  .madoo-modal--md,
+  .madoo-modal--lg,
+  .madoo-modal--xl {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .madoo-modal__header {
+    padding: 14px 16px;
+  }
+
+  .madoo-modal__body {
+    padding: 16px;
+  }
+
+  .madoo-modal__footer {
+    padding: 12px 16px;
+  }
 }

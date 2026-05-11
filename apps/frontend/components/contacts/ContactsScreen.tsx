@@ -317,6 +317,7 @@ export function ContactsScreen() {
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <aside
+        className="madoo-desktop-only"
         style={{
           width: 240,
           borderRight: "1px solid var(--border)",
@@ -433,6 +434,7 @@ export function ContactsScreen() {
         }}
       >
         <div
+          className="madoo-contacts-header"
           style={{
             padding: "24px 32px 16px",
             borderBottom: "1px solid var(--border)",
@@ -445,6 +447,7 @@ export function ContactsScreen() {
               alignItems: "flex-end",
               justifyContent: "space-between",
               gap: 16,
+              flexWrap: "wrap",
             }}
           >
             <div>
@@ -469,8 +472,8 @@ export function ContactsScreen() {
               </Button>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 18 }}>
-            <div style={{ flex: 1, maxWidth: 320 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 220px", maxWidth: 320, minWidth: 0 }}>
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -539,7 +542,8 @@ export function ContactsScreen() {
               </Button>
             </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <div className="madoo-table-scroll">
+            <table style={{ width: "100%", minWidth: 720, borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr
                   style={{
@@ -669,6 +673,7 @@ export function ContactsScreen() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
@@ -926,7 +931,7 @@ export function ContactsScreen() {
               type="email"
             />
           </label>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div className="madoo-grid-two" style={{ gap: 8 }}>
             <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
               First name
               <Input

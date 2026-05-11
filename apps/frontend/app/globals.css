@@ -58,6 +58,23 @@ body {
   height: 100%;
 }
 
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+table {
+  max-width: 100%;
+}
+
+.madoo-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
@@ -179,5 +196,189 @@ select:focus-visible {
 @media (max-width: 920px) {
   .topbar-credits {
     display: none !important;
+  }
+}
+
+/* Responsive helpers used across screens */
+.madoo-screen-pad {
+  padding: 32px 40px 60px;
+}
+
+.madoo-home-hero {
+  padding: 64px 48px 40px;
+}
+.madoo-home-recent {
+  padding: 0 48px 24px;
+}
+.madoo-home-templates {
+  padding: 24px 48px 80px;
+}
+@media (max-width: 900px) {
+  .madoo-home-hero {
+    padding: 48px 24px 32px;
+  }
+  .madoo-home-recent {
+    padding: 0 24px 20px;
+  }
+  .madoo-home-templates {
+    padding: 20px 24px 60px;
+  }
+}
+@media (max-width: 600px) {
+  .madoo-home-hero {
+    padding: 32px 16px 24px;
+  }
+  .madoo-home-recent {
+    padding: 0 16px 16px;
+  }
+  .madoo-home-templates {
+    padding: 16px 16px 48px;
+  }
+}
+@media (max-width: 900px) {
+  .madoo-screen-pad {
+    padding: 24px 24px 48px;
+  }
+}
+@media (max-width: 600px) {
+  .madoo-screen-pad {
+    padding: 16px 16px 40px;
+  }
+}
+
+.madoo-grid-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 1024px) {
+  .madoo-grid-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 520px) {
+  .madoo-grid-metrics {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+.madoo-grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .madoo-grid-two {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+.madoo-grid-label {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .madoo-grid-label {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 900px) {
+  .madoo-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease-out;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  }
+  .madoo-sidebar[data-open="true"] {
+    transform: translateX(0);
+  }
+}
+
+.madoo-mobile-only {
+  display: none !important;
+}
+@media (max-width: 900px) {
+  .madoo-mobile-only {
+    display: inline-flex !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .madoo-desktop-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .madoo-dns-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+    row-gap: 6px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .madoo-compose-cols {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .madoo-editor-shell {
+    flex-direction: column !important;
+    overflow: auto !important;
+  }
+  .madoo-editor-aside {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border);
+    max-height: 60vh;
+  }
+}
+
+.madoo-contacts-header {
+  padding: 24px 32px 16px;
+}
+@media (max-width: 700px) {
+  .madoo-contacts-header {
+    padding: 16px 16px 12px;
+  }
+}
+
+.madoo-campaign-row {
+  grid-template-columns: minmax(0, 1fr) 148px 128px 110px 90px minmax(150px, auto);
+}
+@media (max-width: 1100px) {
+  .madoo-campaign-row {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+  }
+}
+
+.madoo-analytics-row {
+  grid-template-columns: minmax(0, 1fr) 100px 100px 100px;
+}
+@media (max-width: 760px) {
+  .madoo-analytics-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: 8px;
+  }
+}
+
+.madoo-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 26, 18, 0.45);
+  z-index: 40;
+}
+
+@media (min-width: 901px) {
+  .madoo-sidebar-backdrop {
+    display: none;
   }
 }

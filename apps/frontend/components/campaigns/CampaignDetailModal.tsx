@@ -62,14 +62,11 @@ type DetailRowProps = { label: string; children: ReactNode; hideBorder?: boolean
 function DetailRow({ label, children, hideBorder }: DetailRowProps) {
   return (
     <div
+      className="madoo-grid-label"
       style={{
-        display: "grid",
-        gridTemplateColumns: "160px 1fr",
-        gap: 14,
         padding: "12px 0",
         borderBottom: hideBorder ? "none" : "1px solid var(--border-soft)",
         fontSize: 13,
-        alignItems: "start",
       }}
     >
       <div style={{ color: "var(--ink-faint)", fontWeight: 500 }}>{label}</div>

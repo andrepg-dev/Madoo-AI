@@ -7,6 +7,7 @@ import { useMe } from "@/hooks/use-me";
 import { ApiError } from "@/lib/api/fetch-wrapper";
 import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
 import { useAuthStore } from "@/stores/auth";
+import { useSidebarStore } from "@/stores/sidebar";
 import { PLAN_LIMITS } from "@madoo/shared";
 import {
   Avatar,
@@ -27,6 +28,7 @@ export function TopBar() {
   const router = useRouter();
   const { data: user, isPending: loading } = useMe();
   const openLogin = useAuthStore((s) => s.openLogin);
+  const toggleSidebar = useSidebarStore((s) => s.toggle);
   const { mutate: logout } = useLogout();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -137,6 +139,32 @@ export function TopBar() {
           zIndex: 100,
         }}
       >
+        {/* ── Mobile hamburger ── */}
+        <button
+          type="button"
+          className="madoo-mobile-only"
+          aria-label="Open menu"
+          onClick={toggleSidebar}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
+            cursor: "pointer",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            flexShrink: 0,
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <line x1="4" y1="7" x2="20" y2="7" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="17" x2="20" y2="17" />
+          </svg>
+        </button>
+
         {/* ── Workspace breadcrumb ── */}
         <div
           style={{
@@ -145,6 +173,7 @@ export function TopBar() {
             gap: 6,
             fontSize: 13,
             flexShrink: 0,
+            minWidth: 0,
           }}
         >
           <div
