@@ -83,7 +83,7 @@ export function DomainScreen() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
-      <div style={{ padding: "32px 40px 60px", maxWidth: 900, margin: "0 auto" }}>
+      <div className="madoo-screen-pad" style={{ maxWidth: 900, margin: "0 auto" }}>
         <h1
           className="serif"
           style={{ fontSize: 36, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}
@@ -233,6 +233,7 @@ export function DomainScreen() {
           </div>
           <div style={{ border: "1px solid var(--border)", borderRadius: 9, overflow: "hidden" }}>
             <div
+              className="madoo-dns-row madoo-desktop-only"
               style={{
                 display: "grid",
                 gridTemplateColumns: "90px 1fr 70px 100px",
@@ -261,9 +262,10 @@ export function DomainScreen() {
               return (
                 <div
                   key={i}
+                  className="madoo-dns-row"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "90px 1fr 70px 100px",
+                    gridTemplateColumns: "90px minmax(0, 1fr) 70px 100px",
                     gap: 12,
                     padding: 14,
                     borderTop: "1px solid var(--border-soft)",

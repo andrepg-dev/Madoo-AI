@@ -726,7 +726,7 @@ export function ComposeModal({
               No real email variant found yet. Generate an email first to map `variableSchema` values.
             </Banner>
           )}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 14 }}>
+          <div className="madoo-compose-cols" style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 14 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div
                 style={{
@@ -954,7 +954,7 @@ export function ComposeModal({
               </div>
             )}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="madoo-grid-two" style={{ gap: 10 }}>
             <SelectableCard
               padded
               selected={schedule === "now"}
@@ -1099,10 +1099,9 @@ export function ComposeModal({
           ).map(([k, v]) => (
             <div
               key={k}
+              className="madoo-grid-label"
               style={{
-                display: "grid",
                 gridTemplateColumns: "120px 1fr",
-                gap: 12,
                 padding: "10px 0",
                 borderBottom: "1px solid var(--border-soft)",
               }}

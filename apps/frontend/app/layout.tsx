@@ -4,7 +4,7 @@ import { ToastProvider } from "@/components/providers/ToastProvider";
 import { AppShell } from "@/components/shell/AppShell";
 import "@madoo/ui/tokens.css";
 import { Analytics } from "@vercel/analytics/next";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -41,6 +41,12 @@ const metadataBaseUrl = (() => {
     return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 })();
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(metadataBaseUrl),

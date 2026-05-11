@@ -147,7 +147,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
-      <section style={{ padding: "64px 48px 40px", maxWidth: 980, margin: "0 auto" }}>
+      <section className="madoo-home-hero" style={{ maxWidth: 980, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div
             style={{
@@ -168,7 +168,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           <h1
             className="serif"
             style={{
-              fontSize: 52,
+              fontSize: "clamp(32px, 7vw, 52px)",
               fontWeight: 400,
               lineHeight: 1.05,
               letterSpacing: -1,
@@ -270,7 +270,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
       </section>
 
       {user ? (
-        <section style={{ padding: "0 48px 24px", maxWidth: 1280, margin: "0 auto" }}>
+        <section className="madoo-home-recent" style={{ maxWidth: 1280, margin: "0 auto" }}>
           <div
             style={{
               display: "flex",
@@ -389,7 +389,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         </section>
       ) : null}
 
-      <section style={{ padding: "24px 48px 80px", maxWidth: 1280, margin: "0 auto" }}>
+      <section className="madoo-home-templates" style={{ maxWidth: 1280, margin: "0 auto" }}>
         <div
           style={{
             display: "flex",

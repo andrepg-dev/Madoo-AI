@@ -89,6 +89,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         justifyContent: "center",
         zIndex: 200,
         paddingTop: "12vh",
+        padding: "12vh 16px 16px",
       }}
     >
       <div
