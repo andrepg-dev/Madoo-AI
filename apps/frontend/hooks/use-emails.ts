@@ -108,8 +108,33 @@ export async function consumeEmailSseStream(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `Stream failed (${res.status})`);
+    const contentType = res.headers.get("Content-Type") ?? "";
+    const raw = await res.text().catch(() => "");
+
+    let message = "";
+    if (contentType.includes("application/json")) {
+      try {
+        const parsed = JSON.parse(raw) as { message?: unknown };
+        if (typeof parsed.message === "string" && parsed.message.trim()) {
+          message = parsed.message.trim();
+        }
+      } catch {
+        // Ignore parse errors and fall back to text heuristics.
+      }
+    }
+
+    if (!message && raw) {
+      // When upstream/proxy returns HTML (e.g. nginx 502 page), strip tags.
+      const cleaned = raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if (cleaned) message = cleaned;
+    }
+
+    if (!message && res.status === 502) {
+      message =
+        "Upstream gateway error (502). Check backend/proxy logs and retry.";
+    }
+
+    throw new Error(message || `Stream failed (${res.status})`);
   }
 
   const reader = res.body?.getReader();
