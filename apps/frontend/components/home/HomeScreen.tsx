@@ -176,9 +176,9 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               color: "var(--ink)",
             }}
           >
-            What email do you want
+            The world's first AI
             <br />
-            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>to create today?</span>
+            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>email template generator</span>
           </h1>
           <p style={{ fontSize: 16, color: "var(--ink-soft)", marginTop: 14, lineHeight: 1.5 }}>
             Describe it in plain words. {brand} writes, designs, and ships it.
