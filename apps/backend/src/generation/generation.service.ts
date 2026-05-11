@@ -280,7 +280,7 @@ export class GenerationService {
       .filter(Boolean)
       .join("\n");
 
-    await this.executeAnthropicTurn({
+    const result = await this.executeAnthropicTurn({
       emailId,
       workspaceId,
       kind: "INITIAL",
@@ -291,6 +291,21 @@ export class GenerationService {
         },
       ],
       emit,
+    });
+
+    await this.appendChatMessage({
+      workspaceId,
+      emailId,
+      role: "ASSISTANT",
+      kind: "THINKING",
+      content: result.thinkingText,
+    });
+    await this.appendChatMessage({
+      workspaceId,
+      emailId,
+      role: "ASSISTANT",
+      kind: "TEXT",
+      content: result.assistantText,
     });
   }
 
@@ -378,14 +393,16 @@ export class GenerationService {
       emit,
     });
 
-    await this.prisma.emailVfsSnapshot.update({
-      where: { emailId },
-      data: {
-        componentCode: result.componentCode,
-        componentHash: shortHash(result.componentCode),
-        sourceVariantId: result.variantId,
-      },
-    });
+    if (result.applied && result.componentCode && result.variantId) {
+      await this.prisma.emailVfsSnapshot.update({
+        where: { emailId },
+        data: {
+          componentCode: result.componentCode,
+          componentHash: shortHash(result.componentCode),
+          sourceVariantId: result.variantId,
+        },
+      });
+    }
 
     await this.appendChatMessage({
       workspaceId,
@@ -413,8 +430,9 @@ export class GenerationService {
   }): Promise<{
     assistantText: string;
     thinkingText: string;
-    componentCode: string;
-    variantId: string;
+    componentCode?: string;
+    variantId?: string;
+    applied: boolean;
   }> {
     const { emailId, workspaceId, kind, modelMessages, fullCodeForRetry, emit } = params;
 
@@ -487,7 +505,38 @@ export class GenerationService {
         (b) => b.type === "tool_use" && b.name === "emit_email",
       );
       if (!toolBlock || toolBlock.type !== "tool_use") {
-        throw new InternalServerErrorException("Model did not return emit_email tool output.");
+        const statusDone: GenerationRunStatus = "COMPLETED";
+        const nextEmailStatus = kind === "INITIAL" ? "DRAFT" : "READY";
+
+        await this.prisma.email.update({
+          where: { id: emailId },
+          data: { status: nextEmailStatus },
+        });
+        await this.prisma.emailGenerationRun.update({
+          where: { id: run.id },
+          data: {
+            status: statusDone,
+            inputTokens: usageTotals.input_tokens,
+            cachedTokens: usageTotals.cache_read_input_tokens,
+            outputTokens: usageTotals.output_tokens,
+            cacheCreationInputTokens: usageTotals.cache_creation_input_tokens,
+            cacheReadInputTokens: usageTotals.cache_read_input_tokens,
+            latencyMs: Date.now() - runStartedAt,
+            completedAt: new Date(),
+          },
+        });
+
+        emit({
+          type: "step",
+          message: "AI shared guidance. Ask for a concrete draft when ready.",
+        });
+        emit({ type: "done", chatOnly: true });
+
+        return {
+          assistantText,
+          thinkingText,
+          applied: false,
+        };
       }
 
       const input = toolBlock.input as {
@@ -645,6 +694,7 @@ export class GenerationService {
         thinkingText,
         componentCode: input.componentCode,
         variantId: variant.id,
+        applied: true,
       };
     } catch (e) {
       await this.prisma.emailGenerationRun.update({
