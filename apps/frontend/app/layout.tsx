@@ -30,9 +30,9 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const siteTitle = "Madoo AI — Generate beautiful emails with AI";
+const siteTitle = "Madoo AI — The world's first AI email template generator";
 const siteDescription =
-  "Describe it in plain words. Madoo AI writes, designs, and ships it.";
+  "Generate professional email template code from a simple prompt. Madoo AI handles the design and code, so you can focus on your message.";
 
 const metadataBaseUrl = (() => {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
