@@ -163,7 +163,6 @@ export class BillingService {
         ? { customer: subscription.stripeCustomerId }
         : {
             customer_email: user?.email ?? undefined,
-            customer_creation: "always",
           }),
       client_reference_id: workspaceId,
       metadata: { workspaceId, plan: targetPlan, interval },
