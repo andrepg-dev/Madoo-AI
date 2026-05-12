@@ -22,7 +22,7 @@ import type {
 } from "@prisma/client";
 import { Observable } from "rxjs";
 import { createHash } from "node:crypto";
-import { parseVariableSchemaJson } from "@madoo/shared";
+import { parseVariableSchemaJson, type VariableSchemaRoot } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
 import { ReactToHtmlService } from "./react-to-html.service";
@@ -50,7 +50,7 @@ const EMIT_EMAIL_TOOL: Tool = {
       variableSchema: {
         type: "array",
         description:
-          "Array of variable specs: { name, label?, default, role? }. name must be a valid JS identifier.",
+          "Array of merge-field specs: { name, label?, default, role? }. Keep it small and only include fields that should be personalized or mapped from contacts.",
       },
     },
     required: ["subject", "componentCode", "variableSchema"],
@@ -65,6 +65,12 @@ const STATIC_INSTRUCTION = [
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role? }.",
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
+  "Variable discipline: use only a small set of meaningful merge fields, usually 3-6 and never more than 8 unless the user explicitly asks for many personalized fields.",
+  "Create variables only for important personalized or campaign-specific parts: recipientName, companyName, productName, offer, discountCode, eventDate, ctaUrl, senderName.",
+  "Do not create variables for CTA/button labels, closing text, feature bullets, generic body sentences, every headline fragment, colors, spacing, layout styles, decorative labels, or text that should stay fixed for all recipients.",
+  "Banned variable examples: ctaLabel, ctaButtonLabel, buttonLabel, closingText, closingLine, feature1, feature2, feature3, featureOne, featureTwo, featureThree.",
+  "If a value is not expected to change per recipient or campaign send, keep it as inline copy inside componentCode instead of adding it to variableSchema.",
+  "variableSchema must match the component props exactly: every schema variable is destructured with a default, used in the component, and no extra props are invented.",
   "Component pattern must be: const Email = ({ ...defaults } = {}) => (<Html>...</Html>); export default Email;",
   "Subject line (emit_email.subject) must be normal marketing or transactional copy for the recipient. Never base it on environment variables, .env files, API keys, secrets, or other developer/deployment configuration topics—even if the user brief drifts there.",
   "CRITICAL: Do not never explain to the user how your internally work."
@@ -81,6 +87,14 @@ const FEW_SHOT_TEXT = [
 const CHAT_HISTORY_LIMIT = 8;
 const CODE_CONTEXT_LIMIT = 24_000;
 const CODE_CONTEXT_HEAD_RATIO = 0.65;
+const DISALLOWED_GENERATED_VARIABLE_PATTERNS = [
+  /cta.*(label|text|copy)/i,
+  /button.*(label|text|copy)/i,
+  /closing/i,
+  /^feature(\d+|one|two|three)$/i,
+  /feature.*(label|text|copy|title|description)/i,
+  /^(headline|subheadline|eyebrow|tagline|intro|body|paragraph|footer|signature)(Text|Copy)?$/i,
+];
 
 function shortHash(input: string): string {
   return createHash("sha256").update(input).digest("hex").slice(0, 16);
@@ -100,6 +114,19 @@ function buildCodeContextSnippet(code: string, maxChars: number): string {
     "",
     tail,
   ].join("\n");
+}
+
+function sanitizeGeneratedVariableSchema(schema: VariableSchemaRoot): VariableSchemaRoot {
+  return {
+    variables: schema.variables
+      .filter((variable) => {
+        const searchable = `${variable.name} ${variable.label ?? ""}`;
+        return !DISALLOWED_GENERATED_VARIABLE_PATTERNS.some((pattern) =>
+          pattern.test(searchable),
+        );
+      })
+      .slice(0, 8),
+  };
 }
 
 
@@ -564,7 +591,9 @@ export class GenerationService {
       while (attempts < 2) {
         attempts += 1;
         try {
-          variableSchema = parseVariableSchemaJson(input.variableSchema);
+          variableSchema = sanitizeGeneratedVariableSchema(
+            parseVariableSchemaJson(input.variableSchema),
+          );
           emit({
             type: "meta",
             attempt: attempts,
