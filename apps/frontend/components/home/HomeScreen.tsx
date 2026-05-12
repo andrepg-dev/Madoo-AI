@@ -1,22 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import {
-  Banner,
-  Button,
-  Icon,
-  PromptPill,
-  SegmentedControl,
-  SuggestionChip,
-  Textarea,
-} from "@madoo/ui";
-import { TemplateCard } from "./TemplateCard";
-import { useMe } from "@/hooks/use-me";
 import { useCreateEmail, useEmails } from "@/hooks/use-emails";
-import { readPendingPrompt, clearPendingPrompt, savePendingPrompt } from "@/lib/api";
-import { shortEmailId } from "@/lib/email-id";
-import { useAuthStore } from "@/stores/auth";
+import { useMe } from "@/hooks/use-me";
+import { clearPendingPrompt, readPendingPrompt, savePendingPrompt } from "@/lib/api";
 import {
   CATEGORIES,
   PROMPT_AUDIENCES,
@@ -27,6 +13,21 @@ import {
   TEMPLATES,
   type Template,
 } from "@/lib/data";
+import { shortEmailId } from "@/lib/email-id";
+import { productFaq, productFeatures, productUseCases, productWorkflow } from "@/lib/product-marketing";
+import { useAuthStore } from "@/stores/auth";
+import {
+  Banner,
+  Button,
+  Icon,
+  PromptPill,
+  SegmentedControl,
+  SuggestionChip,
+  Textarea,
+} from "@madoo/ui";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { TemplateCard } from "./TemplateCard";
 
 export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
   const router = useRouter();
@@ -269,6 +270,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         </div>
       </section>
 
+
       {user ? (
         <section className="madoo-home-recent" style={{ maxWidth: 1280, margin: "0 auto" }}>
           <div
@@ -438,6 +440,79 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           ))}
         </div>
       </section>
+
+      <MarketingSeoSections />
+
+
     </div>
+  );
+}
+
+function MarketingSeoSections() {
+  return (
+    <>
+      <section className="madoo-home-seo" style={{ maxWidth: 1180, margin: "0 auto" }}>
+        <div className="madoo-seo-band">
+          <div>
+            <p className="madoo-kicker">AI email marketing workspace</p>
+            <h2 className="serif madoo-seo-heading">
+              Generate responsive HTML email templates, then send smarter campaigns.
+            </h2>
+          </div>
+          <p className="madoo-seo-lede">
+            Madoo AI helps teams go from a plain-language brief to a polished marketing email. It combines an AI
+            email template generator, editable email previews, contact management, sending-domain setup, campaign
+            scheduling, and analytics in one product.
+          </p>
+        </div>
+
+        <div className="madoo-seo-grid">
+          {productFeatures.map((feature) => (
+            <article className="madoo-seo-card" key={feature.title}>
+              <h3>{feature.title}</h3>
+              <p>{feature.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="madoo-home-seo madoo-seo-split" style={{ maxWidth: 1180, margin: "0 auto" }}>
+        <div>
+          <p className="madoo-kicker">How it works</p>
+          <h2 className="serif madoo-seo-heading">From campaign idea to send-ready email.</h2>
+          <ol className="madoo-seo-steps">
+            {productWorkflow.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </div>
+        <div>
+          <p className="madoo-kicker">Use cases</p>
+          <h2 className="serif madoo-seo-heading">Built for repeatable email growth.</h2>
+          <div className="madoo-use-case-grid">
+            {productUseCases.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="madoo-home-seo" style={{ maxWidth: 1180, margin: "0 auto" }}>
+        <div className="madoo-faq-wrap">
+          <div>
+            <p className="madoo-kicker">Product FAQ</p>
+            <h2 className="serif madoo-seo-heading">Learn what Madoo AI does before you generate.</h2>
+          </div>
+          <div className="madoo-faq-list">
+            {productFaq.map((item) => (
+              <details key={item.question}>
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
