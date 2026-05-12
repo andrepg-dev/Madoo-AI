@@ -213,6 +213,118 @@ select:focus-visible {
 .madoo-home-templates {
   padding: 24px 48px 80px;
 }
+.madoo-home-seo {
+  padding: 24px 48px;
+}
+.madoo-seo-band {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1fr);
+  gap: 28px;
+  align-items: end;
+  border-top: 1px solid var(--border);
+  padding-top: 32px;
+}
+.madoo-kicker {
+  margin: 0 0 8px;
+  color: var(--accent-deep);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.madoo-seo-heading {
+  margin: 0;
+  color: var(--ink);
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.08;
+}
+.madoo-seo-lede {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.madoo-seo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+.madoo-seo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.madoo-seo-card h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 15px;
+}
+.madoo-seo-card p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.madoo-seo-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+}
+.madoo-seo-steps {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding-left: 20px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.madoo-use-case-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.madoo-use-case-grid span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  padding: 8px 11px;
+  font-size: 13px;
+}
+.madoo-faq-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(320px, 1.2fr);
+  gap: 28px;
+  border-top: 1px solid var(--border);
+  padding-top: 28px;
+}
+.madoo-faq-list {
+  display: grid;
+  gap: 10px;
+}
+.madoo-faq-list details {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.madoo-faq-list summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+.madoo-faq-list p {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.55;
+}
 @media (max-width: 900px) {
   .madoo-home-hero {
     padding: 48px 24px 32px;
@@ -222,6 +334,17 @@ select:focus-visible {
   }
   .madoo-home-templates {
     padding: 20px 24px 60px;
+  }
+  .madoo-home-seo {
+    padding: 20px 24px;
+  }
+  .madoo-seo-band,
+  .madoo-seo-split,
+  .madoo-faq-wrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .madoo-seo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 600px) {
@@ -233,6 +356,15 @@ select:focus-visible {
   }
   .madoo-home-templates {
     padding: 16px 16px 48px;
+  }
+  .madoo-home-seo {
+    padding: 18px 16px;
+  }
+  .madoo-seo-heading {
+    font-size: 26px;
+  }
+  .madoo-seo-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 900px) {

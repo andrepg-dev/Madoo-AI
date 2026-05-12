@@ -2,6 +2,7 @@ import { LoginModal } from "@/components/auth/LoginModal";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { AppShell } from "@/components/shell/AppShell";
+import { siteConfig } from "@/lib/site";
 import "@madoo/ui/tokens.css";
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
@@ -30,18 +31,6 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const siteTitle = "Madoo AI — The world's first AI email template generator";
-const siteDescription =
-  "Generate professional email template code from a simple prompt. Madoo AI handles the design and code, so you can focus on your message.";
-
-const metadataBaseUrl = (() => {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (fromEnv) return fromEnv;
-  if (process.env.VERCEL_URL)
-    return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-})();
-
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -49,29 +38,53 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(metadataBaseUrl),
-  title: siteTitle,
-  description: siteDescription,
+  metadataBase: new URL(siteConfig.url),
+  applicationName: siteConfig.name,
+  title: {
+    default: siteConfig.title,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  keywords: siteConfig.keywords,
+  authors: [{ name: siteConfig.name }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  category: "Email marketing software",
   icons: {
     icon: "/icon.png",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
-    title: siteTitle,
-    description: siteDescription,
+    type: "website",
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    locale: "en_US",
+    title: siteConfig.title,
+    description: siteConfig.description,
     images: [
       {
-        url: "/og-image.png",
+        url: siteConfig.ogImage,
         width: 1024,
         height: 516,
-        alt: "Madoo AI — The world's first AI email template generator",
+        alt: "Madoo AI email template generator workspace",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: siteTitle,
-    description: siteDescription,
-    images: ["/og-image.png"],
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
   },
 };
 
