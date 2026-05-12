@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
 import { Icon, Kbd, type IconName } from "@madoo/ui";
+import { assistantApi } from "@/actions/assistant";
+import { ApiError } from "@/lib/api/fetch-wrapper";
 
 type PaletteItem = {
   kind: "action" | "nav" | "doc";
@@ -33,16 +36,28 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
+  const [askedQuestion, setAskedQuestion] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const {
+    data: askResult,
+    error: askError,
+    isPending: isAnswering,
+    mutate: askMadoo,
+    reset: resetAsk,
+  } = useMutation({
+    mutationFn: assistantApi.ask,
+  });
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  const trimmedQuery = query.trim();
   const isAsk =
-    query.trim().length > 0 &&
-    (query.trim().endsWith("?") ||
-      /^(ask|how|what|write|why|when|who)\s/i.test(query));
+    trimmedQuery.length > 0 &&
+    (trimmedQuery.endsWith("?") ||
+      ASK_SUGGESTIONS.includes(trimmedQuery) ||
+      /^(ask|how|what|write|why|when|who|where|which|should|can|could|show|tell|best)\s/i.test(trimmedQuery));
 
   const items = useMemo(() => {
     if (!query) return PALETTE_ITEMS.slice(0, 7);
@@ -51,21 +66,55 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     ).slice(0, 8);
   }, [query]);
 
-  const navigate = (href: string) => {
-    router.push(href);
-    onClose();
-  };
+  const answerBlocks = useMemo(
+    () =>
+      (askResult?.answer ?? "")
+        .split(/\n{2,}/)
+        .map((block) => block.trim())
+        .filter(Boolean),
+    [askResult?.answer],
+  );
+
+  const updateQuery = useCallback(
+    (value: string) => {
+      setQuery(value);
+      setActiveIdx(0);
+      setAskedQuestion("");
+      resetAsk();
+    },
+    [resetAsk],
+  );
+
+  const navigate = useCallback(
+    (href: string) => {
+      router.push(href);
+      onClose();
+    },
+    [onClose, router],
+  );
+
+  const handleAsk = useCallback(() => {
+    const trimmed = query.trim();
+    if (!trimmed || isAnswering) return;
+    setAskedQuestion(trimmed);
+    askMadoo({ question: trimmed });
+  }, [askMadoo, isAnswering, query]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActiveIdx((i) => Math.min(i + 1, items.length - 1));
+        setActiveIdx((i) => Math.min(i + 1, Math.max(items.length - 1, 0)));
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setActiveIdx((i) => Math.max(i - 1, 0));
+      }
+      if (e.key === "Enter" && isAsk) {
+        e.preventDefault();
+        void handleAsk();
+        return;
       }
       if (e.key === "Enter" && items[activeIdx]?.href) {
         navigate(items[activeIdx].href!);
@@ -73,8 +122,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, activeIdx]);
+  }, [activeIdx, handleAsk, isAsk, items, navigate]);
 
   return (
     <div
@@ -120,10 +168,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setActiveIdx(0);
-            }}
+            onChange={(e) => updateQuery(e.target.value)}
             placeholder="Search anything, or ask a question…"
             style={{
               flex: 1,
@@ -158,30 +203,22 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         {/* Results */}
         <div style={{ maxHeight: 420, overflowY: "auto", padding: 6 }}>
           {isAsk ? (
-            <div style={{ padding: "14px 14px 10px" }}>
-              <button
-                type="button"
+            <div style={{ padding: "16px 16px 12px" }}>
+              <div
                 style={{
-                  width: "100%",
                   display: "flex",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  padding: 14,
-                  borderRadius: 10,
-                  border: "none",
-                  background: "var(--accent-soft)",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  textAlign: "left",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 14,
                 }}
               >
                 <div
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    background: "var(--accent)",
-                    color: "var(--accent-fg)",
+                    width: 34,
+                    height: 34,
+                    borderRadius: 9,
+                    background: "var(--ink)",
+                    color: "var(--surface)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -191,38 +228,126 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
                   <Icon name="sparkle" size={14} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--accent-deep)" }}>
-                    Ask Madoo AI
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", letterSpacing: 0.2 }}>
+                    Madoo AI
                   </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "var(--ink)",
-                      marginTop: 4,
-                      lineHeight: 1.5,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    &ldquo;{query}&rdquo;
+                  <div style={{ fontSize: 11.5, color: "var(--ink-faint)", marginTop: 2 }}>
+                    {isAnswering ? "Answering..." : askResult ? "Answered in this modal" : "Ready"}
                   </div>
                 </div>
-                <div
+                <button
+                  type="button"
+                  disabled={!query.trim() || isAnswering}
+                  onClick={handleAsk}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: 4,
-                    padding: "4px 8px",
-                    background: "var(--surface)",
-                    borderRadius: 6,
-                    fontSize: 11,
-                    color: "var(--ink-soft)",
-                    fontWeight: 500,
-                    alignSelf: "center",
+                    gap: 8,
+                    height: 32,
+                    padding: "0 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--ink)",
+                    background: "var(--ink)",
+                    color: "var(--surface)",
+                    cursor: !query.trim() || isAnswering ? "wait" : "pointer",
+                    opacity: !query.trim() || isAnswering ? 0.68 : 1,
+                    fontFamily: "inherit",
+                    fontSize: 12.5,
+                    fontWeight: 600,
                   }}
                 >
-                  ↵
+                  {isAnswering ? "Thinking..." : askResult ? "Ask again" : "Ask"}
+                  <span style={{ fontSize: 11, opacity: 0.75 }}>↵</span>
+                </button>
+              </div>
+
+              <div
+                style={{
+                  borderLeft: "3px solid var(--accent)",
+                  paddingLeft: 12,
+                  marginBottom: 14,
+                }}
+              >
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-faint)", textTransform: "uppercase", letterSpacing: 0.8 }}>
+                  Question
                 </div>
-              </button>
+                <div
+                  style={{
+                    fontSize: 14,
+                    color: "var(--ink)",
+                    lineHeight: 1.45,
+                    marginTop: 4,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {askedQuestion || query.trim()}
+                </div>
+              </div>
+
+              {isAnswering ? (
+                <div
+                  aria-live="polite"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    padding: "4px 0 6px",
+                  }}
+                >
+                  {[92, 74, 86].map((width) => (
+                    <div
+                      key={width}
+                      style={{
+                        height: 9,
+                        width: `${width}%`,
+                        borderRadius: 999,
+                        background: "linear-gradient(90deg, var(--surface-2), var(--accent-soft), var(--surface-2))",
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : askResult ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    color: "var(--ink)",
+                    fontSize: 13.5,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {answerBlocks.map((block, i) => (
+                    <p
+                      key={`${askResult.generatedAt}-${i}`}
+                      style={{
+                        margin: 0,
+                        whiteSpace: "pre-wrap",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {block}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+
+              {askError ? (
+                <div
+                  role="alert"
+                  style={{
+                    marginTop: 10,
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    background: "rgba(176, 64, 64, 0.08)",
+                    color: "#A34242",
+                    fontSize: 12,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {toErrorMessage(askError)}
+                </div>
+              ) : null}
               {items.length > 0 && (
                 <>
                   <div
@@ -286,7 +411,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
                 <button
                   key={i}
                   type="button"
-                  onClick={() => setQuery(s)}
+                  onClick={() => updateQuery(s)}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "var(--surface-2)";
                   }}
@@ -436,4 +561,10 @@ function PaletteRow({
       </span>
     </button>
   );
+}
+
+function toErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) return error.message;
+  if (error instanceof Error) return error.message;
+  return "Madoo AI could not answer right now.";
 }

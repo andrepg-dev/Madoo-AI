@@ -25,7 +25,7 @@ const PLAN_FEATURES: Record<Plan | "SCALE", { label: string; included: boolean; 
     { label: "100 contacts", included: true },
     { label: "2,000 emails / month", included: true },
     { label: "5 AI generations / month", included: true },
-    { label: "12 starter templates", included: true },
+    { label: "Full template library", included: false },
     { label: "Send from Madoo subdomain", included: true },
     { label: "Open & click tracking", included: true },
     { label: "Custom sending domain", included: false },
@@ -143,6 +143,17 @@ function FaqItem({ item, first }: { item: (typeof FAQ_ITEMS)[number]; first: boo
   );
 }
 
+function formatResetTime(value: string | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 function BillingPageContent() {
   const qc = useQueryClient();
   const hydrateWorkspaceId = useWorkspaceStore((s) => s.hydrateWorkspaceId);
@@ -191,6 +202,8 @@ function BillingPageContent() {
   const genLimit = data?.usage.aiGenerations.limit ?? PLAN_LIMITS[currentPlan].aiGenerations;
   const genUnlimited = genLimit === -1;
   const genPct = genUnlimited ? 0 : Math.min(100, Math.round((genUsed / genLimit) * 100));
+  const genResetTime = formatResetTime(data?.usage.aiGenerations.resetsAt);
+  const genExhausted = !genUnlimited && genUsed >= genLimit;
 
   const errorMessage =
     checkout.error instanceof ApiError
@@ -355,6 +368,11 @@ function BillingPageContent() {
                 ) : (
                   <ProgressBar value={genPct} aria-label="AI generation usage" />
                 )}
+                {!genUnlimited && genResetTime ? (
+                  <div style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 8 }}>
+                    {genExhausted ? "AI credits enabled again" : "AI credits reset"} {genResetTime}
+                  </div>
+                ) : null}
               </div>
             </>
           )}
@@ -806,7 +824,7 @@ function BillingPageContent() {
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <a
-              href="mailto:hello@madoo.ai?subject=Feature comparison"
+              href="mailto:asponceg@gmail.com?subject=Feature comparison"
               style={{
                 padding: "11px 18px",
                 borderRadius: 9,
@@ -825,7 +843,7 @@ function BillingPageContent() {
               Compare features
             </a>
             <a
-              href="mailto:hello@madoo.ai?subject=Migration call"
+              href="mailto:asponceg@gmail.com?subject=Migration call"
               style={{
                 padding: "11px 18px",
                 borderRadius: 9,
@@ -858,7 +876,7 @@ function BillingPageContent() {
             </h2>
             <p style={{ fontSize: 14, color: "var(--ink-soft)", marginTop: 6 }}>
               Still wondering?{" "}
-              <a href="mailto:hello@madoo.ai" style={{ color: "var(--accent-deep)", fontWeight: 600, textDecoration: "none" }}>
+              <a href="mailto:asponceg@gmail.com" style={{ color: "var(--accent-deep)", fontWeight: 600, textDecoration: "none" }}>
                 Talk to a human →
               </a>
             </p>
