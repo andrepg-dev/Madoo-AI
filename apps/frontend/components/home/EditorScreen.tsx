@@ -1,8 +1,12 @@
 "use client";
 
-import { consumeEmailSseStream, useEmail } from "@/hooks/use-emails";
+import {
+  consumeEmailSseStream,
+  useEmail,
+  useUpdateEmailVariantVariableSchema,
+} from "@/hooks/use-emails";
 import { shortEmailId } from "@/lib/email-id";
-import type { EmailVariantDto } from "@madoo/shared";
+import type { EmailVariantDto, VariableSchemaRoot } from "@madoo/shared";
 import {
   Banner,
   Button,
@@ -51,6 +55,7 @@ export function EditorScreen({
   const qc = useQueryClient();
   const router = useRouter();
   const { data: email, isLoading, refetch, isError } = useEmail(emailId);
+  const updateVariables = useUpdateEmailVariantVariableSchema(emailId);
 
   const variants = useMemo(() => {
     const list = email?.variants ?? [];
@@ -70,11 +75,16 @@ export function EditorScreen({
   const [busy, setBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [variableDefaults, setVariableDefaults] = useState<Record<string, string>>({});
+  const [variableSaveMessage, setVariableSaveMessage] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [activeStreamingId, setActiveStreamingId] = useState<string | null>(null);
   const [previewHeight, setPreviewHeight] = useState<number>(640);
   const panelScrollRef = useRef<HTMLDivElement | null>(null);
   const previewObserverRef = useRef<ResizeObserver | null>(null);
+
+  useEffect(() => {
+    if (variants.length > 0) setVariantIdx(variants.length - 1);
+  }, [emailId, variants.length]);
 
   useEffect(() => {
     const el = panelScrollRef.current;
@@ -149,6 +159,49 @@ export function EditorScreen({
       .filter((line) => line.length > 0 && !previous.has(line))
       .slice(0, 4);
   }, [activeVariant, previousVariant]);
+
+  useEffect(() => {
+    const nextDefaults = Object.fromEntries(
+      activeVariant?.variableSchema.variables.map((variable) => [
+        variable.name,
+        variable.default,
+      ]) ?? [],
+    );
+    setVariableDefaults(nextDefaults);
+    setVariableSaveMessage(null);
+    updateVariables.reset();
+  }, [activeVariant?.id]);
+
+  const variableSchemaDraft = useMemo<VariableSchemaRoot | null>(() => {
+    if (!activeVariant?.variableSchema.variables.length) return null;
+    return {
+      variables: activeVariant.variableSchema.variables.map((variable) => ({
+        ...variable,
+        default: variableDefaults[variable.name] ?? variable.default,
+      })),
+    };
+  }, [activeVariant?.variableSchema.variables, variableDefaults]);
+
+  const variablesDirty = useMemo(() => {
+    if (!activeVariant?.variableSchema.variables.length) return false;
+    return activeVariant.variableSchema.variables.some(
+      (variable) => (variableDefaults[variable.name] ?? variable.default) !== variable.default,
+    );
+  }, [activeVariant?.variableSchema.variables, variableDefaults]);
+
+  const saveVariables = useCallback(async () => {
+    if (!activeVariant || !variableSchemaDraft || updateVariables.isPending) return;
+    setVariableSaveMessage(null);
+    try {
+      await updateVariables.mutateAsync({
+        variantId: activeVariant.id,
+        variableSchema: variableSchemaDraft,
+      });
+      setVariableSaveMessage("Variables saved.");
+    } catch (err) {
+      setVariableSaveMessage(err instanceof Error ? err.message : "Could not save variables.");
+    }
+  }, [activeVariant, updateVariables, variableSchemaDraft]);
 
   const runEdit = useCallback(
     async (instruction: string) => {
@@ -431,8 +484,16 @@ export function EditorScreen({
           ) : null}
           {activeVariant?.variableSchema?.variables?.length ? (
             <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-faint)", marginBottom: 8 }}>
-                VARIABLE SCHEMA
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-faint)" }}>
+                  VARIABLE SCHEMA
+                </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {activeVariant.variableSchema.variables.map((variable) => {
@@ -464,6 +525,43 @@ export function EditorScreen({
                   );
                 })}
               </div>
+            </div>
+          ) : null}
+          {variablesDirty || variableSaveMessage ? (
+            <div
+              style={{
+                position: "sticky",
+                bottom: 8,
+                zIndex: 3,
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                padding: "10px 12px",
+                background: "var(--surface)",
+                boxShadow: "0 14px 28px rgba(0,0,0,0.12)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  color: updateVariables.isError ? "var(--danger)" : "var(--ink-soft)",
+                }}
+              >
+                {variableSaveMessage ?? "You have unsaved variable changes."}
+              </div>
+              {variablesDirty ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={updateVariables.isPending}
+                  onClick={() => void saveVariables()}
+                  style={{ marginLeft: "auto", flexShrink: 0 }}
+                >
+                  {updateVariables.isPending ? "Saving…" : "Save variables"}
+                </Button>
+              ) : null}
             </div>
           ) : null}
           <Banner tone="accent" title="Suggestion">
@@ -670,10 +768,10 @@ export function EditorScreen({
                                   animation: "pulse 1.2s ease-in-out infinite",
                                 }}
                               />
-                              Editando componente...
+                              Editing component...
                             </>
                           ) : (
-                            "Componente actualizado."
+                            "Component updated."
                           )}
                         </div>
                       </div>

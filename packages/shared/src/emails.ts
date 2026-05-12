@@ -134,6 +134,14 @@ export const EditEmailSchema = z.object({
 
 export type EditEmailInput = z.infer<typeof EditEmailSchema>;
 
+export const UpdateEmailVariantVariableSchemaSchema = z.object({
+  variableSchema: VariableSchemaRootSchema,
+});
+
+export type UpdateEmailVariantVariableSchemaInput = z.infer<
+  typeof UpdateEmailVariantVariableSchemaSchema
+>;
+
 export const TemplateSeedPreviewDtoSchema = z.object({
   slug: TemplateSlugSchema,
   name: z.string(),

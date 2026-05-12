@@ -5,11 +5,20 @@ import { AuthModule } from "../auth/auth.module";
 import { GenerationModule } from "../generation/generation.module";
 import { TemplatesModule } from "../templates/templates.module";
 import { BillingModule } from "../billing/billing.module";
+import { S3Module } from "../s3/s3.module";
 import { EmailsController } from "./emails.controller";
 import { EmailsService } from "./emails.service";
 
 @Module({
-  imports: [PrismaModule, WorkspacesModule, AuthModule, GenerationModule, TemplatesModule, BillingModule],
+  imports: [
+    PrismaModule,
+    WorkspacesModule,
+    AuthModule,
+    GenerationModule,
+    TemplatesModule,
+    BillingModule,
+    S3Module,
+  ],
   controllers: [EmailsController],
   providers: [EmailsService],
   exports: [EmailsService],

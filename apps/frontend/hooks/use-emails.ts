@@ -7,8 +7,10 @@ import {
   fetchEmail,
   fetchEmails,
   saveEmailTemplate,
+  updateEmailVariantVariableSchema,
   type CreateEmailFromTemplateInput,
   type CreateEmailInput,
+  type UpdateEmailVariantVariableSchemaInput,
 } from "@/actions/emails";
 
 export function useCreateEmail() {
@@ -45,6 +47,24 @@ export function useSaveTemplate(emailId: string) {
     mutationFn: () => saveEmailTemplate(emailId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["email", emailId] });
+    },
+  });
+}
+
+export function useUpdateEmailVariantVariableSchema(emailId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      variantId: string;
+      variableSchema: UpdateEmailVariantVariableSchemaInput["variableSchema"];
+    }) =>
+      updateEmailVariantVariableSchema(emailId, input.variantId, {
+        variableSchema: input.variableSchema,
+      }),
+    onSuccess: (data) => {
+      qc.setQueryData(["email", emailId], data);
+      void qc.invalidateQueries({ queryKey: ["email", emailId] });
+      void qc.invalidateQueries({ queryKey: ["emails"] });
     },
   });
 }
