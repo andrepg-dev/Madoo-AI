@@ -15,7 +15,7 @@ import {
   Select,
   Tag,
 } from "@madoo/ui";
-import { CSV_FIELDS, PREVIEW_CONTACTS } from "@/lib/data";
+import type { Contact } from "@madoo/shared";
 import { useEmails } from "@/hooks/use-emails";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -59,6 +59,30 @@ function isNonEmptyEmail(value: string): boolean {
 
 type VarMap = Record<string, { field: string | null }>;
 const EMPTY_VARIABLES: Array<{ name: string; default: string; label?: string }> = [];
+
+const BASE_CONTACT_FIELD_OPTIONS = [
+  { value: "contact.email", label: "Email" },
+  { value: "contact.firstName", label: "First name" },
+  { value: "contact.lastName", label: "Last name" },
+];
+
+function contactDisplayName(contact: Contact, index: number): string {
+  const name = `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
+  if (name) return name;
+  return contact.email?.trim() || `Contact ${index + 1}`;
+}
+
+function resolveMappedValue(contact: Contact, mappedField: string | null): string | undefined {
+  if (!mappedField) return undefined;
+  if (mappedField === "contact.email") return contact.email;
+  if (mappedField === "contact.firstName") return contact.firstName;
+  if (mappedField === "contact.lastName") return contact.lastName;
+  if (mappedField.startsWith("custom.")) {
+    const key = mappedField.slice("custom.".length);
+    return key ? contact.customFields[key] : undefined;
+  }
+  return undefined;
+}
 
 const initialVarMap = (variableNames: string[]): VarMap =>
   Object.fromEntries(
@@ -235,16 +259,43 @@ export function ComposeModal({
       ? `${selectedEmail.prompt.slice(0, 72)}${selectedEmail.prompt.length > 72 ? "…" : ""}`
       : "—";
 
-  const previewOptions = PREVIEW_CONTACTS.map((c, i) => ({ value: String(i), label: c.name }));
-  const fieldOptions = [
-    { value: "", label: "— select field —" },
-    ...CSV_FIELDS.map((f) => ({ value: f, label: f })),
-  ];
+  const sampleContacts = isAllContacts ? [] : previewQuery.data?.sampleContacts ?? [];
+
+  const previewOptions = useMemo(
+    () =>
+      sampleContacts.map((contact, idx) => ({
+        value: String(idx),
+        label: contactDisplayName(contact, idx),
+      })),
+    [sampleContacts],
+  );
+
+  const fieldOptions = useMemo(() => {
+    const customFieldSet = new Set<string>();
+    for (const contact of sampleContacts) {
+      for (const key of Object.keys(contact.customFields ?? {})) customFieldSet.add(key);
+    }
+    const customFieldOptions = Array.from(customFieldSet)
+      .sort((a, b) => a.localeCompare(b))
+      .map((key) => ({
+        value: `custom.${key}`,
+        label: key,
+      }));
+    return [
+      { value: "", label: "Select a contact field" },
+      ...BASE_CONTACT_FIELD_OPTIONS,
+      ...customFieldOptions,
+    ];
+  }, [sampleContacts]);
 
   const matchedCount = useMemo(
     () => variableSpecs.filter((variable) => Boolean(varMap[variable.name]?.field)).length,
     [variableSpecs, varMap],
   );
+
+  useEffect(() => {
+    if (previewIdx >= previewOptions.length) setPreviewIdx(0);
+  }, [previewIdx, previewOptions.length]);
 
   useEffect(() => {
     const names = variableSpecs.map((variable) => variable.name);
@@ -716,10 +767,8 @@ export function ComposeModal({
       {step === 3 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <Banner tone="accent">
-            <b>
-              {matchedCount.toLocaleString()} of {variableSpecs.length.toLocaleString()}
-            </b>{" "}
-            variables mapped. If a contact misses a mapped field, the component inline default is used.
+            <b>{matchedCount.toLocaleString()} / {variableSpecs.length.toLocaleString()} mapped.</b>{" "}
+            Unmapped or empty fields use each variable default.
           </Banner>
           {!currentVariant && (
             <Banner tone="warn">
@@ -741,7 +790,7 @@ export function ComposeModal({
                   textTransform: "uppercase",
                 }}
               >
-                <div>Email variable</div>
+                <div>Template variable</div>
                 <div></div>
                 <div>Contact field</div>
               </div>
@@ -848,11 +897,12 @@ export function ComposeModal({
               }}
             >
               <Select
-                label="Preview as"
+                label="Preview contact"
                 selectSize="sm"
                 value={String(previewIdx)}
                 onChange={(e) => setPreviewIdx(Number(e.target.value))}
                 options={previewOptions}
+                disabled={previewOptions.length === 0}
               />
               <div
                 style={{
@@ -867,21 +917,27 @@ export function ComposeModal({
                 }}
               >
                 {(() => {
-                  const c = PREVIEW_CONTACTS[previewIdx];
+                  const contact = sampleContacts[previewIdx];
+                  if (isAllContacts) {
+                    return <div style={{ color: "var(--ink-soft)" }}>Select a segment to preview real contact values.</div>;
+                  }
+                  if (previewQuery.isFetching) {
+                    return <div style={{ color: "var(--ink-soft)" }}>Loading sample contacts…</div>;
+                  }
+                  if (!contact) {
+                    return <div style={{ color: "var(--ink-soft)" }}>No sample contacts found for this segment.</div>;
+                  }
                   return (
                     <>
-                      <div style={{ fontWeight: 600 }}>Preview values for {c.name}</div>
+                      <div style={{ fontWeight: 600 }}>Preview values for {contactDisplayName(contact, previewIdx)}</div>
                       <div style={{ marginTop: 6, color: "var(--ink-soft)", display: "flex", flexDirection: "column", gap: 4 }}>
                         {variableSpecs.length === 0 ? (
                           <span>No variables found in current variant.</span>
                         ) : (
-                          variableSpecs.slice(0, 6).map((variable) => {
-                            const mappedField = varMap[variable.name]?.field;
-                            const mappedValue = mappedField
-                              ? (c.data as Record<string, string | undefined>)[mappedField]
-                              : undefined;
-                            const resolved =
-                              mappedValue && mappedValue !== "—" ? mappedValue : variable.default;
+                          variableSpecs.map((variable) => {
+                            const mappedField = varMap[variable.name]?.field ?? null;
+                            const mappedValue = resolveMappedValue(contact, mappedField);
+                            const resolved = mappedValue?.trim() ? mappedValue : variable.default;
                             return (
                               <div key={variable.name}>
                                 <span className="mono">{variable.name}</span>: {resolved || "(empty string)"}
@@ -903,7 +959,7 @@ export function ComposeModal({
                   fontStyle: "italic",
                 }}
               >
-                Switch contacts to see how the email renders for different recipients.
+                Pick a real sample contact to verify your mapping before send.
               </div>
             </div>
           </div>
