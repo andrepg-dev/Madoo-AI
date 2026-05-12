@@ -308,6 +308,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               {emails.slice(0, 12).map((email) => {
                 const latest = email.variants[email.variants.length - 1];
                 const preview = latest?.previewUrl ?? null;
+                const compiledPreview = latest?.compiledHtml ?? null;
                 const goTo = email.status === "DRAFT" ? `/emails/${email.id}/generate` : `/emails/${email.id}/editor`;
                 return (
                   <button
@@ -343,6 +344,19 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                           src={preview}
                           alt={email.title ?? "Email preview"}
                           style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
+                        />
+                      ) : compiledPreview ? (
+                        <iframe
+                          title={`${email.title ?? "Email"} preview`}
+                          srcDoc={compiledPreview}
+                          sandbox="allow-same-origin"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            border: "none",
+                            pointerEvents: "none",
+                            background: "#fff",
+                          }}
                         />
                       ) : (
                         <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth={1.5}>

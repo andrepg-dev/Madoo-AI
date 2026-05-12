@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   Sse,
@@ -19,7 +20,12 @@ import {
 } from "../workspaces/workspace.guard";
 import { EmailsService } from "./emails.service";
 import { GenerationService } from "../generation/generation.service";
-import { CreateEmailFromTemplateSchema, CreateEmailSchema, EditEmailSchema } from "@madoo/shared";
+import {
+  CreateEmailFromTemplateSchema,
+  CreateEmailSchema,
+  EditEmailSchema,
+  UpdateEmailVariantVariableSchemaSchema,
+} from "@madoo/shared";
 
 @Controller({ path: "emails", version: "1" })
 @UseGuards(JwtAuthGuard, WorkspaceGuard)
@@ -81,6 +87,24 @@ export class EmailsController {
   ) {
     await this.emails.saveTemplate(id, req.workspace.id, user.sub);
     return { ok: true };
+  }
+
+  @Patch(":id/variants/:variantId/variable-schema")
+  updateVariantVariableSchema(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Param("variantId") variantId: string,
+    @Body() body: unknown,
+  ) {
+    const dto = UpdateEmailVariantVariableSchemaSchema.parse(body);
+    return this.emails.updateVariantVariableSchema(
+      id,
+      variantId,
+      req.workspace.id,
+      user.sub,
+      dto,
+    );
   }
 
   @Post(":id/generate")

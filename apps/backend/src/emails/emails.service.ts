@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import type { EmailStatus } from "@prisma/client";
@@ -12,20 +13,27 @@ import {
   type CreateEmailInput,
   type EmailDto,
   type EmailVariantDto,
+  type UpdateEmailVariantVariableSchemaInput,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 import { TemplatesService } from "../templates/templates.service";
 import { ReactToHtmlService } from "../generation/react-to-html.service";
+import { ScreenshotService } from "../generation/screenshot.service";
 import { BillingService } from "../billing/billing.service";
+import { S3Service } from "../s3/s3.service";
 
 @Injectable()
 export class EmailsService {
+  private readonly logger = new Logger(EmailsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspaces: WorkspacesService,
     private readonly templates: TemplatesService,
     private readonly reactToHtml: ReactToHtmlService,
+    private readonly screenshot: ScreenshotService,
+    private readonly s3: S3Service,
     private readonly billing: BillingService,
   ) {}
 
@@ -117,6 +125,7 @@ export class EmailsService {
     });
     if (!tpl) throw new BadRequestException("Unknown template slug for this workspace.");
     const compiledHtml = this.reactToHtml.compile(tpl.componentCode);
+    const previewUrl = await this.createPreviewUrl(compiledHtml);
     const now = new Date();
     const email = await this.prisma.$transaction(async (tx) => {
       const created = await tx.email.create({
@@ -140,6 +149,7 @@ export class EmailsService {
           componentCode: tpl.componentCode,
           compiledHtml,
           variableSchema: { variables: [] },
+          previewUrl,
         },
       });
       await tx.emailGenerationRun.create({
@@ -153,6 +163,18 @@ export class EmailsService {
       return created;
     });
     return this.toDto(email.id);
+  }
+
+  private async createPreviewUrl(compiledHtml: string): Promise<string | null> {
+    try {
+      const buffer = await this.screenshot.screenshotHtml(compiledHtml);
+      return await this.s3.uploadBuffer(buffer, "image/png", "email-previews");
+    } catch (err) {
+      this.logger.warn(
+        `Template preview image save failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
   }
 
   async saveTemplate(emailId: string, workspaceId: string, userId: string): Promise<void> {
@@ -179,6 +201,40 @@ export class EmailsService {
         data: { templateSavedAt: new Date() },
       }),
     ]);
+  }
+
+  async updateVariantVariableSchema(
+    emailId: string,
+    variantId: string,
+    workspaceId: string,
+    userId: string,
+    dto: UpdateEmailVariantVariableSchemaInput,
+  ): Promise<EmailDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    const variant = await this.prisma.emailVariant.findFirst({
+      where: { id: variantId, emailId, workspaceId },
+      select: { id: true, componentCode: true },
+    });
+    if (!variant) throw new NotFoundException("Email variant not found.");
+
+    const renderVariables = Object.fromEntries(
+      dto.variableSchema.variables.map((variable) => [variable.name, variable.default]),
+    );
+    const compiledHtml = this.reactToHtml.compile(
+      variant.componentCode,
+      renderVariables,
+    );
+    const previewUrl = await this.createPreviewUrl(compiledHtml);
+
+    await this.prisma.emailVariant.update({
+      where: { id: variantId },
+      data: {
+        variableSchema: dto.variableSchema,
+        compiledHtml,
+        ...(previewUrl ? { previewUrl } : {}),
+      },
+    });
+    return this.toDto(emailId);
   }
 
   async updateStatus(emailId: string, status: EmailStatus): Promise<void> {
