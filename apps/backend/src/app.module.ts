@@ -4,6 +4,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
 import { AnalyticsModule } from "./analytics/analytics.module";
+import { AssistantModule } from "./assistant/assistant.module";
 import { AuditLogsModule } from "./audit-logs/audit-logs.module";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
@@ -84,6 +85,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     AuditLogsModule,
     TrackingModule,
     AnalyticsModule,
+    AssistantModule,
     WebhooksModule,
     BillingModule,
   ],

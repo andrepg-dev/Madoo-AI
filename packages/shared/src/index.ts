@@ -11,3 +11,4 @@ export * from "./campaigns";
 export * from "./audit-log";
 export * from "./analytics";
 export * from "./billing";
+export * from "./assistant";

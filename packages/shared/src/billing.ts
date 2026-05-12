@@ -62,6 +62,7 @@ export const BillingUsageSchema = z.object({
   aiGenerations: z.object({
     used: z.number().int().nonnegative(),
     limit: z.number().int(), // -1 = unlimited
+    resetsAt: z.string().datetime(),
   }),
 });
 export type BillingUsageDto = z.infer<typeof BillingUsageSchema>;

@@ -206,9 +206,7 @@ function BillingCard({
           {plan === "FREE" ? "Upgrade to Starter" : "Upgrade to Growth"}
         </Button>
       ) : (
-        <Button variant="ghost" size="sm" block style={{ marginTop: 10 }} onClick={onClick}>
-          Manage billing
-        </Button>
+        null
       )}
     </Card>
   );

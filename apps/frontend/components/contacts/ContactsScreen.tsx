@@ -64,7 +64,6 @@ export function ContactsScreen() {
   const [statusFilter, setStatusFilter] = useState<"all" | ContactStatus>("all");
   const [tagPresenceFilter, setTagPresenceFilter] = useState<"all" | "tagged" | "untagged">("all");
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[] | null>(null);
-  const [hoverContactId, setHoverContactId] = useState<string | null>(null);
 
   const segmentsQuery = useQuery({
     queryKey: segmentsKeys.list(),
@@ -561,7 +560,7 @@ export function ContactsScreen() {
                       aria-label="Select all contacts"
                     />
                   </th>
-                  {["Name", "Tags", "Joined", "Engagement", "Status", ""].map((h) => (
+                  {["Name", "Tags", "Joined", "Engagement", "Status"].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -583,8 +582,6 @@ export function ContactsScreen() {
                 {rows.map((contact) => (
                   <tr
                     key={contact.id}
-                    onMouseEnter={() => setHoverContactId(contact.id)}
-                    onMouseLeave={() => setHoverContactId(null)}
                     style={{
                       borderBottom: "1px solid var(--border-soft)",
                       background: selected.has(contact.id) ? "var(--accent-soft)" : "transparent",
@@ -656,18 +653,6 @@ export function ContactsScreen() {
                       <Badge tone={STATUS_TONE[contact.status]} dot>
                         {contact.status}
                       </Badge>
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      {hoverContactId === contact.id ? (
-                        <IconButton
-                          variant="soft"
-                          size="sm"
-                          aria-label={`Delete ${contact.name}`}
-                          onClick={() => setDeleteTargetIds([contact.id])}
-                        >
-                          <Icon name="x" size={13} />
-                        </IconButton>
-                      ) : null}
                     </td>
                   </tr>
                 ))}

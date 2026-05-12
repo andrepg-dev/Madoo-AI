@@ -67,6 +67,7 @@ export class BillingService {
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
     const [contactsUsed, generationsUsed] = await Promise.all([
       this.prisma.contact.count({ where: { workspaceId } }),
@@ -90,7 +91,11 @@ export class BillingService {
       },
       usage: {
         contacts: { used: contactsUsed, limit: limits.contacts },
-        aiGenerations: { used: generationsUsed, limit: limits.aiGenerations },
+        aiGenerations: {
+          used: generationsUsed,
+          limit: limits.aiGenerations,
+          resetsAt: startOfNextMonth.toISOString(),
+        },
       },
       limits: { contacts: limits.contacts, aiGenerations: limits.aiGenerations },
     };
