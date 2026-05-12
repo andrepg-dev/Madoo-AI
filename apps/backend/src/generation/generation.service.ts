@@ -50,7 +50,7 @@ const EMIT_EMAIL_TOOL: Tool = {
       variableSchema: {
         type: "array",
         description:
-          "Array of merge-field specs: { name, label?, default, role? }. Keep it small and only include fields that should be personalized or mapped from contacts.",
+          "Array of merge-field specs: { name, label?, default, role?, scope }. scope must be 'dynamic' or 'static'. Keep it small and only include meaningful fields.",
       },
     },
     required: ["subject", "componentCode", "variableSchema"],
@@ -62,9 +62,12 @@ const STATIC_INSTRUCTION = [
   "Output MUST call tool emit_email once when finished only when the user request include some email modification.",
   "componentCode must be valid TSX: Import Html, Body, Container, Section, Text, Button etc from 'html-coditor'.",
   "Use inline styles or tailwind clasess",
-  "Return variableSchema as an ARRAY of objects: { name, default, label?, role? }.",
+  "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
+  "Every variable must set scope: dynamic or static.",
+  "Use scope=dynamic for recipient/contact-driven data mapped at send time (recipientName, companyName, ctaUrl, planName, invoiceNumber, dates from CRM).",
+  "Use scope=static for campaign constants that stay fixed for all recipients in same send (heroTitle, offerText, footerLine, buttonLabel, feature bullets).",
   "Variable discipline: use only a small set of meaningful merge fields, usually 3-6 and never more than 8 unless the user explicitly asks for many personalized fields.",
   "Create variables only for important personalized or campaign-specific parts: recipientName, companyName, productName, offer, discountCode, eventDate, ctaUrl, senderName.",
   "Do not create variables for CTA/button labels, closing text, feature bullets, generic body sentences, every headline fragment, colors, spacing, layout styles, decorative labels, or text that should stay fixed for all recipients.",

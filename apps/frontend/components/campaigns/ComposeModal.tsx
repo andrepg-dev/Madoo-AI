@@ -58,7 +58,12 @@ function isNonEmptyEmail(value: string): boolean {
 }
 
 type VarMap = Record<string, { field: string | null }>;
-const EMPTY_VARIABLES: Array<{ name: string; default: string; label?: string }> = [];
+const EMPTY_VARIABLES: Array<{
+  name: string;
+  default: string;
+  label?: string;
+  scope: "dynamic" | "static";
+}> = [];
 
 const BASE_CONTACT_FIELD_OPTIONS = [
   { value: "contact.email", label: "Email" },
@@ -240,7 +245,10 @@ export function ComposeModal({
 
 
   const variableSpecs = useMemo(
-    () => currentVariant?.variableSchema.variables ?? EMPTY_VARIABLES,
+    () =>
+      (currentVariant?.variableSchema.variables ?? EMPTY_VARIABLES).filter(
+        (variable) => (variable.scope ?? "dynamic") === "dynamic",
+      ),
     [currentVariant],
   );
 
@@ -770,6 +778,11 @@ export function ComposeModal({
             <b>{matchedCount.toLocaleString()} / {variableSpecs.length.toLocaleString()} mapped.</b>{" "}
             Unmapped or empty fields use each variable default.
           </Banner>
+          {currentVariant && variableSpecs.length === 0 ? (
+            <Banner tone="info">
+              No dynamic variables in this email variant. Static variables are kept in the template and are not mapped here.
+            </Banner>
+          ) : null}
           {!currentVariant && (
             <Banner tone="warn">
               No real email variant found yet. Generate an email first to map `variableSchema` values.
