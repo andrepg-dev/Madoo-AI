@@ -1,5 +1,11 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
-import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SegmentQuerySchema, parseVariableSchemaJson } from "@madoo/shared";
 import type { Job } from "bullmq";
@@ -98,9 +104,7 @@ export class CampaignSendProcessor extends WorkerHost {
       const secret = this.config.get<string>("JWT_SECRET") ?? "";
       const senderDomain = this.config.get<string>("SENDING_DOMAIN") ?? "madooai.com";
       const fromEmail = campaign.fromEmail || `hello@${senderDomain}`;
-      const trackingBaseUrl =
-        this.config.get<string>("TRACKING_URL") ??
-        `${this.config.get<string>("BACKEND_URL") ?? `http://localhost:${this.config.get<string>("PORT") ?? "4000"}`}/api/v1`;
+      const trackingBaseUrl = this.resolveTrackingBaseUrl();
 
       const trackedLinkCache = await this.loadTrackedLinkCache(
         job.data.workspaceId,
@@ -267,6 +271,41 @@ export class CampaignSendProcessor extends WorkerHost {
     const minDurationMs = Math.ceil((batchSize / maxPerSecond) * 1000);
     await new Promise((resolve) => setTimeout(resolve, minDurationMs));
   }
+
+  private resolveTrackingBaseUrl(): string {
+    const nodeEnv = this.config.get<string>("NODE_ENV") ?? "development";
+    const explicitTrackingUrl = trimTrailingSlash(this.config.get<string>("TRACKING_URL"));
+    if (explicitTrackingUrl) {
+      this.assertPublicTrackingUrl(explicitTrackingUrl, nodeEnv);
+      return explicitTrackingUrl;
+    }
+
+    const backendUrl = trimTrailingSlash(this.config.get<string>("BACKEND_URL"));
+    if (backendUrl) {
+      this.assertPublicTrackingUrl(backendUrl, nodeEnv);
+      return `${backendUrl}/api/v1`;
+    }
+
+    if (nodeEnv !== "development" && nodeEnv !== "test") {
+      throw new InternalServerErrorException(
+        "TRACKING_URL or BACKEND_URL must be configured before sending campaigns. Refusing to send localhost tracking links.",
+      );
+    }
+
+    const localUrl = `http://localhost:${this.config.get<string>("PORT") ?? "4000"}/api/v1`;
+    this.logger.warn(
+      `TRACKING_URL/BACKEND_URL is not configured. Campaign links will use ${localUrl}. This only works for local testing.`,
+    );
+    return localUrl;
+  }
+
+  private assertPublicTrackingUrl(url: string, nodeEnv: string): void {
+    if ((nodeEnv === "development" || nodeEnv === "test") && isLocalUrl(url)) return;
+    if (!isLocalUrl(url)) return;
+    throw new InternalServerErrorException(
+      "TRACKING_URL/BACKEND_URL cannot point to localhost outside development. Use the public backend URL that exposes /api/v1/t/*.",
+    );
+  }
 }
 
 function toStringMap(value: unknown): Record<string, string> {
@@ -276,4 +315,19 @@ function toStringMap(value: unknown): Record<string, string> {
     if (typeof entry === "string") result[key] = entry;
   }
   return result;
+}
+
+function trimTrailingSlash(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return trimmed.replace(/\/+$/, "");
+}
+
+function isLocalUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname;
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" || hostname === "::1";
+  } catch {
+    return false;
+  }
 }
