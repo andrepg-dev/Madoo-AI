@@ -11,6 +11,7 @@ export const VariableSpecSchema = z.object({
   label: z.string().optional(),
   default: z.string(),
   role: z.enum(["text", "url", "image", "date"]).optional(),
+  scope: z.enum(["dynamic", "static"]).default("dynamic"),
 });
 
 /** Backward-compatible parser for older key/type payloads emitted by earlier prompts. */
@@ -62,6 +63,7 @@ export function parseVariableSchemaJson(raw: unknown): VariableSchemaRoot {
         label: entry.label ?? entry.description ?? entry.key,
         default: "",
         role: entry.type === "url" ? "url" : "text",
+        scope: "dynamic",
       });
     }),
   };

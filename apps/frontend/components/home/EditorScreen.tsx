@@ -43,6 +43,8 @@ type ChatMessage = {
   value: string;
 };
 
+type VariableScope = "dynamic" | "static";
+
 export function EditorScreen({
   emailId,
   genSummary,
@@ -75,6 +77,7 @@ export function EditorScreen({
   const [busy, setBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [variableDefaults, setVariableDefaults] = useState<Record<string, string>>({});
+  const [variableScopes, setVariableScopes] = useState<Record<string, VariableScope>>({});
   const [variableSaveMessage, setVariableSaveMessage] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [activeStreamingId, setActiveStreamingId] = useState<string | null>(null);
@@ -167,7 +170,14 @@ export function EditorScreen({
         variable.default,
       ]) ?? [],
     );
+    const nextScopes = Object.fromEntries(
+      activeVariant?.variableSchema.variables.map((variable) => [
+        variable.name,
+        (variable.scope ?? "dynamic") as VariableScope,
+      ]) ?? [],
+    );
     setVariableDefaults(nextDefaults);
+    setVariableScopes(nextScopes);
     setVariableSaveMessage(null);
     updateVariables.reset();
   }, [activeVariant?.id]);
@@ -178,16 +188,20 @@ export function EditorScreen({
       variables: activeVariant.variableSchema.variables.map((variable) => ({
         ...variable,
         default: variableDefaults[variable.name] ?? variable.default,
+        scope: variableScopes[variable.name] ?? (variable.scope ?? "dynamic"),
       })),
     };
-  }, [activeVariant?.variableSchema.variables, variableDefaults]);
+  }, [activeVariant?.variableSchema.variables, variableDefaults, variableScopes]);
 
   const variablesDirty = useMemo(() => {
     if (!activeVariant?.variableSchema.variables.length) return false;
     return activeVariant.variableSchema.variables.some(
-      (variable) => (variableDefaults[variable.name] ?? variable.default) !== variable.default,
+      (variable) =>
+        (variableDefaults[variable.name] ?? variable.default) !== variable.default ||
+        (variableScopes[variable.name] ?? (variable.scope ?? "dynamic")) !==
+          (variable.scope ?? "dynamic"),
     );
-  }, [activeVariant?.variableSchema.variables, variableDefaults]);
+  }, [activeVariant?.variableSchema.variables, variableDefaults, variableScopes]);
 
   const saveVariables = useCallback(async () => {
     if (!activeVariant || !variableSchemaDraft || updateVariables.isPending) return;
@@ -498,10 +512,29 @@ export function EditorScreen({
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {activeVariant.variableSchema.variables.map((variable) => {
                   const currentDefault = variableDefaults[variable.name] ?? variable.default;
+                  const currentScope = variableScopes[variable.name] ?? (variable.scope ?? "dynamic");
                   return (
                     <div key={variable.name} style={{ display: "grid", gap: 6 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600 }}>
-                        {variable.label ?? variable.name}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>
+                          {variable.label ?? variable.name}
+                        </div>
+                        <Button
+                          variant={currentScope === "dynamic" ? "accent" : "secondary"}
+                          size="sm"
+                          onClick={() =>
+                            setVariableScopes((prev) => ({
+                              ...prev,
+                              [variable.name]:
+                                (prev[variable.name] ?? (variable.scope ?? "dynamic")) === "dynamic"
+                                  ? "static"
+                                  : "dynamic",
+                            }))
+                          }
+                          style={{ marginLeft: "auto", textTransform: "capitalize" }}
+                        >
+                          {currentScope}
+                        </Button>
                       </div>
                       <input
                         value={currentDefault}
@@ -518,9 +551,11 @@ export function EditorScreen({
                           fontFamily: "inherit",
                         }}
                       />
-                      <Button variant="secondary" size="sm" block disabled>
-                        Map to contact field (Phase 2)
-                      </Button>
+                      <div style={{ fontSize: 11, color: "var(--ink-faint)" }}>
+                        {currentScope === "dynamic"
+                          ? "Mapped in campaigns"
+                          : "Static value (not mapped in campaigns)"}
+                      </div>
                     </div>
                   );
                 })}

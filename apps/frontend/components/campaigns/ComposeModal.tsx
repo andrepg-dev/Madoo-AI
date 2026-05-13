@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { auditLogKeys } from "@/actions/audit-log";
+import { campaignsApi, campaignsKeys } from "@/actions/campaigns";
+import { domainsApi, domainsKeys } from "@/actions/domains";
+import { segmentsApi, segmentsKeys } from "@/actions/segments";
+import { useEmails } from "@/hooks/use-emails";
+import { useWorkspaces } from "@/hooks/use-workspaces";
+import { useWorkspaceStore } from "@/stores/workspace";
+import type { Contact } from "@madoo/shared";
 import {
   Banner,
   Button,
@@ -11,19 +16,14 @@ import {
   Input,
   Modal,
   ProgressBar,
-  SelectableCard,
   Select,
+  SelectableCard,
   Tag,
 } from "@madoo/ui";
-import type { Contact } from "@madoo/shared";
-import { useEmails } from "@/hooks/use-emails";
-import { useWorkspaces } from "@/hooks/use-workspaces";
-import { useWorkspaceStore } from "@/stores/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { campaignsApi, campaignsKeys } from "@/actions/campaigns";
-import { segmentsApi, segmentsKeys } from "@/actions/segments";
-import { auditLogKeys } from "@/actions/audit-log";
-import { domainsApi, domainsKeys } from "@/actions/domains";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const SEGMENT_ACCENTS = ["#1F1A12", "#2F5C42", "#A87E54", "#A23E2F", "#5B5FCB"] as const;
 const ALL_CONTACTS_ID = "__all__";
@@ -58,7 +58,12 @@ function isNonEmptyEmail(value: string): boolean {
 }
 
 type VarMap = Record<string, { field: string | null }>;
-const EMPTY_VARIABLES: Array<{ name: string; default: string; label?: string }> = [];
+const EMPTY_VARIABLES: Array<{
+  name: string;
+  default: string;
+  label?: string;
+  scope: "dynamic" | "static";
+}> = [];
 
 const BASE_CONTACT_FIELD_OPTIONS = [
   { value: "contact.email", label: "Email" },
@@ -240,7 +245,10 @@ export function ComposeModal({
 
 
   const variableSpecs = useMemo(
-    () => currentVariant?.variableSchema.variables ?? EMPTY_VARIABLES,
+    () =>
+      (currentVariant?.variableSchema.variables ?? EMPTY_VARIABLES).filter(
+        (variable) => (variable.scope ?? "dynamic") === "dynamic",
+      ),
     [currentVariant],
   );
 
@@ -628,20 +636,33 @@ export function ComposeModal({
                     border: "1px solid var(--border-soft)",
                   }}
                 >
-                  {lastVariant?.compiledHtml ? (
-                    <iframe
-                      title=""
-                      sandbox="allow-same-origin"
-                      srcDoc={lastVariant.compiledHtml}
+                  {lastVariant?.previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={lastVariant.previewUrl}
+                      alt={mail.title?.trim() || "Email preview"}
                       style={{
-                        width: 240,
-                        height: 320,
-                        border: "none",
-                        transform: "scale(0.3)",
-                        transformOrigin: "top left",
-                        pointerEvents: "none",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        objectPosition: "top",
                       }}
                     />
+                  ) : lastVariant?.compiledHtml ? (
+                    <div style={{ width: "100%", height: "100%", overflow: "hidden", background: "#fff" }}>
+                      <iframe
+                        title={mail.title?.trim() || "Email preview"}
+                        srcDoc={lastVariant.compiledHtml}
+                        sandbox="allow-same-origin"
+                        scrolling="no"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          border: "none",
+                          pointerEvents: "none",
+                        }}
+                      />
+                    </div>
                   ) : (
                     <div style={{ fontSize: 10, color: "var(--ink-faint)", padding: 8 }}>No preview</div>
                   )}
@@ -770,6 +791,11 @@ export function ComposeModal({
             <b>{matchedCount.toLocaleString()} / {variableSpecs.length.toLocaleString()} mapped.</b>{" "}
             Unmapped or empty fields use each variable default.
           </Banner>
+          {currentVariant && variableSpecs.length === 0 ? (
+            <Banner tone="info">
+              No dynamic variables in this email variant. Static variables are kept in the template and are not mapped here.
+            </Banner>
+          ) : null}
           {!currentVariant && (
             <Banner tone="warn">
               No real email variant found yet. Generate an email first to map `variableSchema` values.
@@ -1099,20 +1125,33 @@ export function ComposeModal({
                 border: "1px solid var(--border-soft)",
               }}
             >
-              {currentVariant?.compiledHtml ? (
-                <iframe
-                  title=""
-                  sandbox="allow-same-origin"
-                  srcDoc={currentVariant.compiledHtml}
+              {currentVariant?.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentVariant.previewUrl}
+                  alt={emailHeadline}
                   style={{
-                    width: 240,
-                    height: 300,
-                    border: "none",
-                    transform: "scale(0.28)",
-                    transformOrigin: "top left",
-                    pointerEvents: "none",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: "top",
                   }}
                 />
+              ) : currentVariant?.compiledHtml ? (
+                <div style={{ width: "100%", height: "100%", overflow: "hidden", background: "#fff" }}>
+                  <iframe
+                    title={emailHeadline}
+                    srcDoc={currentVariant.compiledHtml}
+                    sandbox="allow-same-origin"
+                    scrolling="no"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                      pointerEvents: "none",
+                    }}
+                  />
+                </div>
               ) : (
                 <div style={{ fontSize: 10, padding: 6, color: "var(--ink-faint)" }}>No preview</div>
               )}

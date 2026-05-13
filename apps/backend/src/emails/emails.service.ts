@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
@@ -26,6 +27,7 @@ import { S3Service } from "../s3/s3.service";
 @Injectable()
 export class EmailsService {
   private readonly logger = new Logger(EmailsService.name);
+  private static readonly PREVIEW_MAX_ATTEMPTS = 3;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -165,28 +167,48 @@ export class EmailsService {
     return this.toDto(email.id);
   }
 
-  private async createPreviewUrl(compiledHtml: string): Promise<string | null> {
-    try {
-      const buffer = await this.screenshot.screenshotHtml(compiledHtml);
-      return await this.s3.uploadBuffer(buffer, "image/png", "email-previews");
-    } catch (err) {
-      this.logger.warn(
-        `Template preview image save failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      return null;
+  private async createPreviewUrl(compiledHtml: string): Promise<string> {
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= EmailsService.PREVIEW_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const buffer = await this.screenshot.screenshotHtml(compiledHtml);
+        return await this.s3.uploadBuffer(buffer, "image/png", "email-previews");
+      } catch (err) {
+        lastErr = err;
+        this.logger.warn(
+          `Template preview image save failed (attempt ${attempt}/${EmailsService.PREVIEW_MAX_ATTEMPTS}): ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
+    throw new InternalServerErrorException(
+      `Failed to generate template preview image after ${EmailsService.PREVIEW_MAX_ATTEMPTS} attempts. Last error: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+    );
   }
 
   async saveTemplate(emailId: string, workspaceId: string, userId: string): Promise<void> {
     await this.workspaces.assertMembership(userId, workspaceId);
     const email = await this.prisma.email.findFirst({
       where: { id: emailId, workspaceId },
-      select: { id: true, templateId: true, templateSavedAt: true },
+      select: {
+        id: true,
+        templateId: true,
+        templateSavedAt: true,
+        variants: {
+          orderBy: { seq: "desc" },
+          take: 1,
+          select: { id: true, compiledHtml: true },
+        },
+      },
     });
     if (!email) throw new NotFoundException("Email not found.");
     if (!email.templateId) throw new BadRequestException("Email is not a pre-built template email.");
     if (email.templateSavedAt) throw new BadRequestException("Template already saved.");
+    const latestVariant = email.variants[0];
+    if (!latestVariant) {
+      throw new BadRequestException("Template email has no variant to preview.");
+    }
     await this.billing.assertCanGenerate(workspaceId);
+    const previewUrl = await this.createPreviewUrl(latestVariant.compiledHtml);
     await this.prisma.$transaction([
       this.prisma.emailGenerationRun.create({
         data: {
@@ -199,6 +221,10 @@ export class EmailsService {
       this.prisma.email.update({
         where: { id: emailId },
         data: { templateSavedAt: new Date() },
+      }),
+      this.prisma.emailVariant.update({
+        where: { id: latestVariant.id },
+        data: { previewUrl },
       }),
     ]);
   }
@@ -224,7 +250,14 @@ export class EmailsService {
       variant.componentCode,
       renderVariables,
     );
-    const previewUrl = await this.createPreviewUrl(compiledHtml);
+    let previewUrl: string | null = null;
+    try {
+      previewUrl = await this.createPreviewUrl(compiledHtml);
+    } catch (err) {
+      this.logger.warn(
+        `Variable schema preview refresh failed for variant ${variantId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     await this.prisma.emailVariant.update({
       where: { id: variantId },
