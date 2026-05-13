@@ -57,6 +57,10 @@ function isNonEmptyEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function isAllContactsSegmentName(name: string): boolean {
+  return name.trim().toLowerCase() === "all contacts";
+}
+
 type VarMap = Record<string, { field: string | null }>;
 const EMPTY_VARIABLES: Array<{
   name: string;
@@ -159,6 +163,17 @@ export function ComposeModal({
     queryFn: () => domainsApi.list(),
     staleTime: 60_000,
   });
+  const savedAllContactsSegment = useMemo(
+    () => (segmentsQuery.data ?? []).find((segment) => isAllContactsSegmentName(segment.name)) ?? null,
+    [segmentsQuery.data],
+  );
+  const visibleSegments = useMemo(
+    () =>
+      (segmentsQuery.data ?? []).filter(
+        (segment) => !isAllContactsSegmentName(segment.name),
+      ),
+    [segmentsQuery.data],
+  );
   const resumeQuery = useQuery({
     queryKey: campaignsKeys.detail(resumeId!),
     queryFn: () => campaignsApi.get(resumeId!),
@@ -176,16 +191,18 @@ export function ComposeModal({
   }, [verifiedDomain]);
 
   const fromEmail = `${fromEmailPrefix}@${fromEmailDomain}`;
+  const isSavedAllContactsSelected =
+    Boolean(savedAllContactsSegment) && segmentId === savedAllContactsSegment?.id;
+  const isAllContacts = segmentId === ALL_CONTACTS_ID || isSavedAllContactsSelected;
 
   const previewQuery = useQuery({
     queryKey: segmentsKeys.preview(segmentId),
     queryFn: () => segmentsApi.preview(segmentId),
-    enabled: Boolean(segmentId) && segmentId !== ALL_CONTACTS_ID,
+    enabled: Boolean(segmentId) && !isAllContacts,
     staleTime: 30_000,
   });
 
   const audCount = previewQuery.data?.count ?? 0;
-  const isAllContacts = segmentId === ALL_CONTACTS_ID;
 
   useEffect(() => {
     if (resumeId || preSelectedEmailId) return;
@@ -241,7 +258,9 @@ export function ComposeModal({
       ? selectedEmail.variants[selectedEmail.variants.length - 1]
       : null;
 
-  const segmentRow = segmentsQuery.data?.find((item) => item.id === segmentId) ?? segmentsQuery.data?.[0];
+  const segmentRow = isAllContacts
+    ? null
+    : segmentsQuery.data?.find((item) => item.id === segmentId) ?? visibleSegments[0] ?? null;
 
 
   const variableSpecs = useMemo(
@@ -327,10 +346,9 @@ export function ComposeModal({
     if (!segmentId || !emailId || !selectedEmail) throw new Error("Select an email and a segment.");
 
     let resolvedSegmentId = segmentId;
-    if (segmentId === ALL_CONTACTS_ID) {
-      const existing = segmentsQuery.data?.find((s) => s.name === "All contacts");
-      if (existing) {
-        resolvedSegmentId = existing.id;
+    if (isAllContacts) {
+      if (savedAllContactsSegment) {
+        resolvedSegmentId = savedAllContactsSegment.id;
       } else {
         const created = await segmentsApi.create({ name: "All contacts", query: {} });
         resolvedSegmentId = created.id;
@@ -716,13 +734,13 @@ export function ComposeModal({
           {/* All contacts virtual entry */}
           {[
             { id: ALL_CONTACTS_ID, name: "All contacts", accent: "var(--accent)" },
-            ...(segmentsQuery.data ?? []).map((s, idx) => ({
+            ...visibleSegments.map((s, idx) => ({
               id: s.id,
               name: s.name,
               accent: SEGMENT_ACCENTS[idx % SEGMENT_ACCENTS.length]!,
             })),
           ].map((s) => {
-            const selected = segmentId === s.id;
+            const selected = s.id === ALL_CONTACTS_ID ? isAllContacts : segmentId === s.id;
             return (
               <button
                 key={s.id}
