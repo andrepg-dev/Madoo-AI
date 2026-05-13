@@ -90,6 +90,14 @@ const FEW_SHOT_TEXT = [
 const CHAT_HISTORY_LIMIT = 8;
 const CODE_CONTEXT_LIMIT = 24_000;
 const CODE_CONTEXT_HEAD_RATIO = 0.65;
+const PREVIEW_MAX_ATTEMPTS = 3;
+const SUBJECT_PLACEHOLDER_PATTERNS = [
+  /\{\{[^}]+\}\}/,
+  /\$\{[^}]+\}/,
+  /%\{[^}]+\}/,
+  /<%[^%]+%>/,
+  /\[\[[^\]]+\]\]/,
+];
 const DISALLOWED_GENERATED_VARIABLE_PATTERNS = [
   /cta.*(label|text|copy)/i,
   /button.*(label|text|copy)/i,
@@ -119,6 +127,10 @@ function buildCodeContextSnippet(code: string, maxChars: number): string {
   ].join("\n");
 }
 
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function sanitizeGeneratedVariableSchema(schema: VariableSchemaRoot): VariableSchemaRoot {
   return {
     variables: schema.variables
@@ -130,6 +142,28 @@ function sanitizeGeneratedVariableSchema(schema: VariableSchemaRoot): VariableSc
       })
       .slice(0, 8),
   };
+}
+
+function assertStaticSubject(subject: string, variableSchema: VariableSchemaRoot): void {
+  const normalized = subject.trim();
+  if (!normalized) {
+    throw new BadRequestException("Subject cannot be empty.");
+  }
+
+  if (SUBJECT_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    throw new BadRequestException(
+      "Subject must be static plain text. Do not use placeholders or template syntax.",
+    );
+  }
+
+  for (const variable of variableSchema.variables) {
+    const pattern = new RegExp(`\\b${escapeRegExp(variable.name)}\\b`, "i");
+    if (pattern.test(normalized)) {
+      throw new BadRequestException(
+        `Subject must not reference variable names. Found: ${variable.name}`,
+      );
+    }
+  }
 }
 
 
@@ -289,6 +323,30 @@ export class GenerationService {
       _max: { seq: true },
     });
     return (agg._max.seq ?? 0) + 1;
+  }
+
+  private async createAndPersistVariantPreview(
+    variantId: string,
+    compiledHtml: string,
+  ): Promise<string | null> {
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= PREVIEW_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const buffer = await this.screenshot.screenshotHtml(compiledHtml);
+        const previewUrl = await this.s3.uploadBuffer(buffer, "image/png");
+        await this.prisma.emailVariant.update({
+          where: { id: variantId },
+          data: { previewUrl },
+        });
+        return previewUrl;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    console.warn(
+      `[GenerationService] preview screenshot failed after ${PREVIEW_MAX_ATTEMPTS} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+    );
+    return null;
   }
 
   private async runInitial(
@@ -597,6 +655,7 @@ export class GenerationService {
           variableSchema = sanitizeGeneratedVariableSchema(
             parseVariableSchemaJson(input.variableSchema),
           );
+          assertStaticSubject(input.subject, variableSchema);
           emit({
             type: "meta",
             attempt: attempts,
@@ -680,17 +739,17 @@ export class GenerationService {
       });
 
       emit({ type: "step", message: "Generating preview screenshot…" });
-      try {
-        const buffer = await this.screenshot.screenshotHtml(compiledHtml);
-        const previewUrl = await this.s3.uploadBuffer(buffer, "image/png");
-        await this.prisma.emailVariant.update({
-          where: { id: variant.id },
-          data: { previewUrl },
-        });
+      const previewUrl = await this.createAndPersistVariantPreview(
+        variant.id,
+        compiledHtml,
+      );
+      if (previewUrl) {
         emit({ type: "preview_url", value: previewUrl });
-      } catch (screenshotErr) {
-        // Non-fatal: log and continue without preview
-        console.warn("[GenerationService] preview screenshot failed:", screenshotErr);
+      } else {
+        emit({
+          type: "meta",
+          warning: "Preview image generation failed; email HTML still saved.",
+        });
       }
 
       await this.prisma.email.update({
