@@ -51,6 +51,30 @@ const EMIT_EMAIL_TOOL: Tool = {
         type: "array",
         description:
           "Array of merge-field specs: { name, label?, default, role?, scope }. scope must be 'dynamic' or 'static'. Keep it small and only include meaningful fields.",
+        items: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description:
+                "Camel-case variable name used as the React prop, for example recipientName or ctaUrl.",
+            },
+            label: { type: "string" },
+            default: { type: "string" },
+            role: {
+              type: "string",
+              enum: ["text", "url", "image", "date"],
+              description:
+                "Data type only. Do not put variable identity values like recipient_name here.",
+            },
+            scope: {
+              type: "string",
+              enum: ["dynamic", "static"],
+            },
+          },
+          required: ["name", "default", "scope"],
+          additionalProperties: false,
+        },
       },
     },
     required: ["subject", "componentCode", "variableSchema"],
@@ -65,6 +89,7 @@ const STATIC_INSTRUCTION = [
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
+  "role is optional and must only be one of: text, url, image, date. Never use role for variable identity such as recipient_name or company_name; put identity in name.",
   "Every variable must set scope: dynamic or static.",
   "Use scope=dynamic for recipient/contact-driven data mapped at send time (recipientName, companyName, ctaUrl, planName, invoiceNumber, dates from CRM).",
   "Use scope=static for campaign constants that stay fixed for all recipients in same send (heroTitle, offerText, footerLine, buttonLabel, feature bullets).",

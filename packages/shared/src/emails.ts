@@ -13,15 +13,24 @@ export const VariableSpecSchema = z.object({
   role: z.enum(["text", "url", "image", "date"]).optional(),
   scope: z.enum(["dynamic", "static"]).default("dynamic"),
 });
+type VariableRole = NonNullable<z.infer<typeof VariableSpecSchema>["role"]>;
 
-/** Backward-compatible parser for older key/type payloads emitted by earlier prompts. */
-const LegacyVariableSpecSchema = z.object({
-  key: z.string().min(1),
-  label: z.string().optional(),
-  type: z.enum(["string", "number", "boolean", "url"]).optional(),
-  description: z.string().optional(),
-  required: z.boolean().optional(),
-});
+const RawVariableSpecSchema = z
+  .object({
+    name: z.string().min(1).optional(),
+    key: z.string().min(1).optional(),
+    label: z.string().optional(),
+    default: z.unknown().optional(),
+    role: z.unknown().optional(),
+    type: z.enum(["string", "number", "boolean", "url"]).optional(),
+    description: z.string().optional(),
+    required: z.boolean().optional(),
+    scope: z.enum(["dynamic", "static"]).optional(),
+  })
+  .passthrough()
+  .refine((entry) => entry.name || entry.key, {
+    message: "Variable must include name or key.",
+  });
 
 export const VariableSchemaRootSchema = z.object({
   variables: z.array(VariableSpecSchema),
@@ -45,24 +54,58 @@ function normalizeLegacyName(name: string): string {
   return prefixed.replace(/[^a-zA-Z0-9_$]/g, "");
 }
 
+function normalizeVariableName(name: string): string {
+  const trimmed = name.trim();
+  return JsIdentifierSchema.safeParse(trimmed).success
+    ? trimmed
+    : normalizeLegacyName(trimmed);
+}
+
+function stringifyDefault(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  return typeof value === "string" ? value : String(value);
+}
+
+function normalizeVariableRole(role: unknown, type?: string): VariableRole | undefined {
+  const value = typeof role === "string" ? role.trim().toLowerCase() : "";
+  if (value === "text" || value === "url" || value === "image" || value === "date") {
+    return value;
+  }
+
+  const hint = value || type || "";
+  if (!hint) return undefined;
+  if (/url|link|href/.test(hint)) return "url";
+  if (/image|photo|picture|avatar|logo/.test(hint)) return "image";
+  if (/date|time|day|deadline/.test(hint)) return "date";
+  return "text";
+}
+
 export function parseVariableSchemaJson(raw: unknown): VariableSchemaRoot {
   const parsed = z
     .union([
       z.object({
-        variables: z.array(z.union([VariableSpecSchema, LegacyVariableSpecSchema])),
+        variables: z.array(RawVariableSpecSchema),
       }),
-      z.array(z.union([VariableSpecSchema, LegacyVariableSpecSchema])),
+      z.array(RawVariableSpecSchema),
     ])
     .parse(raw);
   const entries = Array.isArray(parsed) ? parsed : parsed.variables;
   return {
     variables: entries.map((entry) => {
-      if ("name" in entry) return VariableSpecSchema.parse(entry);
+      if ("name" in entry && entry.name) {
+        return VariableSpecSchema.parse({
+          name: normalizeVariableName(entry.name),
+          label: entry.label,
+          default: stringifyDefault(entry.default),
+          role: normalizeVariableRole(entry.role, entry.type),
+          scope: entry.scope ?? "dynamic",
+        });
+      }
       return VariableSpecSchema.parse({
-        name: normalizeLegacyName(entry.key),
+        name: normalizeLegacyName(entry.key ?? "value"),
         label: entry.label ?? entry.description ?? entry.key,
-        default: "",
-        role: entry.type === "url" ? "url" : "text",
+        default: stringifyDefault(entry.default),
+        role: normalizeVariableRole(entry.role, entry.type) ?? "text",
         scope: "dynamic",
       });
     }),
