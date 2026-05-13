@@ -308,7 +308,6 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               {emails.slice(0, 12).map((email) => {
                 const latest = email.variants[email.variants.length - 1];
                 const preview = latest?.previewUrl ?? null;
-                const compiledPreview = latest?.compiledHtml ?? null;
                 const goTo = email.status === "DRAFT" ? `/emails/${email.id}/generate` : `/emails/${email.id}/editor`;
                 return (
                   <button
@@ -345,19 +344,21 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                           alt={email.title ?? "Email preview"}
                           style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
                         />
-                      ) : compiledPreview ? (
-                        <iframe
-                          title={`${email.title ?? "Email"} preview`}
-                          srcDoc={compiledPreview}
-                          sandbox="allow-same-origin"
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            border: "none",
-                            pointerEvents: "none",
-                            background: "#fff",
-                          }}
-                        />
+                      ) : latest?.compiledHtml ? (
+                        <div style={{ width: "100%", height: "100%", overflow: "hidden", background: "#fff" }}>
+                          <iframe
+                            title={email.title ?? "Email preview"}
+                            srcDoc={latest.compiledHtml}
+                            sandbox="allow-same-origin"
+                            scrolling="no"
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              border: "none",
+                              pointerEvents: "none",
+                            }}
+                          />
+                        </div>
                       ) : (
                         <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth={1.5}>
                           <rect x={2} y={4} width={20} height={16} rx={2} />
