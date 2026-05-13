@@ -178,6 +178,7 @@ select:focus-visible {
 
 .ai-conversation-markdown {
   color: inherit;
+  font-size: 14px;
 }
 
 .ai-conversation-markdown p {
