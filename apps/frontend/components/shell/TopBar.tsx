@@ -8,7 +8,7 @@ import { ApiError } from "@/lib/api/fetch-wrapper";
 import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
 import { useAuthStore } from "@/stores/auth";
 import { useSidebarStore } from "@/stores/sidebar";
-import { PLAN_LIMITS } from "@madoo/shared";
+import { PLAN_DISPLAY_NAMES, PLAN_LIMITS } from "@madoo/shared";
 import {
   Avatar,
   Button,
@@ -113,6 +113,8 @@ export function TopBar() {
   };
 
   // AI generation credits data
+  const currentPlan = billingQuery.data?.subscription.plan;
+  const showFreePlanUpgrade = mounted && Boolean(user) && currentPlan === "FREE";
   const genUsed = billingQuery.data?.usage.aiGenerations.used ?? 0;
   const genLimit = billingQuery.data?.usage.aiGenerations.limit ?? PLAN_LIMITS.FREE.aiGenerations;
   const genUnlimited = genLimit === -1;
@@ -229,11 +231,41 @@ export function TopBar() {
         </div>
 
         {/* ── Center: ⌘K search trigger ── */}
+        {showFreePlanUpgrade ? (
+          <button
+            type="button"
+            className="topbar-upgrade-prompt"
+            onClick={() => router.push("/settings/billing")}
+            aria-label="Upgrade from Free plan"
+            style={{
+              marginLeft: "auto",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              height: 30,
+              padding: "0 11px",
+              borderRadius: 8,
+              border: "1px solid var(--border)",
+              background: "var(--surface)",
+              color: "var(--ink-soft)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 12,
+              fontWeight: 500,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span>{PLAN_DISPLAY_NAMES.FREE} plan</span>
+            <span aria-hidden style={{ color: "var(--ink-faint)" }}>·</span>
+            <span style={{ color: "var(--accent-deep)", fontWeight: 650 }}>Upgrade</span>
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
           style={{
-            marginLeft: "auto",
+            marginLeft: showFreePlanUpgrade ? 0 : "auto",
             display: "flex",
             alignItems: "center",
             gap: 8,

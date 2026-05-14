@@ -199,6 +199,11 @@ select:focus-visible {
     display: none !important;
   }
 }
+@media (max-width: 760px) {
+  .topbar-upgrade-prompt {
+    display: none !important;
+  }
+}
 
 /* Responsive helpers used across screens */
 .madoo-screen-pad {
