@@ -1,13 +1,13 @@
 import { HomeScreen } from "@/components/home/HomeScreen";
 import { productFaq, productFeatures, productUseCases } from "@/lib/product-marketing";
-import { siteConfig } from "@/lib/site";
+import { getCanonicalUrl, siteConfig } from "@/lib/site";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: siteConfig.title,
   description: siteConfig.description,
   alternates: {
-    canonical: "/",
+    canonical: getCanonicalUrl("/"),
   },
 };
 
@@ -17,7 +17,7 @@ const jsonLd = [
     "@type": "Organization",
     name: siteConfig.name,
     url: siteConfig.url,
-    logo: `${siteConfig.url}/madoo-transparent.png`,
+    logo: getCanonicalUrl("/madoo-transparent.png"),
   },
   {
     "@context": "https://schema.org",
@@ -26,6 +26,22 @@ const jsonLd = [
     url: siteConfig.url,
     description: siteConfig.description,
     inLanguage: "en",
+    publisher: {
+      "@type": "Organization",
+      name: siteConfig.name,
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: siteConfig.title,
+    url: getCanonicalUrl("/"),
+    description: siteConfig.description,
+    isPartOf: {
+      "@type": "WebSite",
+      name: siteConfig.name,
+      url: siteConfig.url,
+    },
   },
   {
     "@context": "https://schema.org",
@@ -34,12 +50,17 @@ const jsonLd = [
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     url: siteConfig.url,
-    image: `${siteConfig.url}${siteConfig.ogImage}`,
+    image: getCanonicalUrl(siteConfig.ogImage),
     description: siteConfig.description,
     featureList: productFeatures.map((feature) => feature.title),
+    keywords: siteConfig.keywords.join(", "),
     audience: {
       "@type": "Audience",
       audienceType: "Marketing teams, SaaS founders, ecommerce teams, agencies",
+    },
+    brand: {
+      "@type": "Brand",
+      name: siteConfig.name,
     },
     offers: {
       "@type": "Offer",
@@ -70,6 +91,18 @@ const jsonLd = [
       position: index + 1,
       name,
     })),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: getCanonicalUrl("/"),
+      },
+    ],
   },
 ];
 
