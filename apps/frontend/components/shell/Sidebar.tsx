@@ -4,7 +4,7 @@ import { billingApi, billingKeys } from "@/actions/billing";
 import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
 import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
 import { useSidebarStore } from "@/stores/sidebar";
-import { PLAN_DISPLAY_NAMES, PLAN_LIMITS, type Plan } from "@madoo/shared";
+import { PLAN_DISPLAY_NAMES, PLAN_LIMITS, PLAN_PRICES, type Plan } from "@madoo/shared";
 import { Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
@@ -153,13 +153,57 @@ export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {
         );
       })}
 
-      <BillingCard
-        plan={billingQuery.data?.subscription.plan ?? "FREE"}
-        genUsed={billingQuery.data?.usage.aiGenerations.used ?? 0}
-        genLimit={billingQuery.data?.usage.aiGenerations.limit ?? PLAN_LIMITS.FREE.aiGenerations}
-        onClick={() => router.push("/settings/billing")}
-      />
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+        <PricingShortcut onClick={() => router.push("/settings/billing")} />
+        <BillingCard
+          plan={billingQuery.data?.subscription.plan ?? "FREE"}
+          genUsed={billingQuery.data?.usage.aiGenerations.used ?? 0}
+          genLimit={billingQuery.data?.usage.aiGenerations.limit ?? PLAN_LIMITS.FREE.aiGenerations}
+          onClick={() => router.push("/settings/billing")}
+        />
+      </div>
     </aside>
+  );
+}
+
+function PricingShortcut({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Open usage and pricing"
+      style={{
+        width: "100%",
+        border: "1px solid var(--border)",
+        borderRadius: 8,
+        padding: 10,
+        background: "var(--surface-2)",
+        color: "var(--ink)",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        textAlign: "left",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700 }}>
+          <Icon name="star" size={12} /> Usage & pricing
+        </span>
+        <Icon name="chevron" size={13} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 9 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10, color: "var(--ink-faint)", fontWeight: 600 }}>Starter</div>
+          <div style={{ fontSize: 13, color: "var(--ink)", fontWeight: 700 }}>${PLAN_PRICES.STARTER}/mo</div>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10, color: "var(--ink-faint)", fontWeight: 600 }}>Growth</div>
+          <div style={{ fontSize: 13, color: "var(--ink)", fontWeight: 700 }}>${PLAN_PRICES.GROWTH}/mo</div>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--accent-deep)", fontWeight: 650, marginTop: 8 }}>
+        Compare plans
+      </div>
+    </button>
   );
 }
 
@@ -179,7 +223,7 @@ function BillingCard({
   const showUpgrade = plan !== "GROWTH";
 
   return (
-    <Card surface="secondary" padded style={{ marginTop: "auto" }}>
+    <Card surface="secondary" padded>
       <div
         style={{
           display: "flex",
