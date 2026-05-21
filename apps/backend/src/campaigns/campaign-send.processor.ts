@@ -24,6 +24,7 @@ import {
   rewriteAnchorsAndInjectPixel,
 } from "../tracking/html-tracking";
 import { CAMPAIGN_SEND_JOB, CAMPAIGN_SEND_QUEUE, type CampaignSendJobPayload } from "./campaign-send.types";
+import { resolveVariableValue, toStringMap } from "./variable-mapping";
 
 const CHUNK_SIZE = 200;
 
@@ -100,6 +101,7 @@ export class CampaignSendProcessor extends WorkerHost {
 
       const component = this.reactToHtml.compileComponent(variant.componentCode);
       const variableSchema = parseVariableSchemaJson(variant.variableSchema).variables;
+      const variableMapping = toStringMap(campaign.variableMapping);
       const appUrl = this.config.get<string>("APP_URL") ?? "http://localhost:3000";
       const secret = this.config.get<string>("JWT_SECRET") ?? "";
       const senderDomain = this.config.get<string>("SENDING_DOMAIN") ?? "madooai.com";
@@ -136,24 +138,7 @@ export class CampaignSendProcessor extends WorkerHost {
         const delivery = deliveries[idx];
         const customFields = toStringMap(contact.customFields);
         const variables = variableSchema.reduce<Record<string, string>>((acc, variable) => {
-          const fromCustom = customFields[variable.name];
-          if (typeof fromCustom === "string" && fromCustom.trim().length > 0) {
-            acc[variable.name] = fromCustom;
-            return acc;
-          }
-          if (variable.name === "email") {
-            acc[variable.name] = contact.email;
-            return acc;
-          }
-          if (variable.name === "firstName") {
-            acc[variable.name] = contact.firstName ?? variable.default;
-            return acc;
-          }
-          if (variable.name === "lastName") {
-            acc[variable.name] = contact.lastName ?? variable.default;
-            return acc;
-          }
-          acc[variable.name] = variable.default;
+          acc[variable.name] = resolveVariableValue(contact, customFields, variable, variableMapping);
           return acc;
         }, {});
 
@@ -306,15 +291,6 @@ export class CampaignSendProcessor extends WorkerHost {
       "TRACKING_URL/BACKEND_URL cannot point to localhost outside development. Use the public backend URL that exposes /api/v1/t/*.",
     );
   }
-}
-
-function toStringMap(value: unknown): Record<string, string> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  const result: Record<string, string> = {};
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof entry === "string") result[key] = entry;
-  }
-  return result;
 }
 
 function trimTrailingSlash(value: string | undefined): string | null {

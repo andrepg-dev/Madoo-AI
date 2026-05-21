@@ -23,6 +23,11 @@ import type { CreateCampaignDto } from "./dto/create-campaign.dto";
 import type { UpdateCampaignDto } from "./dto/update-campaign.dto";
 import { toCampaignRecipientDto } from "./dto/campaign-recipient.dto";
 import { toCampaignDto, type CampaignDto } from "./dto/campaign.dto";
+import {
+  resolveVariableValue,
+  sanitizeVariableMapping,
+  toStringMap,
+} from "./variable-mapping";
 
 @Injectable()
 export class CampaignsService {
@@ -50,6 +55,7 @@ export class CampaignsService {
         replyTo: dto.replyTo?.trim().toLowerCase() || null,
         abTest: dto.abTest ?? false,
         scheduledFor: dto.scheduledFor ? new Date(dto.scheduledFor) : null,
+        variableMapping: sanitizeVariableMapping(dto.variableMapping),
         status: dto.scheduledFor ? "SCHEDULED" : "DRAFT",
       },
     });
@@ -131,6 +137,8 @@ export class CampaignsService {
         replyTo: dto.replyTo !== undefined ? dto.replyTo.trim().toLowerCase() : undefined,
         abTest: dto.abTest,
         scheduledFor: dto.scheduledFor ? new Date(dto.scheduledFor) : undefined,
+        variableMapping:
+          dto.variableMapping !== undefined ? sanitizeVariableMapping(dto.variableMapping) : undefined,
       },
     });
     return toCampaignDto(row);
@@ -187,9 +195,11 @@ export class CampaignsService {
     });
 
     const component = this.reactToHtml.compileComponent(variant.componentCode);
+    const variableMapping = sanitizeVariableMapping(campaign.variableMapping);
+    const customFields = toStringMap(testContact.customFields);
     const variables = parseVariableSchemaJson(variant.variableSchema).variables.reduce<Record<string, string>>(
       (acc, variable) => {
-        acc[variable.name] = variable.default;
+        acc[variable.name] = resolveVariableValue(testContact, customFields, variable, variableMapping);
         return acc;
       },
       {},

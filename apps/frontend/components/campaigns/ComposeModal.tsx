@@ -7,7 +7,7 @@ import { segmentsApi, segmentsKeys } from "@/actions/segments";
 import { useEmails } from "@/hooks/use-emails";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useWorkspaceStore } from "@/stores/workspace";
-import type { Contact } from "@madoo/shared";
+import type { CampaignVariableMapping, Contact } from "@madoo/shared";
 import {
   Banner,
   Button,
@@ -99,6 +99,23 @@ const initialVarMap = (variableNames: string[]): VarMap =>
       name,
       {
         field: null,
+      },
+    ]),
+  );
+
+const varMapToVariableMapping = (varMap: VarMap): CampaignVariableMapping =>
+  Object.fromEntries(
+    Object.entries(varMap)
+      .map(([name, mapping]) => [name, mapping.field?.trim() ?? ""] as const)
+      .filter(([, field]) => field.length > 0),
+  );
+
+const variableMappingToVarMap = (variableMapping: CampaignVariableMapping): VarMap =>
+  Object.fromEntries(
+    Object.entries(variableMapping).map(([name, field]) => [
+      name,
+      {
+        field,
       },
     ]),
   );
@@ -235,6 +252,7 @@ export function ComposeModal({
     setFromEmailPrefix(resumePrefix);
     setFromEmailDomain(resumeDomain);
     setAbTest(row.abTest);
+    setVarMap(variableMappingToVarMap(row.variableMapping));
     if (row.scheduledFor) {
       setSchedule("later");
       const { date, time } = isoToLocalDateAndTime(row.scheduledFor);
@@ -369,6 +387,7 @@ export function ComposeModal({
       fromName: fromName.trim(),
       fromEmail: fromEmail.trim().toLowerCase(),
       abTest,
+      variableMapping: varMapToVariableMapping(varMap),
       ...(scheduledFor ? { scheduledFor } : {}),
     };
 

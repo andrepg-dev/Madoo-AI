@@ -448,6 +448,7 @@ model Campaign {
   fromEmail    String
   replyTo      String?
   abTest       Boolean        @default(false)
+  variableMapping Json         @default("{}")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

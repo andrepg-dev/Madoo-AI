@@ -1,4 +1,4 @@
-import { CampaignSchema, type Campaign } from "@madoo/shared";
+import { CampaignSchema, CampaignVariableMappingSchema, type Campaign } from "@madoo/shared";
 import type { Campaign as PrismaCampaign } from "@prisma/client";
 
 function toSharedStatus(status: PrismaCampaign["status"]): Campaign["status"] {
@@ -23,6 +23,7 @@ export function toCampaignDto(row: PrismaCampaign): CampaignDto {
     fromEmail: row.fromEmail,
     replyTo: row.replyTo ?? undefined,
     abTest: row.abTest,
+    variableMapping: CampaignVariableMappingSchema.catch({}).parse(row.variableMapping),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   });

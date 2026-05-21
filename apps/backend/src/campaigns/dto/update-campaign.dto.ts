@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsEmail, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsBoolean, IsDateString, IsEmail, IsObject, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class UpdateCampaignDto {
   @IsOptional()
@@ -29,4 +29,8 @@ export class UpdateCampaignDto {
   @IsOptional()
   @IsDateString()
   scheduledFor?: string;
+
+  @IsOptional()
+  @IsObject()
+  variableMapping?: Record<string, string>;
 }

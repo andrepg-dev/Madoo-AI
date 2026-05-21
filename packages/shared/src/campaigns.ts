@@ -13,6 +13,8 @@ export const CampaignDeliveryStatusSchema = z.enum([
   "complained",
 ]);
 
+export const CampaignVariableMappingSchema = z.record(z.string(), z.string());
+
 export const CampaignSchema = z.object({
   id: z.string().min(1),
   workspaceId: z.string().min(1),
@@ -25,6 +27,7 @@ export const CampaignSchema = z.object({
   fromEmail: z.string().email(),
   replyTo: z.string().email().optional(),
   abTest: z.boolean(),
+  variableMapping: CampaignVariableMappingSchema.default({}),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
 });
@@ -63,6 +66,7 @@ export const CreateCampaignInputSchema = z.object({
   replyTo: z.string().email().optional(),
   abTest: z.boolean().default(false),
   scheduledFor: IsoDateTimeSchema.optional(),
+  variableMapping: CampaignVariableMappingSchema.optional().default({}),
 });
 
 export const UpdateCampaignInputSchema = CreateCampaignInputSchema.partial();
@@ -82,6 +86,7 @@ export type CampaignEnqueueSendResponse = z.infer<typeof CampaignEnqueueSendResp
 
 export type CampaignStatus = z.infer<typeof CampaignStatusSchema>;
 export type CampaignDeliveryStatus = z.infer<typeof CampaignDeliveryStatusSchema>;
+export type CampaignVariableMapping = z.infer<typeof CampaignVariableMappingSchema>;
 export type Campaign = z.infer<typeof CampaignSchema>;
 export type CampaignDelivery = z.infer<typeof CampaignDeliverySchema>;
 export type CampaignRecipient = z.infer<typeof CampaignRecipientSchema>;
