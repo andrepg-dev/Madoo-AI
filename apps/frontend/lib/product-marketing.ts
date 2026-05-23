@@ -1,27 +1,27 @@
 export const productFeatures = [
   {
     title: "Prompt-to-template generation",
-    body: "Describe a launch, newsletter, sale, onboarding sequence, event invite, survey, or win-back email. Madoo AI turns the brief into responsive HTML email code and editable copy.",
+    body: "Describe a launch, newsletter, promo, onboarding email, invite, or win-back campaign. Madoo AI turns the brief into polished, responsive HTML email code.",
   },
   {
-    title: "Built-in template library",
-    body: "Start from high-converting layouts for launches, promotions, newsletters, transactional updates, growth campaigns, and customer engagement.",
+    title: "AI email design system",
+    body: "Start from clean marketing layouts or generate a template from scratch with structured sections, strong CTAs, and mobile-friendly design.",
   },
   {
-    title: "Campaign workspace",
-    body: "Create contacts, map custom fields, build segments, verify a sending domain, schedule campaigns, and track open, click, delivery, and device analytics.",
+    title: "Preview-ready templates",
+    body: "See the email before you use it, refine the layout with prompts, and keep responsive HTML ready for your email workflow.",
   },
   {
-    title: "AI editing loop",
-    body: "Revise the email with natural-language instructions, adjust tone and length, personalize for different audiences, and keep each generation in one workspace.",
+    title: "Send-ready output",
+    body: "Move from campaign idea to usable marketing email faster with structured sections, CTAs, responsive previews, and production-friendly email markup.",
   },
 ];
 
 export const productWorkflow = [
-  "Write a plain-language email brief with audience, tone, offer, and call to action.",
-  "Choose a template style or let Madoo AI design the responsive email from scratch.",
-  "Edit copy, layout, and merge fields before sending through a verified domain.",
-  "Launch the campaign and review performance from analytics dashboards.",
+  "Prompt Madoo AI with a campaign idea, audience, offer, and call to action.",
+  "Choose a template style or let the AI design the responsive email from scratch.",
+  "Preview the layout, refine sections, and keep the final HTML ready for your workflow.",
+  "Ship a polished marketing email without hand-coding the template.",
 ];
 
 export const productUseCases = [
@@ -39,7 +39,7 @@ export const productFaq = [
   {
     question: "What is Madoo AI?",
     answer:
-      "Madoo AI is an AI email template generator and campaign workspace. It creates responsive HTML email templates from prompts, helps edit email copy, manages contacts, and supports campaign sending workflows.",
+      "Madoo AI is an AI email template generator. It turns plain-language prompts into responsive HTML email templates for newsletters, launches, promos, and lifecycle emails.",
   },
   {
     question: "Who is Madoo AI for?",
@@ -49,11 +49,11 @@ export const productFaq = [
   {
     question: "Can Madoo AI create HTML email code?",
     answer:
-      "Yes. Madoo AI generates responsive email template code and previews, then lets teams refine copy, layout, tone, length, and audience targeting.",
+      "Yes. Madoo AI generates responsive email template code and previews so teams can review the design before using it in their email workflow.",
   },
   {
-    question: "Does Madoo AI help with email campaigns?",
+    question: "How is Madoo AI different from a generic AI writer?",
     answer:
-      "Yes. The workspace includes contacts, campaigns, custom sending domains, scheduling, and analytics for opens, clicks, delivery, devices, and top links.",
+      "Madoo AI is built for email design. Prompts become structured templates with sections, CTAs, responsive previews, and production-friendly HTML output.",
   },
 ];

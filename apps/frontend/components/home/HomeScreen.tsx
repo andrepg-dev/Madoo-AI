@@ -172,17 +172,17 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               fontSize: "clamp(32px, 7vw, 52px)",
               fontWeight: 400,
               lineHeight: 1.05,
-              letterSpacing: -1,
+              letterSpacing: 0,
               margin: 0,
               color: "var(--ink)",
             }}
           >
-            The world's first AI
+            AI email templates
             <br />
-            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>email template generator</span>
+            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>from any campaign idea</span>
           </h1>
           <p style={{ fontSize: 16, color: "var(--ink-soft)", marginTop: 14, lineHeight: 1.5 }}>
-            Describe it in plain words. {brand} writes, designs, and ships it.
+            Describe your campaign idea. {brand} turns it into a send-ready email template.
           </p>
         </div>
 
@@ -471,13 +471,12 @@ function MarketingSeoSections() {
           <div>
             <p className="madoo-kicker">AI email marketing workspace</p>
             <h2 className="serif madoo-seo-heading">
-              Generate responsive HTML email templates, then send smarter campaigns.
+              Vibe-code responsive HTML email templates with AI.
             </h2>
           </div>
           <p className="madoo-seo-lede">
-            Madoo AI helps teams go from a plain-language brief to a polished marketing email. It combines an AI
-            email template generator, editable email previews, contact management, sending-domain setup, campaign
-            scheduling, and analytics in one product.
+            Madoo AI turns a plain-language campaign idea into a polished marketing email. Prompt the AI, preview the
+            design, refine the layout, and use the responsive HTML in your email workflow.
           </p>
         </div>
 

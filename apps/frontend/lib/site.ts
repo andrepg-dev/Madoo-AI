@@ -2,14 +2,15 @@ export const siteConfig = {
   name: "Madoo AI",
   title: "AI Email Template Generator for Marketing Teams | Madoo AI",
   description:
-    "Create responsive HTML email templates, edit copy with AI, manage contacts, verify sending domains, and launch email campaigns from one workspace.",
-  shortDescription: "AI email template generator and campaign workspace for marketing teams.",
+    "Vibe-code responsive HTML email templates with AI. Describe your campaign, preview polished designs, and launch send-ready marketing emails faster.",
+  shortDescription: "AI email template generator for send-ready marketing emails.",
   url: getSiteUrl(),
   ogImage: "/og-image.png",
   locale: "en_US" as const,
   type: "website" as const,
   keywords: [
     "AI email template generator",
+    "generative AI email templates",
     "HTML email generator",
     "email campaign builder",
     "responsive email templates",
@@ -17,6 +18,7 @@ export const siteConfig = {
     "newsletter template generator",
     "email design software",
     "marketing email templates",
+    "Vibe code email templates"
   ],
 };
 
