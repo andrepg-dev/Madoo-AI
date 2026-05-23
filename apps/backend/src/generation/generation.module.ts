@@ -6,10 +6,16 @@ import { BillingModule } from "../billing/billing.module";
 import { GenerationService } from "./generation.service";
 import { ReactToHtmlService } from "./react-to-html.service";
 import { ScreenshotService } from "./screenshot.service";
+import { WebsiteBrandService } from "./website-brand.service";
 
 @Module({
   imports: [ConfigModule, PrismaModule, S3Module, BillingModule],
-  providers: [GenerationService, ReactToHtmlService, ScreenshotService],
+  providers: [
+    GenerationService,
+    ReactToHtmlService,
+    ScreenshotService,
+    WebsiteBrandService,
+  ],
   exports: [GenerationService, ReactToHtmlService, ScreenshotService],
 })
 export class GenerationModule {}

@@ -29,6 +29,7 @@ import { ReactToHtmlService } from "./react-to-html.service";
 import { ScreenshotService } from "./screenshot.service";
 import { S3Service } from "../s3/s3.service";
 import { SEED_TEMPLATES } from "../templates/seed-templates";
+import { WebsiteBrandService } from "./website-brand.service";
 
 const EMIT_EMAIL_TOOL: Tool = {
   name: "emit_email",
@@ -81,6 +82,28 @@ const EMIT_EMAIL_TOOL: Tool = {
   },
 };
 
+const INSPECT_WEBSITE_BRAND_TOOL: Tool = {
+  name: "inspect_website_brand",
+  description:
+    "Inspect a public website and return compact brand context for email creation: brand name, copy snippets, CTAs, colors, fonts, logo URL, favicon URL, OpenGraph image URL, and useful image URLs. Never returns image bytes.",
+  input_schema: {
+    type: "object",
+    properties: {
+      url: {
+        type: "string",
+        description:
+          "Public website URL to inspect. Use the official brand/product site when provided by the user.",
+      },
+      purpose: {
+        type: "string",
+        description:
+          "Why this website context is needed, e.g. product launch email, newsletter, welcome email, or promo campaign.",
+      },
+    },
+    required: ["url"],
+  },
+};
+
 const STATIC_INSTRUCTION = [
   "You are Madoo's transactional HTML email generator, powered by 'HTML Coditor'.",
   "Output MUST call tool emit_email once when finished only when the user request include some email modification.",
@@ -101,6 +124,10 @@ const STATIC_INSTRUCTION = [
   "variableSchema must match the component props exactly: every schema variable is destructured with a default, used in the component, and no extra props are invented.",
   "Component pattern must be: const Email = ({ ...defaults } = {}) => (<Html>...</Html>); export default Email;",
   "Subject line (emit_email.subject) must be normal marketing or transactional copy for the recipient. Never base it on environment variables, .env files, API keys, secrets, or other developer/deployment configuration topics—even if the user brief drifts there.",
+  "When the user provides a website URL or asks to match a brand/site, call inspect_website_brand before emit_email.",
+  "Use inspect_website_brand results for visual direction, copy tone, brand colors, fonts, CTA language, logo URL, and image URLs.",
+  "Never ask for or expect image bytes, base64, screenshots, or vision input. You only receive compact text metadata and asset URLs.",
+  "If brand inspection fails or returns partial context, continue with the available context and do not invent exact brand claims.",
   "CRITICAL: Do not never explain to the user how your internally work."
 ].join("\n");
 
@@ -204,6 +231,7 @@ export class GenerationService {
     private readonly reactToHtml: ReactToHtmlService,
     private readonly screenshot: ScreenshotService,
     private readonly s3: S3Service,
+    private readonly websiteBrand: WebsiteBrandService,
   ) {
     const key = this.config.get<string>("ANTHROPIC_API_KEY");
     this.model =
@@ -267,7 +295,7 @@ export class GenerationService {
       void (async () => {
         try {
           subscriber.next({
-            data: JSON.stringify({ type: "step", message: "Preparing generation…" }),
+            data: JSON.stringify({ type: "step", message: "Preparing generation..." }),
           } as MessageEvent);
           await this.runInitial(emailId, workspaceId, (payload) =>
             subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
@@ -293,7 +321,7 @@ export class GenerationService {
       void (async () => {
         try {
           subscriber.next({
-            data: JSON.stringify({ type: "step", message: "Applying AI edits…" }),
+            data: JSON.stringify({ type: "step", message: "Applying AI edits..." }),
           } as MessageEvent);
           await this.runEdit(emailId, workspaceId, body, (payload) =>
             subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
@@ -578,7 +606,7 @@ export class GenerationService {
     };
 
     try {
-      emit({ type: "step", message: "Calling Claude…" });
+      emit({ type: "step", message: "Calling Claude..." });
 
       const systemBlocks: MessageCreateParams["system"] = [
         {
@@ -593,28 +621,94 @@ export class GenerationService {
         },
       ];
 
-      const response = await this.runStream({
-        modelMessages,
-        systemBlocks,
-        emit,
-      });
-      let assistantText = response.assistantText;
-      let thinkingText = response.thinkingText;
+      let response: Awaited<ReturnType<typeof this.runStream>> | null = null;
+      let assistantText = "";
+      let thinkingText = "";
+      let turnMessages = [...modelMessages];
 
-      const u = response.usage;
-      if (u) {
-        usageTotals = {
-          input_tokens: u.input_tokens ?? 0,
-          output_tokens: u.output_tokens ?? 0,
-          cache_creation_input_tokens: u.cache_creation_input_tokens ?? 0,
-          cache_read_input_tokens: u.cache_read_input_tokens ?? 0,
-        };
+      for (let toolTurn = 0; toolTurn < 3; toolTurn += 1) {
+        response = await this.runStream({
+          modelMessages: turnMessages,
+          systemBlocks,
+          emit,
+        });
+        assistantText += response.assistantText;
+        thinkingText += response.thinkingText;
+
+        const u = response.usage;
+        if (u) {
+          usageTotals = {
+            input_tokens: usageTotals.input_tokens + (u.input_tokens ?? 0),
+            output_tokens: usageTotals.output_tokens + (u.output_tokens ?? 0),
+            cache_creation_input_tokens:
+              usageTotals.cache_creation_input_tokens +
+              (u.cache_creation_input_tokens ?? 0),
+            cache_read_input_tokens:
+              usageTotals.cache_read_input_tokens +
+              (u.cache_read_input_tokens ?? 0),
+          };
+        }
+
+        const requestedTool = response.content.find((b) => b.type === "tool_use");
+        if (!requestedTool || requestedTool.type !== "tool_use") break;
+        if (requestedTool.name === "emit_email") break;
+
+        if (requestedTool.name !== "inspect_website_brand") {
+          throw new BadRequestException(`Unsupported tool requested: ${requestedTool.name}`);
+        }
+
+        const input = requestedTool.input as { url?: unknown; purpose?: unknown };
+        if (typeof input.url !== "string" || !input.url.trim()) {
+          throw new BadRequestException("inspect_website_brand requires a URL.");
+        }
+
+        emit({ type: "step", message: "Inspecting brand website..." });
+        const brandContext = await this.websiteBrand.inspect(
+          input.url,
+          typeof input.purpose === "string" ? input.purpose : undefined,
+        );
+        emit({
+          type: "brand_context",
+          url: brandContext.url,
+          brandName: brandContext.brandName,
+          colors: brandContext.colors.map((color) => color.hex),
+          imageCount: brandContext.imageUrls.length,
+        });
+
+        turnMessages = [
+          ...turnMessages,
+          {
+            role: "assistant",
+            content: response.content,
+          } as MessageParam,
+          {
+            role: "user",
+            content: [
+              {
+                type: "tool_result",
+                tool_use_id: requestedTool.id,
+                content: JSON.stringify(brandContext),
+              },
+            ],
+          } as MessageParam,
+        ];
+      }
+
+      if (!response) {
+        throw new InternalServerErrorException("Madoo AI did not return a response.");
       }
 
       emit({
         type: "token_usage",
         ...usageTotals,
       });
+
+      const pendingToolBlock = response.content.find(
+        (b) => b.type === "tool_use" && b.name !== "emit_email",
+      );
+      if (pendingToolBlock?.type === "tool_use") {
+        throw new BadRequestException("AI inspected context but did not return the email.");
+      }
 
       const toolBlock = response.content.find(
         (b) => b.type === "tool_use" && b.name === "emit_email",
@@ -688,7 +782,7 @@ export class GenerationService {
             model: this.model,
           });
           emit({ type: "subject", value: input.subject });
-          emit({ type: "step", message: "Rendering HTML preview…" });
+          emit({ type: "step", message: "Rendering HTML preview..." });
           compiledHtml = this.reactToHtml.compile(input.componentCode, {});
           validated = true;
           break;
@@ -763,7 +857,7 @@ export class GenerationService {
         },
       });
 
-      emit({ type: "step", message: "Generating preview screenshot…" });
+      emit({ type: "step", message: "Generating preview screenshot..." });
       const previewUrl = await this.createAndPersistVariantPreview(
         variant.id,
         compiledHtml,
@@ -854,7 +948,7 @@ export class GenerationService {
       max_tokens: maxTokens,
       ...(thinking ? { thinking } : {}),
       system: args.systemBlocks,
-      tools: [EMIT_EMAIL_TOOL],
+      tools: [INSPECT_WEBSITE_BRAND_TOOL, EMIT_EMAIL_TOOL],
       messages: args.modelMessages,
     });
 
