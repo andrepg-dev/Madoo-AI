@@ -22,7 +22,7 @@ type PaidPlan = Exclude<Plan, "FREE">;
 const PLAN_FEATURES: Record<Plan | "SCALE", { label: string; included: boolean; header?: boolean }[]> = {
   FREE: [
     { label: "1 workspace", included: true },
-    { label: "100 contacts", included: true },
+    { label: "250 contacts", included: true },
     { label: "2,000 emails / month", included: true },
     { label: "5 AI generations / month", included: true },
     { label: "Full template library", included: false },

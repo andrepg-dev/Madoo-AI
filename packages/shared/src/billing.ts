@@ -20,7 +20,7 @@ export type PlanLimits = {
 };
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  FREE:    { contacts: 100,   aiGenerations: 5,   workspaces: 1  },
+  FREE:    { contacts: 250,   aiGenerations: 5,   workspaces: 1  },
   STARTER: { contacts: 1_000, aiGenerations: 100, workspaces: 5  },
   GROWTH:  { contacts: 5_000, aiGenerations: -1,  workspaces: -1 },
 };
