@@ -227,14 +227,6 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             <PromptPill label="Tone" value={tone} options={PROMPT_TONES} onChange={setTone} />
             <PromptPill label="Length" value={length} options={PROMPT_LENGTHS} onChange={setLength} />
             <PromptPill label="Audience" value={audience} options={PROMPT_AUDIENCES} onChange={setAudience} />
-            <Button
-              variant="dashed"
-              size="sm"
-              leftIcon={<Icon name="plus" size={12} />}
-              title="Add brand kit"
-            >
-              Brand kit
-            </Button>
             <div style={{ flex: 1 }} />
             <Button
               variant="primary"
