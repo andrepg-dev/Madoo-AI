@@ -164,7 +164,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               marginBottom: 18,
             }}
           >
-            <Icon name="sparkle" size={12} /> Trained on 10,000+ high-converting emails
+            <Icon name="sparkle" size={12} /> AI email generator for better templates
           </div>
           <h1
             className="serif"
@@ -177,12 +177,12 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               color: "var(--ink)",
             }}
           >
-            AI email templates
+            AI Email Generator
             <br />
-            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>from any campaign idea</span>
+            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>for Better Email Templates</span>
           </h1>
           <p style={{ fontSize: 16, color: "var(--ink-soft)", marginTop: 14, lineHeight: 1.5 }}>
-            Describe your campaign idea. {brand} turns it into a send-ready email template.
+            Describe the email you need. {brand} turns it into a polished, send-ready template.
           </p>
         </div>
 
@@ -207,7 +207,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                   void handleGenerate();
                 }
               }}
-              placeholder="e.g. Announce our new pricing to existing customers — confident but not pushy, with a soft CTA to upgrade."
+              placeholder="e.g. Write a warm product update email for active users — concise, useful, and easy to skim."
               variant="ghost"
               noResize
               rows={4}
@@ -461,14 +461,14 @@ function MarketingSeoSections() {
       <section className="madoo-home-seo" style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div className="madoo-seo-band">
           <div>
-            <p className="madoo-kicker">AI email marketing workspace</p>
+            <p className="madoo-kicker">AI email workspace</p>
             <h2 className="serif madoo-seo-heading">
-              Vibe-code responsive HTML email templates with AI.
+              Generate better email templates with AI.
             </h2>
           </div>
           <p className="madoo-seo-lede">
-            Madoo AI turns a plain-language campaign idea into a polished marketing email. Prompt the AI, preview the
-            design, refine the layout, and use the responsive HTML in your email workflow.
+            Madoo AI turns a plain-language email idea into a polished template. Prompt the AI, preview the design,
+            refine the copy, and keep responsive HTML ready for your workflow.
           </p>
         </div>
 
@@ -485,7 +485,7 @@ function MarketingSeoSections() {
       <section className="madoo-home-seo madoo-seo-split" style={{ maxWidth: 1180, margin: "0 auto" }}>
         <div>
           <p className="madoo-kicker">How it works</p>
-          <h2 className="serif madoo-seo-heading">From campaign idea to send-ready email.</h2>
+          <h2 className="serif madoo-seo-heading">From idea to send-ready email.</h2>
           <ol className="madoo-seo-steps">
             {productWorkflow.map((step) => (
               <li key={step}>{step}</li>
@@ -494,7 +494,7 @@ function MarketingSeoSections() {
         </div>
         <div>
           <p className="madoo-kicker">Use cases</p>
-          <h2 className="serif madoo-seo-heading">Built for repeatable email growth.</h2>
+          <h2 className="serif madoo-seo-heading">Built for repeatable email workflows.</h2>
           <div className="madoo-use-case-grid">
             {productUseCases.map((item) => (
               <span key={item}>{item}</span>

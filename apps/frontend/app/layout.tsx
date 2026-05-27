@@ -2,7 +2,7 @@ import { LoginModal } from "@/components/auth/LoginModal";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { AppShell } from "@/components/shell/AppShell";
-import { getCanonicalUrl, siteConfig, siteVerification } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 import "@madoo/ui/tokens.css";
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
@@ -50,23 +50,12 @@ export const metadata: Metadata = {
   creator: siteConfig.name,
   publisher: siteConfig.name,
   category: "Email marketing software",
-  alternates: {
-    canonical: getCanonicalUrl("/"),
-  },
-  manifest: "/manifest.webmanifest",
-  verification: siteVerification,
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
   icons: {
     icon: "/icon.png",
   },
   robots: {
     index: true,
     follow: true,
-    nocache: false,
     googleBot: {
       index: true,
       follow: true,
@@ -76,15 +65,15 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    type: siteConfig.type,
-    url: getCanonicalUrl("/"),
+    type: "website",
+    url: siteConfig.url,
     siteName: siteConfig.name,
-    locale: siteConfig.locale,
+    locale: "en_US",
     title: siteConfig.title,
     description: siteConfig.description,
     images: [
       {
-        url: getCanonicalUrl(siteConfig.ogImage),
+        url: siteConfig.ogImage,
         width: 1024,
         height: 516,
         alt: "Madoo AI email template generator workspace",
@@ -95,12 +84,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: siteConfig.title,
     description: siteConfig.description,
-    images: [getCanonicalUrl(siteConfig.ogImage)],
-  },
-  appleWebApp: {
-    capable: true,
-    title: siteConfig.name,
-    statusBarStyle: "default",
+    images: [siteConfig.ogImage],
   },
 };
 

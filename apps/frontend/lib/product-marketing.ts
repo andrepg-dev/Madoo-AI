@@ -1,7 +1,7 @@
 export const productFeatures = [
   {
     title: "Prompt-to-template generation",
-    body: "Describe a launch, newsletter, promo, onboarding email, invite, or win-back campaign. Madoo AI turns the brief into polished, responsive HTML email code.",
+    body: "Describe a launch, newsletter, promo, onboarding email, invite, or follow-up. Madoo AI turns the brief into polished, responsive HTML email code.",
   },
   {
     title: "AI email design system",
@@ -13,15 +13,15 @@ export const productFeatures = [
   },
   {
     title: "Send-ready output",
-    body: "Move from campaign idea to usable marketing email faster with structured sections, CTAs, responsive previews, and production-friendly email markup.",
+    body: "Move from email idea to usable template faster with structured sections, CTAs, responsive previews, and production-friendly email markup.",
   },
 ];
 
 export const productWorkflow = [
-  "Prompt Madoo AI with a campaign idea, audience, offer, and call to action.",
+  "Prompt Madoo AI with an email idea, audience, offer, and call to action.",
   "Choose a template style or let the AI design the responsive email from scratch.",
   "Preview the layout, refine sections, and keep the final HTML ready for your workflow.",
-  "Ship a polished marketing email without hand-coding the template.",
+  "Ship a polished email without hand-coding the template.",
 ];
 
 export const productUseCases = [
@@ -44,7 +44,7 @@ export const productFaq = [
   {
     question: "Who is Madoo AI for?",
     answer:
-      "Madoo AI is for founders, marketers, SaaS teams, agencies, and ecommerce teams that need professional marketing emails without hand-coding every template.",
+      "Madoo AI is for teams and creators that need professional email templates without hand-coding every layout.",
   },
   {
     question: "Can Madoo AI create HTML email code?",
@@ -54,6 +54,6 @@ export const productFaq = [
   {
     question: "How is Madoo AI different from a generic AI writer?",
     answer:
-      "Madoo AI is built for email design. Prompts become structured templates with sections, CTAs, responsive previews, and production-friendly HTML output.",
+      "Madoo AI is built for email templates. Prompts become structured layouts with sections, CTAs, responsive previews, and production-friendly HTML output.",
   },
 ];
