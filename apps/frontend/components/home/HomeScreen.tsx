@@ -179,7 +179,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           >
             AI Email Generator
             <br />
-            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>for Better Email Templates</span>
+            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>for Better & Faster Email Templates</span>
           </h1>
           <p style={{ fontSize: 16, color: "var(--ink-soft)", marginTop: 14, lineHeight: 1.5 }}>
             Describe the email you need. {brand} turns it into a polished, send-ready template.
