@@ -2,6 +2,7 @@
 
 import { auditLogKeys } from "@/actions/audit-log";
 import { campaignsApi, campaignsKeys } from "@/actions/campaigns";
+import { contactsApi, contactsKeys } from "@/actions/contacts";
 import { domainsApi, domainsKeys } from "@/actions/domains";
 import { segmentsApi, segmentsKeys } from "@/actions/segments";
 import { useEmails } from "@/hooks/use-emails";
@@ -61,6 +62,12 @@ function isAllContactsSegmentName(name: string): boolean {
   return name.trim().toLowerCase() === "all contacts";
 }
 
+function contactDisplayName(contact: Contact, index: number): string {
+  const name = `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
+  if (name) return name;
+  return contact.email?.trim() || `Contact ${index + 1}`;
+}
+
 type VarMap = Record<string, { field: string | null }>;
 const EMPTY_VARIABLES: Array<{
   name: string;
@@ -74,24 +81,6 @@ const BASE_CONTACT_FIELD_OPTIONS = [
   { value: "contact.firstName", label: "First name" },
   { value: "contact.lastName", label: "Last name" },
 ];
-
-function contactDisplayName(contact: Contact, index: number): string {
-  const name = `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim();
-  if (name) return name;
-  return contact.email?.trim() || `Contact ${index + 1}`;
-}
-
-function resolveMappedValue(contact: Contact, mappedField: string | null): string | undefined {
-  if (!mappedField) return undefined;
-  if (mappedField === "contact.email") return contact.email;
-  if (mappedField === "contact.firstName") return contact.firstName;
-  if (mappedField === "contact.lastName") return contact.lastName;
-  if (mappedField.startsWith("custom.")) {
-    const key = mappedField.slice("custom.".length);
-    return key ? contact.customFields[key] : undefined;
-  }
-  return undefined;
-}
 
 const initialVarMap = (variableNames: string[]): VarMap =>
   Object.fromEntries(
@@ -159,7 +148,6 @@ export function ComposeModal({
   const [testSuccess, setTestSuccess] = useState<string | null>(null);
 
   const [varMap, setVarMap] = useState<VarMap>({});
-  const [previewIdx, setPreviewIdx] = useState(0);
 
   const hydrateWorkspaceId = useWorkspaceStore((s) => s.hydrateWorkspaceId);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -220,6 +208,22 @@ export function ComposeModal({
   });
 
   const audCount = previewQuery.data?.count ?? 0;
+  const audienceContactsInput = useMemo(
+    () => ({
+      ...(isAllContacts ? {} : { segmentId }),
+      pageSize: 5,
+    }),
+    [isAllContacts, segmentId],
+  );
+  const audienceContactsQuery = useQuery({
+    queryKey: contactsKeys.list(audienceContactsInput),
+    queryFn: () => contactsApi.list(audienceContactsInput),
+    enabled: step === 2 && Boolean(segmentId),
+    staleTime: 30_000,
+  });
+  const audienceContacts = audienceContactsQuery.data?.items ?? [];
+  const audienceCount = audienceContactsQuery.data?.total ?? (isAllContacts ? 0 : audCount);
+  const audienceCountLoaded = Boolean(audienceContactsQuery.data);
 
   useEffect(() => {
     if (resumeId || preSelectedEmailId) return;
@@ -306,15 +310,6 @@ export function ComposeModal({
 
   const sampleContacts = isAllContacts ? [] : previewQuery.data?.sampleContacts ?? [];
 
-  const previewOptions = useMemo(
-    () =>
-      sampleContacts.map((contact, idx) => ({
-        value: String(idx),
-        label: contactDisplayName(contact, idx),
-      })),
-    [sampleContacts],
-  );
-
   const fieldOptions = useMemo(() => {
     const customFieldSet = new Set<string>();
     for (const contact of sampleContacts) {
@@ -337,10 +332,7 @@ export function ComposeModal({
     () => variableSpecs.filter((variable) => Boolean(varMap[variable.name]?.field)).length,
     [variableSpecs, varMap],
   );
-
-  useEffect(() => {
-    if (previewIdx >= previewOptions.length) setPreviewIdx(0);
-  }, [previewIdx, previewOptions.length]);
+  const hasDynamicVariables = variableSpecs.length > 0;
 
   useEffect(() => {
     const names = variableSpecs.map((variable) => variable.name);
@@ -359,6 +351,10 @@ export function ComposeModal({
       return prev;
     });
   }, [variableSpecs]);
+
+  useEffect(() => {
+    if (step === 3 && !hasDynamicVariables) setStep(4);
+  }, [hasDynamicVariables, step]);
 
   const persistDraftCampaign = async (): Promise<void> => {
     if (!segmentId || !emailId || !selectedEmail) throw new Error("Select an email and a segment.");
@@ -449,7 +445,7 @@ export function ComposeModal({
     step === 1
       ? !emailId || !currentVariant
       : step === 2
-        ? !segmentId || segmentsQuery.isPending
+        ? !segmentId || segmentsQuery.isPending || audienceContactsQuery.isPending || (audienceCountLoaded && audienceCount === 0)
         : step === 3
           ? false
           : step === 4
@@ -465,7 +461,7 @@ export function ComposeModal({
       await advanceFromScheduleStep();
       return;
     }
-    setStep((s) => s + 1);
+    setStep((s) => (s === 2 && !hasDynamicVariables ? 4 : s + 1));
   }
 
   function scheduleLabel(): string {
@@ -475,7 +471,15 @@ export function ComposeModal({
 
   const footerInner = (
     <div style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-      <Button variant="secondary" size="md" onClick={() => (step === 1 ? onClose() : setStep((s) => Math.max(1, s - 1)))}>
+      <Button
+        variant="secondary"
+        size="md"
+        onClick={() =>
+          step === 1
+            ? onClose()
+            : setStep((s) => (s === 4 && !hasDynamicVariables ? 2 : Math.max(1, s - 1)))
+        }
+      >
         {step === 1 ? "Cancel" : "Back"}
       </Button>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", marginLeft: "auto" }}>
@@ -819,212 +823,278 @@ export function ComposeModal({
               </button>
             );
           })}
+          {audienceContactsQuery.isPending && segmentId ? (
+            <Banner tone="info">Loading audience preview…</Banner>
+          ) : audienceCountLoaded && audienceCount === 0 ? (
+            <div
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                background: "var(--surface-2)",
+                padding: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 8,
+                  background: "var(--accent-soft)",
+                  color: "var(--accent-deep)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Icon name="inbox" size={15} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
+                  Add contacts before sending
+                </div>
+                <div style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 3, lineHeight: 1.4 }}>
+                  This audience has no contacts yet. Import or create contacts, then come back to send.
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  router.push("/contacts");
+                }}
+              >
+                Add contacts
+              </Button>
+            </div>
+          ) : audienceContacts.length > 0 ? (
+            <div
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                background: "var(--surface-2)",
+                padding: 14,
+                display: "grid",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
+                    Audience preview
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 3 }}>
+                    {audienceCount.toLocaleString()} contacts will receive this email.
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    onClose();
+                    router.push("/contacts");
+                  }}
+                >
+                  Manage
+                </Button>
+              </div>
+              <div style={{ display: "grid", gap: 6 }}>
+                {audienceContacts.map((contact, index) => (
+                  <div
+                    key={contact.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 9,
+                      padding: "7px 8px",
+                      border: "1px solid var(--border-soft)",
+                      borderRadius: 8,
+                      background: "var(--surface)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        background: "var(--accent-soft)",
+                        color: "var(--accent-deep)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 10,
+                        fontWeight: 800,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {contactDisplayName(contact, index).charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          fontWeight: 650,
+                          color: "var(--ink)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {contactDisplayName(contact, index)}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          color: "var(--ink-faint)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {contact.email}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
 
       {step === 3 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <Banner tone="accent">
-            <b>{matchedCount.toLocaleString()} / {variableSpecs.length.toLocaleString()} mapped.</b>{" "}
-            Unmapped or empty fields use each variable default.
-          </Banner>
-          {currentVariant && variableSpecs.length === 0 ? (
-            <Banner tone="info">
-              No dynamic variables in this email variant. Static variables are kept in the template and are not mapped here.
-            </Banner>
-          ) : null}
           {!currentVariant && (
             <Banner tone="warn">
               No real email variant found yet. Generate an email first to map `variableSchema` values.
             </Banner>
           )}
-          <div className="madoo-compose-cols" style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 14 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "110px 18px 1fr",
-                  gap: 8,
-                  padding: "0 4px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "var(--ink-faint)",
-                  letterSpacing: 0.5,
-                  textTransform: "uppercase",
-                }}
-              >
-                <div>Template variable</div>
-                <div></div>
-                <div>Contact field</div>
-              </div>
-              {variableSpecs.map((variable) => {
-                const m = varMap[variable.name];
-                const isMatched = !!m?.field;
-                return (
+          <div
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              background: "var(--surface-2)",
+              padding: 14,
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
+              Match template variables to contact fields
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.45, marginTop: 4 }}>
+              {matchedCount.toLocaleString()} of {variableSpecs.length.toLocaleString()} mapped. Unmapped fields use the template default.
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "110px 18px 1fr",
+                gap: 8,
+                padding: "0 4px",
+                fontSize: 11,
+                fontWeight: 600,
+                color: "var(--ink-faint)",
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+              }}
+            >
+              <div>Template variable</div>
+              <div></div>
+              <div>Contact field</div>
+            </div>
+            {variableSpecs.map((variable) => {
+              const m = varMap[variable.name];
+              const isMatched = !!m?.field;
+              return (
+                <div
+                  key={variable.name}
+                  style={{
+                    padding: 10,
+                    background: "var(--surface-2)",
+                    borderRadius: 9,
+                    border: "1px solid var(--border)",
+                  }}
+                >
                   <div
-                    key={variable.name}
                     style={{
-                      padding: 10,
-                      background: "var(--surface-2)",
-                      borderRadius: 9,
-                      border: "1px solid var(--border)",
+                      display: "grid",
+                      gridTemplateColumns: "110px 18px 1fr",
+                      gap: 8,
+                      alignItems: "center",
                     }}
                   >
                     <div
+                      className="mono"
                       style={{
-                        display: "grid",
-                        gridTemplateColumns: "110px 18px 1fr",
-                        gap: 8,
+                        display: "inline-flex",
                         alignItems: "center",
+                        gap: 5,
+                        padding: "5px 9px",
+                        background: "var(--accent-soft)",
+                        color: "var(--accent-deep)",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        alignSelf: "flex-start",
+                        width: "fit-content",
                       }}
                     >
-                      <div
-                        className="mono"
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 5,
-                          padding: "5px 9px",
-                          background: "var(--accent-soft)",
-                          color: "var(--accent-deep)",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          alignSelf: "flex-start",
-                          width: "fit-content",
-                        }}
-                      >
-                        {variable.name}
-                      </div>
-                      <div
-                        style={{
-                          color: "var(--ink-faint)",
-                          display: "flex",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Icon name="arrow" size={12} />
-                      </div>
-                      <Select
-                        selectSize="sm"
-                        value={m?.field ?? ""}
-                        onChange={(e) =>
-                          setVarMap((prev) => ({
-                            ...prev,
-                            [variable.name]: {
-                              ...prev[variable.name],
-                              field: e.target.value || null,
-                            },
-                          }))
-                        }
-                        options={fieldOptions}
-                        aria-label={`Field for ${variable.name}`}
-                      />
+                      {variable.name}
                     </div>
                     <div
                       style={{
+                        color: "var(--ink-faint)",
                         display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginTop: 8,
-                        paddingTop: 8,
-                        borderTop: "1px solid var(--border)",
+                        justifyContent: "center",
                       }}
                     >
-                      <span style={{ fontSize: 11, color: "var(--ink-faint)", fontWeight: 500 }}>
-                        Inline default:
-                      </span>
-                      <Tag tone="neutral" size="sm" sans>
-                        {variable.default || "(empty string)"}
-                      </Tag>
-                      {!isMatched && (
-                        <Tag tone="danger" size="sm" sans>
-                          not mapped
-                        </Tag>
-                      )}
+                      <Icon name="arrow" size={12} />
                     </div>
+                    <Select
+                      selectSize="sm"
+                      value={m?.field ?? ""}
+                      onChange={(e) =>
+                        setVarMap((prev) => ({
+                          ...prev,
+                          [variable.name]: {
+                            ...prev[variable.name],
+                            field: e.target.value || null,
+                          },
+                        }))
+                      }
+                      options={fieldOptions}
+                      aria-label={`Field for ${variable.name}`}
+                    />
                   </div>
-                );
-              })}
-            </div>
-
-            <div
-              style={{
-                background: "var(--surface-2)",
-                borderRadius: 10,
-                border: "1px solid var(--border)",
-                padding: 12,
-                height: "fit-content",
-                position: "sticky",
-                top: 0,
-              }}
-            >
-              <Select
-                label="Preview contact"
-                selectSize="sm"
-                value={String(previewIdx)}
-                onChange={(e) => setPreviewIdx(Number(e.target.value))}
-                options={previewOptions}
-                disabled={previewOptions.length === 0}
-              />
-              <div
-                style={{
-                  background: "var(--surface)",
-                  borderRadius: 7,
-                  padding: 12,
-                  marginTop: 10,
-                  border: "1px solid var(--border)",
-                  fontSize: 12,
-                  lineHeight: 1.6,
-                  color: "var(--ink)",
-                }}
-              >
-                {(() => {
-                  const contact = sampleContacts[previewIdx];
-                  if (isAllContacts) {
-                    return <div style={{ color: "var(--ink-soft)" }}>Select a segment to preview real contact values.</div>;
-                  }
-                  if (previewQuery.isFetching) {
-                    return <div style={{ color: "var(--ink-soft)" }}>Loading sample contacts…</div>;
-                  }
-                  if (!contact) {
-                    return <div style={{ color: "var(--ink-soft)" }}>No sample contacts found for this segment.</div>;
-                  }
-                  return (
-                    <>
-                      <div style={{ fontWeight: 600 }}>Preview values for {contactDisplayName(contact, previewIdx)}</div>
-                      <div style={{ marginTop: 6, color: "var(--ink-soft)", display: "flex", flexDirection: "column", gap: 4 }}>
-                        {variableSpecs.length === 0 ? (
-                          <span>No variables found in current variant.</span>
-                        ) : (
-                          variableSpecs.map((variable) => {
-                            const mappedField = varMap[variable.name]?.field ?? null;
-                            const mappedValue = resolveMappedValue(contact, mappedField);
-                            const resolved = mappedValue?.trim() ? mappedValue : variable.default;
-                            return (
-                              <div key={variable.name}>
-                                <span className="mono">{variable.name}</span>: {resolved || "(empty string)"}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-              <div
-                style={{
-                  fontSize: 10.5,
-                  color: "var(--ink-faint)",
-                  marginTop: 8,
-                  lineHeight: 1.4,
-                  fontStyle: "italic",
-                }}
-              >
-                Pick a real sample contact to verify your mapping before send.
-              </div>
-            </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginTop: 8,
+                      paddingTop: 8,
+                      borderTop: "1px solid var(--border)",
+                    }}
+                  >
+                    <span style={{ fontSize: 11, color: "var(--ink-faint)", fontWeight: 500 }}>
+                      Inline default:
+                    </span>
+                    <Tag tone="neutral" size="sm" sans>
+                      {variable.default || "(empty string)"}
+                    </Tag>
+                    {!isMatched && (
+                      <Tag tone="danger" size="sm" sans>
+                        not mapped
+                      </Tag>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1079,7 +1149,7 @@ export function ComposeModal({
               selected={schedule === "now"}
               onClick={() => setSchedule("now")}
               title="Send now"
-              description={isAllContacts ? "Goes out immediately to all your contacts" : `Goes out immediately to ${audCount.toLocaleString()} contacts`}
+              description={`Goes out immediately to ${audienceCount.toLocaleString()} contacts`}
             />
             <SelectableCard
               padded
@@ -1223,7 +1293,12 @@ export function ComposeModal({
             [
               ["Email", emailHeadline],
               ["Subject", currentVariant?.subject ?? "—"],
-              ["Audience", isAllContacts ? "All contacts" : `${segmentRow?.name ?? "—"} (${audCount.toLocaleString()} contacts)`],
+              [
+                "Audience",
+                isAllContacts
+                  ? `All contacts (${audienceCount.toLocaleString()} contacts)`
+                  : `${segmentRow?.name ?? "—"} (${audienceCount.toLocaleString()} contacts)`,
+              ],
               ["Schedule", scheduleLabel()],
               ["A/B test", abTest ? "Flagged — routing later" : "No"],
               ["From", `${fromName.trim()} <${fromEmail.trim().toLowerCase()}>`],
