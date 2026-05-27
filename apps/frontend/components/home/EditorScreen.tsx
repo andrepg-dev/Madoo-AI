@@ -12,6 +12,7 @@ import {
   Button,
   Icon,
   IconButton,
+  Modal,
   SegmentedControl,
   Textarea,
 } from "@madoo/ui";
@@ -19,6 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
+  type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -45,6 +47,15 @@ type ChatMessage = {
 
 type VariableScope = "dynamic" | "static";
 
+const TEMPLATE_EXPORT_PRICE_LABEL = "$0.45";
+const MIN_AI_SIDEBAR_WIDTH = 320;
+const DEFAULT_AI_SIDEBAR_WIDTH = 390;
+const MAX_AI_SIDEBAR_WIDTH = 620;
+
+function buildExportFilename(emailId: string) {
+  return `madoo-${shortEmailId(emailId)}-template.html`;
+}
+
 export function EditorScreen({
   emailId,
   genSummary,
@@ -66,7 +77,6 @@ export function EditorScreen({
 
   const [variantIdx, setVariantIdx] = useState(0);
   const activeVariant: EmailVariantDto | undefined = variants[variantIdx];
-  const previousVariant: EmailVariantDto | undefined = variantIdx > 0 ? variants[variantIdx - 1] : undefined;
 
   const variantItems = variants.map((v, i) => ({
     value: String(i),
@@ -82,8 +92,43 @@ export function EditorScreen({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [activeStreamingId, setActiveStreamingId] = useState<string | null>(null);
   const [previewHeight, setPreviewHeight] = useState<number>(640);
+  const [aiSidebarWidth, setAiSidebarWidth] = useState(DEFAULT_AI_SIDEBAR_WIDTH);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const panelScrollRef = useRef<HTMLDivElement | null>(null);
   const previewObserverRef = useRef<ResizeObserver | null>(null);
+
+  const startAiSidebarResize = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = aiSidebarWidth;
+      const maxWidth = Math.min(
+        MAX_AI_SIDEBAR_WIDTH,
+        Math.max(MIN_AI_SIDEBAR_WIDTH, window.innerWidth - 480),
+      );
+      const previousCursor = document.body.style.cursor;
+      const previousUserSelect = document.body.style.userSelect;
+
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const nextWidth = startWidth + startX - moveEvent.clientX;
+        setAiSidebarWidth(Math.min(maxWidth, Math.max(MIN_AI_SIDEBAR_WIDTH, nextWidth)));
+      };
+
+      const onPointerUp = () => {
+        document.body.style.cursor = previousCursor;
+        document.body.style.userSelect = previousUserSelect;
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    },
+    [aiSidebarWidth],
+  );
 
   useEffect(() => {
     if (variants.length > 0) setVariantIdx(variants.length - 1);
@@ -148,21 +193,6 @@ export function EditorScreen({
     previewObserverRef.current = observer;
   }, []);
 
-  const changedLines = useMemo(() => {
-    if (!activeVariant || !previousVariant) return [];
-    const previous = new Set(
-      previousVariant.componentCode
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean),
-    );
-    return activeVariant.componentCode
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !previous.has(line))
-      .slice(0, 4);
-  }, [activeVariant, previousVariant]);
-
   useEffect(() => {
     const nextDefaults = Object.fromEntries(
       activeVariant?.variableSchema.variables.map((variable) => [
@@ -203,6 +233,8 @@ export function EditorScreen({
     );
   }, [activeVariant?.variableSchema.variables, variableDefaults, variableScopes]);
 
+  const exportFilename = useMemo(() => buildExportFilename(emailId), [emailId]);
+
   const saveVariables = useCallback(async () => {
     if (!activeVariant || !variableSchemaDraft || updateVariables.isPending) return;
     setVariableSaveMessage(null);
@@ -216,6 +248,39 @@ export function EditorScreen({
       setVariableSaveMessage(err instanceof Error ? err.message : "Could not save variables.");
     }
   }, [activeVariant, updateVariables, variableSchemaDraft]);
+
+  const goToCampaignCompose = useCallback(() => {
+    router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`);
+  }, [emailId, router]);
+
+  const openExportDialog = useCallback(() => {
+    setExportFeedback(null);
+    setExportModalOpen(true);
+  }, []);
+
+  const copyCompiledHtml = useCallback(async () => {
+    if (!activeVariant?.compiledHtml) return;
+    try {
+      await navigator.clipboard.writeText(activeVariant.compiledHtml);
+      setExportFeedback("Copied compiled HTML.");
+    } catch {
+      setExportFeedback("Could not copy HTML. Download file instead.");
+    }
+  }, [activeVariant?.compiledHtml]);
+
+  const downloadCompiledHtml = useCallback(() => {
+    if (!activeVariant?.compiledHtml) return;
+    const blob = new Blob([activeVariant.compiledHtml], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = exportFilename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setExportFeedback("Compiled HTML downloaded.");
+  }, [activeVariant?.compiledHtml, exportFilename]);
 
   const runEdit = useCallback(
     async (instruction: string) => {
@@ -387,15 +452,6 @@ export function EditorScreen({
                 aria-label="Variant"
               />
             ) : null}
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Icon name="send" size={12} />}
-              disabled={!activeVariant}
-              onClick={() => router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`)}
-            >
-              Send campaign
-            </Button>
           </div>
         </div>
 
@@ -436,13 +492,33 @@ export function EditorScreen({
       <aside
         className="madoo-editor-aside"
         style={{
-          width: 390,
+          width: aiSidebarWidth,
           borderLeft: "1px solid var(--border)",
           background: "var(--surface)",
           display: "flex",
           flexDirection: "column",
+          flexShrink: 0,
+          position: "relative",
         }}
       >
+        <button
+          type="button"
+          className="madoo-editor-resize-handle"
+          aria-label="Resize AI sidebar"
+          onPointerDown={startAiSidebarResize}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: -5,
+            width: 10,
+            height: "100%",
+            border: "none",
+            padding: 0,
+            background: "transparent",
+            cursor: "col-resize",
+            zIndex: 4,
+          }}
+        />
         <div
           style={{
             padding: "14px 18px",
@@ -480,20 +556,9 @@ export function EditorScreen({
             gap: 14,
           }}
         >
-          {genSummary ? (
-            <Banner tone="accent" title="Brief">
-              {genSummary.prompt.slice(0, 220)}
-              {genSummary.prompt.length > 220 ? "…" : ""}
-            </Banner>
-          ) : null}
           {editError ? (
             <Banner tone="danger" title="Edit failed">
               {editError}
-            </Banner>
-          ) : null}
-          {changedLines.length > 0 ? (
-            <Banner tone="accent" title="Variant diff">
-              {changedLines.join(" · ")}
             </Banner>
           ) : null}
           {activeVariant?.variableSchema?.variables?.length ? (
@@ -501,12 +566,16 @@ export function EditorScreen({
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  marginBottom: 8,
+                  flexDirection: "column",
+                  gap: 4,
+                  marginBottom: 10,
                 }}
               >
                 <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-faint)" }}>
                   VARIABLE SCHEMA
+                </div>
+                <div style={{ fontSize: 11.5, lineHeight: 1.4, color: "var(--ink-soft)" }}>
+                  Set fallback values. Dynamic fields can be replaced when sending a campaign.
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -551,11 +620,6 @@ export function EditorScreen({
                           fontFamily: "inherit",
                         }}
                       />
-                      <div style={{ fontSize: 11, color: "var(--ink-faint)" }}>
-                        {currentScope === "dynamic"
-                          ? "Mapped in campaigns"
-                          : "Static value (not mapped in campaigns)"}
-                      </div>
                     </div>
                   );
                 })}
@@ -599,9 +663,6 @@ export function EditorScreen({
               ) : null}
             </div>
           ) : null}
-          <Banner tone="accent" title="Suggestion">
-            Subject lines under ~50 characters often improve opens. Try variant <b>v2</b> after an edit.
-          </Banner>
           {chatMessages.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div
@@ -872,6 +933,35 @@ export function EditorScreen({
               </div>
             </div>
           ) : null}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 8,
+              marginTop: "auto",
+            }}
+          >
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!activeVariant}
+              onClick={goToCampaignCompose}
+              leftIcon={<Icon name="send" size={13} />}
+              style={{ minHeight: 36, borderRadius: 999 }}
+            >
+              Send campaign
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!activeVariant?.compiledHtml}
+              onClick={openExportDialog}
+              leftIcon={<Icon name="download" size={13} />}
+              style={{ minHeight: 36, borderRadius: 999 }}
+            >
+              Export template
+            </Button>
+          </div>
         </div>
         <div style={{ padding: 14, borderTop: "1px solid var(--border)" }}>
           <div style={{ marginBottom: 10 }}>
@@ -953,6 +1043,84 @@ export function EditorScreen({
         </div>
       </aside>
 
+      <Modal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        size="md"
+        eyebrow="EXPORT TEMPLATE"
+        title="Download compiled HTML"
+        description={`Exporting this template costs ${TEMPLATE_EXPORT_PRICE_LABEL}. Sending with Madoo stays free.`}
+        footer={
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              leftIcon={<Icon name="copy" size={12} />}
+              disabled={!activeVariant?.compiledHtml}
+              onClick={() => void copyCompiledHtml()}
+            >
+              Copy HTML
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<Icon name="download" size={12} />}
+              disabled={!activeVariant?.compiledHtml}
+              onClick={downloadCompiledHtml}
+            >
+              Download HTML
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ display: "grid", gap: 12 }}>
+          <div
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "var(--bg-2)",
+              padding: 14,
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: "var(--ink-faint)" }}>
+              PRICING
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
+              <span style={{ color: "var(--ink-soft)" }}>Compiled HTML export</span>
+              <strong>{TEMPLATE_EXPORT_PRICE_LABEL}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
+              <span style={{ color: "var(--ink-soft)" }}>Madoo campaign send</span>
+              <strong>$0.00</strong>
+            </div>
+            <div style={{ height: 1, background: "var(--border)" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 15 }}>
+              <span style={{ fontWeight: 800 }}>Total</span>
+              <strong>{TEMPLATE_EXPORT_PRICE_LABEL}</strong>
+            </div>
+            <div
+              style={{
+                border: "1px solid var(--border-soft)",
+                borderRadius: 8,
+                background: "var(--surface)",
+                padding: 10,
+                fontSize: 12,
+                lineHeight: 1.45,
+                color: "var(--ink-soft)",
+              }}
+            >
+              File: <span className="mono" style={{ color: "var(--ink)" }}>{exportFilename}</span>
+            </div>
+          </div>
+          {exportFeedback ? (
+            <Banner tone="success" title="Export ready">
+              {exportFeedback}
+            </Banner>
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 }

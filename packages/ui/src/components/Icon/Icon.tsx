@@ -17,6 +17,7 @@ export type IconName =
   | "settings"
   | "edit"
   | "copy"
+  | "download"
   | "send"
   | "refresh"
   | "image"
@@ -80,6 +81,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
       <rect x="9" y="9" width="13" height="13" rx="2" />
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
     </>
   ),
   send: <path d="m22 2-7 20-4-9-9-4 20-7z" />,

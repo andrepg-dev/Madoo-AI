@@ -466,6 +466,24 @@ select:focus-visible {
   }
 }
 
+.madoo-editor-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 2px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--border);
+  transform: translateY(-50%);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.madoo-editor-resize-handle:hover::after,
+.madoo-editor-resize-handle:focus-visible::after {
+  background: var(--accent);
+}
+
 @media (max-width: 900px) {
   .madoo-editor-shell {
     flex-direction: column !important;
@@ -476,6 +494,9 @@ select:focus-visible {
     border-left: none !important;
     border-top: 1px solid var(--border);
     max-height: 60vh;
+  }
+  .madoo-editor-resize-handle {
+    display: none !important;
   }
 }
 
