@@ -44,7 +44,7 @@ export const Default: Story = {
           }
         >
           <p style={{ color: "var(--ink-soft)", lineHeight: 1.6, fontSize: 13.5 }}>
-            Schedule for later or send right away. AI will pick the optimal time
+            Export now or keep editing. AI will preserve the template structure
             inside the next 24 hours when scheduling is enabled.
           </p>
         </Modal>
@@ -65,7 +65,7 @@ export const Login: Story = {
           onClose={() => setOpen(false)}
           size="sm"
           title="Continue to Madoo AI"
-          description="Sign in to generate, save, and send beautiful emails."
+          description="Sign in to generate, save, and export beautiful emails."
         >
           <div
             style={{

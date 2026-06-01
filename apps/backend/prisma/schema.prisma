@@ -51,7 +51,6 @@ model Workspace {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
-  postalAddress String?
   templateCreationReason String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -63,59 +62,10 @@ model Workspace {
   emailGenerationRuns EmailGenerationRun[]
   emailChatMessages   EmailChatMessage[]
   emailVfsSnapshots   EmailVfsSnapshot[]
-  contacts            Contact[]
-  tags                Tag[]
-  contactTags         ContactTag[]
-  segments            Segment[]
-  suppressionEntries  SuppressionEntry[]
-  contactImportJobs   ContactImportJob[]
-  domains             Domain[]
-  dnsChecks           DnsCheck[]
-  campaigns           Campaign[]
   auditLogs           AuditLog[]
-  events              Event[]
-  trackedLinks        TrackedLink[]
   billingSubscription BillingSubscription?
 
   @@index([slug])
-}
-
-enum DomainStatus {
-  PENDING
-  VERIFIED
-}
-
-enum DnsCheckType {
-  SPF
-  DKIM
-  DMARC
-  RETURN_PATH
-}
-
-enum CampaignStatus {
-  DRAFT
-  SCHEDULED
-  SENDING
-  SENT
-}
-
-enum CampaignDeliveryStatus {
-  PENDING
-  SENT
-  OPENED
-  CLICKED
-  BOUNCED
-  UNSUBSCRIBED
-  COMPLAINED
-}
-
-enum EventType {
-  DELIVERED
-  OPENED
-  CLICKED
-  BOUNCED
-  COMPLAINED
-  UNSUBSCRIBED
 }
 
 enum EmailStatus {
@@ -149,27 +99,6 @@ enum EmailChatKind {
   STATUS
 }
 
-enum ContactStatus {
-  ACTIVE
-  UNSUBSCRIBED
-  BOUNCED
-  COMPLAINED
-}
-
-enum SuppressionReason {
-  UNSUBSCRIBED
-  HARD_BOUNCE
-  COMPLAINED
-}
-
-enum ContactImportJobStatus {
-  UPLOADED
-  QUEUED
-  PROCESSING
-  COMPLETED
-  FAILED
-}
-
 model Email {
   id          String      @id @default(cuid())
   workspaceId String
@@ -196,7 +125,6 @@ model Email {
   generationRuns        EmailGenerationRun[]
   chatMessages          EmailChatMessage[]
   vfsSnapshot           EmailVfsSnapshot?
-  campaigns             Campaign[]
 
   @@index([workspaceId, createdAt])
 }
@@ -307,216 +235,6 @@ model Template {
 
   @@unique([workspaceId, slug])
   @@index([workspaceId])
-}
-
-model Contact {
-  id          String        @id @default(cuid())
-  workspaceId String
-  email       String
-  firstName   String?
-  lastName    String?
-  status      ContactStatus @default(ACTIVE)
-  customFields Json         @default("{}")
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  tags      ContactTag[]
-  deliveries CampaignDelivery[]
-
-  @@unique([workspaceId, email])
-  @@index([workspaceId, status])
-}
-
-model Tag {
-  id          String   @id @default(cuid())
-  workspaceId String
-  name        String
-  color       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  contacts  ContactTag[]
-
-  @@unique([workspaceId, name])
-  @@index([workspaceId])
-}
-
-model ContactTag {
-  id          String   @id @default(cuid())
-  workspaceId String
-  contactId   String
-  tagId       String
-  createdAt   DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  contact   Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@unique([contactId, tagId])
-  @@index([workspaceId, contactId])
-  @@index([workspaceId, tagId])
-}
-
-model Segment {
-  id          String   @id @default(cuid())
-  workspaceId String
-  name        String
-  query       Json
-  createdAt   DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  campaigns Campaign[]
-
-  @@index([workspaceId, createdAt])
-}
-
-model SuppressionEntry {
-  id          String            @id @default(cuid())
-  workspaceId String
-  email       String
-  reason      SuppressionReason
-  createdAt   DateTime          @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([workspaceId, email])
-  @@index([workspaceId, reason])
-}
-
-model ContactImportJob {
-  id            String                 @id @default(cuid())
-  workspaceId   String
-  status        ContactImportJobStatus @default(UPLOADED)
-  totalRows     Int                    @default(0)
-  processedRows Int                    @default(0)
-  errors        Json                   @default("[]")
-  filePath      String
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId, status])
-  @@index([workspaceId, createdAt])
-}
-
-model Domain {
-  id             String       @id @default(cuid())
-  workspaceId    String
-  hostname       String
-  status         DomainStatus @default(PENDING)
-  dkimPublicKey  String       @db.Text
-  dkimPrivateKey String?      @db.Text
-  verifiedAt     DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  checks    DnsCheck[]
-
-  @@unique([workspaceId, hostname])
-  @@index([workspaceId, status])
-}
-
-model DnsCheck {
-  id          String       @id @default(cuid())
-  workspaceId String
-  domainId    String
-  type        DnsCheckType
-  hostname    String
-  expected    String       @db.Text
-  actual      String?      @db.Text
-  ok          Boolean
-  checkedAt   DateTime     @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  domain    Domain    @relation(fields: [domainId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId, domainId, type, checkedAt])
-}
-
-model Campaign {
-  id           String         @id @default(cuid())
-  workspaceId  String
-  emailId      String
-  segmentId    String
-  status       CampaignStatus @default(DRAFT)
-  scheduledFor DateTime?
-  sentAt       DateTime?
-  fromName     String
-  fromEmail    String
-  replyTo      String?
-  abTest       Boolean        @default(false)
-  variableMapping Json         @default("{}")
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-
-  workspace  Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  email      Email              @relation(fields: [emailId], references: [id], onDelete: Cascade)
-  segment    Segment            @relation(fields: [segmentId], references: [id], onDelete: Cascade)
-  deliveries CampaignDelivery[]
-  events     Event[]
-  trackedLinks TrackedLink[]
-
-  @@index([workspaceId, status, createdAt])
-}
-
-model CampaignDelivery {
-  id             String                 @id @default(cuid())
-  campaignId     String
-  contactId      String
-  messageId      String?
-  status         CampaignDeliveryStatus @default(PENDING)
-  sentAt         DateTime?
-  openedAt       DateTime?
-  clickedAt      DateTime?
-  bouncedAt      DateTime?
-  unsubscribedAt DateTime?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-
-  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  events   Event[]
-
-  @@index([campaignId, status])
-  @@index([contactId])
-}
-
-model Event {
-  id          String   @id @default(cuid())
-  workspaceId String
-  campaignId  String
-  contactId   String?
-  deliveryId  String?
-  type        EventType
-  data        Json     @default("{}")
-  createdAt   DateTime @default(now())
-
-  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  campaign  Campaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  delivery  CampaignDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
-
-  @@index([campaignId, type, createdAt])
-  @@index([workspaceId, type, createdAt])
-  @@index([deliveryId, type])
-}
-
-model TrackedLink {
-  id          String   @id @default(cuid())
-  workspaceId String
-  campaignId  String
-  url         String   @db.Text
-  clicks      Int      @default(0)
-  createdAt   DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-
-  @@index([campaignId])
-  @@index([workspaceId, campaignId, clicks])
 }
 
 model AuditLog {

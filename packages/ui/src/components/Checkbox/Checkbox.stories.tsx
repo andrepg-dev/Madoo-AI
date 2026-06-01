@@ -8,7 +8,7 @@ const meta: Meta<typeof Checkbox> = {
   args: {
     label: "Run A/B test on subject lines",
     description:
-      "Send 3 variants to 10% of your list, then auto-send the winner to the rest after 4 hours.",
+      "Create 3 variants, compare the copy, then keep the strongest version.",
   },
 };
 

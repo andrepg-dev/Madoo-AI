@@ -12,7 +12,7 @@ export const productFeatures = [
     body: "See the email before you use it, refine the layout with prompts, and keep responsive HTML ready for your email workflow.",
   },
   {
-    title: "Send-ready output",
+    title: "Export-ready output",
     body: "Move from email idea to usable template faster with structured sections, CTAs, responsive previews, and production-friendly email markup.",
   },
 ];
@@ -28,11 +28,11 @@ export const productUseCases = [
   "SaaS product launches",
   "Ecommerce promotions",
   "Customer onboarding",
-  "Newsletter campaigns",
+  "Newsletter templates",
   "Event invitations",
   "Reactivation emails",
   "Surveys and feedback",
-  "Referral campaigns",
+  "Referral templates",
 ];
 
 export const productFaq = [

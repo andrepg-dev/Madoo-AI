@@ -14,15 +14,14 @@ export const SubscriptionStatusSchema = z.enum([
 export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
 
 export type PlanLimits = {
-  contacts: number;
   aiGenerations: number; // -1 = unlimited
   workspaces: number;    // -1 = unlimited
 };
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  FREE:    { contacts: 250,   aiGenerations: 5,   workspaces: 1  },
-  STARTER: { contacts: 1_000, aiGenerations: 100, workspaces: 5  },
-  GROWTH:  { contacts: 5_000, aiGenerations: -1,  workspaces: -1 },
+  FREE:    { aiGenerations: 5,   workspaces: 1  },
+  STARTER: { aiGenerations: 100, workspaces: 5  },
+  GROWTH:  { aiGenerations: -1,  workspaces: -1 },
 };
 
 export const PLAN_PRICES: Record<Plan, number> = {
@@ -55,10 +54,6 @@ export const BillingSubscriptionSchema = z.object({
 export type BillingSubscriptionDto = z.infer<typeof BillingSubscriptionSchema>;
 
 export const BillingUsageSchema = z.object({
-  contacts: z.object({
-    used: z.number().int().nonnegative(),
-    limit: z.number().int().nonnegative(),
-  }),
   aiGenerations: z.object({
     used: z.number().int().nonnegative(),
     limit: z.number().int(), // -1 = unlimited
@@ -71,7 +66,6 @@ export const BillingOverviewSchema = z.object({
   subscription: BillingSubscriptionSchema,
   usage: BillingUsageSchema,
   limits: z.object({
-    contacts: z.number().int().nonnegative(),
     aiGenerations: z.number().int(), // -1 = unlimited
   }),
 });

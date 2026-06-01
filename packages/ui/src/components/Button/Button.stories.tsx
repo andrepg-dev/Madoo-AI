@@ -27,7 +27,7 @@ type Story = StoryObj<typeof Button>;
 
 export const Primary: Story = {};
 
-export const Accent: Story = { args: { variant: "accent", children: "Send campaign" } };
+export const Accent: Story = { args: { variant: "accent", children: "Export template" } };
 
 export const Secondary: Story = {
   args: { variant: "secondary", children: "Back", size: "md" },

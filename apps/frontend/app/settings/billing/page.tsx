@@ -22,48 +22,33 @@ type PaidPlan = Exclude<Plan, "FREE">;
 const PLAN_FEATURES: Record<Plan | "SCALE", { label: string; included: boolean; header?: boolean }[]> = {
   FREE: [
     { label: "1 workspace", included: true },
-    { label: "250 contacts", included: true },
-    { label: "2,000 emails / month", included: true },
     { label: "5 AI generations / month", included: true },
+    { label: "Template export", included: true },
     { label: "Full template library", included: false },
-    { label: "Send from Madoo subdomain", included: true },
-    { label: "Open & click tracking", included: true },
-    { label: "Custom sending domain", included: false },
-    { label: "A/B testing", included: false },
     { label: "Priority support", included: false },
   ],
   STARTER: [
     { label: "Up to 5 workspaces", included: true },
-    { label: "1,000 contacts", included: true },
-    { label: "15,000 emails / month", included: true },
     { label: "100 AI generations / month", included: true },
+    { label: "Template export", included: true },
     { label: "Full template library", included: true },
-    { label: "Custom sending domain (SPF/DKIM)", included: true },
-    { label: "Open, click & device analytics", included: true },
-    { label: "A/B test subject lines", included: true },
-    { label: "Variable mapping & fallbacks", included: true },
-    { label: 'Remove "Sent with Madoo" footer', included: false },
+    { label: "Variable defaults", included: true },
+    { label: "Priority support", included: false },
   ],
   GROWTH: [
     { label: "Unlimited workspaces", included: true },
-    { label: "5,000 contacts", included: true },
-    { label: "100,000 emails / month", included: true },
     { label: "Unlimited AI generations", included: true },
     { label: "Premium template gallery", included: true },
-    { label: "Advanced analytics & cohorts", included: true },
-    { label: "A/B test everything", included: true },
-    { label: "Smart segments (AI-powered)", included: true },
-    { label: "White-label sending", included: true },
+    { label: "Template export", included: true },
+    { label: "Variable defaults", included: true },
     { label: "Priority support (4h response)", included: true },
   ],
   SCALE: [
     { label: "Everything in Growth, plus:", included: true, header: true },
-    { label: "75,000+ contacts", included: true },
-    { label: "Dedicated IP & warm-up", included: true },
     { label: "Custom AI fine-tuned to your brand", included: true },
     { label: "Multi-workspace & team roles", included: true },
     { label: "SSO (Google, Okta, SAML)", included: true },
-    { label: "API access & webhooks", included: true },
+    { label: "API access", included: true },
     { label: "Dedicated success manager", included: true },
     { label: "99.9% SLA + onboarding call", included: true },
   ],
@@ -79,16 +64,8 @@ const FAQ_ITEMS = [
     a: "Yes. Upgrade and you're billed prorated; downgrade and the new rate kicks in next cycle. No fees, no calls.",
   },
   {
-    q: "What if I exceed my contact limit?",
-    a: "We'll email you at 80% and 100%. You can upgrade — we never block your campaigns mid-send.",
-  },
-  {
     q: "How does annual billing work?",
     a: "Annual plans are billed upfront for the full year at a 20% discount. You can switch back to monthly at renewal.",
-  },
-  {
-    q: "How does deliverability work?",
-    a: "We sign every email with SPF, DKIM, and DMARC, send through warmed IPs, and monitor reputation 24/7.",
   },
 ];
 
@@ -194,10 +171,6 @@ function BillingPageContent() {
 
   const data = overview.data;
   const currentPlan: Plan = data?.subscription.plan ?? "FREE";
-  const used = data?.usage.contacts.used ?? 0;
-  const limit = data?.usage.contacts.limit ?? PLAN_LIMITS[currentPlan].contacts;
-  const usagePct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-
   const genUsed = data?.usage.aiGenerations.used ?? 0;
   const genLimit = data?.usage.aiGenerations.limit ?? PLAN_LIMITS[currentPlan].aiGenerations;
   const genUnlimited = genLimit === -1;
@@ -232,7 +205,7 @@ function BillingPageContent() {
       {
         id: "GROWTH",
         name: "Growth",
-        tagline: "When sending is part of how you grow.",
+        tagline: "When templates become core workflow.",
         highlight: true,
         badge: "Most popular",
         cta: "Upgrade to Growth",
@@ -240,7 +213,7 @@ function BillingPageContent() {
       {
         id: "SCALE",
         name: "Scale",
-        tagline: "Big lists, big sends, big expectations.",
+        tagline: "Big workspaces, custom AI, deeper support.",
         highlight: false,
         cta: "Talk to sales",
         scaleOnly: true,
@@ -313,7 +286,7 @@ function BillingPageContent() {
                   </div>
                   <div style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 2 }}>
                     {PLAN_PRICES[currentPlan] === 0
-                      ? "Free forever — upgrade to unlock more contacts and features."
+                      ? "Free forever. Upgrade to unlock more generations and features."
                       : `$${PLAN_PRICES[currentPlan]}/mo`}
                     {data?.subscription.cancelAtPeriodEnd ? " · Cancels at period end." : ""}
                   </div>
@@ -328,24 +301,6 @@ function BillingPageContent() {
                     {portal.isPending ? "Opening…" : "Manage billing"}
                   </Button>
                 ) : null}
-              </div>
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--ink-soft)",
-                    marginBottom: 6,
-                  }}
-                >
-                  <span>Contacts</span>
-                  <span>
-                    {used.toLocaleString()} / {limit.toLocaleString()}
-                  </span>
-                </div>
-                <ProgressBar value={usagePct} aria-label="Contact usage" />
               </div>
               <div>
                 <div
@@ -818,8 +773,7 @@ function BillingPageContent() {
                 maxWidth: 520,
               }}
             >
-              We migrate your lists, templates, and automations free of charge. Most teams are sending from Madoo
-              within 48 hours.
+              We migrate your templates free of charge. Most teams are fully set up within 48 hours.
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>

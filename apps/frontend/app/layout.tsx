@@ -4,7 +4,6 @@ import { ToastProvider } from "@/components/providers/ToastProvider";
 import { AppShell } from "@/components/shell/AppShell";
 import { siteConfig } from "@/lib/site";
 import "@madoo/ui/tokens.css";
-import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -108,8 +107,6 @@ export default function RootLayout({
           </ToastProvider>
         </QueryProvider>
       </body>
-
-      <Analytics />
     </html>
   );
 }

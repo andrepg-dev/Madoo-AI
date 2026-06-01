@@ -17,7 +17,6 @@ import {
   Textarea,
 } from "@madoo/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
   type PointerEvent as ReactPointerEvent,
@@ -66,7 +65,6 @@ export function EditorScreen({
   onBack: () => void;
 }) {
   const qc = useQueryClient();
-  const router = useRouter();
   const { data: email, isLoading, refetch, isError } = useEmail(emailId);
   const updateVariables = useUpdateEmailVariantVariableSchema(emailId);
 
@@ -248,10 +246,6 @@ export function EditorScreen({
       setVariableSaveMessage(err instanceof Error ? err.message : "Could not save variables.");
     }
   }, [activeVariant, updateVariables, variableSchemaDraft]);
-
-  const goToCampaignCompose = useCallback(() => {
-    router.push(`/campaigns?compose=1&emailId=${encodeURIComponent(emailId)}`);
-  }, [emailId, router]);
 
   const openExportDialog = useCallback(() => {
     setExportFeedback(null);
@@ -575,7 +569,7 @@ export function EditorScreen({
                   VARIABLE SCHEMA
                 </div>
                 <div style={{ fontSize: 11.5, lineHeight: 1.4, color: "var(--ink-soft)" }}>
-                  Set fallback values. Dynamic fields can be replaced when sending a campaign.
+                  Set fallback values for exported templates.
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -936,23 +930,13 @@ export function EditorScreen({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gridTemplateColumns: "minmax(0, 1fr)",
               gap: 8,
               marginTop: "auto",
             }}
           >
             <Button
               variant="primary"
-              size="sm"
-              disabled={!activeVariant}
-              onClick={goToCampaignCompose}
-              leftIcon={<Icon name="send" size={13} />}
-              style={{ minHeight: 36, borderRadius: 999 }}
-            >
-              Send campaign
-            </Button>
-            <Button
-              variant="secondary"
               size="sm"
               disabled={!activeVariant?.compiledHtml}
               onClick={openExportDialog}
@@ -1049,7 +1033,7 @@ export function EditorScreen({
         size="md"
         eyebrow="EXPORT TEMPLATE"
         title="Download compiled HTML"
-        description={`Exporting this template costs ${TEMPLATE_EXPORT_PRICE_LABEL}. Sending with Madoo stays free.`}
+        description={`Exporting this template costs ${TEMPLATE_EXPORT_PRICE_LABEL}.`}
         footer={
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
             <Button
@@ -1090,10 +1074,6 @@ export function EditorScreen({
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
               <span style={{ color: "var(--ink-soft)" }}>Compiled HTML export</span>
               <strong>{TEMPLATE_EXPORT_PRICE_LABEL}</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13 }}>
-              <span style={{ color: "var(--ink-soft)" }}>Madoo campaign send</span>
-              <strong>$0.00</strong>
             </div>
             <div style={{ height: 1, background: "var(--border)" }} />
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 15 }}>

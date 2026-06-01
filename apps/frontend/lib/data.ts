@@ -1,16 +1,6 @@
 import type { TemplateSlug } from "@madoo/shared";
 
-/**
- * UI-only constants: template gallery, prompt presets, ComposeModal preview
- * fixtures.
- *
- * Everything that used to live here as fake data (MOCK_CONTACTS, SEGMENTS,
- * DRAFT_EMAILS, EMAIL_VARIABLES, MOCK_CAMPAIGNS) has been removed — those
- * surfaces are now driven by the real backend. The two preview helpers
- * `CSV_FIELDS` and `PREVIEW_CONTACTS` are interim placeholders used inside
- * the variable-mapping step of the ComposeModal until that step is rewired
- * to read columns from the real contact list.
- */
+/** UI-only constants: template gallery and prompt presets. */
 
 export type TemplatePreviewKey =
   | "launch"
@@ -58,28 +48,6 @@ export const PROMPT_SUGGESTIONS = [
   "Welcome new signups with a warm onboarding email",
   "Black Friday sale — 40% off everything, urgency-driven",
   "Re-engage users who haven't logged in for 30 days",
-];
-
-/** Placeholder column list for ComposeModal step 3 until variable mapping is
- * rewired against the real contact schema. */
-export const CSV_FIELDS = [
-  "first_name",
-  "last_name",
-  "email",
-  "company",
-  "city",
-  "location",
-  "country",
-  "last_order_date",
-  "plan",
-  "signup_date",
-];
-
-/** Placeholder preview-recipient set used by ComposeModal's preview pane. */
-export const PREVIEW_CONTACTS = [
-  { name: "Sofia Martinez", data: { "{Nombre}": "Sofia", "{Empresa}": "Acme Co", "{Ciudad}": "Madrid", "{Última_compra}": "Apr 12" } },
-  { name: "James Liu", data: { "{Nombre}": "James", "{Empresa}": "Startup.io", "{Ciudad}": "—", "{Última_compra}": "Apr 14" } },
-  { name: "Priya Shah", data: { "{Nombre}": "Priya", "{Empresa}": "Design Studio", "{Ciudad}": "Mumbai", "{Última_compra}": "Apr 02" } },
 ];
 
 export const PROMPT_TONES = ["Friendly", "Professional", "Bold", "Witty", "Urgent"];

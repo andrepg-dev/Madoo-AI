@@ -14,12 +14,8 @@ import { useEffect, useState } from "react";
 
 const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Home", icon: "home" },
-  { href: "/campaigns", label: "Campaigns", icon: "send" },
-  { href: "/contacts", label: "Contacts", icon: "inbox" },
-  { href: "/analytics", label: "Analytics", icon: "bolt" },
   { href: "/settings", label: "Settings", icon: "sliders" },
   { href: "/settings/billing", label: "Usage & Billing", icon: "barChart" },
-  { href: "/domain", label: "Domain", icon: "settings" },
 ];
 
 export function Sidebar({ brand = "Madoo AI" }: { brand?: string }) {

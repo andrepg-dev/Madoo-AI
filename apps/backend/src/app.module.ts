@@ -1,27 +1,16 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { ScheduleModule } from "@nestjs/schedule";
-import { ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
-import { AnalyticsModule } from "./analytics/analytics.module";
 import { AssistantModule } from "./assistant/assistant.module";
 import { AuditLogsModule } from "./audit-logs/audit-logs.module";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
-import { CampaignsModule } from "./campaigns/campaigns.module";
-import { ContactsModule } from "./contacts/contacts.module";
-import { DomainsModule } from "./domains/domains.module";
 import { EmailsModule } from "./emails/emails.module";
 import { HealthController } from "./health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { PromptsModule } from "./prompts/prompts.module";
-import { SegmentsModule } from "./segments/segments.module";
-import { TagsModule } from "./tags/tags.module";
 import { TemplatesModule } from "./templates/templates.module";
-import { TrackingModule } from "./tracking/tracking.module";
-import { UnsubscribeModule } from "./unsubscribe/unsubscribe.module";
 import { UsersModule } from "./users/users.module";
-import { WebhooksModule } from "./webhooks/webhooks.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
 
 @Module({
@@ -62,13 +51,6 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
           : {}),
       },
     }),
-    ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([
-      {
-        ttl: Number(process.env.SEND_THROTTLE_TTL_MS ?? "1000"),
-        limit: Number(process.env.SEND_THROTTLE_LIMIT ?? "5"),
-      },
-    ]),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -76,17 +58,8 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     PromptsModule,
     EmailsModule,
     TemplatesModule,
-    ContactsModule,
-    TagsModule,
-    SegmentsModule,
-    DomainsModule,
-    CampaignsModule,
-    UnsubscribeModule,
     AuditLogsModule,
-    TrackingModule,
-    AnalyticsModule,
     AssistantModule,
-    WebhooksModule,
     BillingModule,
   ],
   controllers: [HealthController],

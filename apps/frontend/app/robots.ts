@@ -9,10 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: [
           "/api/",
-          "/analytics",
-          "/campaigns",
-          "/contacts",
-          "/domain",
           "/emails/",
           "/settings",
           "/templates/*/preview",

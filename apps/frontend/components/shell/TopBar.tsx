@@ -544,7 +544,7 @@ export function TopBar() {
         }}
         size="sm"
         title="Create workspace"
-        description="Workspaces isolate contacts, campaigns, and analytics."
+        description="Workspaces isolate templates and settings."
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>

@@ -17,19 +17,13 @@ type PaletteItem = {
 
 const PALETTE_ITEMS: PaletteItem[] = [
   { kind: "action", icon: "sparkle", title: "Generate new email", sub: "Start with an AI prompt", href: "/" },
-  { kind: "action", icon: "send", title: "New campaign", sub: "Send to a segment", href: "/campaigns" },
   { kind: "nav", icon: "home", title: "Home", sub: "Dashboard", href: "/" },
-  { kind: "nav", icon: "send", title: "Campaigns", sub: "All your sends", href: "/campaigns" },
-  { kind: "nav", icon: "inbox", title: "Contacts", sub: "Audience & segments", href: "/contacts" },
-  { kind: "nav", icon: "bolt", title: "Analytics", sub: "Open & click rates", href: "/analytics" },
-  { kind: "nav", icon: "settings", title: "Domain", sub: "DNS & sender identity", href: "/domain" },
   { kind: "nav", icon: "sliders", title: "Settings", sub: "User & workspace settings", href: "/settings" },
 ];
 
 const ASK_SUGGESTIONS = [
-  "Why did open rates drop last week?",
-  "Who hasn't opened my last 3 campaigns?",
-  "Best time to send to Pro customers",
+  "How many emails are in this workspace?",
+  "Summarize this workspace",
 ];
 
 export function CommandPalette({ onClose }: { onClose: () => void }) {

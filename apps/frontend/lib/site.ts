@@ -2,7 +2,7 @@ export const siteConfig = {
   name: "Madoo AI",
   title: "Madoo — AI Email Generator for Better Email Templates",
   description:
-    "Generate better email templates with AI. Draft, preview, edit, and send responsive emails from one workspace.",
+    "Generate better email templates with AI. Draft, preview, edit, and export responsive emails from one workspace.",
   url: getSiteUrl(),
   ogImage: "/og-image.png",
   keywords: [

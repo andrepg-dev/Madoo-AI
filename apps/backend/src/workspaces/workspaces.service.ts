@@ -125,7 +125,7 @@ export class WorkspacesService {
 
   async updatePrimaryWorkspaceForUser(
     userId: string,
-    input: { postalAddress?: string; templateCreationReason?: string },
+    input: { templateCreationReason?: string },
   ): Promise<Workspace & { membership: Membership }> {
     const membership = await this.prisma.membership.findFirst({
       where: { userId },
@@ -134,13 +134,7 @@ export class WorkspacesService {
     });
     if (!membership) throw new NotFoundException("Workspace not found.");
 
-    const data: {
-      postalAddress?: string;
-      templateCreationReason?: string;
-    } = {};
-    if (input.postalAddress !== undefined) {
-      data.postalAddress = input.postalAddress.trim();
-    }
+    const data: { templateCreationReason?: string } = {};
     if (input.templateCreationReason !== undefined) {
       data.templateCreationReason = input.templateCreationReason.trim();
     }

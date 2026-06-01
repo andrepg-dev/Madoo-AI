@@ -196,7 +196,7 @@ export function LoginModal() {
         >
           {pendingPromptForGate?.prompt
             ? "We'll save your prompt and pick up right where you left off."
-            : "Sign in to generate, save, and send beautiful emails."}
+            : "Sign in to generate, save, and export beautiful emails."}
         </p>
 
         {pendingPromptForGate?.prompt && (

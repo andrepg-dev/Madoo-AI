@@ -221,7 +221,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             }}
           >
             Describe the email you need. {brand} turns it into a polished,
-            send-ready template.
+            export-ready template.
           </p>
         </div>
 
@@ -628,7 +628,7 @@ function MarketingSeoSections() {
         <div>
           <p className="madoo-kicker">How it works</p>
           <h2 className="serif madoo-seo-heading">
-            From idea to send-ready email.
+            From idea to export-ready email.
           </h2>
           <ol className="madoo-seo-steps">
             {productWorkflow.map((step) => (

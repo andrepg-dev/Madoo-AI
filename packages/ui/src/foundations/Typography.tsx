@@ -73,7 +73,7 @@ export function TypographyScale() {
                 color: "var(--ink)",
               }}
             >
-              What email do you want to send today?
+              What email do you want to create today?
             </div>
           </div>
         ))}

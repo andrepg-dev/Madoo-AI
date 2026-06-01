@@ -500,35 +500,6 @@ select:focus-visible {
   }
 }
 
-.madoo-contacts-header {
-  padding: 24px 32px 16px;
-}
-@media (max-width: 700px) {
-  .madoo-contacts-header {
-    padding: 16px 16px 12px;
-  }
-}
-
-.madoo-campaign-row {
-  grid-template-columns: minmax(0, 1fr) 148px 128px 110px 90px minmax(150px, auto);
-}
-@media (max-width: 1100px) {
-  .madoo-campaign-row {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 8px;
-  }
-}
-
-.madoo-analytics-row {
-  grid-template-columns: minmax(0, 1fr) 100px 100px 100px;
-}
-@media (max-width: 760px) {
-  .madoo-analytics-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    row-gap: 8px;
-  }
-}
-
 .madoo-sidebar-backdrop {
   position: fixed;
   inset: 0;

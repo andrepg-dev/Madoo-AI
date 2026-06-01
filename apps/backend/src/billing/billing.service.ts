@@ -69,8 +69,7 @@ export class BillingService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    const [contactsUsed, generationsUsed] = await Promise.all([
-      this.prisma.contact.count({ where: { workspaceId } }),
+    const [generationsUsed] = await Promise.all([
       this.prisma.emailGenerationRun.count({
         where: {
           workspaceId,
@@ -90,14 +89,13 @@ export class BillingService {
         hasStripeCustomer: Boolean(subscription.stripeCustomerId),
       },
       usage: {
-        contacts: { used: contactsUsed, limit: limits.contacts },
         aiGenerations: {
           used: generationsUsed,
           limit: limits.aiGenerations,
           resetsAt: startOfNextMonth.toISOString(),
         },
       },
-      limits: { contacts: limits.contacts, aiGenerations: limits.aiGenerations },
+      limits: { aiGenerations: limits.aiGenerations },
     };
   }
 
@@ -208,39 +206,6 @@ export class BillingService {
         return_url: `${appUrl}/settings/billing`,
       });
     return { url: session.url };
-  }
-
-  /**
-   * Plan-limit guard for adding contacts. Returns the slack so import jobs
-   * can decide whether to short-circuit with a partial error.
-   */
-  async assertCanAddContacts(
-    workspaceId: string,
-    additional: number,
-  ): Promise<void> {
-    const subscription = await this.ensureSubscription(workspaceId);
-    const plan = subscription.plan as Plan;
-    const limit = PLAN_LIMITS[plan].contacts;
-    const used = await this.prisma.contact.count({ where: { workspaceId } });
-    if (used + additional > limit) {
-      throw new ForbiddenException(
-        `Plan limit reached: ${plan} allows ${limit} contacts (using ${used}). Upgrade to add more.`,
-      );
-    }
-  }
-
-  async assertCanSendCampaign(
-    workspaceId: string,
-    audienceCount: number,
-  ): Promise<void> {
-    const subscription = await this.ensureSubscription(workspaceId);
-    const plan = subscription.plan as Plan;
-    const limit = PLAN_LIMITS[plan].contacts;
-    if (audienceCount > limit) {
-      throw new ForbiddenException(
-        `Audience (${audienceCount}) exceeds the ${plan} plan limit of ${limit} contacts. Upgrade to send to a larger audience.`,
-      );
-    }
   }
 
   /**

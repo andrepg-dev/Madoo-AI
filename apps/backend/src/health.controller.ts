@@ -1,6 +1,5 @@
 import { Controller, Get, Version } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import IORedis from "ioredis";
 import { PrismaService } from "./prisma/prisma.service";
 
 type Check = { ok: boolean; latencyMs?: number; error?: string; skipped?: boolean };
@@ -9,9 +8,7 @@ type HealthReport = {
   uptime: number;
   checks: {
     db: Check;
-    redis: Check;
     anthropic: Check;
-    resend: Check;
     stripe: Check;
   };
 };
@@ -26,19 +23,14 @@ export class HealthController {
   @Get()
   @Version("1")
   async health(): Promise<HealthReport> {
-    const [db, redis] = await Promise.all([
-      this.checkDb(),
-      this.checkRedis(),
-    ]);
+    const db = await this.checkDb();
     const anthropic = this.checkConfig("ANTHROPIC_API_KEY");
-    const resend = this.checkConfig("RESEND_API_KEY");
     const stripe = this.checkConfig("STRIPE_SECRET_KEY");
 
-    const allOk = [db, redis].every((c) => c.ok);
     return {
-      status: allOk ? "ok" : "degraded",
+      status: db.ok ? "ok" : "degraded",
       uptime: process.uptime(),
-      checks: { db, redis, anthropic, resend, stripe },
+      checks: { db, anthropic, stripe },
     };
   }
 
@@ -53,35 +45,6 @@ export class HealthController {
         latencyMs: Date.now() - start,
         error: error instanceof Error ? error.message : "db ping failed",
       };
-    }
-  }
-
-  private async checkRedis(): Promise<Check> {
-    const url = this.config.get<string>("REDIS_URL");
-    if (!url) return { ok: false, skipped: true, error: "REDIS_URL unset" };
-    const start = Date.now();
-    let client: IORedis | null = null;
-    try {
-      client = new IORedis(url, {
-        lazyConnect: true,
-        maxRetriesPerRequest: 1,
-        enableOfflineQueue: false,
-      });
-      await client.connect();
-      await client.ping();
-      return { ok: true, latencyMs: Date.now() - start };
-    } catch (error) {
-      return {
-        ok: false,
-        latencyMs: Date.now() - start,
-        error: error instanceof Error ? error.message : "redis ping failed",
-      };
-    } finally {
-      try {
-        client?.disconnect();
-      } catch {
-        // ignore cleanup errors
-      }
     }
   }
 

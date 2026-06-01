@@ -10,7 +10,7 @@ const meta: Meta<typeof Banner> = {
     tone: "accent",
     title: "AI prediction",
     children:
-      "Based on your past campaigns, expect ~580 opens and ~140 clicks.",
+      "Based on your template brief, this layout is ready for review.",
   },
   argTypes: {
     tone: {
@@ -33,16 +33,16 @@ export const All: Story = {
         Subject lines under 50 chars get 22% more opens.
       </Banner>
       <Banner tone="info" title="Heads up">
-        Your domain DKIM record will refresh in 12 hours.
+        Your template preview refreshed successfully.
       </Banner>
       <Banner tone="success" title="Domain verified">
-        acme.co is ready to send marketing emails.
+        Your workspace is ready to export templates.
       </Banner>
       <Banner tone="warn" title="Variables missing">
         4 contacts will receive the fallback value for {"{Empresa}"}.
       </Banner>
       <Banner tone="danger" title="Send failed">
-        Stripe rejected your card. Update billing to keep sending.
+        Stripe rejected your card. Update billing to keep exporting.
       </Banner>
     </div>
   ),
