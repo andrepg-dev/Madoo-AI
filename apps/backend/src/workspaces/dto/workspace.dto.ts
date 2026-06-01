@@ -16,6 +16,7 @@ export function toWorkspaceDto(w: Workspace): WorkspaceDto {
     name: w.name,
     slug: w.slug,
     postalAddress: w.postalAddress ?? undefined,
+    templateCreationReason: w.templateCreationReason ?? undefined,
     createdAt: w.createdAt.toISOString(),
     updatedAt: w.updatedAt.toISOString(),
   });

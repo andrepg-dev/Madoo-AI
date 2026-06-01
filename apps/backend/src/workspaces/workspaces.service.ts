@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -124,7 +125,7 @@ export class WorkspacesService {
 
   async updatePrimaryWorkspaceForUser(
     userId: string,
-    input: { postalAddress: string },
+    input: { postalAddress?: string; templateCreationReason?: string },
   ): Promise<Workspace & { membership: Membership }> {
     const membership = await this.prisma.membership.findFirst({
       where: { userId },
@@ -132,9 +133,24 @@ export class WorkspacesService {
       orderBy: { createdAt: "asc" },
     });
     if (!membership) throw new NotFoundException("Workspace not found.");
+
+    const data: {
+      postalAddress?: string;
+      templateCreationReason?: string;
+    } = {};
+    if (input.postalAddress !== undefined) {
+      data.postalAddress = input.postalAddress.trim();
+    }
+    if (input.templateCreationReason !== undefined) {
+      data.templateCreationReason = input.templateCreationReason.trim();
+    }
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException("No workspace fields provided.");
+    }
+
     const updated = await this.prisma.workspace.update({
       where: { id: membership.workspaceId },
-      data: { postalAddress: input.postalAddress.trim() },
+      data,
     });
     return { ...updated, membership };
   }

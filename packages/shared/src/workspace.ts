@@ -10,6 +10,7 @@ export const WorkspaceSchema = z.object({
     .max(64)
     .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "slug must be lowercase, dash-separated"),
   postalAddress: z.string().min(1).max(500).optional(),
+  templateCreationReason: z.string().min(1).max(80).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -38,7 +39,8 @@ export const CreateWorkspaceInputSchema = z.object({
 export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceInputSchema>;
 
 export const UpdateWorkspaceMeInputSchema = z.object({
-  postalAddress: z.string().min(1).max(500),
+  postalAddress: z.string().min(1).max(500).optional(),
+  templateCreationReason: z.string().min(1).max(80).optional(),
 });
 
 export type UpdateWorkspaceMeInput = z.infer<typeof UpdateWorkspaceMeInputSchema>;

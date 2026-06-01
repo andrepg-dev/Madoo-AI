@@ -31,9 +31,7 @@ export class WorkspacesController {
     @CurrentUser() current: { sub: string },
     @Body() body: UpdateWorkspaceMeDto,
   ): Promise<MyWorkspaceDto> {
-    const workspace = await this.workspaces.updatePrimaryWorkspaceForUser(current.sub, {
-      postalAddress: body.postalAddress,
-    });
+    const workspace = await this.workspaces.updatePrimaryWorkspaceForUser(current.sub, body);
     return toMyWorkspaceDto(workspace, workspace.membership);
   }
 }
