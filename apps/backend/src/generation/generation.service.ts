@@ -606,7 +606,7 @@ export class GenerationService {
     };
 
     try {
-      emit({ type: "step", message: "Calling Claude..." });
+      emit({ type: "step", message: "Calling to LLM..." });
 
       const systemBlocks: MessageCreateParams["system"] = [
         {
