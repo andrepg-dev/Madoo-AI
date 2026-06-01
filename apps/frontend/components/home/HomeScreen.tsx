@@ -2,7 +2,11 @@
 
 import { useCreateEmail, useEmails } from "@/hooks/use-emails";
 import { useMe } from "@/hooks/use-me";
-import { clearPendingPrompt, readPendingPrompt, savePendingPrompt } from "@/lib/api";
+import {
+  clearPendingPrompt,
+  readPendingPrompt,
+  savePendingPrompt,
+} from "@/lib/api";
 import {
   CATEGORIES,
   PROMPT_AUDIENCES,
@@ -14,7 +18,12 @@ import {
   type Template,
 } from "@/lib/data";
 import { shortEmailId } from "@/lib/email-id";
-import { productFaq, productFeatures, productUseCases, productWorkflow } from "@/lib/product-marketing";
+import {
+  productFaq,
+  productFeatures,
+  productUseCases,
+  productWorkflow,
+} from "@/lib/product-marketing";
 import { useAuthStore } from "@/stores/auth";
 import {
   Banner,
@@ -32,8 +41,11 @@ import { TemplateCard } from "./TemplateCard";
 export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
   const router = useRouter();
   const { data: user, isPending: loading } = useMe();
-  const { mutateAsync: createEmail, isPending: creatingEmail } = useCreateEmail();
-  const { data: emails = [], isLoading: loadingEmails } = useEmails(Boolean(user));
+  const { mutateAsync: createEmail, isPending: creatingEmail } =
+    useCreateEmail();
+  const { data: emails = [], isLoading: loadingEmails } = useEmails(
+    Boolean(user),
+  );
   const openLogin = useAuthStore((s) => s.openLogin);
 
   const [prompt, setPrompt] = useState("");
@@ -45,7 +57,29 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const autoTriggerRef = useRef(false);
 
-  const filtered = activeCat === "All" ? TEMPLATES : TEMPLATES.filter((t) => t.category === activeCat);
+  const filtered =
+    activeCat === "All"
+      ? TEMPLATES
+      : TEMPLATES.filter((t) => t.category === activeCat);
+
+  const createFromPrompt = async (input: {
+    prompt: string;
+    tone: string;
+    length: string;
+    audience: string;
+  }) => {
+    try {
+      const email = await createEmail({
+        prompt: input.prompt,
+        tone: input.tone,
+        length: input.length,
+        audience: input.audience,
+      });
+      router.push(`/emails/${email.id}/generate`);
+    } catch {
+      autoTriggerRef.current = false;
+    }
+  };
 
   const handleGenerate = async () => {
     const trimmed = prompt.trim();
@@ -56,17 +90,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
       openLogin(pending);
       return;
     }
-    try {
-      const email = await createEmail({
-        prompt: trimmed,
-        tone,
-        length,
-        audience,
-      });
-      router.push(`/emails/${email.id}/generate`);
-    } catch {
-      /* surfaced via global error handling later */
-    }
+    await createFromPrompt({ prompt: trimmed, tone, length, audience });
   };
 
   useEffect(() => {
@@ -81,17 +105,12 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
     clearPendingPrompt();
 
     const run = async () => {
-      try {
-        const email = await createEmail({
-          prompt: pending.prompt,
-          tone: pending.tone ?? tone,
-          length: pending.length ?? length,
-          audience: pending.audience ?? audience,
-        });
-        router.push(`/emails/${email.id}/generate`);
-      } catch {
-        autoTriggerRef.current = false;
-      }
+      await createFromPrompt({
+        prompt: pending.prompt,
+        tone: pending.tone ?? tone,
+        length: pending.length ?? length,
+        audience: pending.audience ?? audience,
+      });
     };
 
     void run();
@@ -124,7 +143,9 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           length: "Medium",
           audience: "Existing customers",
         });
-        router.push(`/templates/${encodeURIComponent(slug)}/preview?${params.toString()}`);
+        router.push(
+          `/templates/${encodeURIComponent(slug)}/preview?${params.toString()}`,
+        );
         return;
       }
       const email = await createEmail({
@@ -135,7 +156,11 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
       });
       router.push(`/emails/${email.id}/generate`);
     } catch (err) {
-      setTemplateError(err instanceof Error ? err.message : "Failed to start from template. Please try again.");
+      setTemplateError(
+        err instanceof Error
+          ? err.message
+          : "Failed to start from template. Please try again.",
+      );
     }
   };
 
@@ -148,7 +173,10 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
-      <section className="madoo-home-hero" style={{ maxWidth: 980, margin: "0 auto" }}>
+      <section
+        className="madoo-home-hero"
+        style={{ maxWidth: 980, margin: "0 auto" }}
+      >
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div
             style={{
@@ -164,7 +192,8 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               marginBottom: 18,
             }}
           >
-            <Icon name="sparkle" size={12} /> AI email generator for better templates
+            <Icon name="sparkle" size={12} /> AI email generator for better
+            templates
           </div>
           <h1
             className="serif"
@@ -179,10 +208,20 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           >
             AI Email Generator
             <br />
-            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>for Better & Faster Email Templates</span>
+            <span style={{ fontStyle: "italic", color: "var(--accent-deep)" }}>
+              for Better & Faster Email Templates
+            </span>
           </h1>
-          <p style={{ fontSize: 16, color: "var(--ink-soft)", marginTop: 14, lineHeight: 1.5 }}>
-            Describe the email you need. {brand} turns it into a polished, send-ready template.
+          <p
+            style={{
+              fontSize: 16,
+              color: "var(--ink-soft)",
+              marginTop: 14,
+              lineHeight: 1.5,
+            }}
+          >
+            Describe the email you need. {brand} turns it into a polished,
+            send-ready template.
           </p>
         </div>
 
@@ -192,7 +231,8 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             border: "1px solid var(--border)",
             borderRadius: 18,
             padding: 4,
-            boxShadow: "0 1px 0 rgba(0,0,0,0.02), 0 12px 40px -12px rgba(60, 50, 40, 0.12)",
+            boxShadow:
+              "0 1px 0 rgba(0,0,0,0.02), 0 12px 40px -12px rgba(60, 50, 40, 0.12)",
             transition: "box-shadow 0.2s, border-color 0.2s",
           }}
         >
@@ -224,9 +264,24 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               flexWrap: "wrap",
             }}
           >
-            <PromptPill label="Tone" value={tone} options={PROMPT_TONES} onChange={setTone} />
-            <PromptPill label="Length" value={length} options={PROMPT_LENGTHS} onChange={setLength} />
-            <PromptPill label="Audience" value={audience} options={PROMPT_AUDIENCES} onChange={setAudience} />
+            <PromptPill
+              label="Tone"
+              value={tone}
+              options={PROMPT_TONES}
+              onChange={setTone}
+            />
+            <PromptPill
+              label="Length"
+              value={length}
+              options={PROMPT_LENGTHS}
+              onChange={setLength}
+            />
+            <PromptPill
+              label="Audience"
+              value={audience}
+              options={PROMPT_AUDIENCES}
+              onChange={setAudience}
+            />
             <div style={{ flex: 1 }} />
             <Button
               variant="primary"
@@ -262,9 +317,11 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         </div>
       </section>
 
-
       {user ? (
-        <section className="madoo-home-recent" style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <section
+          className="madoo-home-recent"
+          style={{ maxWidth: 1280, margin: "0 auto" }}
+        >
           <div
             style={{
               display: "flex",
@@ -275,7 +332,10 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               flexWrap: "wrap",
             }}
           >
-            <h3 className="serif" style={{ margin: 0, fontSize: 28, fontWeight: 400 }}>
+            <h3
+              className="serif"
+              style={{ margin: 0, fontSize: 28, fontWeight: 400 }}
+            >
               Recent emails
             </h3>
             <div style={{ fontSize: 12, color: "var(--ink-faint)" }}>
@@ -296,11 +356,20 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               Your generated emails will appear here.
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                gap: 12,
+              }}
+            >
               {emails.slice(0, 12).map((email) => {
                 const latest = email.variants[email.variants.length - 1];
                 const preview = latest?.previewUrl ?? null;
-                const goTo = email.status === "DRAFT" ? `/emails/${email.id}/generate` : `/emails/${email.id}/editor`;
+                const goTo =
+                  email.status === "DRAFT"
+                    ? `/emails/${email.id}/generate`
+                    : `/emails/${email.id}/editor`;
                 return (
                   <button
                     key={email.id}
@@ -321,7 +390,9 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                       style={{
                         width: "100%",
                         height: 160,
-                        background: preview ? "transparent" : "var(--surface-raised)",
+                        background: preview
+                          ? "transparent"
+                          : "var(--surface-raised)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -334,10 +405,22 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                         <img
                           src={preview}
                           alt={email.title ?? "Email preview"}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            objectPosition: "top",
+                          }}
                         />
                       ) : latest?.compiledHtml ? (
-                        <div style={{ width: "100%", height: "100%", overflow: "hidden", background: "#fff" }}>
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            overflow: "hidden",
+                            background: "#fff",
+                          }}
+                        >
                           <iframe
                             title={email.title ?? "Email preview"}
                             srcDoc={latest.compiledHtml}
@@ -352,7 +435,14 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                           />
                         </div>
                       ) : (
-                        <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth={1.5}>
+                        <svg
+                          width={32}
+                          height={32}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="var(--ink-faint)"
+                          strokeWidth={1.5}
+                        >
                           <rect x={2} y={4} width={20} height={16} rx={2} />
                           <path d="M2 9h20" />
                           <path d="M7 13h3m-3 3h6" />
@@ -362,8 +452,21 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
 
                     {/* Card info */}
                     <div style={{ padding: "12px 14px" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                        <div style={{ fontSize: 11, color: "var(--ink-faint)", fontFamily: "var(--font-jetbrains-mono)" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--ink-faint)",
+                            fontFamily: "var(--font-jetbrains-mono)",
+                          }}
+                        >
                           {shortEmailId(email.id)}
                         </div>
                         <div
@@ -379,14 +482,34 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                           {email.status}
                         </div>
                       </div>
-                      <div style={{ marginTop: 6, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
+                      <div
+                        style={{
+                          marginTop: 6,
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "var(--ink)",
+                        }}
+                      >
                         {email.title ?? latest?.subject ?? "Untitled email"}
                       </div>
-                      <div style={{ marginTop: 4, fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.45 }}>
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontSize: 12.5,
+                          color: "var(--ink-soft)",
+                          lineHeight: 1.45,
+                        }}
+                      >
                         {email.prompt.slice(0, 80)}
                         {email.prompt.length > 80 ? "…" : ""}
                       </div>
-                      <div style={{ marginTop: 8, fontSize: 11, color: "var(--ink-faint)" }}>
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: 11,
+                          color: "var(--ink-faint)",
+                        }}
+                      >
                         {new Date(email.updatedAt).toLocaleString()}
                       </div>
                     </div>
@@ -398,7 +521,10 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         </section>
       ) : null}
 
-      <section className="madoo-home-templates" style={{ maxWidth: 1280, margin: "0 auto" }}>
+      <section
+        className="madoo-home-templates"
+        style={{ maxWidth: 1280, margin: "0 auto" }}
+      >
         <div
           style={{
             display: "flex",
@@ -412,10 +538,17 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           <div>
             <h2
               className="serif"
-              style={{ fontSize: 32, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}
+              style={{
+                fontSize: 32,
+                fontWeight: 400,
+                margin: 0,
+                letterSpacing: -0.5,
+              }}
             >
               Or start with a template{" "}
-              <span style={{ fontStyle: "italic", color: "var(--ink-soft)" }}>—</span>
+              <span style={{ fontStyle: "italic", color: "var(--ink-soft)" }}>
+                —
+              </span>
             </h2>
             <p style={{ fontSize: 14, color: "var(--ink-soft)", marginTop: 4 }}>
               Hand-crafted designs. Edit anything with AI.
@@ -443,14 +576,16 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
           }}
         >
           {filtered.map((t) => (
-            <TemplateCard key={t.id} template={t} onClick={() => void onSelectTemplate(t)} />
+            <TemplateCard
+              key={t.id}
+              template={t}
+              onClick={() => void onSelectTemplate(t)}
+            />
           ))}
         </div>
       </section>
 
       <MarketingSeoSections />
-
-
     </div>
   );
 }
@@ -458,7 +593,10 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
 function MarketingSeoSections() {
   return (
     <>
-      <section className="madoo-home-seo" style={{ maxWidth: 1180, margin: "0 auto" }}>
+      <section
+        className="madoo-home-seo"
+        style={{ maxWidth: 1180, margin: "0 auto" }}
+      >
         <div className="madoo-seo-band">
           <div>
             <p className="madoo-kicker">AI email workspace</p>
@@ -467,8 +605,9 @@ function MarketingSeoSections() {
             </h2>
           </div>
           <p className="madoo-seo-lede">
-            Madoo AI turns a plain-language email idea into a polished template. Prompt the AI, preview the design,
-            refine the copy, and keep responsive HTML ready for your workflow.
+            Madoo AI turns a plain-language email idea into a polished template.
+            Prompt the AI, preview the design, refine the copy, and keep
+            responsive HTML ready for your workflow.
           </p>
         </div>
 
@@ -482,10 +621,15 @@ function MarketingSeoSections() {
         </div>
       </section>
 
-      <section className="madoo-home-seo madoo-seo-split" style={{ maxWidth: 1180, margin: "0 auto" }}>
+      <section
+        className="madoo-home-seo madoo-seo-split"
+        style={{ maxWidth: 1180, margin: "0 auto" }}
+      >
         <div>
           <p className="madoo-kicker">How it works</p>
-          <h2 className="serif madoo-seo-heading">From idea to send-ready email.</h2>
+          <h2 className="serif madoo-seo-heading">
+            From idea to send-ready email.
+          </h2>
           <ol className="madoo-seo-steps">
             {productWorkflow.map((step) => (
               <li key={step}>{step}</li>
@@ -494,7 +638,9 @@ function MarketingSeoSections() {
         </div>
         <div>
           <p className="madoo-kicker">Use cases</p>
-          <h2 className="serif madoo-seo-heading">Built for repeatable email workflows.</h2>
+          <h2 className="serif madoo-seo-heading">
+            Built for repeatable email workflows.
+          </h2>
           <div className="madoo-use-case-grid">
             {productUseCases.map((item) => (
               <span key={item}>{item}</span>
@@ -503,11 +649,16 @@ function MarketingSeoSections() {
         </div>
       </section>
 
-      <section className="madoo-home-seo" style={{ maxWidth: 1180, margin: "0 auto" }}>
+      <section
+        className="madoo-home-seo"
+        style={{ maxWidth: 1180, margin: "0 auto" }}
+      >
         <div className="madoo-faq-wrap">
           <div>
             <p className="madoo-kicker">Product FAQ</p>
-            <h2 className="serif madoo-seo-heading">Learn what Madoo AI does before you generate.</h2>
+            <h2 className="serif madoo-seo-heading">
+              Learn what Madoo AI does before you generate.
+            </h2>
           </div>
           <div className="madoo-faq-list">
             {productFaq.map((item) => (

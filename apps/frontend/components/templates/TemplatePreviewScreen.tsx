@@ -18,7 +18,14 @@ type Props = {
   onBack: () => void;
 };
 
-export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, onBack }: Props) {
+export function TemplatePreviewScreen({
+  slug,
+  prompt,
+  tone,
+  length,
+  audience,
+  onBack,
+}: Props) {
   const router = useRouter();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -39,7 +46,6 @@ export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, on
   const genUsed = billingQuery.data?.usage.aiGenerations.used ?? 0;
   const genLimit = billingQuery.data?.usage.aiGenerations.limit ?? -1;
   const isAtGenerationLimit = genLimit !== -1 && genUsed >= genLimit;
-
   const saveMutation = useCreateEmailFromTemplate();
 
   useEffect(() => {
@@ -54,7 +60,10 @@ export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, on
       const doc = frame.contentDocument;
       if (!doc) return;
       const resize = () => {
-        const h = Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight ?? 0);
+        const h = Math.max(
+          doc.documentElement.scrollHeight,
+          doc.body?.scrollHeight ?? 0,
+        );
         if (h > 0) setPreviewHeight(h + 2);
       };
       resize();
@@ -66,9 +75,45 @@ export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, on
     }
   };
 
+  const saveTemplate = async () => {
+    if (isAtGenerationLimit) {
+      toast({
+        tone: "danger",
+        title: "No AI credits left",
+        body: "You've reached your monthly AI credit limit. Upgrade your plan to save more templates.",
+      });
+      return;
+    }
+
+    try {
+      const email = await saveMutation.mutateAsync({
+        templateSlug: slug,
+        prompt,
+        tone,
+        length,
+        audience,
+      });
+      void qc.invalidateQueries({ queryKey: billingKeys.overview() });
+      router.push(`/emails/${encodeURIComponent(email.id)}/editor`);
+    } catch (err) {
+      toast({
+        tone: "danger",
+        title: "Cannot save template",
+        body: err instanceof Error ? err.message : "Something went wrong.",
+      });
+    }
+  };
+
   if (previewQuery.isLoading) {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <p style={{ color: "var(--ink-soft)" }}>Loading template…</p>
       </div>
     );
@@ -76,9 +121,20 @@ export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, on
 
   if (previewQuery.isError || !previewQuery.data) {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
         <p style={{ color: "var(--ink-soft)" }}>Could not load template.</p>
-        <Button variant="secondary" size="sm" onClick={onBack}>Back</Button>
+        <Button variant="secondary" size="sm" onClick={onBack}>
+          Back
+        </Button>
       </div>
     );
   }
@@ -86,8 +142,22 @@ export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, on
   const seed = previewQuery.data;
 
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden", background: "var(--bg)" }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        overflow: "hidden",
+        background: "var(--bg)",
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
         <div
           style={{
             height: 52,
@@ -104,7 +174,9 @@ export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, on
             size="sm"
             onClick={onBack}
             leftIcon={
-              <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}>
+              <span
+                style={{ transform: "rotate(180deg)", display: "inline-flex" }}
+              >
                 <Icon name="arrow" size={12} />
               </span>
             }
@@ -112,49 +184,37 @@ export function TemplatePreviewScreen({ slug, prompt, tone, length, audience, on
             Back
           </Button>
           <div style={{ width: 1, height: 20, background: "var(--border)" }} />
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>{seed.name}</div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink)" }}>
+            {seed.name}
+          </div>
+          <div
+            style={{
+              marginLeft: "auto",
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+            }}
+          >
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 3,
                 fontSize: 11,
-                color: isAtGenerationLimit ? "var(--danger, #c0392b)" : "var(--ink-faint)",
+                color: isAtGenerationLimit
+                  ? "var(--danger, #c0392b)"
+                  : "var(--ink-faint)",
               }}
             >
-              <Icon name="bolt" size={11} /> {isAtGenerationLimit ? "No credits left" : "1 credit"}
+              <Icon name="bolt" size={11} />{" "}
+              {isAtGenerationLimit ? "No credits left" : "1 credit"}
             </div>
             <Button
               variant="primary"
               size="sm"
               leftIcon={<Icon name="check" size={12} />}
               disabled={saveMutation.isPending}
-              onClick={() => {
-                if (isAtGenerationLimit) {
-                  toast({
-                    tone: "danger",
-                    title: "No AI credits left",
-                    body: "You've reached your monthly AI credit limit. Upgrade your plan to save more templates.",
-                  });
-                  return;
-                }
-                saveMutation.mutate(
-                  { templateSlug: slug, prompt, tone, length, audience },
-                  {
-                    onSuccess: (email) => {
-                      void qc.invalidateQueries({ queryKey: billingKeys.overview() });
-                      router.push(`/emails/${encodeURIComponent(email.id)}/editor`);
-                    },
-                    onError: (err) =>
-                      toast({
-                        tone: "danger",
-                        title: "Cannot save template",
-                        body: err instanceof Error ? err.message : "Something went wrong.",
-                      }),
-                  },
-                );
-              }}
+              onClick={() => void saveTemplate()}
             >
               {saveMutation.isPending ? "Saving…" : "Save template"}
             </Button>
