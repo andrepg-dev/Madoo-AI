@@ -1,2 +1,22 @@
 @import "tailwindcss";
 
+.grainient-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+@keyframes madoo-provider-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-25% - 0.5625rem));
+  }
+}
+
+.madoo-provider-marquee {
+  animation: madoo-provider-marquee 60s linear infinite;
+}
