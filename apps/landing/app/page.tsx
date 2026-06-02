@@ -8,7 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 export default function HomePage() {
   return (
     <section className="min-h-screen bg-[#f3faff]">
-      <header>
+      <header className="absolute top-0 left-0 right-0">
         <div className="flex h-16 items-center justify-between px-4 sm:px-8 xl:px-48">
           <div className="flex gap-16">
             <a className="flex items-center gap-2.5" href="/" aria-label="Madoo AI home">
@@ -31,19 +31,20 @@ export default function HomePage() {
                 Solutions
                 <HugeiconsIcon
                   icon={ArrowDown01Icon}
-                  size={15}
-                  strokeWidth={2}
-                  className="text-[#687382]"
+                  size={13}
+                  strokeWidth={2.4}
+                  className="text-[#4f5b68] [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
                   aria-hidden="true"
+
                 />
               </a>
               <a className="inline-flex items-center gap-2" href="#resources">
                 Resources
                 <HugeiconsIcon
                   icon={ArrowDown01Icon}
-                  size={15}
-                  strokeWidth={2}
-                  className="text-[#687382]"
+                  size={13}
+                  strokeWidth={2.4}
+                  className="text-[#4f5b68] [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
                   aria-hidden="true"
                 />
               </a>
@@ -54,7 +55,7 @@ export default function HomePage() {
 
           <div className="flex gap-1.5">
             <a
-              className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm leading-none text-[#101114] transition sm:inline-flex border border-zinc-400"
+              className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm leading-none text-[#101114] shadow-[inset_0_0_0_0.5px_#b8d2e4] transition hover:bg-[#f3faff] sm:inline-flex"
               href="mailto:hello@madoo.ai"
             >
               Login
@@ -82,6 +83,18 @@ export default function HomePage() {
           </button>
         </div>
       </header>
+
+      <div className="w-full flex justify-center items-center h-screen flex-col gap-9">
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-5xl text-[#0c336a] text-center">Artificial Intelligence <br /> Email Builder</h3>
+          <h4 className="text-lg text-zinc-800 text-center font-light">Create Better & Faster Email Templates with AI</h4>
+        </div>
+
+        <textarea
+          placeholder="Ask Madoo to build a landing page for my company"
+          className="min-h-36 min-w-3xl rounded-3xl bg-[#ffffff] p-5 text-sm resize-none shadow-[inset_0_0_0_0.5px_#b8d2e4] placeholder:text-zinc-600 outline-none"
+        />
+      </div>
     </section>
   )
 }
