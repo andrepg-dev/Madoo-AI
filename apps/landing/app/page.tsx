@@ -2,7 +2,7 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Add01Icon,
   ArrowDown01Icon,
@@ -72,6 +72,7 @@ const movingExportProviders = Array.from({ length: 4 }, () => exportProviders).f
 export default function HomePage() {
   const [prompt, setPrompt] = useState("");
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const hasPrompt = prompt.trim().length > 0;
 
   const openAuthDialog = () => setAuthDialogOpen(true);
@@ -83,6 +84,16 @@ export default function HomePage() {
       openAuthDialog();
     }
   };
+
+  useEffect(() => {
+    const textarea = promptTextareaRef.current;
+    if (!textarea) return;
+
+    const maxHeight = 320;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [prompt]);
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#FAFBFD]">
@@ -210,11 +221,12 @@ export default function HomePage() {
         <div className="flex flex-col gap-4">
           <div className="min-w-[700px] rounded-3xl bg-white shadow-[inset_0_0_0_0.5px_#b8d2e4]">
             <textarea
+              ref={promptTextareaRef}
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               onKeyDown={onPromptKeyDown}
-              placeholder="Hi Madoo, can you create an email template for my AWS Summer Event? Check this link.com for more information"
-              className="min-h-24 w-full resize-none rounded-t-3xl bg-transparent px-5 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
+              placeholder="Hi Madoo, can you create an email template for my AWS Summit Event? Check this link.com for more information"
+              className="max-h-80 min-h-24 w-full resize-none rounded-t-3xl bg-transparent px-5 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
             />
 
             <div className="flex items-center justify-between px-3.5 pb-3">
@@ -265,7 +277,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={openAuthDialog}
-                  className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt ? "bg-[#0c346a] hover:bg-[#092952]" : "bg-[#7d7d7a] hover:bg-[#666663]"
+                  className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt ? "bg-black" : "bg-[#7d7d7a] hover:bg-[#666663]"
                     }`}
                   aria-label="Submit prompt"
                 >
@@ -276,7 +288,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="text-sm">
+          <div className="text-sm mt-7">
             <h6 className="font-light text-zinc-800 text-xs">Export to any provider of you choise</h6>
             <div className="mt-3 w-[700px] overflow-hidden">
               <div className="madoo-provider-marquee flex w-max gap-3">

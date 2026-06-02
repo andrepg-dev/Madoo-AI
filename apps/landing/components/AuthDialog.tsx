@@ -120,7 +120,7 @@ export default function AuthDialog({ open, onClose }: AuthDialogProps) {
           />
           <p className="text-2xl leading-none text-zinc-400">Start building.</p>
           <h2 id="auth-dialog-title" className="mt-1 text-2xl leading-tight">
-            Create free account
+            Log in to your account
           </h2>
         </div>
 
@@ -129,7 +129,7 @@ export default function AuthDialog({ open, onClose }: AuthDialogProps) {
             <button
               key={provider.name}
               type="button"
-              className="flex h-8 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm text-[#101114] shadow-[0_1px_2px_rgba(16,17,20,0.035),0_0_0_0.5px_rgba(16,17,20,0.22)] transition hover:bg-[#f7f8fb] hover:shadow-[0_2px_6px_rgba(16,17,20,0.055),0_0_0_0.5px_rgba(16,17,20,0.28)]"
+              className="flex h-8 w-full items-center cursor-pointer justify-center gap-1.5 rounded-lg bg-white text-sm text-[#101114] shadow-[0_1px_2px_rgba(16,17,20,0.035),0_0_0_0.5px_rgba(16,17,20,0.22)] transition hover:bg-[#f7f8fb] hover:shadow-[0_2px_6px_rgba(16,17,20,0.055),0_0_0_0.5px_rgba(16,17,20,0.28)]"
             >
               <span className="text-[#101114]">{provider.icon}</span>
               {provider.label}
@@ -151,7 +151,7 @@ export default function AuthDialog({ open, onClose }: AuthDialogProps) {
           />
           <button
             type="button"
-            className="h-8 rounded-lg bg-[#101114] text-sm text-white shadow-[0_8px_20px_rgba(16,17,20,0.16),0_0_0_0.5px_rgba(16,17,20,0.22)] transition hover:bg-[#26282d]"
+            className="h-8 cursor-pointer rounded-lg bg-[#101114] text-sm text-white shadow-[0_8px_20px_rgba(16,17,20,0.16),0_0_0_0.5px_rgba(16,17,20,0.22)] transition hover:bg-[#26282d]"
           >
             Continue
           </button>
