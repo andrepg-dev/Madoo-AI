@@ -1,6 +1,7 @@
 
 "use client";
 
+import type { KeyboardEvent } from "react";
 import { useState } from "react";
 import {
   Add01Icon,
@@ -10,6 +11,7 @@ import {
   Mic02Icon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import AuthDialog from "../components/AuthDialog";
 import Grainient from "../components/Grainient";
 
 const promptOptions: Array<{ label: string; value?: string }> = [
@@ -69,7 +71,18 @@ const movingExportProviders = Array.from({ length: 4 }, () => exportProviders).f
 
 export default function HomePage() {
   const [prompt, setPrompt] = useState("");
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const hasPrompt = prompt.trim().length > 0;
+
+  const openAuthDialog = () => setAuthDialogOpen(true);
+  const closeAuthDialog = () => setAuthDialogOpen(false);
+
+  const onPromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      openAuthDialog();
+    }
+  };
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#FAFBFD]">
@@ -125,19 +138,21 @@ export default function HomePage() {
           </div>
 
           <div className="flex gap-1.5">
-            <a
+            <button
+              type="button"
               className="hidden cursor-pointer items-center gap-2 rounded-lg px-3 py-2 bg-white text-sm leading-none text-[#101114] shadow-[inset_0_0_0_0.5px_#b8d2e4] transition hover:bg-[#f3faff] sm:inline-flex"
-              href="mailto:hello@madoo.ai"
+              onClick={openAuthDialog}
             >
               Login
-            </a>
+            </button>
 
-            <a
+            <button
+              type="button"
               className="hidden cursor-pointer items-center gap-2 rounded-lg bg-[#101114] px-4 py-2 text-sm leading-none text-white transition hover:bg-[#26282d] sm:inline-flex"
-              href="mailto:hello@madoo.ai"
+              onClick={openAuthDialog}
             >
               Get started
-            </a>
+            </button>
           </div>
 
           <button
@@ -197,6 +212,7 @@ export default function HomePage() {
             <textarea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={onPromptKeyDown}
               placeholder="Hi Madoo, can you create an email template for my AWS Summer Event? Check this link.com for more information"
               className="min-h-24 w-full resize-none rounded-t-3xl bg-transparent px-5 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
             />
@@ -248,6 +264,7 @@ export default function HomePage() {
 
                 <button
                   type="button"
+                  onClick={openAuthDialog}
                   className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt ? "bg-[#0c346a] hover:bg-[#092952]" : "bg-[#7d7d7a] hover:bg-[#666663]"
                     }`}
                   aria-label="Submit prompt"
@@ -282,6 +299,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+      <AuthDialog open={authDialogOpen} onClose={closeAuthDialog} />
     </section>
   )
 }
