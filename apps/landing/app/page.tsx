@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   Add01Icon,
   ArrowDown01Icon,
+  MailLove01Icon,
   Menu01Icon,
   Mic02Icon
 } from "@hugeicons/core-free-icons";
@@ -71,7 +72,7 @@ export default function HomePage() {
   const hasPrompt = prompt.trim().length > 0;
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-[#f8fafb]">
+    <section className="relative min-h-screen overflow-hidden bg-[#FAFBFD]">
       {/* 
       <img
         src={"/madoo-blur.svg"}
@@ -154,87 +155,41 @@ export default function HomePage() {
         </div>
       </header>
 
-      <div className="relative z-50 flex h-screen w-full flex-col items-center justify-center gap-9">
-        <div className="flex flex-col gap-1.5">
-          <h3 className="text-center text-5xl text-[#000000]">
-            <span className="inline-flex items-start justify-center gap-2">
+      <div className="relative z-50 flex h-screen w-full flex-col items-center justify-center gap-9 mt-8">
+        <div className="flex flex-col gap-1.5 font-figtree">
+          <h3 className="text-center text-5xl font-medium leading-[0.94] tracking-normal text-[#071b38]">
+            <span className="block">Artificial Intelligence</span>
+            <span className="relative mt-1 inline-flex items-center justify-center gap-2">
+              <span className="bg-gradient-to-r from-[#0c346a] via-[#12629f] to-[#0c346a] bg-clip-text font-semibold text-transparent">
+                Email Builder
+              </span>
+              <span className="inline-flex h-12 w-12 translate-y-0.5 items-center justify-center rounded-xl bg-white/85 text-[#0c346a] shadow-[0_10px_28px_rgba(12,52,106,0.12),inset_0_0_0_1px_rgba(12,52,106,0.12)] backdrop-blur">
+                <HugeiconsIcon icon={MailLove01Icon} size={28} />
+              </span>
               <svg
-                viewBox="0 0 24 24"
+                viewBox="0 0 240 20"
                 fill="none"
-                className="mt-1 h-7 w-7 text-[#0c346a]"
+                className="pointer-events-none absolute -bottom-4 left-1/2 h-4 w-[82%] -translate-x-1/2 text-[#3ea7ff]"
                 aria-hidden="true"
               >
                 <path
-                  d="M9.35 5.5c-2.9 1.7-4.35 4.05-4.35 7.05v5.95h6.25v-6.25H8.1c.08-1.68.98-3.08 2.7-4.2L9.35 5.5Z"
-                  fill="currentColor"
-                  opacity="0.9"
+                  d="M7 11.5C52 6.2 156 5.6 233 10.8"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  opacity="0.32"
                 />
                 <path
-                  d="M18.55 5.5c-2.9 1.7-4.35 4.05-4.35 7.05v5.95h6.25v-6.25H17.3c.08-1.68.98-3.08 2.7-4.2L18.55 5.5Z"
-                  fill="currentColor"
-                  opacity="0.9"
+                  d="M38 14.2C91 11.3 153 11.1 202 13.6"
+                  stroke="#0c346a"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  opacity="0.14"
                 />
               </svg>
-              <span>Artificial Intelligence</span>
-            </span>
-            <br />
-            <span className="inline-flex items-center justify-center gap-3 -ml-10">
-              Email Builder
-
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                className="h-7 w-7 text-[#0c346a]"
-                aria-hidden="true"
-              >
-                <path
-                  d="M5.45 18.5c2.9-1.7 4.35-4.05 4.35-7.05V5.5H3.55v6.25H6.7c-.08 1.68-.98 3.08-2.7 4.2l1.45 2.55Z"
-                  fill="currentColor"
-                  opacity="0.9"
-                />
-                <path
-                  d="M14.65 18.5c2.9-1.7 4.35-4.05 4.35-7.05V5.5h-6.25v6.25h3.15c-.08 1.68-.98 3.08-2.7 4.2l1.45 2.55Z"
-                  fill="currentColor"
-                  opacity="0.9"
-                />
-              </svg>    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 text-[#0c346a] shadow-[0_10px_28px_rgba(12,52,106,0.12),inset_0_0_0_1px_rgba(12,52,106,0.12)] backdrop-blur">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="h-6 w-6"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M5 7.25c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2v9.5c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2v-9.5Z"
-                    fill="#edf6ff"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="m6.25 7.35 5.32 4.43c.28.23.58.35.93.35s.65-.12.93-.35l5.32-4.43"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="m9.35 11.55-3.1 3.35m8.4-3.35 3.1 3.35"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M17.9 4.65v1.8m.9-.9h-1.8"
-                    stroke="#3ea7ff"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
             </span>
           </h3>
-          <h4 className="text-lg text-zinc-700 text-center font-light">Create Better Email Templates & Move Faster with AI</h4>
+          <h4 className="text-center text-lg font-light text-zinc-700 mt-1.5">Create Better Email Templates & Move Faster with AI</h4>
         </div>
 
         <div className="flex flex-col gap-4">

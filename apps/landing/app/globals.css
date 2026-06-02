@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme {
+  --font-figtree: var(--font-figtree-next), ui-sans-serif, system-ui, sans-serif;
+}
+
 .grainient-container {
   position: relative;
   width: 100%;
