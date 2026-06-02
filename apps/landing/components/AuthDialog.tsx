@@ -64,16 +64,12 @@ export default function AuthDialog({ open, onClose }: AuthDialogProps) {
   useEffect(() => {
     if (!open) return;
 
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
 
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.body.style.overflow = originalOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open, onClose]);

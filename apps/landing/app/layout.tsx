@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree, Instrument_Serif, Inter } from "next/font/google";
+import { Figtree, IBM_Plex_Sans, Instrument_Serif, Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -13,6 +13,13 @@ const figtree = Figtree({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-figtree-next",
+  display: "swap",
+});
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-ibm-plex-sans",
   display: "swap",
 });
 
@@ -47,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${figtree.variable} ${instrumentSerif.variable}`}
+      className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable} ${instrumentSerif.variable}`}
     >
       <body className={inter.className}>{children}</body>
     </html>
