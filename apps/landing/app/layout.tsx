@@ -1,4 +1,3 @@
-import "@madoo/ui/tokens.css";
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Inter } from "next/font/google";
 import "./globals.css";
@@ -24,9 +23,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://madoo.ai"),
-  title: "Madoo | New product landing",
-  description: "Landing page shell for the next Madoo product.",
+  metadataBase: new URL("https://madooai.com"),
+  title: "Madoo | AI Email Builder",
+  description: "Export your email templates design to MailChimp or any provider of your preference.",
   robots: {
     index: true,
     follow: true,

@@ -1,114 +1,87 @@
-const proofItems = [
-  "Private beta",
-  "Built for operators",
-  "Launching soon",
-];
 
-const steps = [
-  {
-    label: "01",
-    title: "Capture demand",
-    copy: "Collect qualified interest before full product release.",
-  },
-  {
-    label: "02",
-    title: "Shape positioning",
-    copy: "Test message clarity with a page made for fast iteration.",
-  },
-  {
-    label: "03",
-    title: "Convert early users",
-    copy: "Move visitors toward waitlist, demo, or sales workflows.",
-  },
-];
+import {
+  ArrowDown01Icon,
+  Menu01Icon
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 
-export default function LandingPage() {
+export default function HomePage() {
   return (
-    <main>
-      <section className="hero">
-        <nav className="nav" aria-label="Primary navigation">
-          <a className="brand" href="/">
-            <span className="brand-mark" aria-hidden="true" />
-            <span>Madoo</span>
-          </a>
-          <div className="nav-actions">
-            <a href="#details">Details</a>
-            <a className="nav-cta" href="mailto:hello@madoo.ai">
-              Contact
+    <section className="min-h-screen bg-[#f3faff]">
+      <header>
+        <div className="flex h-16 items-center justify-between px-4 sm:px-8 xl:px-48">
+          <div className="flex gap-16">
+            <a className="flex items-center gap-2.5" href="/" aria-label="Madoo AI home">
+              <img
+                className="h-8 w-8 object-contain"
+                src="/madoo-transparent.png"
+                alt=""
+                aria-hidden="true"
+              />
+              <span className="text-xl leading-none tracking-normal text-[#2b3037] font-medium">
+                Madoo AI
+              </span>
+            </a>
+
+            <nav
+              className="hidden items-center gap-8 text-[15px] text-[#23272f] lg:flex"
+              aria-label="Primary navigation"
+            >
+              <a className="inline-flex items-center gap-2" href="#solutions">
+                Solutions
+                <HugeiconsIcon
+                  icon={ArrowDown01Icon}
+                  size={15}
+                  strokeWidth={2}
+                  className="text-[#687382]"
+                  aria-hidden="true"
+                />
+              </a>
+              <a className="inline-flex items-center gap-2" href="#resources">
+                Resources
+                <HugeiconsIcon
+                  icon={ArrowDown01Icon}
+                  size={15}
+                  strokeWidth={2}
+                  className="text-[#687382]"
+                  aria-hidden="true"
+                />
+              </a>
+              <a href="#community">Community</a>
+              <a href="#pricing">Pricing</a>
+            </nav>
+          </div>
+
+          <div className="flex gap-1.5">
+            <a
+              className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm leading-none text-[#101114] transition sm:inline-flex border border-zinc-400"
+              href="mailto:hello@madoo.ai"
+            >
+              Login
+            </a>
+
+            <a
+              className="hidden items-center gap-2 rounded-lg bg-[#101114] px-4 py-2 text-sm leading-none text-white transition hover:bg-[#26282d] sm:inline-flex"
+              href="mailto:hello@madoo.ai"
+            >
+              Get started
             </a>
           </div>
-        </nav>
 
-        <div className="hero-grid">
-          <div className="hero-copy">
-            <p className="eyebrow">New product</p>
-            <h1>Launch page ready for next Madoo product.</h1>
-            <p className="lede">
-              Focused landing shell for positioning, waitlist capture, and beta
-              demand before product details are final.
-            </p>
-            <div className="hero-actions" aria-label="Primary actions">
-              <a className="primary-action" href="mailto:hello@madoo.ai">
-                Start conversation
-              </a>
-              <a className="secondary-action" href="#details">
-                View structure
-              </a>
-            </div>
-            <ul className="proof-list" aria-label="Launch status">
-              {proofItems.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="product-visual" aria-label="Landing page preview">
-            <div className="preview-toolbar">
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="preview-body">
-              <div className="preview-head">
-                <p>Launch pipeline</p>
-                <strong>78%</strong>
-              </div>
-              <div className="preview-chart" aria-hidden="true">
-                <span style={{ height: "42%" }} />
-                <span style={{ height: "64%" }} />
-                <span style={{ height: "56%" }} />
-                <span style={{ height: "83%" }} />
-                <span style={{ height: "72%" }} />
-              </div>
-              <div className="preview-panel">
-                <span>Waitlist fit</span>
-                <strong>High signal</strong>
-              </div>
-              <div className="preview-rows" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-          </div>
+          <button
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#c8ddec] text-[#23272f] sm:hidden"
+            type="button"
+            aria-label="Open navigation"
+          >
+            <HugeiconsIcon
+              icon={Menu01Icon}
+              size={21}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+          </button>
         </div>
-      </section>
-
-      <section id="details" className="section">
-        <div className="section-heading">
-          <p className="eyebrow">Project shell</p>
-          <h2>Built to swap in real product copy fast.</h2>
-        </div>
-        <div className="steps-grid">
-          {steps.map((step) => (
-            <article className="step-card" key={step.label}>
-              <span>{step.label}</span>
-              <h3>{step.title}</h3>
-              <p>{step.copy}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-    </main>
-  );
+      </header>
+    </section>
+  )
 }
