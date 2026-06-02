@@ -178,9 +178,26 @@ export default function HomePage() {
               <span>Artificial Intelligence</span>
             </span>
             <br />
-            <span className="inline-flex items-center justify-center gap-3">
+            <span className="inline-flex items-center justify-center gap-3 -ml-10">
               Email Builder
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 text-[#0c346a] shadow-[0_10px_28px_rgba(12,52,106,0.12),inset_0_0_0_1px_rgba(12,52,106,0.12)] backdrop-blur">
+
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-7 w-7 text-[#0c346a]"
+                aria-hidden="true"
+              >
+                <path
+                  d="M5.45 18.5c2.9-1.7 4.35-4.05 4.35-7.05V5.5H3.55v6.25H6.7c-.08 1.68-.98 3.08-2.7 4.2l1.45 2.55Z"
+                  fill="currentColor"
+                  opacity="0.9"
+                />
+                <path
+                  d="M14.65 18.5c2.9-1.7 4.35-4.05 4.35-7.05V5.5h-6.25v6.25h3.15c-.08 1.68-.98 3.08-2.7 4.2l1.45 2.55Z"
+                  fill="currentColor"
+                  opacity="0.9"
+                />
+              </svg>    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 text-[#0c346a] shadow-[0_10px_28px_rgba(12,52,106,0.12),inset_0_0_0_1px_rgba(12,52,106,0.12)] backdrop-blur">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -215,23 +232,6 @@ export default function HomePage() {
                   />
                 </svg>
               </span>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                className="h-7 w-7 text-[#0c346a]"
-                aria-hidden="true"
-              >
-                <path
-                  d="M5.45 18.5c2.9-1.7 4.35-4.05 4.35-7.05V5.5H3.55v6.25H6.7c-.08 1.68-.98 3.08-2.7 4.2l1.45 2.55Z"
-                  fill="currentColor"
-                  opacity="0.9"
-                />
-                <path
-                  d="M14.65 18.5c2.9-1.7 4.35-4.05 4.35-7.05V5.5h-6.25v6.25h3.15c-.08 1.68-.98 3.08-2.7 4.2l1.45 2.55Z"
-                  fill="currentColor"
-                  opacity="0.9"
-                />
-              </svg>
             </span>
           </h3>
           <h4 className="text-lg text-zinc-700 text-center font-light">Create Better Email Templates & Move Faster with AI</h4>
@@ -293,9 +293,8 @@ export default function HomePage() {
 
                 <button
                   type="button"
-                  className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${
-                    hasPrompt ? "bg-[#0c346a] hover:bg-[#092952]" : "bg-[#7d7d7a] hover:bg-[#666663]"
-                  }`}
+                  className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt ? "bg-[#0c346a] hover:bg-[#092952]" : "bg-[#7d7d7a] hover:bg-[#666663]"
+                    }`}
                   aria-label="Submit prompt"
                 >
                   Generate email
