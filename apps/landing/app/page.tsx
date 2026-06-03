@@ -4,16 +4,17 @@
 import {
   Add01Icon,
   ArrowDown01Icon,
+  GlobalSearchIcon,
   Menu01Icon,
   Mic02Icon,
   PenTool03Icon,
-  SearchCircleIcon,
   SparklesIcon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import AuthDialog from "../components/AuthDialog";
+import ArrowUpComponent from "../components/arrow-up-component";
 import { LandingButton } from "../components/LandingButton";
 
 const promptOptions: Array<{ label: string; value?: string }> = [
@@ -73,54 +74,41 @@ const movingExportProviders = Array.from({ length: 4 }, () => exportProviders).f
 
 const templateCards = [
   {
-    name: "Product Launch",
-    category: "Launch",
-    description: "Announce new features, drive traffic, and make next action obvious.",
-    accent: "#0c346a",
-    bg: "from-[#eef7ff] to-white",
-    metric: "42%",
-    metricLabel: "avg. click lift",
-    sections: ["Hero", "Benefits", "CTA"],
+    name: "Big news: We've been backed by Y Combinator 🚀",
+    description: "Bold startup funding announcement.",
+    date: "5/25/2026, 3:46:32 PM",
+    imageSrc: "/templates/ycombinator.png",
   },
   {
-    name: "Event Invite",
-    category: "Events",
-    description: "Promote webinars, meetups, demos, and limited-seat sessions.",
-    accent: "#0f766e",
-    bg: "from-[#ecfdf5] to-white",
-    metric: "3 min",
-    metricLabel: "draft time",
-    sections: ["Agenda", "Speakers", "RSVP"],
+    name: "Tu próximo hogar está a un clic — Hopta",
+    description: "Clean real estate offer in Spanish.",
+    imageSrc: "/templates/hopta-preview.png",
   },
   {
-    name: "Welcome Flow",
-    category: "Lifecycle",
-    description: "Guide new users from sign-up to first value with a polished intro.",
-    accent: "#7c3aed",
-    bg: "from-[#f5f3ff] to-white",
-    metric: "5 step",
-    metricLabel: "sequence ready",
-    sections: ["Intro", "Setup", "Next step"],
+    name: "40% off everything — no exceptions",
+    description: "High-contrast Black Friday promo.",
+    imageSrc: "/templates/black-friday.png",
   },
   {
-    name: "Promo Offer",
-    category: "Commerce",
-    description: "Frame discounts without making the brand feel cheap or noisy.",
-    accent: "#b45309",
-    bg: "from-[#fff7ed] to-white",
-    metric: "A/B",
-    metricLabel: "subject lines",
-    sections: ["Offer", "Proof", "Urgency"],
+    name: "Beautiful emails, built in seconds — Madoo AI",
+    description: "Editorial product update layout.",
+    imageSrc: "/templates/news-letter-2.png",
   },
   {
-    name: "Newsletter",
-    category: "Editorial",
-    description: "Turn updates, links, and stories into a readable weekly send.",
-    accent: "#be123c",
-    bg: "from-[#fff1f2] to-white",
-    metric: "8",
-    metricLabel: "content blocks",
-    sections: ["Lead", "Links", "Digest"],
+    name: "We're officially backed by Y Combinator — here's what's next",
+    description: "Investor-backed milestone note.",
+    imageSrc: "/templates/black-friday-2.png",
+  },
+  {
+    name: "We just shipped something big 🚀",
+    description: "Dark invite-style product launch.",
+    imageSrc: "/templates/letter.png",
+  },
+  {
+    name: "Big ideas. Short sentences. Zero fluff.",
+    description: "Minimal long-form newsletter.",
+    date: "5/15/2026, 10:24:02 AM",
+    imageSrc: "/templates/news-letter.png",
   },
 ]
 
@@ -154,7 +142,7 @@ export default function HomePage() {
     <>
       <AuthDialog open={authDialogOpen} onClose={closeAuthDialog} />
 
-      <main className="relative min-h-screen w-full">
+      <main className="relative min-h-screen w-full bg-[#fbfaf6]">
         <div className="madoo-paper-background pointer-events-none absolute inset-0 z-0" aria-hidden="true" />
 
 
@@ -228,7 +216,7 @@ export default function HomePage() {
           </div>
         </header>
 
-        <div className="relative z-50 flex h-screen w-full flex-col items-center justify-center gap-9 font-ibm-plex-sans">
+        <div className="madoo-paper-section madoo-paper-hero relative z-50 flex h-screen w-full flex-col items-center justify-center gap-9 font-ibm-plex-sans">
           <div className="flex flex-col gap-1.5">
             <h3 className="text-center text-5xl font-medium leading-[0.94] tracking-normal text-[#071b38]">
               <span className="block text-zinc-700">Artific<span className="rotate-45 relative ">ia</span>l Intelligence</span>
@@ -284,18 +272,18 @@ export default function HomePage() {
               </span>
             </h3>
             <h4 className="text-center text-lg font-light text-zinc-700 mt-1.5">
-              A design company helping teams create better email templates and move faster with AI
+              Create better email templates and move faster with AI
             </h4>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <div className="min-w-[700px] overflow-hidden rounded-3xl bg-white shadow-[inset_0_0_0_0.5px_#b8d2e4]">
+          <div className="flex flex-col gap-2">
+            <div className="madoo-paper-border min-w-[700px] overflow-hidden rounded-3xl bg-white">
               <textarea
                 ref={promptTextareaRef}
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 onKeyDown={onPromptKeyDown}
-                placeholder="Hi Madoo, can you create an email template for my AWS Summit Event? Check this link.com for more information"
+                placeholder="Hi Madoo, can you create an email template for my AWS Summit event? Please check this link for more information: link.com"
                 className="madoo-prompt-textarea mr-3 max-h-80 min-h-24 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
               />
 
@@ -353,11 +341,13 @@ export default function HomePage() {
                     aria-label="Submit prompt"
                   >
                     Generate email
-                    {/* <HugeiconsIcon icon={ArrowUp01Icon} size={18} strokeWidth={2} aria-hidden="true" /> */}
+                    <ArrowUpComponent className="ml-2 h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>
             </div>
+
+            <p className="text-xs underline decoration-1 decoration-dashed text-center text-zinc-400 cursor-pointer hover:text-zinc-950 hover:decoration-wavy transition-all">Explore templates examples</p>
 
             <div className="text-sm mt-7">
               <h6 className="font-light text-zinc-800 text-xs">Export to any provider of you choise</h6>
@@ -383,90 +373,47 @@ export default function HomePage() {
           </div>
         </div>
 
-        <section className="relative z-10 mx-auto mt-32 w-full max-w-7xl px-4 pb-24 sm:px-8 xl:px-0">
-          <div className="flex w-full flex-col justify-between gap-6 sm:flex-row sm:items-end">
-            <div>
-              <h2 className="text-5xl font-figtree font-semibold">Explore templates</h2>
-              <h4 className="mt-3 max-w-xl text-zinc-600">
-                Start from 50+ community-tested email templates, then customize copy, layout, tone, and audience with AI.
-              </h4>
+        <section className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 py-24 sm:px-8 xl:px-0">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="flex w-full flex-col justify-between gap-6 sm:flex-row sm:items-end">
+              <div>
+                <h2 className="text-5xl font-ibm-plex-sans font-semibold">Explore templates</h2>
+
+
+                
+                <h4 className="mt-3 max-w-xl text-zinc-600 font-ibm-plex-sans">
+                  Start from 50+ community-tested email templates, then customize copy, layout, tone, and audience with AI.
+                </h4>
+              </div>
+
+              <LandingButton variant="secondary" className="h-8 px-4" onClick={openAuthDialog}>
+                <HugeiconsIcon icon={GlobalSearchIcon} size={16} />
+                Explore all templates
+              </LandingButton>
             </div>
 
-            <LandingButton variant="secondary" className="h-8 px-4" onClick={openAuthDialog}>
-              <HugeiconsIcon icon={SearchCircleIcon} size={16} />
-              Explore
-            </LandingButton>
-          </div>
-
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
-            {templateCards.map((template) => (
-              <article
-                key={template.name}
-                className="group flex min-h-[430px] flex-col justify-between overflow-hidden rounded-3xl bg-white shadow-[inset_0_0_0_0.5px_#cfe0ec,0_24px_70px_rgba(12,52,106,0.08)] transition hover:-translate-y-1 hover:shadow-[inset_0_0_0_0.5px_#b8d2e4,0_30px_90px_rgba(12,52,106,0.13)]"
-              >
-                <div className={`min-h-56 bg-gradient-to-b ${template.bg} p-4`}>
-                  <div className="rounded-2xl bg-white/85 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08),inset_0_0_0_0.5px_rgba(15,23,42,0.08)] backdrop-blur">
-                    <div className="mb-4 flex items-center justify-between">
-                      <span
-                        className="rounded-full px-2.5 py-1 text-[11px] font-medium text-white"
-                        style={{ backgroundColor: template.accent }}
-                      >
-                        {template.category}
-                      </span>
-                      <span className="text-[11px] font-medium text-zinc-500">Madoo AI</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div
-                        className="h-16 rounded-2xl"
-                        style={{ backgroundColor: template.accent }}
-                      />
-                      {template.sections.map((section, index) => (
-                        <div key={section} className="rounded-xl border border-zinc-100 bg-white p-2.5">
-                          <div className="mb-2 flex items-center gap-2">
-                            <span
-                              className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: template.accent }}
-                            />
-                            <span className="text-[10px] font-medium uppercase tracking-normal text-zinc-500">
-                              {section}
-                            </span>
-                          </div>
-                          <div className="space-y-1.5">
-                            <span className="block h-1.5 rounded-full bg-zinc-200" />
-                            <span
-                              className="block h-1.5 rounded-full bg-zinc-100"
-                              style={{ width: `${78 - index * 13}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-1 flex-col justify-between p-5">
-                  <div>
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <h3 className="text-2xl font-semibold leading-tight text-[#071b38]">{template.name}</h3>
-                      <div className="text-right">
-                        <div className="text-sm font-semibold text-[#101114]">{template.metric}</div>
-                        <div className="text-[11px] text-zinc-500">{template.metricLabel}</div>
-                      </div>
-                    </div>
-                    <p className="text-sm leading-6 text-zinc-600">{template.description}</p>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {templateCards.map((template) => (
+                <article
+                  key={template.name}
+                  className="madoo-paper-border madoo-paper-border-hover group flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white transition"
+                >
+                  <div className="relative h-[170px] overflow-hidden bg-[#f8f7f2]">
+                    <img
+                      src={template.imageSrc}
+                      alt={`${template.name} email template preview`}
+                      className="h-full w-full object-cover object-top brightness-[1.06] contrast-[1.03] saturate-[1.04]"
+                      loading="lazy"
+                    />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={openAuthDialog}
-                    className="mt-6 inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-[#101114] px-4 text-sm font-medium text-white transition hover:bg-[#26282d]"
-                  >
-                    Use template
-                  </button>
-                </div>
-              </article>
-            ))}
+                  <div className="border-t border-[rgba(17,24,39,0.14)] px-3.5 py-3">
+                    <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-[#1b1a18]">{template.name}</h3>
+                    <p className="mt-1 line-clamp-1 text-[12px] leading-4 text-[#6f6961]">{template.description}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
       </main>

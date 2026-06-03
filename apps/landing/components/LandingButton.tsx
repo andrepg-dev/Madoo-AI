@@ -12,7 +12,7 @@ type LandingButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 const variantClasses: Record<LandingButtonVariant, string> = {
   primary: "bg-[#101114] px-4 text-white hover:bg-[#26282d]",
   secondary:
-    "bg-white px-3 text-[#101114] shadow-[inset_0_0_0_0.5px_#b8d2e4] hover:bg-[#f3faff]",
+    "madoo-paper-border madoo-paper-border-hover bg-white px-3 text-[#101114] hover:bg-[#f3faff]",
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
