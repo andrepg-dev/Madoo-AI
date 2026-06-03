@@ -5,12 +5,12 @@ import { useEffect } from "react";
 type AuthDialogProps = {
   open: boolean;
   onClose: () => void;
+  locale?: "en" | "es";
 };
 
 const authProviders = [
   {
     name: "Google",
-    label: "Continue with Google",
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
         <path
@@ -34,7 +34,6 @@ const authProviders = [
   },
   {
     name: "GitHub",
-    label: "Continue with GitHub",
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
         <path
@@ -48,7 +47,6 @@ const authProviders = [
   },
   {
     name: "Apple",
-    label: "Continue with Apple",
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
         <path
@@ -60,7 +58,40 @@ const authProviders = [
   },
 ];
 
-export default function AuthDialog({ open, onClose }: AuthDialogProps) {
+const authCopy = {
+  en: {
+    closeLogin: "Close login dialog",
+    close: "Close",
+    eyebrow: "Start building.",
+    title: "Log in to your account",
+    continueWith: "Continue with",
+    or: "OR",
+    email: "Email",
+    continue: "Continue",
+    termsPrefix: "By continuing, you agree to the",
+    terms: "Terms of Service",
+    and: "and",
+    privacy: "Privacy Policy",
+  },
+  es: {
+    closeLogin: "Cerrar diálogo de inicio de sesión",
+    close: "Cerrar",
+    eyebrow: "Empieza a crear.",
+    title: "Inicia sesión en tu cuenta",
+    continueWith: "Continuar con",
+    or: "O",
+    email: "Email",
+    continue: "Continuar",
+    termsPrefix: "Al continuar, aceptas los",
+    terms: "Términos de Servicio",
+    and: "y la",
+    privacy: "Política de Privacidad",
+  },
+} as const;
+
+export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogProps) {
+  const copy = authCopy[locale];
+
   useEffect(() => {
     if (!open) return;
 
@@ -86,7 +117,7 @@ export default function AuthDialog({ open, onClose }: AuthDialogProps) {
       <button
         type="button"
         className="absolute inset-0 cursor-default"
-        aria-label="Close login dialog"
+        aria-label={copy.closeLogin}
         onClick={onClose}
         tabIndex={-1}
       />
@@ -95,7 +126,7 @@ export default function AuthDialog({ open, onClose }: AuthDialogProps) {
         <button
           type="button"
           className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full text-zinc-500 transition hover:bg-black/5 hover:text-zinc-900"
-          aria-label="Close"
+          aria-label={copy.close}
           onClick={onClose}
         >
           <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
@@ -114,9 +145,9 @@ export default function AuthDialog({ open, onClose }: AuthDialogProps) {
             alt="Madoo AI"
             className="mb-5 h-10 w-10 object-contain"
           />
-          <p className="text-2xl leading-none text-zinc-400">Start building.</p>
+          <p className="text-2xl leading-none text-zinc-400">{copy.eyebrow}</p>
           <h2 id="auth-dialog-title" className="mt-1 text-2xl leading-tight">
-            Log in to your account
+            {copy.title}
           </h2>
         </div>
 
@@ -128,39 +159,39 @@ export default function AuthDialog({ open, onClose }: AuthDialogProps) {
               className="flex h-8 w-full items-center cursor-pointer justify-center gap-1.5 rounded-lg bg-white text-sm text-[#101114] shadow-[0_1px_2px_rgba(16,17,20,0.035),0_0_0_0.5px_rgba(16,17,20,0.22)] transition hover:bg-[#f7f8fb] hover:shadow-[0_2px_6px_rgba(16,17,20,0.055),0_0_0_0.5px_rgba(16,17,20,0.28)]"
             >
               <span className="text-[#101114]">{provider.icon}</span>
-              {provider.label}
+              {copy.continueWith} {provider.name}
             </button>
           ))}
         </div>
 
         <div className="my-5 flex items-center gap-3 text-xs text-zinc-900">
           <span className="h-px flex-1 bg-zinc-300" />
-          <span>OR</span>
+          <span>{copy.or}</span>
           <span className="h-px flex-1 bg-zinc-300" />
         </div>
 
         <div className="grid gap-2.5">
           <input
             type="email"
-            placeholder="Email"
+            placeholder={copy.email}
             className="h-8 rounded-lg bg-white px-3.5 text-sm text-[#101114] outline-none shadow-[0_1px_2px_rgba(16,17,20,0.035),0_0_0_0.5px_rgba(16,17,20,0.22)] placeholder:text-zinc-600 focus:shadow-[0_2px_6px_rgba(16,17,20,0.055),0_0_0_0.5px_rgba(12,52,106,0.34)]"
           />
           <button
             type="button"
             className="h-8 cursor-pointer rounded-lg bg-[#101114] text-sm text-white shadow-[0_8px_20px_rgba(16,17,20,0.16),0_0_0_0.5px_rgba(16,17,20,0.22)] transition hover:bg-[#26282d]"
           >
-            Continue
+            {copy.continue}
           </button>
         </div>
 
         <p className="mt-5 text-xs leading-5 text-zinc-500">
-          By continuing, you agree to the{" "}
+          {copy.termsPrefix}{" "}
           <a className="font-medium text-zinc-700 underline underline-offset-2" href="/terms">
-            Terms of Service
+            {copy.terms}
           </a>{" "}
-          and{" "}
+          {copy.and}{" "}
           <a className="font-medium text-zinc-700 underline underline-offset-2" href="/privacy">
-            Privacy Policy
+            {copy.privacy}
           </a>
           .
         </p>
