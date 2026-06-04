@@ -583,21 +583,15 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
               </p>
             </div>
 
-            <div className="relative grid gap-3 sm:grid-cols-3">
-              <Arrow4 className="pointer-events-none absolute -left-[5%] -top-4 hidden h-[70px] w-[400px] text-[#7d849b] opacity-55 lg:block" aria-hidden="true" />
-              <Arrow11 className="pointer-events-none absolute left-[50%] -top-4 hidden h-[100px] w-32 text-[#cf4cff] opacity-55 lg:block" aria-hidden="true" />
-              {copy.workflow.steps.map((step, index) => (
-                <div
-                  key={step.label}
-                  className="relative z-10 rounded-2xl p-4 text-left"
-                >
-                  <div className="mb-5 flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-[#071b38] text-xs font-semibold text-[#071b38]">
-                    <HugeiconsIcon icon={workflowSteps[index].icon} size={17} strokeWidth={1.8} aria-hidden="true" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-[#1b1a18]">{step.label}</h3>
-                  <p className="mt-2 text-sm leading-5 text-[#6f6961]">{step.text}</p>
-                </div>
-              ))}
+            <div className="madoo-product-explain-panel relative overflow-hidden rounded-xl px-5 py-6 sm:px-7 lg:px-8">
+              <Image
+                src="/floating-icons/madoo-product-explain.png"
+                alt="Madoo AI workflow from prompt to AI-generated email template and export"
+                width={1916}
+                height={821}
+                className="relative z-10 h-auto w-full"
+                sizes="(min-width: 1280px) 704px, (min-width: 1024px) 60vw, 100vw"
+              />
             </div>
           </div>
         </section>

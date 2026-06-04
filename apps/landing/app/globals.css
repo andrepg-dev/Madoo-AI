@@ -59,6 +59,13 @@
   box-shadow: inset 0 0 0 0.5px rgb(var(--madoo-rule-rgb) / 0.28);
 }
 
+.madoo-product-explain-panel {
+  background: linear-gradient(180deg, #101114 0%, #050506 100%);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.1),
+    0 24px 70px rgb(var(--madoo-ink-shadow-rgb) / 0.16);
+}
+
 .madoo-hero-float-email {
   animation: madoo-hero-float-email 8s ease-in-out infinite;
   filter: drop-shadow(0 28px 34px rgb(var(--madoo-ink-shadow-rgb) / 0.08));
