@@ -37,14 +37,14 @@ const plans: PricingPlan[] = [
     tier: "basic",
     name: "Basic",
     description:
-      "Perfect for solo email creators. More credits, exports, and templates.",
+      "For solo creators building more templates and exports.",
     monthlyPrice: tierPrices.basic,
     cta: "Try Basic",
     features: [
       { value: "100", label: "monthly credits", emphasized: true },
       { value: "50", label: "stored templates", emphasized: true },
       { value: "2", label: "members", emphasized: true },
-      { label: "Access to any model" },
+      { label: "Claude, Gemini, GPT-5 models included" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],
@@ -52,7 +52,7 @@ const plans: PricingPlan[] = [
   {
     tier: "medium",
     name: "Medium",
-    description: "Built for small teams that need more monthly production.",
+    description: "Amazing for small teams and agencies.",
     monthlyPrice: tierPrices.medium,
     cta: "Try Medium",
     featured: true,
@@ -60,7 +60,7 @@ const plans: PricingPlan[] = [
       { value: "250", label: "monthly credits", emphasized: true },
       { value: "150", label: "stored templates", emphasized: true },
       { value: "3", label: "members", emphasized: true },
-      { label: "Access to any model" },
+      { label: "All models included" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],
@@ -68,33 +68,33 @@ const plans: PricingPlan[] = [
   {
     tier: "pro",
     name: "Pro",
-    description: "For bigger workflows, more storage, and agency volume.",
+    description: "For agencies that need more storage and volume.",
     monthlyPrice: tierPrices.pro,
     cta: "Try Pro",
     features: [
-      { value: "500", label: "monthly credits", emphasized: true },
+      { value: "550", label: "monthly credits", emphasized: true },
       { value: "300", label: "stored templates", emphasized: true },
       { value: "10", label: "members", emphasized: true },
-      { label: "Access to any model" },
+      { label: "All models included" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],
   },
-  {
-    tier: "enterprise",
-    name: "Enterprise",
-    description: "Custom limits, security, and support for larger teams.",
-    monthlyPrice: tierPrices.enterprise,
-    cta: "Contact sales",
-    features: [
-      { label: "Custom monthly credits" },
-      { label: "Custom stored templates" },
-      { label: "Custom members" },
-      { label: "Access to any model" },
-      { label: "Export to any provider of your choice" },
-      { label: "Sharing preview template links" },
-    ],
-  },
+  // {
+  //   tier: "enterprise",
+  //   name: "Enterprise",
+  //   description: "Built for large agencies needing flexibility, scale and governance",
+  //   monthlyPrice: tierPrices.enterprise,
+  //   cta: "Contact sales",
+  //   features: [
+  //     { label: "Custom monthly credits" },
+  //     { label: "Custom stored templates" },
+  //     { label: "Custom members" },
+  //     { label: "Access to any model" },
+  //     { label: "Export to any provider of your choice" },
+  //     { label: "Sharing preview template links" },
+  //   ],
+  // },
 ];
 
 function getDisplayPrice(monthlyPrice: number, billingInterval: BillingInterval) {
@@ -140,9 +140,8 @@ function BillingSwitch({
         onClick={() => onChange(isYearly ? "monthly" : "yearly")}
       >
         <span
-          className={`absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-madoo-ink transition-transform ${
-            isYearly ? "translate-x-5" : "translate-x-0"
-          }`}
+          className={`absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-madoo-ink transition-transform ${isYearly ? "translate-x-5" : "translate-x-0"
+            }`}
         />
       </button>
       <button
@@ -190,30 +189,19 @@ function PriceBlock({
   monthlyPrice,
   billingInterval,
   helper,
-  customLabel,
+  enterprisePricing,
 }: {
   monthlyPrice: number;
   billingInterval: BillingInterval;
   helper?: string;
-  customLabel?: string;
+  enterprisePricing?: boolean;
 }) {
-  if (customLabel) {
+  if (enterprisePricing) {
     return (
-      <div className="mt-8">
-        <div className="grid grid-cols-[1fr_auto] items-center gap-4">
-          <div>
-            <span className="text-5xl font-semibold leading-none text-madoo-text">
-              {customLabel}
-            </span>
-            <span className="ml-2 text-sm text-madoo-muted">per month</span>
-          </div>
-          <div className="border-l border-madoo-rule/10 pl-4 text-sm text-madoo-muted">
-            Platform fee
-          </div>
+      <div className="mt- flex flex-col justify-center">
+        <div className="text-2xl font-medium leading-none text-madoo-muted">
+          Platform fee
         </div>
-        {helper ? (
-          <p className="mt-3 text-sm leading-none text-madoo-muted">{helper}</p>
-        ) : null}
       </div>
     );
   }
@@ -221,7 +209,7 @@ function PriceBlock({
   const displayPrice = getDisplayPrice(monthlyPrice, billingInterval);
 
   return (
-    <div className="mt-8">
+    <div className="mt- flex flex-col justify-center">
       <div className="flex items-end gap-2">
         <span className="text-5xl font-semibold leading-none text-madoo-text">
           ${displayPrice}
@@ -252,14 +240,18 @@ function PlanCard({
 }) {
   return (
     <article className="madoo-paper-border flex min-h-[420px] flex-col rounded-[28px] bg-madoo-paper p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex min-h-[118px] items-start justify-between gap-4">
+        <div className="w-full">
           <h2 className="text-2xl font-semibold leading-none text-madoo-text">
             {plan.name}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-madoo-muted">
-            {plan.description}
-          </p>
+          {plan.description ? (
+            <p className="mt-2 min-h-[48px] w-full text-sm leading-6 text-madoo-muted">
+              {plan.description}
+            </p>
+          ) : (
+            null
+          )}
         </div>
         {plan.featured ? (
           <span className="rounded-full bg-madoo-accent px-3 py-1 text-xs font-semibold text-white">
@@ -271,15 +263,14 @@ function PlanCard({
       <PriceBlock
         monthlyPrice={plan.monthlyPrice}
         billingInterval={billingInterval}
-        customLabel={plan.tier === "enterprise" ? "Custom" : undefined}
+        enterprisePricing={plan.tier === "enterprise"}
       />
 
       <Link
-        className={`mt-8 inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 text-sm leading-none transition ${
-          plan.featured
-            ? "bg-madoo-ink text-white hover:bg-madoo-ink-hover"
-            : "madoo-paper-border madoo-paper-border-hover bg-madoo-paper text-madoo-ink hover:bg-madoo-ink hover:text-white"
-        }`}
+        className={`mt-8 inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 text-sm leading-none transition ${plan.featured
+          ? "bg-madoo-ink text-white hover:bg-madoo-ink-hover"
+          : "madoo-paper-border madoo-paper-border-hover bg-madoo-paper text-madoo-ink hover:bg-madoo-ink hover:text-white"
+          }`}
         href="/"
       >
         {plan.cta}
@@ -311,7 +302,7 @@ export function PricingPlans() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="grid gap-4 lg:grid-cols-3">
         {plans.map((plan) => (
           <PlanCard
             key={plan.tier}
