@@ -64,18 +64,8 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable} ${instrumentSerif.variable}`}
     >
-      <body className={`${inter.className} bg-madoo-paper`}>
-        <div className="relative min-h-screen w-full bg-madoo-paper">
-          <div
-            className="pointer-events-none fixed inset-0 z-0"
-            style={{
-              background: "var(--color-madoo-paper)",
-              backgroundImage:
-                "radial-gradient(circle at 1px 1px, rgb(var(--madoo-ink-shadow-rgb) / 0.35) 1px, transparent 0)",
-              backgroundSize: "20px 20px",
-            }}
-            aria-hidden="true"
-          />
+      <body className={`${inter.className} bg-madoo-page`}>
+        <div className="relative min-h-screen w-full bg-madoo-page">
           <div className="relative z-10">
             {children}
             <LandingFooter />

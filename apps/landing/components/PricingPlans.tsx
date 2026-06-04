@@ -243,7 +243,7 @@ function PlanCard({
 }) {
   return (
     <article className="madoo-paper-border flex min-h-[420px] flex-col rounded-[28px] bg-madoo-paper p-6">
-      <div className="flex min-h-[118px] items-start justify-between gap-4">
+      <div className="flex min-h-[80px] items-start justify-between gap-4">
         <div className="w-full">
           <h2 className="text-2xl font-semibold leading-none text-madoo-text">
             {plan.name}

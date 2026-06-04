@@ -14,21 +14,31 @@ const pricingHeaderCopy = {
 
 export default function PricingPage() {
   return (
-    <main className="relative min-h-screen w-full font-ibm-plex-sans">
+    <main className="relative min-h-screen w-full overflow-hidden bg-white font-ibm-plex-sans">
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(45deg, transparent, transparent 2px, #f3f4f6 2px, #f3f4f6 4px)",
+        }}
+      />
+
       <LandingHeader copy={pricingHeaderCopy} sectionHrefPrefix="/" />
 
-      <section className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-20 sm:px-8 sm:py-24">
-        <div className="max-w-2xl">
-          <h1 className="text-4xl font-semibold leading-none text-madoo-text">
-            Plans & Pricing
-          </h1>
-          <p className="mt-4 text-base leading-7 text-madoo-muted">
-            Discover the best price for you, all plans are designed to fit your
-            needs.
-          </p>
-        </div>
+      <section className="relative z-10 min-h-screen w-full">
+        <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-20 sm:px-8 sm:py-24">
+          <div className="max-w-2xl">
+            <h1 className="text-4xl font-semibold leading-none text-madoo-text">
+              Plans & Pricing
+            </h1>
+            <p className="mt-4 text-base leading-7 text-madoo-muted">
+              Discover the best price for you, all plans are designed to fit
+              your needs.
+            </p>
+          </div>
 
-        <PricingPlans />
+          <PricingPlans />
+        </div>
       </section>
 
       <PricingFaq />

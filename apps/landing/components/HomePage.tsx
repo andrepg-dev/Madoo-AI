@@ -415,188 +415,151 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
       <AuthDialog open={authDialogOpen} onClose={closeAuthDialog} locale={locale} />
 
       <main lang={locale} className="relative min-h-screen w-full">
-        <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
+        <div className="relative z-50 bg-madoo-page px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
+          <div className="madoo-hero-box relative mx-auto flex min-h-[120vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start rounded-2xl gap-9 pt-36 font-ibm-plex-sans sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-64 xl:max-w-[calc(100vw-2rem)]">
+            <div className="absolute left-0 right-0 top-0 z-30">
+              <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
+            </div>
 
-        <div className="madoo-paper-section madoo-paper-hero relative z-50 flex h-[90vh] w-full flex-col items-center justify-center gap-9 overflow-hidden font-ibm-plex-sans">
-          <Image
-            src="/floating-icons/email-template-cut.png"
-            alt=""
-            width={2508}
-            height={2508}
-            aria-hidden="true"
-            className="madoo-hero-float-email pointer-events-none absolute right-[max(3rem,calc(50%-42rem))] top-[15%] z-0 hidden h-auto w-[13.5rem] select-none xl:block 2xl:w-[17.5rem]"
-            priority
-          />
-          <Image
-            src="/floating-icons/browser-template-cut.png"
-            alt=""
-            width={3068}
-            height={2050}
-            aria-hidden="true"
-            className="madoo-hero-float-browser pointer-events-none absolute bottom-[8%] left-[max(2.5rem,calc(50%-48rem))] z-0 hidden h-auto w-[21.5rem] select-none xl:block 2xl:w-[28.5rem]"
-            priority
-          />
+            <Image
+              src="/floating-icons/email-template-cut.png"
+              alt=""
+              width={2508}
+              height={2508}
+              aria-hidden="true"
+              className="madoo-hero-float-email pointer-events-none absolute right-[max(3rem,calc(50%-42rem))] top-[15%] z-0 hidden h-auto w-[13.5rem] select-none xl:block 2xl:w-[17.5rem]"
+              priority
+            />
+            <Image
+              src="/floating-icons/browser-template-cut.png"
+              alt=""
+              width={3068}
+              height={2050}
+              aria-hidden="true"
+              className="madoo-hero-float-browser pointer-events-none absolute bottom-[28%] left-[max(2.5rem,calc(50%-48rem))] z-0 hidden h-auto w-[21.5rem] select-none xl:block 2xl:w-[28.5rem]"
+              priority
+            />
 
-          <div className="relative z-10 flex flex-col gap-1.5">
-            <h3 className="text-center text-5xl font-medium leading-[0.94] tracking-normal text-[#071b38]">
-              <span>{copy.hero.titleStart}</span>{" "}
-              <span className="relative inline-flex items-center justify-center">
-                <span className="bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] via-[#2563eb] via-[#0284c7] to-[#1d4ed8] bg-clip-text font-semibold text-transparent">
-                  {copy.hero.titleAccent}
-                </span>
-                {/* <span className="madoo-gradient-icon relative inline-flex h-12 w-12 translate-y-0.5 items-center justify-center">
-                  <svg width="0" height="0" aria-hidden="true" focusable="false">
-                    <defs>
-                      <linearGradient id="madoo-pen-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#6d28d9" />
-                        <stop offset="30%" stopColor="#7c3aed" />
-                        <stop offset="58%" stopColor="#2563eb" />
-                        <stop offset="78%" stopColor="#0284c7" />
-                        <stop offset="100%" stopColor="#1d4ed8" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <HugeiconsIcon icon={PenTool03Icon} size={28} className="text-[#0c346a]" />
-                  <span
-                    className="pointer-events-none absolute -right-1 top-0 inline-flex h-5 w-5 items-center justify-center text-[#0c346a]"
-                    aria-hidden="true"
-                  >
-                    <HugeiconsIcon icon={SparklesIcon} size={18} strokeWidth={1.8} />
+            <div className="relative z-10 flex flex-col gap-1.5">
+              <h3 className="text-center text-5xl font-medium leading-[0.94] tracking-normal text-[#071b38]">
+                <span>{copy.hero.titleStart}</span>{" "}
+                <span className="relative inline-flex items-center justify-center">
+                  <span className="bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] via-[#2563eb] via-[#0284c7] to-[#1d4ed8] bg-clip-text font-semibold text-transparent">
+                    {copy.hero.titleAccent}
                   </span>
-                  <span
-                    className="pointer-events-none absolute right-3 top-1 inline-flex h-2 w-2 rounded-full bg-[#F9F9FA]"
-                    aria-hidden="true"
-                  />
-                </span> */}
-              </span>
-            </h3>
-            <h4 className="text-center text-lg font-light text-zinc-700 mt-1.5">
-              {copy.hero.subtitle}
-            </h4>
-          </div>
+                </span>
+              </h3>
+              <h4 className="mt-1.5 text-center text-lg font-light text-zinc-700">
+                {copy.hero.subtitle}
+              </h4>
+            </div>
 
-          <div className="relative z-10 flex flex-col gap-2">
-            <div className="madoo-paper-border min-w-[700px] overflow-hidden rounded-3xl bg-white">
-              <textarea
-                ref={promptTextareaRef}
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                onKeyDown={onPromptKeyDown}
-                placeholder={hasPrompt ? "" : heroPlaceholder}
-                className="madoo-prompt-textarea mr-3 max-h-80 min-h-24 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
-              />
+            <div className="relative z-10 flex flex-col gap-2">
+              <div className="madoo-paper-border min-w-[700px] overflow-hidden rounded-3xl bg-white">
+                <textarea
+                  ref={promptTextareaRef}
+                  value={prompt}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  onKeyDown={onPromptKeyDown}
+                  placeholder={hasPrompt ? "" : heroPlaceholder}
+                  className="madoo-prompt-textarea mr-3 max-h-80 min-h-24 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
+                />
 
-              <div className="flex items-center justify-between px-3.5 pb-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
-                    aria-label={copy.hero.addAttachment}
-                  >
-                    <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={1} aria-hidden="true" />
-                  </button>
+                <div className="flex items-center justify-between px-3.5 pb-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+                      aria-label={copy.hero.addAttachment}
+                    >
+                      <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={1} aria-hidden="true" />
+                    </button>
 
-                  <div className="flex items-center gap-1.5">
-                    {copy.promptOptions.map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs text-zinc-600 transition"
+                    <div className="flex items-center gap-1.5">
+                      {copy.promptOptions.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs text-zinc-600 transition"
+                        >
+                          <span>{option}</span>
+                          <HugeiconsIcon
+                            icon={ArrowDown01Icon}
+                            size={10}
+                            strokeWidth={2.2}
+                            className="text-zinc-600 [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+                      aria-label={copy.hero.microphone}
+                    >
+                      <HugeiconsIcon icon={Mic02Icon} size={16} strokeWidth={1.8} aria-hidden="true" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={openAuthDialog}
+                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt ? "bg-black" : "bg-[#7d7d7a] hover:bg-[#666663]"
+                        }`}
+                      aria-label={copy.hero.submit}
+                    >
+                      {copy.hero.submit}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p className="cursor-pointer text-center text-xs text-zinc-400 underline decoration-dashed decoration-1 transition-all hover:text-zinc-950 hover:decoration-wavy">
+                {copy.hero.explore}
+              </p>
+
+              <div className="mt-7 text-sm">
+                <h6 className="text-xs font-light text-zinc-800">{copy.hero.exportLabel}</h6>
+                <div className="mt-3 w-[700px] overflow-hidden">
+                  <div className="madoo-provider-marquee flex w-max gap-3">
+                    {movingExportProviders.map((provider, index) => (
+                      <div
+                        key={`${provider.name}-${index}`}
+                        className="flex h-11 shrink-0 items-center gap-2 rounded-xl px-3 pr-4"
                       >
-                        <span>{option}</span>
-                        <HugeiconsIcon
-                          icon={ArrowDown01Icon}
-                          size={10}
-                          strokeWidth={2.2}
-                          className="text-zinc-600 [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
-                          aria-hidden="true"
-                        />
-                      </button>
+                        <span
+                          className="flex h-8 w-8 items-center justify-center rounded-full"
+                          style={{ backgroundColor: providerLogoSwatches[index % providerLogoSwatches.length] }}
+                        >
+                          <img
+                            src={provider.iconSrc}
+                            alt={`${provider.name} logo`}
+                            className="h-5 w-5 object-contain"
+                            loading="lazy"
+                          />
+                        </span>
+                        <span className="whitespace-nowrap text-xs font-medium text-[#1f2937]">{provider.name}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
-
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
-                    aria-label={copy.hero.microphone}
-                  >
-                    <HugeiconsIcon icon={Mic02Icon} size={16} strokeWidth={1.8} aria-hidden="true" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={openAuthDialog}
-                    className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt ? "bg-black" : "bg-[#7d7d7a] hover:bg-[#666663]"
-                      }`}
-                    aria-label={copy.hero.submit}
-                  >
-                    {copy.hero.submit}
-                  </button>
-                </div>
               </div>
             </div>
 
-            <p className="text-xs underline decoration-1 decoration-dashed text-center text-zinc-400 cursor-pointer hover:text-zinc-950 hover:decoration-wavy transition-all">
-              {copy.hero.explore}
-            </p>
-
-            <div className="text-sm mt-7">
-              <h6 className="font-light text-zinc-800 text-xs">{copy.hero.exportLabel}</h6>
-              <div className="mt-3 w-[700px] overflow-hidden">
-                <div className="madoo-provider-marquee flex w-max gap-3">
-                  {movingExportProviders.map((provider, index) => (
-                    <div
-                      key={`${provider.name}-${index}`}
-                      className="flex h-11 shrink-0 items-center gap-2 rounded-xl px-3 pr-4"
-                    >
-                      <span
-                        className="flex h-8 w-8 items-center justify-center rounded-full"
-                        style={{ backgroundColor: providerLogoSwatches[index % providerLogoSwatches.length] }}
-                      >
-                        <img
-                          src={provider.iconSrc}
-                          alt={`${provider.name} logo`}
-                          className="h-5 w-5 object-contain"
-                          loading="lazy"
-                        />
-                      </span>
-                      <span className="whitespace-nowrap text-xs font-medium text-[#1f2937]">{provider.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="bottom-0 mx-auto absolute z-50 max-w-5xl w-full translate-y-[50%] h-125 p-6 bg-madoo-paper ring-8 ring-[#E5E5E5] rounded-4xl">
+              
             </div>
           </div>
         </div>
+        {/* 
+        <section className="madoo-paper-section relative z-10 w-full pt-64">
 
-        <section className="madoo-paper-section relative z-10 w-full pb-32 pt-0">
-          <div className="mx-auto grid w-full max-w-7xl gap-10 font-ibm-plex-sans text-[#171717] sm:py-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <div className="max-w-xl">
-              <h2 className="text-4xl font-semibold leading-none tracking-normal sm:text-5xl">
-                {copy.workflow.title}
-              </h2>
-              <p className="mt-4 max-w-md text-sm leading-6 text-[#6f6961] sm:text-base">
-                {copy.workflow.description}
-              </p>
-            </div>
+        </section> */}
 
-            <div className="madoo-product-explain-panel relative overflow-hidden rounded-xl px-5 py-6 sm:px-7 lg:px-8">
-              <Image
-                src="/floating-icons/madoo-product-explain.png"
-                alt="Madoo AI workflow from prompt to AI-generated email template and export"
-                width={1916}
-                height={821}
-                className="relative z-10 h-auto w-full"
-                sizes="(min-width: 1280px) 704px, (min-width: 1024px) 60vw, 100vw"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 py-20 sm:px-8 sm:py-24 xl:px-0">
+        <section className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 py-20 sm:px-8 sm:pt-[550px] xl:px-0">
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex w-full flex-col justify-between gap-6 sm:flex-row sm:items-end">
               <div>
@@ -652,8 +615,6 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
             </div>
           </div>
         </section>
-
-
 
         <section className="relative z-10 overflow-hidden px-4 py-20 sm:px-8 sm:py-24 mb-16">
           <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center font-ibm-plex-sans">

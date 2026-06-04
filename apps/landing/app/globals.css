@@ -14,6 +14,7 @@
   --color-madoo-nav: #23272f;
   --color-madoo-logo: #2b3037;
   --color-madoo-paper: #ffffff;
+  --color-madoo-page: #f3f4f6;
   --color-madoo-paper-tint: #fbfaf6;
   --color-madoo-surface: #f3faff;
   --color-madoo-rule: #0c346a;
@@ -32,6 +33,7 @@
   --color-madoo-blue-800: #0c346a;
   --color-madoo-blue-900: #071b38;
 }
+
 
 :root {
   --madoo-rule-rgb: 12 52 106;
@@ -57,6 +59,24 @@
 
 .madoo-paper-border-hover:hover {
   box-shadow: inset 0 0 0 0.5px rgb(var(--madoo-rule-rgb) / 0.28);
+}
+
+.madoo-hero-box {
+  isolation: isolate;
+  background: #f6f6f6;
+  box-shadow: 0 0 0 0.5px rgb(var(--madoo-ink-shadow-rgb) / 0.14);
+}
+
+.madoo-hero-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, rgb(var(--madoo-ink-shadow-rgb) / 0.1) 1px, transparent 0);
+  background-size: 10px 10px;
+  mask-image: radial-gradient(ellipse 58% 58% at 50% 52%, #000 0%, #000 44%, rgb(0 0 0 / 0.68) 64%, transparent 90%);
+  -webkit-mask-image: radial-gradient(ellipse 58% 58% at 50% 52%, #000 0%, #000 44%, rgb(0 0 0 / 0.68) 64%, transparent 90%);
 }
 
 .madoo-product-explain-panel {
@@ -110,7 +130,7 @@
 }
 
 .madoo-provider-marquee {
-  animation: madoo-provider-marquee 60s linear infinite;
+  animation: madoo-provider-marquee 200s linear infinite;
 }
 
 @keyframes madoo-hero-float-email {

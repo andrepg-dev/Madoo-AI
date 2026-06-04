@@ -7,7 +7,9 @@ When adapting a reference design, copy the useful layout idea, not the whole pag
 - Keep Madoo's existing page shell, navigation, footer, spacing rhythm, and typography.
 - Use the app's current fonts and Tailwind conventions.
 - Prefer `madoo-paper-border` and `madoo-paper-border-hover` for card edges instead of visible hard borders.
+- When saying "shadow as border" or "border shadow", match the button/card border weight: a subtle zero-blur box-shadow ring, usually `0 0 0 0.5px rgb(... / alpha)`. Do not use thick 1px borders by default, and do not add blur, large spread, halo, or drop-shadow unless explicitly requested.
 - Use Madoo button styling: compact rounded-lg buttons, dark primary action, white secondary action with paper shadow.
+- Official Madoo AI page background is `#f3f4f6` via `bg-madoo-page`; use it for the body/page shell unless a specific section needs its own surface.
 - Keep cards compact and aligned with existing landing-page scale.
 - Do not add unrelated reference-page sections unless requested.
 - Use Hugeicons for most UI icons when an icon is needed. Prefer existing `@hugeicons/core-free-icons` imports and `HugeiconsIcon` rendering before text glyphs or custom SVGs.
@@ -26,6 +28,7 @@ Palette lives in `apps/landing/app/globals.css` under Tailwind's `@theme`
 - `madoo-nav`: navigation text.
 - `madoo-logo`: wordmark text.
 - `madoo-paper`: white card/page surface.
+- `madoo-page`: official page background, `#f3f4f6`.
 - `madoo-paper-tint`: translucent header surface.
 - `madoo-surface`: soft blue-white page texture.
 - `madoo-rule`: paper-border shadow color source.
