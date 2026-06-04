@@ -69,8 +69,10 @@ export default function RootLayout({
           <div
             className="pointer-events-none fixed inset-0 z-0"
             style={{
+              background: "var(--color-madoo-paper)",
               backgroundImage:
-                "repeating-linear-gradient(45deg, transparent, transparent 2px, var(--color-madoo-surface) 2px, var(--color-madoo-surface) 4px)",
+                "radial-gradient(circle at 1px 1px, rgb(var(--madoo-ink-shadow-rgb) / 0.35) 1px, transparent 0)",
+              backgroundSize: "20px 20px",
             }}
             aria-hidden="true"
           />

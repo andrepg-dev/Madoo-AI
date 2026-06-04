@@ -6,11 +6,10 @@ import {
   ArrowDown01Icon,
   Download01Icon,
   Mic02Icon,
-  PenTool03Icon,
-  SparklesIcon,
-  WebDesign01Icon,
+  WebDesign01Icon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Image from "next/image";
 import type { KeyboardEvent, SVGAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
 import AuthDialog from "./AuthDialog";
@@ -418,15 +417,34 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
       <main lang={locale} className="relative min-h-screen w-full">
         <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
 
-        <div className="madoo-paper-section madoo-paper-hero relative z-50 flex h-[90vh] w-full flex-col items-center justify-center gap-9 font-ibm-plex-sans">
-          <div className="flex flex-col gap-1.5">
+        <div className="madoo-paper-section madoo-paper-hero relative z-50 flex h-[90vh] w-full flex-col items-center justify-center gap-9 overflow-hidden font-ibm-plex-sans">
+          <Image
+            src="/floating-icons/email-template-cut.png"
+            alt=""
+            width={2508}
+            height={2508}
+            aria-hidden="true"
+            className="madoo-hero-float-email pointer-events-none absolute right-[max(3rem,calc(50%-42rem))] top-[15%] z-0 hidden h-auto w-[13.5rem] select-none xl:block 2xl:w-[17.5rem]"
+            priority
+          />
+          <Image
+            src="/floating-icons/browser-template-cut.png"
+            alt=""
+            width={3068}
+            height={2050}
+            aria-hidden="true"
+            className="madoo-hero-float-browser pointer-events-none absolute bottom-[8%] left-[max(2.5rem,calc(50%-48rem))] z-0 hidden h-auto w-[21.5rem] select-none xl:block 2xl:w-[28.5rem]"
+            priority
+          />
+
+          <div className="relative z-10 flex flex-col gap-1.5">
             <h3 className="text-center text-5xl font-medium leading-[0.94] tracking-normal text-[#071b38]">
               <span>{copy.hero.titleStart}</span>{" "}
               <span className="relative inline-flex items-center justify-center">
                 <span className="bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] via-[#2563eb] via-[#0284c7] to-[#1d4ed8] bg-clip-text font-semibold text-transparent">
                   {copy.hero.titleAccent}
                 </span>
-                <span className="madoo-gradient-icon relative inline-flex h-12 w-12 translate-y-0.5 items-center justify-center">
+                {/* <span className="madoo-gradient-icon relative inline-flex h-12 w-12 translate-y-0.5 items-center justify-center">
                   <svg width="0" height="0" aria-hidden="true" focusable="false">
                     <defs>
                       <linearGradient id="madoo-pen-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -449,7 +467,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                     className="pointer-events-none absolute right-3 top-1 inline-flex h-2 w-2 rounded-full bg-[#F9F9FA]"
                     aria-hidden="true"
                   />
-                </span>
+                </span> */}
               </span>
             </h3>
             <h4 className="text-center text-lg font-light text-zinc-700 mt-1.5">
@@ -457,7 +475,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
             </h4>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="relative z-10 flex flex-col gap-2">
             <div className="madoo-paper-border min-w-[700px] overflow-hidden rounded-3xl bg-white">
               <textarea
                 ref={promptTextareaRef}
