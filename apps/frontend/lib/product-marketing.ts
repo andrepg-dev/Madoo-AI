@@ -37,23 +37,33 @@ export const productUseCases = [
 
 export const productFaq = [
   {
-    question: "What is Madoo AI?",
+    question: "What's Madoo AI and how does it work?",
     answer:
-      "Madoo AI is an AI email template generator. It turns plain-language prompts into responsive HTML email templates for newsletters, launches, promos, and lifecycle emails.",
+      "Madoo AI is an AI email design company. It's built for marketers and agencies that don't want to keep using drag-and-drop tools and want to create professional email templates with pre-trained, specialized AI tools.",
   },
   {
-    question: "Who is Madoo AI for?",
+    question: "Can I change my plan?",
     answer:
-      "Madoo AI is for teams and creators that need professional email templates without hand-coding every layout.",
+      "Yes. You can change your plan at any time.",
   },
   {
-    question: "Can Madoo AI create HTML email code?",
+    question: "Is there any free trial?",
     answer:
-      "Yes. Madoo AI generates responsive email template code and previews so teams can review the design before using it in their email workflow.",
+      "Yes. New users get a 7-day free trial, and no credit card is needed.",
   },
   {
-    question: "How is Madoo AI different from a generic AI writer?",
+    question: "How do credits work?",
     answer:
-      "Madoo AI is built for email templates. Prompts become structured layouts with sections, CTAs, responsive previews, and production-friendly HTML output.",
+      "1 AI message costs 1 credit. Creating a template from scratch costs 1 credit, and each message you send to edit that template also costs 1 credit.",
+  },
+  {
+    question: "Who owns the project and code?",
+    answer:
+      "You completely own the AI-generated code. You can use it wherever you need, in any project or workflow.",
+  },
+  {
+    question: "What if I don't find my export provider?",
+    answer:
+      "If you don't find your provider, you can report it inside the platform with the add provider button. We'll review it, and if we accept and add that provider, we'll give you 150 AI credits for free.",
   },
 ];

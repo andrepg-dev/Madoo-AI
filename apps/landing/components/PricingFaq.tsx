@@ -5,24 +5,34 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 const faqs = [
   {
-    question: "Can I change plans later?",
+    question: "What's Madoo AI and how does it work?",
     answer:
-      "Yes. You can move between Basic, Medium, and Pro as your email workflow grows.",
+      "Madoo AI is an AI email design company. It's built for marketers and agencies that don't want to keep using drag-and-drop tools and want to create professional email templates with pre-trained, specialized AI tools.",
   },
   {
-    question: "What happens when I switch to yearly billing?",
+    question: "Can I change my plan?",
     answer:
-      "The pricing cards show the discounted monthly-equivalent price with the yearly interval active.",
+      "Yes. You can change your plan at any time.",
   },
   {
-    question: "Do all plans include templates?",
+    question: "Is there any free trial?",
     answer:
-      "Yes. Paid plans include premium templates and sharing preview links.",
+      "Yes. New users get a 7-day free trial, and no credit card is needed.",
   },
   {
-    question: "Which plan should a team choose?",
+    question: "How do credits work?",
     answer:
-      "Medium works well for small teams. Pro is better for larger agency workflows and higher monthly volume.",
+      "1 AI message costs 1 credit. Creating a template from scratch costs 1 credit, and each message you send to edit that template also costs 1 credit.",
+  },
+  {
+    question: "Who owns the project and code?",
+    answer:
+      "You completely own the AI-generated code. You can use it wherever you need, in any project or workflow.",
+  },
+  {
+    question: "What if I don't find my export provider?",
+    answer:
+      "If you don't find your provider, you can report it inside the platform with the add provider button. We'll review it, and if we accept and add that provider, we'll give you 150 AI credits for free.",
   },
 ];
 
@@ -34,8 +44,7 @@ export function PricingFaq() {
           Frequently asked questions
         </h2>
         <p className="mt-4 text-base leading-7 text-madoo-muted">
-          Answers for plan changes, billing, and choosing the right workspace
-          tier.
+          Answers based on our platform and how the process works.
         </p>
       </div>
 
