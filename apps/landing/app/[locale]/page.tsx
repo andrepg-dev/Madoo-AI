@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import HomePage from "../page";
+import HomePage from "../../components/HomePage";
 
 const locales = ["en", "es"] as const;
 

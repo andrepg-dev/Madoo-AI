@@ -109,10 +109,10 @@ const PricingScreen = () => {
         {/* HEADER */}
         <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'var(--accent-soft)', color: 'var(--accent-deep)', borderRadius: 999, fontSize: 12, fontWeight: 500 }}>
-            <Icon name="sparkle" size={12}/> Pricing that grows with you
+            <Icon name="sparkle" size={12} /> Pricing that grows with you
           </div>
           <h1 style={{ fontFamily: 'Instrument Serif, serif', fontSize: 56, fontWeight: 400, lineHeight: 1.05, letterSpacing: -1, margin: '18px 0 0', color: 'var(--ink)' }}>
-            Send beautiful emails<br/><span style={{ fontStyle: 'italic', color: 'var(--accent-deep)' }}>at any scale.</span>
+            Send beautiful emails<br /><span style={{ fontStyle: 'italic', color: 'var(--accent-deep)' }}>at any scale.</span>
           </h1>
           <p style={{ fontSize: 16, color: 'var(--ink-soft)', marginTop: 14, lineHeight: 1.55 }}>
             Start free. Upgrade when your list does. Cancel anytime — really.
@@ -175,7 +175,7 @@ const PricingScreen = () => {
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)', textTransform: 'uppercase',
                     display: 'inline-flex', alignItems: 'center', gap: 4,
                   }}>
-                    <Icon name="star" size={10}/> {plan.badge}
+                    <Icon name="star" size={10} /> {plan.badge}
                   </div>
                 )}
 
@@ -220,7 +220,7 @@ const PricingScreen = () => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   transition: 'opacity 0.15s',
                 }}>
-                  {plan.cta} <Icon name="arrow" size={12}/>
+                  {plan.cta} <Icon name="arrow" size={12} />
                 </button>
 
                 {/* FEATURE LIST */}
@@ -236,7 +236,7 @@ const PricingScreen = () => {
                     }}>
                       {!f.header && (
                         <div style={{ flexShrink: 0, marginTop: 2, color: f.included ? (isHigh ? 'var(--accent)' : 'var(--accent-deep)') : 'inherit' }}>
-                          {f.included ? <Icon name="check" size={13} stroke={2.4}/> : <Icon name="x" size={11}/>}
+                          {f.included ? <Icon name="check" size={13} stroke={2.4} /> : <Icon name="x" size={11} />}
                         </div>
                       )}
                       <span>{f.label}</span>
@@ -258,7 +258,7 @@ const PricingScreen = () => {
           ].map(t => (
             <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>
               <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--accent-soft)', color: 'var(--accent-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name={t.icon} size={14}/>
+                <Icon name={t.icon} size={14} />
               </div>
               {t.label}
             </div>
@@ -269,7 +269,7 @@ const PricingScreen = () => {
         <div style={{ marginTop: 32, padding: 28, background: 'var(--ink)', color: 'var(--bg)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 280 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, letterSpacing: 0.5, color: 'var(--accent)', textTransform: 'uppercase' }}>
-              <Icon name="sparkle" size={12}/> The Mailmint switch
+              <Icon name="sparkle" size={12} /> The Mailmint switch
             </div>
             <div style={{ fontFamily: 'Instrument Serif, serif', fontSize: 30, fontWeight: 400, marginTop: 6, lineHeight: 1.1, letterSpacing: -0.3 }}>
               Coming from Mailchimp or Klaviyo?
@@ -281,7 +281,7 @@ const PricingScreen = () => {
           <div style={{ display: 'flex', gap: 8 }}>
             <button style={{ padding: '11px 18px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'var(--bg)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Compare features</button>
             <button style={{ padding: '11px 18px', borderRadius: 9, border: 'none', background: 'var(--accent)', color: 'var(--accent-fg)', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
-              Book migration call <Icon name="arrow" size={12}/>
+              Book migration call <Icon name="arrow" size={12} />
             </button>
           </div>
         </div>
@@ -293,7 +293,7 @@ const PricingScreen = () => {
             <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginTop: 6 }}>Still wondering? <a style={{ color: 'var(--accent-deep)', fontWeight: 600, textDecoration: 'none' }}>Talk to a human →</a></p>
           </div>
           <div style={{ maxWidth: 720, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
-            {FAQ.map((item, i) => <FaqItem key={i} item={item} first={i === 0}/>)}
+            {FAQ.map((item, i) => <FaqItem key={i} item={item} first={i === 0} />)}
           </div>
         </div>
       </div>
@@ -312,7 +312,7 @@ const FaqItem = ({ item, first }) => {
       }}>
         {item.q}
         <div style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--ink-soft)' }}>
-          <Icon name="chevronDown" size={16}/>
+          <Icon name="chevronDown" size={16} />
         </div>
       </button>
       {open && (
