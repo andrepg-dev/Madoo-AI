@@ -41,6 +41,13 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://madooai.com"),
   title: "Madoo | AI Email Builder",
   description: "Export your email templates design to MailChimp or any provider of your preference.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "64x64" },
+    ],
+    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+  },
   robots: {
     index: true,
     follow: true,

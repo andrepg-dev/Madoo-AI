@@ -50,7 +50,11 @@ export const metadata: Metadata = {
   publisher: siteConfig.name,
   category: "Email marketing software",
   icons: {
-    icon: "/icon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "64x64" },
+    ],
+    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
   },
   robots: {
     index: true,
