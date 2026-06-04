@@ -2,6 +2,7 @@
 
 import { ArrowDown01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { LandingButton } from "./LandingButton";
@@ -31,12 +32,12 @@ function HeaderAction({
   href: string;
 }) {
   return (
-    <a
-      className="hidden cursor-pointer items-center gap-2 rounded-lg bg-[#101114] px-4 py-2 text-sm leading-none text-white transition hover:bg-[#26282d] sm:inline-flex"
+    <Link
+      className="hidden cursor-pointer items-center gap-2 rounded-lg bg-madoo-ink px-4 py-2 text-sm leading-none text-white transition hover:bg-madoo-ink-hover sm:inline-flex"
       href={href}
     >
       {children}
-    </a>
+    </Link>
   );
 }
 
@@ -44,7 +45,7 @@ export function LandingHeader({
   copy,
   onAuthClick,
   sectionHrefPrefix = "",
-  scrolledBackgroundClassName = "bg-[#fbfaf6]/50",
+  scrolledBackgroundClassName = "bg-madoo-paper-tint/50",
 }: LandingHeaderProps) {
   const [hasScrolled, setHasScrolled] = useState(false);
 
@@ -67,7 +68,7 @@ export function LandingHeader({
     <header className={headerClassName}>
       <div className="flex h-16 items-center justify-between px-4 sm:px-8 xl:px-48">
         <div className="flex gap-16">
-          <a
+          <Link
             className="flex cursor-pointer items-center gap-2.5"
             href="/"
             aria-label="Madoo AI home"
@@ -78,16 +79,16 @@ export function LandingHeader({
               alt=""
               aria-hidden="true"
             />
-            <span className="font-medium leading-none tracking-normal text-[#2b3037]">
+            <span className="font-medium leading-none tracking-normal text-madoo-logo">
               Madoo AI
             </span>
-          </a>
+          </Link>
 
           <nav
-            className="hidden items-center gap-8 text-sm text-[#23272f] lg:flex"
+            className="hidden items-center gap-8 text-sm text-madoo-nav lg:flex"
             aria-label="Primary navigation"
           >
-            <a
+            <Link
               className="inline-flex cursor-pointer items-center gap-2"
               href={`${sectionHrefPrefix}#solutions`}
             >
@@ -99,8 +100,8 @@ export function LandingHeader({
                 className="text-[#4f5b68] [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
                 aria-hidden="true"
               />
-            </a>
-            <a
+            </Link>
+            <Link
               className="inline-flex cursor-pointer items-center gap-2"
               href={`${sectionHrefPrefix}#resources`}
             >
@@ -112,11 +113,11 @@ export function LandingHeader({
                 className="text-[#4f5b68] [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
                 aria-hidden="true"
               />
-            </a>
-            <a className="cursor-pointer" href={`${sectionHrefPrefix}#community`}>
+            </Link>
+            <Link className="cursor-pointer" href={`${sectionHrefPrefix}#community`}>
               {copy.community}
-            </a>
-            <a className="cursor-pointer" href="/pricing">{copy.pricing}</a>
+            </Link>
+            <Link className="cursor-pointer" href="/pricing">{copy.pricing}</Link>
           </nav>
         </div>
 
@@ -137,19 +138,19 @@ export function LandingHeader({
             </>
           ) : (
             <>
-              <a
-                className="madoo-paper-border madoo-paper-border-hover hidden cursor-pointer items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm leading-none text-[#101114] transition sm:inline-flex"
+              <Link
+                className="madoo-paper-border madoo-paper-border-hover hidden cursor-pointer items-center gap-2 rounded-lg bg-madoo-paper px-3 py-2 text-sm leading-none text-madoo-ink transition sm:inline-flex"
                 href="/"
               >
                 {copy.login}
-              </a>
+              </Link>
               <HeaderAction href="/">{copy.getStarted}</HeaderAction>
             </>
           )}
         </div>
 
         <button
-          className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-[#c8ddec] text-[#23272f] sm:hidden"
+          className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-[#c8ddec] text-madoo-nav sm:hidden"
           type="button"
           aria-label={copy.mobileMenu}
         >

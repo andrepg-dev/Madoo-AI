@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, IBM_Plex_Sans, Instrument_Serif, Inter } from "next/font/google";
+import { LandingFooter } from "../components/LandingFooter";
 import "./globals.css";
 
 const inter = Inter({
@@ -56,7 +57,22 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable} ${instrumentSerif.variable}`}
     >
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.className} bg-madoo-paper`}>
+        <div className="relative min-h-screen w-full bg-madoo-paper">
+          <div
+            className="pointer-events-none fixed inset-0 z-0"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(45deg, transparent, transparent 2px, var(--color-madoo-surface) 2px, var(--color-madoo-surface) 4px)",
+            }}
+            aria-hidden="true"
+          />
+          <div className="relative z-10">
+            {children}
+            <LandingFooter />
+          </div>
+        </div>
+      </body>
     </html>
   );
 }

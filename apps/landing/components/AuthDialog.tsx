@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 
 type AuthDialogProps = {
@@ -109,7 +110,7 @@ export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogP
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#071123]/45 px-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-madoo-blue-900/45 px-4 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-dialog-title"
@@ -122,7 +123,7 @@ export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogP
         tabIndex={-1}
       />
 
-      <div className="font-figtree relative w-full max-w-[390px] rounded-[28px] bg-[#FAFBFD] px-7 py-7 text-[#101114] shadow-[0_28px_90px_rgba(7,17,35,0.28),0_0_0_1px_rgba(12,52,106,0.12),inset_0_1px_0_rgba(255,255,255,0.92)]">
+      <div className="font-ibm-plex-sans relative w-full max-w-[390px] rounded-[28px] bg-madoo-paper px-7 py-7 text-madoo-ink shadow-[0_28px_90px_rgb(7_17_35/0.28),0_0_0_1px_rgb(var(--madoo-rule-rgb)/0.12),inset_0_1px_0_rgb(255_255_255/0.92)]">
         <button
           type="button"
           className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full text-zinc-500 transition hover:bg-black/5 hover:text-zinc-900"
@@ -156,9 +157,9 @@ export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogP
             <button
               key={provider.name}
               type="button"
-              className="flex h-8 w-full items-center cursor-pointer justify-center gap-1.5 rounded-lg bg-white text-sm text-[#101114] shadow-[0_1px_2px_rgba(16,17,20,0.035),0_0_0_0.5px_rgba(16,17,20,0.22)] transition hover:bg-[#f7f8fb] hover:shadow-[0_2px_6px_rgba(16,17,20,0.055),0_0_0_0.5px_rgba(16,17,20,0.28)]"
+              className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-madoo-paper text-sm text-madoo-ink shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-neutral-50 hover:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.28)]"
             >
-              <span className="text-[#101114]">{provider.icon}</span>
+              <span className="text-madoo-ink">{provider.icon}</span>
               {copy.continueWith} {provider.name}
             </button>
           ))}
@@ -174,11 +175,11 @@ export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogP
           <input
             type="email"
             placeholder={copy.email}
-            className="h-8 rounded-lg bg-white px-3.5 text-sm text-[#101114] outline-none shadow-[0_1px_2px_rgba(16,17,20,0.035),0_0_0_0.5px_rgba(16,17,20,0.22)] placeholder:text-zinc-600 focus:shadow-[0_2px_6px_rgba(16,17,20,0.055),0_0_0_0.5px_rgba(12,52,106,0.34)]"
+            className="h-8 rounded-lg bg-madoo-paper px-3.5 text-sm text-madoo-ink outline-none shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] placeholder:text-madoo-muted focus:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.34)]"
           />
           <button
             type="button"
-            className="h-8 cursor-pointer rounded-lg bg-[#101114] text-sm text-white shadow-[0_8px_20px_rgba(16,17,20,0.16),0_0_0_0.5px_rgba(16,17,20,0.22)] transition hover:bg-[#26282d]"
+            className="h-8 cursor-pointer rounded-lg bg-madoo-ink text-sm text-white shadow-[0_8px_20px_rgb(var(--madoo-ink-shadow-rgb)/0.16),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-ink-hover"
           >
             {copy.continue}
           </button>
@@ -186,13 +187,13 @@ export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogP
 
         <p className="mt-5 text-xs leading-5 text-zinc-500">
           {copy.termsPrefix}{" "}
-          <a className="font-medium text-zinc-700 underline underline-offset-2" href="/terms">
+          <Link className="font-medium text-zinc-700 underline underline-offset-2" href="/terms">
             {copy.terms}
-          </a>{" "}
+          </Link>{" "}
           {copy.and}{" "}
-          <a className="font-medium text-zinc-700 underline underline-offset-2" href="/privacy">
+          <Link className="font-medium text-zinc-700 underline underline-offset-2" href="/privacy">
             {copy.privacy}
-          </a>
+          </Link>
           .
         </p>
       </div>

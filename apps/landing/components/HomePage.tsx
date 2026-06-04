@@ -173,7 +173,7 @@ const localeCopy = {
     templates: {
       title: "Explore templates",
       description:
-        "Start community-tested templates and adjust copy, layout, tone and audience with AI",
+        "Start from community-tested templates, then adjust copy, layout, tone, and audience with AI.",
       previewAlt: "email template preview",
       hover: "Template Details",
       cards: [
@@ -195,16 +195,6 @@ const localeCopy = {
       title: "Ready to build?",
       placeholder: "Hi Madoo, can you create an email template for my product launch?",
     },
-    footer: [
-      { title: "Company", links: ["About", "Careers", "Press & media", "Security", "Trust center", "Contact"] },
-      {
-        title: "Product",
-        links: ["Pricing", "Templates", "Email editor", "AI generator", "Export", "Brand kits", "Changelog", "Status"],
-      },
-      { title: "Resources", links: ["Learn", "Guides", "Blog", "Support", "Reviews", "Sitemap"] },
-      { title: "Legal", links: ["Privacy policy", "Cookie settings", "Terms", "DPA", "Report abuse", "Report security concerns"] },
-      { title: "Community", links: ["Become a partner", "Affiliates", "Discord", "X / Twitter", "LinkedIn", "YouTube"] },
-    ],
   },
   es: {
     nav: {
@@ -264,16 +254,6 @@ const localeCopy = {
       title: "¿Listo para crear?",
       placeholder: "Hola Madoo, ¿puedes crear una plantilla de email para mi lanzamiento?",
     },
-    footer: [
-      { title: "Compañía", links: ["Acerca de", "Carreras", "Prensa", "Seguridad", "Centro de confianza", "Contacto"] },
-      {
-        title: "Producto",
-        links: ["Precios", "Plantillas", "Editor de emails", "Generador IA", "Exportar", "Kits de marca", "Cambios", "Estado"],
-      },
-      { title: "Recursos", links: ["Aprender", "Guías", "Blog", "Soporte", "Reseñas", "Sitemap"] },
-      { title: "Legal", links: ["Privacidad", "Cookies", "Términos", "DPA", "Reportar abuso", "Reportar seguridad"] },
-      { title: "Comunidad", links: ["Ser partner", "Afiliados", "Discord", "X / Twitter", "LinkedIn", "YouTube"] },
-    ],
   },
 } as const;
 
@@ -346,9 +326,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
     <>
       <AuthDialog open={authDialogOpen} onClose={closeAuthDialog} locale={locale} />
 
-      <main lang={locale} className="relative min-h-screen w-full bg-[#ffffff]">
-        <div className="madoo-paper-background pointer-events-none absolute inset-0 z-0" aria-hidden="true" />
-
+      <main lang={locale} className="relative min-h-screen w-full">
         <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
 
         <div className="madoo-paper-section madoo-paper-hero relative z-50 flex h-[90vh] w-full flex-col items-center justify-center gap-9 font-ibm-plex-sans">
@@ -629,46 +607,6 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
           </div>
         </section>
 
-
-
-        <footer className="relative z-10 px-4 pb-10 sm:px-8">
-          <div className="madoo-paper-border mx-auto grid w-full max-w-7xl gap-12 rounded-[28px] bg-white px-8 py-12 font-ibm-plex-sans text-[#1f1d1a] md:grid-cols-[1fr_4fr] md:px-12 md:py-14">
-            <div className="flex flex-col justify-between gap-10">
-              <a className="flex w-fit cursor-pointer items-center gap-2.5" href="/" aria-label="Madoo AI home">
-                <img src="/madoo-transparent.png" alt="" aria-hidden="true" className="h-9 w-9 object-contain" />
-                <span className="text-sm font-semibold text-[#2b3037]">Madoo AI</span>
-              </a>
-
-              <div className="flex items-center gap-2 text-sm text-[#696762]">
-                <span aria-hidden="true">◎</span>
-                <a className={`transition hover:text-[#5b63ff] ${locale === "en" ? "font-semibold text-[#1f1d1a]" : ""}`} href="/en">
-                  EN
-                </a>
-                <span aria-hidden="true">/</span>
-                <a className={`transition hover:text-[#5b63ff] ${locale === "es" ? "font-semibold text-[#1f1d1a]" : ""}`} href="/es">
-                  ES
-                </a>
-              </div>
-            </div>
-
-            <div className="grid gap-9 sm:grid-cols-2 lg:grid-cols-5">
-              {copy.footer.map((column) => (
-                <div key={column.title}>
-                  <h3 className="mb-5 text-sm font-medium text-[#6b6963]">{column.title}</h3>
-                  <ul className="space-y-3.5">
-                    {column.links.map((link) => (
-                      <li key={link}>
-                        <a className="text-sm text-[#24221f] transition hover:text-[#5b63ff]" href={link}>
-                          {link}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        </footer>
       </main>
     </>
   )
