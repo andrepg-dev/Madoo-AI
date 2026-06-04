@@ -151,8 +151,13 @@ const localeCopy = {
       titleStart: "AI",
       titleAccent: "Email Builder",
       subtitle: "Design your email template with AI",
-      placeholder:
-        "Hi Madoo, can you create an email template for my AWS Summit event? Please check this link for more information: link.com",
+      placeholderPrefix: "Hi Madoo, ",
+      placeholders: [
+        "create an email template for my AWS Summit event. Use this link for details: link.com",
+        "turn this product update into a short newsletter for our subscribers.",
+        "make a campaign email for our new feature launch. Target active users and drive trials.",
+        "create a marketer-ready promo email for a limited offer with a clear CTA.",
+      ],
       submit: "Generate email",
       explore: "Explore template examples",
       exportLabel: "Export to any provider of your choice",
@@ -193,7 +198,13 @@ const localeCopy = {
     cta: {
       eyebrow: "AI Email Builder",
       title: "Ready to build?",
-      placeholder: "Hi Madoo, can you create an email template for my product launch?",
+      placeholderPrefix: "Hi Madoo, ",
+      placeholders: [
+        "create a product launch email for my audience.",
+        "make a newsletter from our latest product updates.",
+        "create a new feature campaign for existing customers.",
+        "write a marketer-ready promotion with a clear CTA.",
+      ],
     },
   },
   es: {
@@ -210,8 +221,13 @@ const localeCopy = {
       titleStart: "IA",
       titleAccent: "para Emails",
       subtitle: "Diseña tu plantilla de email con IA y avanza más rápido",
-      placeholder:
-        "Hola Madoo, ¿puedes crear una plantilla de email para mi evento AWS Summit? Revisa este enlace para más información: link.com",
+      placeholderPrefix: "Hola Madoo, ",
+      placeholders: [
+        "crea una plantilla de email para mi evento AWS Summit. Usa este enlace: link.com",
+        "convierte esta actualización de producto en un newsletter corto para suscriptores.",
+        "crea una campaña para lanzar una nueva función y activar usuarios actuales.",
+        "escribe un email promocional para marketing con una llamada a la acción clara.",
+      ],
       submit: "Generar email",
       explore: "Explorar ejemplos de plantillas",
       exportLabel: "Exporta a cualquier proveedor",
@@ -252,10 +268,79 @@ const localeCopy = {
     cta: {
       eyebrow: "Constructor de Emails con IA",
       title: "¿Listo para crear?",
-      placeholder: "Hola Madoo, ¿puedes crear una plantilla de email para mi lanzamiento?",
+      placeholderPrefix: "Hola Madoo, ",
+      placeholders: [
+        "crea un email para lanzar mi producto.",
+        "crea un newsletter con nuestras últimas novedades.",
+        "crea una campaña para una nueva función.",
+        "escribe una promoción para marketers con CTA claro.",
+      ],
     },
   },
 } as const;
+
+const placeholderTypingDelay = 36;
+const placeholderDeletingDelay = 18;
+const placeholderHoldDelay = 3200;
+const placeholderRestartDelay = 420;
+
+function useTypingPlaceholder(texts: readonly string[]) {
+  const [placeholder, setPlaceholder] = useState("");
+
+  useEffect(() => {
+    if (texts.length === 0) {
+      setPlaceholder("");
+      return;
+    }
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPlaceholder(texts[0] ?? "");
+      return;
+    }
+
+    let timeout: ReturnType<typeof setTimeout>;
+    let textIndex = 0;
+    let characterIndex = 0;
+    let isDeleting = false;
+
+    const tick = () => {
+      const text = texts[textIndex] ?? "";
+
+      if (!isDeleting) {
+        characterIndex = Math.min(characterIndex + 1, text.length);
+        setPlaceholder(text.slice(0, characterIndex));
+
+        if (characterIndex === text.length) {
+          isDeleting = true;
+          timeout = setTimeout(tick, placeholderHoldDelay);
+          return;
+        }
+
+        timeout = setTimeout(tick, placeholderTypingDelay);
+        return;
+      }
+
+      characterIndex = Math.max(characterIndex - 1, 0);
+      setPlaceholder(text.slice(0, characterIndex));
+
+      if (characterIndex === 0) {
+        isDeleting = false;
+        textIndex = (textIndex + 1) % texts.length;
+        timeout = setTimeout(tick, placeholderRestartDelay);
+        return;
+      }
+
+      timeout = setTimeout(tick, placeholderDeletingDelay);
+    };
+
+    setPlaceholder("");
+    timeout = setTimeout(tick, placeholderRestartDelay);
+
+    return () => clearTimeout(timeout);
+  }, [texts]);
+
+  return placeholder;
+}
 
 function TemplateHoverArrow(props: SVGAttributes<SVGSVGElement>) {
   return (
@@ -294,6 +379,10 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const ctaPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const hasPrompt = prompt.trim().length > 0;
+  const heroPlaceholderBody = useTypingPlaceholder(copy.hero.placeholders);
+  const ctaPlaceholderBody = useTypingPlaceholder(copy.cta.placeholders);
+  const heroPlaceholder = `${copy.hero.placeholderPrefix}${heroPlaceholderBody}`;
+  const ctaPlaceholder = `${copy.cta.placeholderPrefix}${ctaPlaceholderBody}`;
 
   const openAuthDialog = () => setAuthDialogOpen(true);
   const closeAuthDialog = () => setAuthDialogOpen(false);
@@ -375,7 +464,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 onKeyDown={onPromptKeyDown}
-                placeholder={copy.hero.placeholder}
+                placeholder={hasPrompt ? "" : heroPlaceholder}
                 className="madoo-prompt-textarea mr-3 max-h-80 min-h-24 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
               />
 
@@ -570,7 +659,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 onKeyDown={onPromptKeyDown}
-                placeholder={copy.cta.placeholder}
+                placeholder={hasPrompt ? "" : ctaPlaceholder}
                 className="madoo-prompt-textarea mr-3 max-h-56 min-h-20 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
               />
 
