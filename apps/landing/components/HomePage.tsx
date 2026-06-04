@@ -195,7 +195,7 @@ const localeCopy = {
       ],
     },
     cta: {
-      eyebrow: "AI Email Builder",
+      eyebrow: "Madoo | AI Email Design Company",
       title: "Ready to build?",
       placeholderPrefix: "Hi Madoo, ",
       placeholders: [
@@ -416,7 +416,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
       <main lang={locale} className="relative min-h-screen w-full">
         <div className="relative z-50 bg-madoo-page px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
-          <div className="madoo-hero-box relative mx-auto flex min-h-[120vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start rounded-2xl gap-9 pt-36 font-ibm-plex-sans sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-64 xl:max-w-[calc(100vw-2rem)]">
+          <div className="madoo-hero-box relative mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start rounded-2xl gap-9 pt-36 font-ibm-plex-sans sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-64 xl:max-w-[calc(100vw-2rem)]">
             <div className="absolute left-0 right-0 top-0 z-30">
               <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
             </div>
@@ -436,7 +436,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
               width={3068}
               height={2050}
               aria-hidden="true"
-              className="madoo-hero-float-browser pointer-events-none absolute bottom-[28%] left-[max(2.5rem,calc(50%-48rem))] z-0 hidden h-auto w-[21.5rem] select-none xl:block 2xl:w-[28.5rem]"
+              className="madoo-hero-float-browser pointer-events-none absolute bottom-[40%] left-[max(2.5rem,calc(50%-48rem))] z-0 hidden h-auto w-[21.5rem] select-none xl:block 2xl:w-[28.5rem]"
               priority
             />
 
@@ -549,8 +549,8 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
               </div>
             </div>
 
-            <div className="bottom-0 mx-auto absolute z-50 max-w-5xl w-full translate-y-[50%] h-125 p-6 bg-madoo-paper ring-8 ring-[#E5E5E5] rounded-4xl">
-              
+            <div className="bottom-0 mx-auto absolute z-50 max-w-5xl w-full translate-y-[35%] h-[600px] p-6 bg-madoo-paper ring-8 ring-[#E5E5E5] rounded-4xl">
+
             </div>
           </div>
         </div>
@@ -618,11 +618,11 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
         <section className="relative z-10 overflow-hidden px-4 py-20 sm:px-8 sm:py-24 mb-16">
           <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center font-ibm-plex-sans">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm">
+            <div className="inline-flex items-center gap-2 rounded-full px-3 text-sm text-zinc-600">
               {copy.cta.eyebrow}
             </div>
 
-            <h2 className="text-4xl font-semibold leading-none tracking-normal text-[#171717]">
+            <h2 className="text-5xl font-semibold font leading-none tracking-normal text-[#171717]">
               {copy.cta.title}
             </h2>
 
