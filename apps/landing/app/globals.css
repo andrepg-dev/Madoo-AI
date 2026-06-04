@@ -34,10 +34,21 @@
   --color-madoo-blue-900: #071b38;
 }
 
-
 :root {
   --madoo-rule-rgb: 12 52 106;
   --madoo-ink-shadow-rgb: 16 17 20;
+  --madoo-page-pattern-line: #f3f4f6;
+}
+
+.madoo-pattern-background {
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    var(--madoo-page-pattern-line) 2px,
+    var(--madoo-page-pattern-line) 4px
+  );
 }
 
 .grainient-container {
@@ -63,7 +74,7 @@
 
 .madoo-hero-box {
   isolation: isolate;
-  background: #f6f6f6;
+  background: #ffffff;
   box-shadow: 0 0 0 0.5px rgb(var(--madoo-ink-shadow-rgb) / 0.14);
 }
 
@@ -73,10 +84,14 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: radial-gradient(circle at 1px 1px, rgb(var(--madoo-ink-shadow-rgb) / 0.1) 1px, transparent 0);
-  background-size: 10px 10px;
-  mask-image: radial-gradient(ellipse 58% 58% at 50% 52%, #000 0%, #000 44%, rgb(0 0 0 / 0.68) 64%, transparent 90%);
-  -webkit-mask-image: radial-gradient(ellipse 58% 58% at 50% 52%, #000 0%, #000 44%, rgb(0 0 0 / 0.68) 64%, transparent 90%);
+  border-radius: inherit;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    var(--madoo-page-pattern-line) 2px,
+    var(--madoo-page-pattern-line) 4px
+  );
 }
 
 .madoo-product-explain-panel {
