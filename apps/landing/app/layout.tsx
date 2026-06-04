@@ -40,7 +40,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://madooai.com"),
   title: "Madoo | AI Email Builder",
-  description: "Export your email templates design to MailChimp or any provider of your preference.",
+  description: "Export your email templates design to MailChimp or any provider of your preference. ",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
