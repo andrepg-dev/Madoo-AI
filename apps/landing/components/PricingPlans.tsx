@@ -44,7 +44,8 @@ const plans: PricingPlan[] = [
       { value: "100", label: "monthly credits", emphasized: true },
       { value: "50", label: "stored templates", emphasized: true },
       { value: "2", label: "members", emphasized: true },
-      { label: "Claude, Gemini, GPT-5 models included" },
+      { value: "50", label: "test emails a day", emphasized: true },
+      { label: "Access to any model" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],
@@ -60,7 +61,8 @@ const plans: PricingPlan[] = [
       { value: "250", label: "monthly credits", emphasized: true },
       { value: "150", label: "stored templates", emphasized: true },
       { value: "3", label: "members", emphasized: true },
-      { label: "All models included" },
+      { value: "100", label: "test emails a day", emphasized: true },
+      { label: "Access to any model" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],
@@ -74,8 +76,9 @@ const plans: PricingPlan[] = [
     features: [
       { value: "550", label: "monthly credits", emphasized: true },
       { value: "300", label: "stored templates", emphasized: true },
-      { value: "10", label: "members", emphasized: true },
-      { label: "All models included" },
+      { value: "5", label: "members", emphasized: true },
+      { value: "300", label: "test emails a day", emphasized: true },
+      { label: "Access to any model" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],
@@ -199,7 +202,7 @@ function PriceBlock({
   if (enterprisePricing) {
     return (
       <div className="mt- flex flex-col justify-center">
-        <div className="text-2xl font-medium leading-none text-madoo-muted">
+        <div className="text-xl  leading-none text-madoo-muted my-3.5">
           Platform fee
         </div>
       </div>
