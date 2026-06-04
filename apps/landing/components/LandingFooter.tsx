@@ -19,131 +19,119 @@ const footerContent: Array<{
   locale: FooterLocale;
   columns: FooterColumn[];
 }> = [
-  {
-    locale: "en",
-    columns: [
-      {
-        title: "Company",
-        links: [
-          { label: "About", href: "/" },
-          { label: "Careers", href: "/" },
-          { label: "Press & media", href: "/" },
-          { label: "Security", href: "/" },
-          { label: "Trust center", href: "/" },
-          { label: "Contact", href: "/" },
-        ],
-      },
-      {
-        title: "Product",
-        links: [
-          { label: "Pricing", href: "/pricing" },
-          { label: "Templates", href: "/#templates" },
-          { label: "Email editor", href: "/" },
-          { label: "AI generator", href: "/" },
-          { label: "Export", href: "/" },
-          { label: "Brand kits", href: "/" },
-          { label: "Changelog", href: "/" },
-          { label: "Status", href: "/" },
-        ],
-      },
-      {
-        title: "Resources",
-        links: [
-          { label: "Learn", href: "/" },
-          { label: "Guides", href: "/" },
-          { label: "Blog", href: "/" },
-          { label: "Support", href: "/" },
-          { label: "Reviews", href: "/" },
-          { label: "Sitemap", href: "/sitemap.xml" },
-        ],
-      },
-      {
-        title: "Legal",
-        links: [
-          { label: "Privacy policy", href: "/" },
-          { label: "Cookie settings", href: "/" },
-          { label: "Terms", href: "/" },
-          { label: "DPA", href: "/" },
-          { label: "Report abuse", href: "/" },
-          { label: "Report security concerns", href: "/" },
-        ],
-      },
-      {
-        title: "Community",
-        links: [
-          { label: "Become a partner", href: "/" },
-          { label: "Affiliates", href: "/" },
-          { label: "Discord", href: "/" },
-          { label: "X / Twitter", href: "/" },
-          { label: "LinkedIn", href: "/" },
-          { label: "YouTube", href: "/" },
-        ],
-      },
-    ],
-  },
-  {
-    locale: "es",
-    columns: [
-      {
-        title: "Compañía",
-        links: [
-          { label: "Acerca de", href: "/es" },
-          { label: "Carreras", href: "/es" },
-          { label: "Prensa", href: "/es" },
-          { label: "Seguridad", href: "/es" },
-          { label: "Centro de confianza", href: "/es" },
-          { label: "Contacto", href: "/es" },
-        ],
-      },
-      {
-        title: "Producto",
-        links: [
-          { label: "Precios", href: "/pricing" },
-          { label: "Plantillas", href: "/es#templates" },
-          { label: "Editor de emails", href: "/es" },
-          { label: "Generador IA", href: "/es" },
-          { label: "Exportar", href: "/es" },
-          { label: "Kits de marca", href: "/es" },
-          { label: "Cambios", href: "/es" },
-          { label: "Estado", href: "/es" },
-        ],
-      },
-      {
-        title: "Recursos",
-        links: [
-          { label: "Aprender", href: "/es" },
-          { label: "Guías", href: "/es" },
-          { label: "Blog", href: "/es" },
-          { label: "Soporte", href: "/es" },
-          { label: "Reseñas", href: "/es" },
-          { label: "Sitemap", href: "/sitemap.xml" },
-        ],
-      },
-      {
-        title: "Legal",
-        links: [
-          { label: "Privacidad", href: "/es" },
-          { label: "Cookies", href: "/es" },
-          { label: "Términos", href: "/es" },
-          { label: "DPA", href: "/es" },
-          { label: "Reportar abuso", href: "/es" },
-          { label: "Reportar seguridad", href: "/es" },
-        ],
-      },
-      {
-        title: "Comunidad",
-        links: [
-          { label: "Ser partner", href: "/es" },
-          { label: "Afiliados", href: "/es" },
-          { label: "Discord", href: "/es" },
-          { label: "X / Twitter", href: "/es" },
-          { label: "LinkedIn", href: "/es" },
-          { label: "YouTube", href: "/es" },
-        ],
-      },
-    ],
-  },
-];
+    {
+      locale: "en",
+      columns: [
+        {
+          title: "Company",
+          links: [
+            { label: "About", href: "/" },
+            { label: "Security", href: "/" },
+            { label: "Trust center", href: "/" },
+            { label: "Contact", href: "/" },
+          ],
+        },
+        {
+          title: "Product",
+          links: [
+            { label: "Pricing", href: "/pricing" },
+            { label: "Templates", href: "/#templates" },
+            { label: "Email editor", href: "/" },
+            { label: "AI generator", href: "/" },
+            { label: "Export", href: "/" },
+            { label: "Changelog", href: "/" },
+            { label: "Status", href: "/" },
+          ],
+        },
+        {
+          title: "Resources",
+          links: [
+            { label: "Learn", href: "/" },
+            { label: "Guides", href: "/" },
+            { label: "Blog", href: "/" },
+            { label: "Support", href: "/" },
+            { label: "Reviews", href: "/" },
+            { label: "Sitemap", href: "/sitemap.xml" },
+          ],
+        },
+        {
+          title: "Legal",
+          links: [
+            { label: "Privacy policy", href: "/" },
+            { label: "Cookie settings", href: "/" },
+            { label: "Terms", href: "/" },
+            { label: "Report abuse", href: "/" },
+            { label: "Report security concerns", href: "/" },
+          ],
+        },
+        {
+          title: "Community",
+          links: [
+            { label: "Discord", href: "/" },
+            { label: "X / Twitter", href: "/" },
+            { label: "LinkedIn", href: "/" },
+            { label: "YouTube", href: "/" },
+          ],
+        },
+      ],
+    },
+    {
+      locale: "es",
+      columns: [
+        {
+          title: "Compañía",
+          links: [
+            { label: "Acerca de", href: "/es" },
+            { label: "Seguridad", href: "/es" },
+            { label: "Centro de confianza", href: "/es" },
+            { label: "Contacto", href: "/es" },
+          ],
+        },
+        {
+          title: "Producto",
+          links: [
+            { label: "Precios", href: "/pricing" },
+            { label: "Plantillas", href: "/es#templates" },
+            { label: "Editor de emails", href: "/es" },
+            { label: "Generador IA", href: "/es" },
+            { label: "Exportar", href: "/es" },
+            { label: "Cambios", href: "/es" },
+            { label: "Estado", href: "/es" },
+          ],
+        },
+        {
+          title: "Recursos",
+          links: [
+            { label: "Aprender", href: "/es" },
+            { label: "Guías", href: "/es" },
+            { label: "Blog", href: "/es" },
+            { label: "Soporte", href: "/es" },
+            { label: "Reseñas", href: "/es" },
+            { label: "Sitemap", href: "/sitemap.xml" },
+          ],
+        },
+        {
+          title: "Legal",
+          links: [
+            { label: "Privacidad", href: "/es" },
+            { label: "Cookies", href: "/es" },
+            { label: "Términos", href: "/es" },
+            { label: "Reportar abuso", href: "/es" },
+            { label: "Reportar seguridad", href: "/es" },
+          ],
+        },
+        {
+          title: "Comunidad",
+          links: [
+            { label: "Discord", href: "/es" },
+            { label: "X / Twitter", href: "/es" },
+            { label: "LinkedIn", href: "/es" },
+            { label: "YouTube", href: "/es" },
+          ],
+        },
+      ],
+    },
+  ];
 
 const languageLinks: Array<{ label: string; locale: FooterLocale; href: string }> = [
   { label: "EN", locale: "en", href: "/en" },
@@ -163,13 +151,7 @@ export function LandingFooter() {
   return (
     <footer className="relative z-10 px-4 pb-10 sm:px-8">
       {hasPricingBackground ? (
-        <div
-          className="absolute inset-0 z-0 bg-white"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, transparent, transparent 2px, #f3f4f6 2px, #f3f4f6 4px)",
-          }}
-        />
+        <div className="madoo-pattern-background absolute inset-0 z-0" />
       ) : null}
 
       <div className="madoo-paper-border relative z-10 mx-auto grid w-full max-w-7xl gap-12 rounded-[28px] bg-white px-8 py-12 font-ibm-plex-sans text-[#1f1d1a] md:grid-cols-[1fr_4fr] md:px-12 md:py-14">
@@ -185,9 +167,8 @@ export function LandingFooter() {
               <span key={link.locale} className="contents">
                 {index > 0 ? <span aria-hidden="true">/</span> : null}
                 <Link
-                  className={`transition hover:text-[#5b63ff] ${
-                    locale === link.locale ? "font-semibold text-[#1f1d1a]" : ""
-                  }`}
+                  className={`transition hover:text-[#5b63ff] ${locale === link.locale ? "font-semibold text-[#1f1d1a]" : ""
+                    }`}
                   href={link.href}
                 >
                   {link.label}
