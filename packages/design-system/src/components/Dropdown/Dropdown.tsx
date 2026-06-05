@@ -1,58 +1,63 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Icon } from "../Icon";
+import {
+  Children,
+  cloneElement,
+  createContext,
+  isValidElement,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type MouseEvent as ReactMouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+import { cx } from "../../lib/cx";
 import "./Dropdown.css";
 
-export type DropdownSize = "sm" | "md" | "lg";
-export type DropdownVariant = "default" | "ghost" | "surface";
-export type DropdownAlign = "start" | "end";
-
-export type DropdownOption =
-  | string
-  | {
-      label: string;
-      value: string;
-      disabled?: boolean;
-    };
-
-export interface DropdownProps {
-  value: string;
-  options: readonly DropdownOption[];
-  onChange: (value: string) => void;
-  label?: string;
-  menuTitle?: string;
-  placeholder?: string;
-  menuWidth?: number;
-  size?: DropdownSize;
-  variant?: DropdownVariant;
-  align?: DropdownAlign;
+interface DropdownContextValue {
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }
 
-function normalizeOption(option: DropdownOption) {
-  return typeof option === "string" ? { label: option, value: option } : option;
+const DropdownContext = createContext<DropdownContextValue | null>(null);
+
+function useDropdown() {
+  const context = useContext(DropdownContext);
+  if (!context) {
+    throw new Error("Dropdown components must be used inside <Dropdown />");
+  }
+  return context;
+}
+
+export interface DropdownProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function Dropdown({
-  value,
-  options,
-  onChange,
-  label,
-  menuTitle,
-  placeholder = "Select",
-  menuWidth,
-  size = "md",
-  variant = "default",
-  align = "start",
+  children,
+  defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange,
+  className,
+  ...rest
 }: DropdownProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const listboxId = useId();
-  const normalizedOptions = useMemo(() => options.map(normalizeOption), [options]);
-  const selected = normalizedOptions.find((option) => option.value === value);
-  const displayValue = selected?.label ?? (value || placeholder);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const open = controlledOpen ?? uncontrolledOpen;
+
+  const setOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) setUncontrolledOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   useEffect(() => {
-    const onDoc = (event: MouseEvent) => {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    const onDoc = (event: globalThis.MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -63,58 +68,129 @@ export function Dropdown({
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  });
+
+  return (
+    <DropdownContext.Provider value={{ open, setOpen }}>
+      <div ref={rootRef} className={cx("madoo-dropdown", className)} {...rest}>
+        {children}
+      </div>
+    </DropdownContext.Provider>
+  );
+}
+
+export interface DropdownTriggerProps
+  extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children: ReactNode;
+  asChild?: boolean;
+}
+
+export function DropdownTrigger({
+  children,
+  asChild = false,
+  className,
+  onClick,
+  ...rest
+}: DropdownTriggerProps) {
+  const { open, setOpen } = useDropdown();
+
+  const triggerProps = {
+    "aria-haspopup": "menu" as const,
+    "aria-expanded": open,
+    className: cx("madoo-dropdown__trigger", className),
+    onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
+      onClick?.(event);
+      if (!event.defaultPrevented) setOpen(!open);
+    },
+  };
+
+  if (asChild) {
+    const child = Children.only(children);
+    if (!isValidElement(child)) return null;
+
+    return cloneElement(child as ReactElement<Record<string, unknown>>, {
+      ...triggerProps,
+      ...rest,
+      className: cx(
+        "madoo-dropdown__trigger",
+        (child.props as { className?: string }).className,
+        className,
+      ),
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      className={cx("madoo-dropdown__trigger", className)}
+      onClick={triggerProps.onClick}
+      aria-haspopup="menu"
+      aria-expanded={open}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
+export interface DropdownContentProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  align?: "start" | "end";
+}
+
+export function DropdownContent({
+  children,
+  align = "start",
+  className,
+  ...rest
+}: DropdownContentProps) {
+  const { open } = useDropdown();
+  if (!open) return null;
 
   return (
     <div
-      ref={ref}
-      className={`madoo-dropdown madoo-dropdown--${size} madoo-dropdown--${variant} madoo-dropdown--align-${align}`}
+      role="menu"
+      className={cx(
+        "madoo-dropdown__content",
+        align === "end" && "madoo-dropdown__content--align-end",
+        className,
+      )}
+      {...rest}
     >
-      <button
-        type="button"
-        className="madoo-dropdown__trigger"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={open ? listboxId : undefined}
-        onClick={() => setOpen((current) => !current)}
-      >
-        {label ? <span className="madoo-dropdown__label">{label}:</span> : null}
-        <span className="madoo-dropdown__value">{displayValue}</span>
-        <Icon name="chevronDown" size={size === "lg" ? 22 : 12} />
-      </button>
-
-      {open ? (
-        <div
-          id={listboxId}
-          role="listbox"
-          className="madoo-dropdown__menu"
-          style={menuWidth ? { minWidth: menuWidth } : undefined}
-        >
-          {menuTitle ? <div className="madoo-dropdown__menu-title">{menuTitle}</div> : null}
-          {normalizedOptions.map((option) => {
-            const selectedOption = option.value === value;
-
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="option"
-                aria-selected={selectedOption}
-                disabled={option.disabled}
-                className="madoo-dropdown__option"
-                onClick={() => {
-                  if (option.disabled) return;
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-              >
-                <span>{option.label}</span>
-                {selectedOption ? <Icon name="check" size={size === "lg" ? 22 : 14} /> : null}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      {children}
     </div>
+  );
+}
+
+export interface DropdownItemProps
+  extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children: ReactNode;
+  onSelect?: () => void;
+}
+
+export function DropdownItem({
+  children,
+  className,
+  onClick,
+  onSelect,
+  ...rest
+}: DropdownItemProps) {
+  const { setOpen } = useDropdown();
+
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={cx("madoo-dropdown__item", className)}
+      onClick={(event) => {
+        onClick?.(event);
+        if (event.defaultPrevented || rest.disabled) return;
+        onSelect?.();
+        setOpen(false);
+      }}
+      {...rest}
+    >
+      {children}
+    </button>
   );
 }

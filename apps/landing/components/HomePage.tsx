@@ -8,7 +8,7 @@ import {
   WebDesign01Icon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Dropdown } from "@madoo/design-system";
+import { Select } from "@madoo/design-system";
 import Image from "next/image";
 import type { KeyboardEvent, SVGAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -513,7 +513,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
                     <div className="flex items-center gap-1.5">
                       {copy.promptOptions.map((option) => (
-                        <Dropdown
+                        <Select
                           key={option.label}
                           value={promptOptionValues[option.label] ?? ""}
                           options={option.options}
@@ -593,7 +593,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
         </section> */}
 
-        <section className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 py-20 sm:px-8 sm:pt-[550px] xl:px-0">
+        <section className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 py-20 sm:px-8 sm:pt-87.5 xl:px-0">
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex w-full flex-col justify-between gap-6 sm:flex-row sm:items-end">
               <div>

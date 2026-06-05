@@ -2,9 +2,8 @@
   display: inline-flex;
   gap: 4px;
   padding: 4px;
-  background: rgb(255 255 255 / 0.56);
+  background: rgb(248 250 252 / 0.34);
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-border);
   backdrop-filter: blur(18px) saturate(1.35);
   -webkit-backdrop-filter: blur(18px) saturate(1.35);
   overflow-x: auto;
@@ -39,7 +38,6 @@
 }
 
 .madoo-segmented--minimal {
-  box-shadow: var(--shadow-border);
   background: transparent;
   padding: 0;
   gap: 6px;

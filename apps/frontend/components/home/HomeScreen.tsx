@@ -28,9 +28,9 @@ import { useAuthStore } from "@/stores/auth";
 import {
   Banner,
   Button,
-  Dropdown,
   Icon,
   SegmentedControl,
+  Select,
   SuggestionChip,
   Textarea,
 } from "@madoo/design-system";
@@ -263,7 +263,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               flexWrap: "wrap",
             }}
           >
-            <Dropdown
+            <Select
               label="Tone"
               value={tone}
               options={PROMPT_TONES}
@@ -271,7 +271,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               size="sm"
               variant="ghost"
             />
-            <Dropdown
+            <Select
               label="Length"
               value={length}
               options={PROMPT_LENGTHS}
@@ -279,7 +279,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               size="sm"
               variant="ghost"
             />
-            <Dropdown
+            <Select
               label="Audience"
               value={audience}
               options={PROMPT_AUDIENCES}

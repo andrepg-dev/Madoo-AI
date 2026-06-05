@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { Dropdown } from "./Dropdown";
+import { Button } from "../Button";
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
+} from "./Dropdown";
 
 const meta: Meta<typeof Dropdown> = {
   title: "Components/Dropdown",
@@ -11,54 +17,27 @@ const meta: Meta<typeof Dropdown> = {
 export default meta;
 type Story = StoryObj<typeof Dropdown>;
 
-export const Visibility: Story = {
+export const CustomTrigger: Story = {
   render: () => {
-    const [visibility, setVisibility] = useState("Any visibility");
-    return (
-      <Dropdown
-        value={visibility}
-        options={["Any visibility", "Workspace"]}
-        onChange={setVisibility}
-        menuTitle="Visibility"
-        size="lg"
-        menuWidth={340}
-      />
-    );
-  },
-};
+    const [action, setAction] = useState("No action selected");
 
-export const PromptControls: Story = {
-  parameters: { layout: "padded" },
-  render: () => {
-    const [tone, setTone] = useState("Friendly");
-    const [length, setLength] = useState("Medium");
-    const [audience, setAudience] = useState("Existing customers");
     return (
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <Dropdown
-          label="Tone"
-          value={tone}
-          options={["Friendly", "Confident", "Playful", "Formal"]}
-          onChange={setTone}
-          size="sm"
-          variant="ghost"
-        />
-        <Dropdown
-          label="Length"
-          value={length}
-          options={["Short", "Medium", "Long"]}
-          onChange={setLength}
-          size="sm"
-          variant="ghost"
-        />
-        <Dropdown
-          label="Audience"
-          value={audience}
-          options={["All contacts", "Existing customers", "Trial users"]}
-          onChange={setAudience}
-          size="sm"
-          variant="ghost"
-        />
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Dropdown>
+          <DropdownTrigger asChild>
+            <Button variant="secondary" size="sm">
+              Actions
+            </Button>
+          </DropdownTrigger>
+          <DropdownContent>
+            <DropdownItem onSelect={() => setAction("Duplicate")}>
+              Duplicate
+            </DropdownItem>
+            <DropdownItem onSelect={() => setAction("Archive")}>Archive</DropdownItem>
+            <DropdownItem onSelect={() => setAction("Delete")}>Delete</DropdownItem>
+          </DropdownContent>
+        </Dropdown>
+        <span style={{ color: "var(--ink-muted)", fontSize: 13 }}>{action}</span>
       </div>
     );
   },

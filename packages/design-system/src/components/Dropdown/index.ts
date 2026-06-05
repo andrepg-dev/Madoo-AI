@@ -1,8 +1,12 @@
-export { Dropdown } from "./Dropdown";
+export {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
+} from "./Dropdown";
 export type {
-  DropdownAlign,
-  DropdownOption,
+  DropdownContentProps,
+  DropdownItemProps,
   DropdownProps,
-  DropdownSize,
-  DropdownVariant,
+  DropdownTriggerProps,
 } from "./Dropdown";
