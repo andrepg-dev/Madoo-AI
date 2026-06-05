@@ -12,15 +12,14 @@
   height: 34px;
   padding: 0 36px 0 12px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--border);
+  border: none;
+  box-shadow: var(--shadow-border);
   background: var(--surface);
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
   color: var(--ink);
   cursor: pointer;
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out);
+  transition: box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .madoo-select--sm {
@@ -36,12 +35,13 @@
 
 .madoo-select:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow:
+    var(--shadow-border-accent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .madoo-select--invalid {
-  border-color: var(--danger);
+  box-shadow: var(--shadow-border-danger);
 }
 
 .madoo-select-wrapper__chevron {

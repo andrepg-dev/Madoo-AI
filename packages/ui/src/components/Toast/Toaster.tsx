@@ -99,8 +99,7 @@ export function Toaster({ children }: { children: ReactNode }) {
               aria-label="Dismiss"
               onClick={() => dismiss(t.id)}
               style={{
-                background: "transparent",
-                border: "none",
+                all: "unset",
                 cursor: "pointer",
                 color: "inherit",
                 fontSize: 14,

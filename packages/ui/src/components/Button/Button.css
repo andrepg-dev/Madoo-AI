@@ -1,10 +1,9 @@
 .madoo-btn {
   --_btn-bg: var(--ink);
-  --_btn-fg: var(--bg);
-  --_btn-border: transparent;
+  --_btn-fg: var(--accent-fg);
+  --_btn-shadow-border: none;
   --_btn-bg-hover: var(--ink);
-  --_btn-fg-hover: var(--bg);
-  --_btn-border-style: solid;
+  --_btn-fg-hover: var(--accent-fg);
 
   display: inline-flex;
   align-items: center;
@@ -12,7 +11,8 @@
   gap: 8px;
   padding: 10px 16px;
   border-radius: var(--radius-lg);
-  border: 1px var(--_btn-border-style) var(--_btn-border);
+  border: none;
+  box-shadow: var(--_btn-shadow-border);
   background: var(--_btn-bg);
   color: var(--_btn-fg);
   font-family: var(--font-sans);
@@ -24,7 +24,6 @@
   transition:
     background var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out),
     box-shadow var(--duration-fast) var(--ease-out),
     opacity var(--duration-fast) var(--ease-out);
   white-space: nowrap;
@@ -69,9 +68,9 @@
 /* ── Variants ────────────────────────────────────────────────── */
 .madoo-btn--primary {
   --_btn-bg: var(--ink);
-  --_btn-fg: var(--bg);
-  --_btn-bg-hover: #2c241a;
-  --_btn-fg-hover: var(--bg);
+  --_btn-fg: var(--accent-fg);
+  --_btn-bg-hover: var(--ink-soft);
+  --_btn-fg-hover: var(--accent-fg);
 }
 
 .madoo-btn--accent {
@@ -84,7 +83,7 @@
 .madoo-btn--secondary {
   --_btn-bg: var(--surface);
   --_btn-fg: var(--ink);
-  --_btn-border: var(--border);
+  --_btn-shadow-border: var(--shadow-border);
   --_btn-bg-hover: var(--surface-2);
   --_btn-fg-hover: var(--ink);
 }
@@ -92,7 +91,7 @@
 .madoo-btn--ghost {
   --_btn-bg: transparent;
   --_btn-fg: var(--ink-soft);
-  --_btn-border: transparent;
+  --_btn-shadow-border: none;
   --_btn-bg-hover: var(--surface-2);
   --_btn-fg-hover: var(--ink);
 }
@@ -100,8 +99,7 @@
 .madoo-btn--dashed {
   --_btn-bg: transparent;
   --_btn-fg: var(--ink-faint);
-  --_btn-border: var(--border);
-  --_btn-border-style: dashed;
+  --_btn-shadow-border: var(--shadow-border);
   --_btn-bg-hover: var(--surface-2);
   --_btn-fg-hover: var(--ink-soft);
 }

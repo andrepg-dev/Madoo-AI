@@ -17,7 +17,7 @@
   max-width: 480px;
   background: var(--surface);
   border-radius: 16px;
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-border), var(--shadow-xl);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -47,7 +47,7 @@
   align-items: flex-start;
   gap: 14px;
   padding: 18px 24px;
-  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-border-bottom);
 }
 
 .madoo-modal__title-block {
@@ -103,7 +103,7 @@
 
 .madoo-modal__footer {
   padding: 14px 20px;
-  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-border-top);
   display: flex;
   justify-content: space-between;
   gap: 8px;

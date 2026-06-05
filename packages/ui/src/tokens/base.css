@@ -49,10 +49,6 @@ select:focus-visible,
   outline: none;
 }
 
-.madoo-serif {
-  font-family: var(--font-serif);
-}
-
 .madoo-mono {
   font-family: var(--font-mono);
 }

@@ -5,15 +5,22 @@ const RADII = [
   { name: "lg", token: "--radius-lg" },
   { name: "xl", token: "--radius-xl" },
   { name: "2xl", token: "--radius-2xl" },
+  { name: "shell", token: "--radius-shell" },
+  { name: "panel", token: "--radius-panel" },
   { name: "pill", token: "--radius-pill" },
 ];
 
 const SHADOWS = [
+  { name: "border", token: "--shadow-border" },
+  { name: "border-soft", token: "--shadow-border-soft" },
+  { name: "border-strong", token: "--shadow-border-strong" },
+  { name: "border-accent", token: "--shadow-border-accent" },
   { name: "xs", token: "--shadow-xs" },
   { name: "sm", token: "--shadow-sm" },
   { name: "md", token: "--shadow-md" },
   { name: "lg", token: "--shadow-lg" },
   { name: "xl", token: "--shadow-xl" },
+  { name: "inner-rule", token: "--shadow-inner-rule" },
 ];
 
 const SPACING = [
@@ -32,7 +39,7 @@ export function TokensReference() {
   return (
     <div style={{ fontFamily: "var(--font-sans)", color: "var(--ink)", display: "grid", gap: 36 }}>
       <section>
-        <h3 style={{ fontFamily: "var(--font-serif)", fontWeight: 400, fontSize: 24, margin: 0 }}>
+        <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 24, margin: 0 }}>
           Radii
         </h3>
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 12 }}>
@@ -43,7 +50,7 @@ export function TokensReference() {
                   width: "100%",
                   height: 64,
                   background: "var(--accent-soft)",
-                  border: "1px solid var(--border)",
+                  boxShadow: "var(--shadow-border)",
                   borderRadius: `var(${r.token})`,
                 }}
               />
@@ -57,7 +64,7 @@ export function TokensReference() {
       </section>
 
       <section>
-        <h3 style={{ fontFamily: "var(--font-serif)", fontWeight: 400, fontSize: 24, margin: 0 }}>
+        <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 24, margin: 0 }}>
           Shadows
         </h3>
         <div
@@ -75,8 +82,7 @@ export function TokensReference() {
                 background: "var(--surface)",
                 borderRadius: 12,
                 padding: 16,
-                border: "1px solid var(--border-soft)",
-                boxShadow: `var(${s.token})`,
+                boxShadow: `var(--shadow-border-soft), var(${s.token})`,
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 600 }}>{s.name}</div>
@@ -89,7 +95,7 @@ export function TokensReference() {
       </section>
 
       <section>
-        <h3 style={{ fontFamily: "var(--font-serif)", fontWeight: 400, fontSize: 24, margin: 0 }}>
+        <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 24, margin: 0 }}>
           Spacing
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>

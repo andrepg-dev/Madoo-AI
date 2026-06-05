@@ -1,9 +1,9 @@
 # `@madoo/ui` — Madoo Design System
 
 Design system del monorepo Madoo AI: componentes React + tokens CSS +
-Storybook como playground/documentacion. **No reemplaza** los componentes
-existentes en `apps/frontend`; es una capa nueva, opt-in, lista para que la
-app vaya migrando componente a componente.
+Storybook como playground/documentacion. Este es el nuevo sistema visual del
+pivot, basado en la landing page: blanco limpio, gris frio, tinta casi
+negra, azul profundo y acento azul-violeta.
 
 ## Quick start
 
@@ -29,9 +29,9 @@ pnpm --filter @madoo/ui build
 packages/ui/
 ├── src/
 │   ├── tokens/
-│   │   ├── tokens.css   ← variables (colores, radii, sombras, espacios)
-│   │   ├── fonts.css    ← carga Inter, Instrument Serif, JetBrains Mono
-│   │   └── base.css     ← reset minimal y helpers (.madoo-serif, .madoo-mono)
+│   │   ├── tokens.css   ← variables, aliases landing y helpers visuales
+│   │   ├── fonts.css    ← carga Figtree, IBM Plex Sans, Inter, JetBrains Mono
+│   │   └── base.css     ← reset minimal y helper .madoo-mono
 │   ├── lib/cx.ts        ← helper className
 │   ├── foundations/     ← stories de tokens, color y tipografia
 │   └── components/      ← un folder por componente con CSS y stories
@@ -62,11 +62,26 @@ packages/ui/
 | `Spinner`           | Loaders en GeneratingScreen                                                |
 | `ProgressBar`       | Indicador de progreso de pasos                                             |
 | `Kbd`               | Tecla `↵` y atajos                                                         |
-| `Icon`              | Set completo (sparkle, arrow, check, x, ...)                               |
+| `Icon`              | Wrapper Hugeicons (sparkle, arrow, check, x, ...)                          |
+
+## Principios visuales
+
+- **White first**: superficies principales blancas, fondos gris frio y reglas
+  finas en azul tinta.
+- **Hugeicons only**: iconografia del sistema usa `@hugeicons/react` y
+  `@hugeicons/core-free-icons`.
+- **Producto visible**: templates, previews, providers y controles reales antes
+  que ilustraciones genericas.
+- **App densa, landing amplia**: componentes compactos para plataforma; panels
+  grandes solo para marketing, modales o previews.
+- **Tokens compartidos**: `--madoo-*` aliases replican la landing para que
+  `@madoo/landing` y `@madoo/frontend` converjan.
+- **Shadow-border only**: edges, dividers y estados usan `box-shadow` con
+  `--shadow-border*`; `border` queda solo para resets como `border: none`.
 
 ## Themes
 
-Storybook permite cambiar entre `Default`, `Warm` e `Indigo` desde la
+Storybook permite cambiar entre `Default`, `Paper` y `Midnight` desde la
 toolbar. Los componentes solo dependen de `var(--ink)`, `var(--accent)`,
 etc. — agregar un tema nuevo es declarar `[data-theme="..."]` en
 `tokens.css`.
@@ -90,7 +105,6 @@ etc. — agregar un tema nuevo es declarar `[data-theme="..."]` en
    import { Button, Modal, Banner } from "@madoo/ui";
    ```
 
-> Nota: `tokens.css` del DS es un superset compatible con el `globals.css`
-> actual. Importarlo no rompe nada — solo agrega los tokens semanticos
-> (`--success`, `--danger`, `--radius-*`, `--shadow-*`, etc.) que la app
-> aun no usa.
+> Nota: `tokens.css` del DS ahora incluye helpers usados por la landing:
+> `.madoo-pattern-background`, `.madoo-paper-border`,
+> `.madoo-paper-border-hover` y `.madoo-hero-shell`.

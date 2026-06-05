@@ -39,7 +39,7 @@
 
 .madoo-badge--solid {
   background: var(--ink);
-  color: var(--bg);
+  color: var(--accent-fg);
 }
 
 .madoo-badge--dot::before {

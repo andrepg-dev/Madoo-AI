@@ -4,8 +4,8 @@
   gap: 6px;
   padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid var(--border);
   background: var(--surface);
+  box-shadow: var(--shadow-border);
   font-size: var(--font-size-sm);
   color: var(--ink-soft);
   cursor: pointer;
@@ -13,7 +13,7 @@
   transition:
     background var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out);
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .madoo-chip:hover {
@@ -23,14 +23,14 @@
 
 .madoo-chip[aria-pressed="true"] {
   background: var(--ink);
-  color: var(--bg);
-  border-color: var(--ink);
+  color: var(--accent-fg);
+  box-shadow: var(--shadow-border-ink);
 }
 
 .madoo-chip--accent {
   background: var(--accent-soft);
   color: var(--accent-deep);
-  border-color: transparent;
+  box-shadow: none;
 }
 
 .madoo-chip--accent:hover {

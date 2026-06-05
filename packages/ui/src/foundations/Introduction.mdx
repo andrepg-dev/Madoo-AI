@@ -10,13 +10,19 @@ aplicaciones del monorepo.
 
 ## Filosofía
 
-- **Editorial + AI**: combinamos serif italica (Instrument Serif) para los
-  titulares con Inter para UI y JetBrains Mono para metadatos tecnicos.
-- **Calmado**: paleta beige cálida (`--bg`) con verdes profundos como acento.
-  Buscamos sentir "papel premium", nunca SaaS frio.
+- **Landing-first**: el sistema nace desde la nueva landing. Blanco limpio como
+  superficie principal, gris frio como campo, reglas azules finas y tinta casi
+  negra.
+- **AI email workflow**: cada componente debe servir para crear, editar,
+  previsualizar y exportar templates. Evitamos UI generica que no muestre el
+  producto real.
+- **Tipografia nueva**: Figtree para titulares de marketing, IBM Plex Sans para
+  UI, Inter como fallback de producto y JetBrains Mono para metadatos tecnicos.
 - **Token-first**: cada color, radio o sombra esta en `tokens.css`. Los
   componentes nunca usan literales — siempre `var(--ink)` etc.
-- **Themed**: soporta tres temas (`default`, `warm`, `indigo`) intercambiables
+- **Shadow-border only**: cualquier borde visual se pinta con tokens
+  `--shadow-border*`; no usamos `border` CSS para edges, dividers o estados.
+- **Themed**: soporta tres temas (`default`, `paper`, `midnight`) intercambiables
   via `data-theme` en `<html>` o cualquier ancestro.
 
 ## Como usar
@@ -69,6 +75,6 @@ packages/ui/
 | Feedback      | `Banner`, `Badge`, `Tag`, `Spinner`, `ProgressBar`                |
 | Identidad     | `Avatar`, `Icon`                                                  |
 
-> El objetivo es que la app `@madoo/frontend` pueda migrar componente por
-> componente sin re-pintar la UI: la paleta y la tipografia ya coinciden 1:1
-> con `apps/frontend/app/globals.css`.
+> El objetivo es que `@madoo/frontend` y `@madoo/landing` migren a un mismo
+> lenguaje visual: paleta landing, helpers compartidos (`.madoo-pattern-background`,
+> `.madoo-paper-border`) y componentes UI listos para la nueva plataforma.

@@ -19,12 +19,12 @@
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  border: 1.5px solid var(--border);
   border-radius: 5px;
   background: var(--surface);
+  box-shadow: var(--shadow-border);
   transition:
     background var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out);
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .madoo-checkbox__input {
@@ -37,11 +37,13 @@
 
 .madoo-checkbox__input:checked + .madoo-checkbox__control {
   background: var(--accent-deep);
-  border-color: var(--accent-deep);
+  box-shadow: var(--shadow-border-accent);
 }
 
 .madoo-checkbox__input:focus-visible + .madoo-checkbox__control {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow:
+    var(--shadow-border-accent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
   outline: none;
 }
 

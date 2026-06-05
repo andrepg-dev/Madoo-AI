@@ -5,8 +5,8 @@
   flex-shrink: 0;
   background: var(--accent);
   color: var(--accent-fg);
-  font-family: var(--font-serif);
-  font-style: italic;
+  font-family: var(--font-display);
+  font-style: normal;
   font-weight: 600;
   text-transform: uppercase;
   user-select: none;
@@ -54,7 +54,7 @@
 
 .madoo-avatar--ink {
   background: var(--ink);
-  color: var(--bg);
+  color: var(--accent-fg);
 }
 
 .madoo-avatar--surface {

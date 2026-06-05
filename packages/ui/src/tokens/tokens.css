@@ -2,37 +2,64 @@
  * Madoo Design System — Design Tokens
  *
  * CSS custom properties consumidas por todos los componentes.
- * Mantienen paridad con apps/frontend/app/globals.css y agregan
- * tokens semanticos extra (radios, espaciado, sombras, tipografia).
+ * Nuevo sistema visual basado en apps/landing: blanco limpio, gris frio,
+ * tinta casi negra, azul profundo y acento violeta-azul para links.
  *
  * Cualquier app que importe `@madoo/ui/tokens.css` obtiene la paleta.
  */
 
 :root {
   /* ── Surfaces & ink ──────────────────────────────────────────── */
-  --bg: #faf7f0;
-  --bg-2: #f4f0e6;
-  --surface: #fffdf8;
-  --surface-2: #f4f0e6;
-  --ink: #1f1a12;
-  --ink-soft: #5c5246;
-  --ink-faint: #9a8e7f;
-  --border: #e8e1d2;
-  --border-soft: #f0ebdd;
+  --bg: #f3f4f6;
+  --bg-2: #eef1f5;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-blue: #f3faff;
+  --ink: #101114;
+  --ink-soft: #252a31;
+  --ink-muted: #667085;
+  --ink-faint: #98a2b3;
+  --border: #d8dee8;
+  --border-soft: #edf2f7;
 
   /* ── Brand / accent ──────────────────────────────────────────── */
-  --accent: #6b9d7c;
-  --accent-deep: #2f5c42;
-  --accent-soft: #e5efe6;
-  --accent-fg: #fffdf8;
+  --accent: #071b38;
+  --accent-deep: #031024;
+  --accent-soft: #f3faff;
+  --accent-fg: #ffffff;
+  --link: #5b63ff;
+  --link-hover: #454ce6;
+  --rule: #0c346a;
+  --rule-rgb: 12 52 106;
+  --ink-shadow-rgb: 16 17 20;
+  --page-pattern-line: #f3f4f6;
+
+  /* ── Landing compatibility aliases ───────────────────────────── */
+  --madoo-ink: var(--ink);
+  --madoo-ink-hover: #26282d;
+  --madoo-text: #171717;
+  --madoo-copy: var(--ink-soft);
+  --madoo-muted: var(--ink-muted);
+  --madoo-nav: #23272f;
+  --madoo-logo: #2b3037;
+  --madoo-paper: var(--surface);
+  --madoo-page: var(--bg);
+  --madoo-paper-tint: var(--surface-2);
+  --madoo-surface: var(--surface-blue);
+  --madoo-rule: var(--rule);
+  --madoo-accent: var(--accent);
+  --madoo-link: var(--link);
+  --madoo-rule-rgb: var(--rule-rgb);
+  --madoo-ink-shadow-rgb: var(--ink-shadow-rgb);
+  --madoo-page-pattern-line: var(--page-pattern-line);
 
   /* ── Status ──────────────────────────────────────────────────── */
-  --danger: #a23e2f;
-  --danger-soft: #fbe8e2;
-  --warn: #7a5a1e;
-  --warn-soft: #fff1d6;
-  --success: #2f5c42;
-  --success-soft: #e5efe6;
+  --danger: #b42318;
+  --danger-soft: #fee4e2;
+  --warn: #b54708;
+  --warn-soft: #fffaeb;
+  --success: #027a48;
+  --success-soft: #ecfdf3;
   --info: #2c3070;
   --info-soft: #e5e5f5;
 
@@ -41,8 +68,10 @@
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 10px;
-  --radius-xl: 14px;
-  --radius-2xl: 18px;
+  --radius-xl: 16px;
+  --radius-2xl: 28px;
+  --radius-shell: 16px;
+  --radius-panel: 28px;
   --radius-pill: 999px;
 
   /* ── Spacing ─────────────────────────────────────────────────── */
@@ -58,9 +87,11 @@
 
   /* ── Typography ──────────────────────────────────────────────── */
   --font-sans:
-    var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", sans-serif;
-  --font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+    var(--font-ibm-plex-sans), var(--font-inter), -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display:
+    var(--font-figtree), var(--font-ibm-plex-sans), var(--font-inter),
+    ui-sans-serif, system-ui, sans-serif;
   --font-mono:
     var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Consolas,
     monospace;
@@ -72,18 +103,37 @@
   --font-size-lg: 16px;
   --font-size-xl: 22px;
   --font-size-2xl: 32px;
-  --font-size-display: 52px;
+  --font-size-3xl: 40px;
+  --font-size-display: 56px;
+  --font-size-hero: 72px;
+
+  --line-height-tight: 1;
+  --line-height-heading: 1.08;
+  --line-height-body: 1.55;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
 
   /* ── Shadows ─────────────────────────────────────────────────── */
-  --shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.02);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 12px 32px -8px rgba(40, 30, 20, 0.18);
-  --shadow-lg: 0 12px 40px -12px rgba(60, 50, 40, 0.12);
-  --shadow-xl: 0 30px 80px -20px rgba(20, 15, 10, 0.4);
+  --shadow-xs: 0 1px 0 rgb(var(--ink-shadow-rgb) / 0.03);
+  --shadow-sm: 0 1px 2px rgb(var(--ink-shadow-rgb) / 0.06);
+  --shadow-md: 0 12px 32px -10px rgb(var(--ink-shadow-rgb) / 0.14);
+  --shadow-lg: 0 24px 70px rgb(var(--ink-shadow-rgb) / 0.16);
+  --shadow-xl: 0 28px 90px rgb(7 17 35 / 0.28);
+  --shadow-border: inset 0 0 0 1px var(--border);
+  --shadow-border-soft: inset 0 0 0 1px var(--border-soft);
+  --shadow-border-strong: inset 0 0 0 1px var(--ink-faint);
+  --shadow-border-ink: inset 0 0 0 1.5px var(--ink);
+  --shadow-border-accent: inset 0 0 0 1px var(--accent);
+  --shadow-border-danger: inset 0 0 0 1px var(--danger);
+  --shadow-border-rule: inset 0 0 0 0.5px rgb(var(--rule-rgb) / 0.18);
+  --shadow-border-rule-hover: inset 0 0 0 0.5px rgb(var(--rule-rgb) / 0.28);
+  --shadow-border-bottom: inset 0 -1px 0 var(--border);
+  --shadow-border-top: inset 0 1px 0 var(--border);
+  --shadow-border-bottom-soft: inset 0 -1px 0 var(--border-soft);
+  --shadow-border-top-soft: inset 0 1px 0 var(--border-soft);
+  --shadow-inner-rule: var(--shadow-border-rule);
 
   /* ── Motion ──────────────────────────────────────────────────── */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -97,24 +147,75 @@
   --z-toast: 300;
 }
 
-/* ── Themes ────────────────────────────────────────────────────── */
-[data-theme="warm"] {
-  --bg: #fbf5ec;
-  --accent: #c97b4f;
-  --accent-deep: #6b3a1e;
-  --accent-soft: #f5e4d5;
+/* ── Shared visual patterns ────────────────────────────────────── */
+.madoo-pattern-background {
+  background-color: var(--surface);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    var(--page-pattern-line) 2px,
+    var(--page-pattern-line) 4px
+  );
 }
 
-[data-theme="indigo"] {
-  --bg: #f6f4f9;
-  --bg-2: #edeaf2;
-  --surface: #ffffff;
-  --surface-2: #efecf5;
-  --border: #e4dfec;
-  --border-soft: #efeaf4;
-  --accent: #5b5fcb;
-  --accent-deep: #2c3070;
-  --accent-soft: #e5e5f5;
+.madoo-paper-border {
+  box-shadow: var(--shadow-border-rule);
+}
+
+.madoo-paper-border-hover:hover {
+  box-shadow: var(--shadow-border-rule-hover);
+}
+
+.madoo-hero-shell {
+  isolation: isolate;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-shell);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--ink-shadow-rgb) / 0.14);
+}
+
+.madoo-hero-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    var(--page-pattern-line) 2px,
+    var(--page-pattern-line) 4px
+  );
+}
+
+/* ── Themes ────────────────────────────────────────────────────── */
+[data-theme="paper"] {
+  --bg: #f8fafc;
+  --bg-2: #f3f4f6;
+  --surface-2: #f8fafc;
+}
+
+[data-theme="midnight"] {
+  --bg: #101114;
+  --bg-2: #171717;
+  --surface: #17191d;
+  --surface-2: #1f2228;
+  --surface-blue: #071b38;
+  --ink: #ffffff;
+  --ink-soft: #e8eaef;
+  --ink-muted: #b7bdc8;
+  --ink-faint: #8b95a5;
+  --border: #2b3037;
+  --border-soft: #23272f;
+  --accent: #ffffff;
+  --accent-deep: #dfe5ef;
+  --accent-soft: #23272f;
+  --accent-fg: #101114;
+  --page-pattern-line: #17191d;
 }
 
 [data-density="compact"] {

@@ -17,6 +17,10 @@ export default meta;
 type Story = StoryObj<typeof Modal>;
 
 export const Default: Story = {
+  args: {
+    size: "xl"
+  },
+
   render: () => {
     const [open, setOpen] = useState(true);
     return (
@@ -50,11 +54,16 @@ export const Default: Story = {
         </Modal>
       </>
     );
-  },
+  }
 };
 
 export const Login: Story = {
+  args: {
+    size: "sm"
+  },
+
   parameters: { layout: "fullscreen" },
+
   render: () => {
     const [open, setOpen] = useState(true);
     return (
@@ -84,5 +93,5 @@ export const Login: Story = {
         </Modal>
       </>
     );
-  },
+  }
 };

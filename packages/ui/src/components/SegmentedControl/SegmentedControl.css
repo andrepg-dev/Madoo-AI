@@ -4,7 +4,7 @@
   padding: 4px;
   background: var(--surface-2);
   border-radius: 10px;
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow-border);
   overflow-x: auto;
   font-family: var(--font-sans);
 }
@@ -37,7 +37,7 @@
 }
 
 .madoo-segmented--minimal {
-  border: none;
+  box-shadow: none;
   background: transparent;
   padding: 0;
   gap: 6px;

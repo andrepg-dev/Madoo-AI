@@ -11,10 +11,11 @@ const preview: Preview = {
     backgrounds: {
       default: "Madoo bg",
       values: [
-        { name: "Madoo bg", value: "#FAF7F0" },
-        { name: "Madoo bg-2", value: "#F4F0E6" },
+        { name: "Madoo bg", value: "#F3F4F6" },
+        { name: "Madoo surface", value: "#FFFFFF" },
+        { name: "Madoo tint", value: "#F8FAFC" },
         { name: "White", value: "#FFFFFF" },
-        { name: "Ink", value: "#1F1A12" },
+        { name: "Ink", value: "#101114" },
       ],
     },
     controls: {
@@ -27,7 +28,7 @@ const preview: Preview = {
       storySort: {
         order: [
           "Foundations",
-          ["Introduction", "Tokens", "Typography", "Color", "Iconography"],
+          ["Introduction", "Brand", "Tokens", "Typography", "Color", "Iconography"],
           "Components",
           ["Button", "IconButton", "Input", "Textarea", "Select", "Checkbox"],
           "Patterns",
@@ -39,8 +40,8 @@ const preview: Preview = {
     withThemeByDataAttribute({
       themes: {
         Default: "default",
-        Warm: "warm",
-        Indigo: "indigo",
+        Paper: "paper",
+        Midnight: "midnight",
       },
       defaultTheme: "Default",
       attributeName: "data-theme",

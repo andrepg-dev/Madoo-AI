@@ -16,7 +16,7 @@ type Story = StoryObj<typeof Card>;
 export const Default: Story = {
   render: (args) => (
     <Card {...args} style={{ maxWidth: 360 }}>
-      <h3 style={{ margin: 0, fontFamily: "var(--font-serif)", fontWeight: 400, fontSize: 22 }}>
+      <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 22 }}>
         Welcome series
       </h3>
       <p style={{ marginTop: 8, color: "var(--ink-soft)", fontSize: 13.5, lineHeight: 1.5 }}>

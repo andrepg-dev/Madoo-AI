@@ -2,10 +2,9 @@
   position: relative;
   display: flex;
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-border);
   transition:
-    border-color var(--duration-fast) var(--ease-out),
     box-shadow var(--duration-fast) var(--ease-out);
 }
 
@@ -15,12 +14,13 @@
 
 .madoo-textarea-wrapper--ghost {
   background: transparent;
-  border-color: transparent;
+  box-shadow: none;
 }
 
 .madoo-textarea-wrapper:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow:
+    var(--shadow-border-accent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 /*
@@ -30,12 +30,11 @@
  * un anillo flotando dentro del card padre.
  */
 .madoo-textarea-wrapper--ghost:focus-within {
-  border-color: transparent;
   box-shadow: none;
 }
 
 .madoo-textarea-wrapper--invalid {
-  border-color: var(--danger);
+  box-shadow: var(--shadow-border-danger);
 }
 
 .madoo-textarea {

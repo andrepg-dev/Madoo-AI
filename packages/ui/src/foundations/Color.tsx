@@ -10,6 +10,7 @@ const COLOR_GROUPS: { title: string; colors: { name: string; token: string }[] }
       { name: "bg-2", token: "--bg-2" },
       { name: "surface", token: "--surface" },
       { name: "surface-2", token: "--surface-2" },
+      { name: "surface-blue", token: "--surface-blue" },
     ],
   },
   {
@@ -17,6 +18,7 @@ const COLOR_GROUPS: { title: string; colors: { name: string; token: string }[] }
     colors: [
       { name: "ink", token: "--ink" },
       { name: "ink-soft", token: "--ink-soft" },
+      { name: "ink-muted", token: "--ink-muted" },
       { name: "ink-faint", token: "--ink-faint" },
       { name: "border", token: "--border" },
       { name: "border-soft", token: "--border-soft" },
@@ -29,6 +31,20 @@ const COLOR_GROUPS: { title: string; colors: { name: string; token: string }[] }
       { name: "accent-deep", token: "--accent-deep" },
       { name: "accent-soft", token: "--accent-soft" },
       { name: "accent-fg", token: "--accent-fg" },
+      { name: "link", token: "--link" },
+      { name: "rule", token: "--rule" },
+    ],
+  },
+  {
+    title: "Landing aliases",
+    colors: [
+      { name: "madoo-text", token: "--madoo-text" },
+      { name: "madoo-copy", token: "--madoo-copy" },
+      { name: "madoo-muted", token: "--madoo-muted" },
+      { name: "madoo-page", token: "--madoo-page" },
+      { name: "madoo-paper", token: "--madoo-paper" },
+      { name: "madoo-surface", token: "--madoo-surface" },
+      { name: "madoo-link", token: "--madoo-link" },
     ],
   },
   {
@@ -53,8 +69,8 @@ export function ColorPalette() {
         <section key={group.title} style={{ marginBottom: 32 }}>
           <h3
             style={{
-              fontFamily: "var(--font-serif)",
-              fontWeight: 400,
+              fontFamily: "var(--font-display)",
+              fontWeight: 600,
               fontSize: 24,
               margin: 0,
             }}
@@ -73,9 +89,9 @@ export function ColorPalette() {
               <div
                 key={c.token}
                 style={{
-                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   background: "var(--surface)",
+                  boxShadow: "var(--shadow-border)",
                   padding: 12,
                   display: "flex",
                   flexDirection: "column",
@@ -87,7 +103,7 @@ export function ColorPalette() {
                     height: 56,
                     borderRadius: 8,
                     background: `var(${c.token})`,
-                    border: "1px solid var(--border-soft)",
+                    boxShadow: "var(--shadow-border-soft)",
                   }}
                 />
                 <div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.name}</div>
