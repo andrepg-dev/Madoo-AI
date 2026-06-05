@@ -1,6 +1,7 @@
 .madoo-card {
   background: var(--surface);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
+  border: none;
   box-shadow: var(--shadow-border);
   padding: 16px;
   font-family: var(--font-sans);
@@ -19,11 +20,13 @@
 }
 
 .madoo-card--lg {
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-border);
 }
 
 .madoo-card--interactive {
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
   text-align: left;
 }
@@ -34,7 +37,20 @@
 
 .madoo-card--selected {
   background: var(--surface-2);
-  box-shadow: var(--shadow-border-accent);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--rule-rgb) / 0.34);
+}
+
+.madoo-card--interactive.madoo-card--selected:hover {
+  box-shadow: inset 0 0 0 0.5px rgb(var(--rule-rgb) / 0.34);
+}
+
+.madoo-card--interactive:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-border-rule-hover);
+}
+
+.madoo-card--interactive.madoo-card--selected:focus-visible {
+  box-shadow: inset 0 0 0 0.5px rgb(var(--rule-rgb) / 0.34);
 }
 
 .madoo-card__title {
