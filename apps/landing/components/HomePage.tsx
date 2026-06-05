@@ -3,12 +3,12 @@
 import {
   Add01Icon,
   AiIdeaIcon,
-  ArrowDown01Icon,
   Download01Icon,
   Mic02Icon,
   WebDesign01Icon
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Dropdown } from "@madoo/design-system";
 import Image from "next/image";
 import type { KeyboardEvent, SVGAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -163,7 +163,18 @@ const localeCopy = {
       addAttachment: "Add attachment",
       microphone: "Use microphone",
     },
-    promptOptions: ["Tone", "Length", "Audience"],
+    promptOptions: [
+      {
+        label: "Tone",
+        options: ["Friendly", "Professional", "Bold", "Luxury"],
+        menuWidth: 160,
+      },
+      {
+        label: "Length",
+        options: ["Short", "Medium", "Long"],
+        menuWidth: 144,
+      },
+    ],
     workflow: {
       title: "Prompt. Design. Export.",
       description:
@@ -233,7 +244,18 @@ const localeCopy = {
       addAttachment: "Añadir adjunto",
       microphone: "Usar micrófono",
     },
-    promptOptions: ["Tono", "Longitud", "Audiencia"],
+    promptOptions: [
+      {
+        label: "Tono",
+        options: ["Cercano", "Profesional", "Directo", "Premium"],
+        menuWidth: 168,
+      },
+      {
+        label: "Longitud",
+        options: ["Corta", "Media", "Larga"],
+        menuWidth: 152,
+      },
+    ],
     workflow: {
       title: "Prompt. Diseño. Exportación.",
       description:
@@ -374,6 +396,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
     ...copy.templates.cards[index],
   }));
   const [prompt, setPrompt] = useState("");
+  const [promptOptionValues, setPromptOptionValues] = useState<Record<string, string>>({});
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const ctaPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -467,8 +490,8 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
               </h4>
             </div>
 
-            <div className="relative z-10 flex flex-col gap-2">
-              <div className="madoo-paper-border min-w-[700px] overflow-hidden rounded-3xl bg-white">
+            <div className="relative z-[60] flex flex-col gap-2">
+              <div className="madoo-paper-border min-w-[700px] overflow-visible rounded-3xl bg-white">
                 <textarea
                   ref={promptTextareaRef}
                   value={prompt}
@@ -490,20 +513,22 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
                     <div className="flex items-center gap-1.5">
                       {copy.promptOptions.map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs text-zinc-600 transition"
-                        >
-                          <span>{option}</span>
-                          <HugeiconsIcon
-                            icon={ArrowDown01Icon}
-                            size={10}
-                            strokeWidth={2.2}
-                            className="text-zinc-600 [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
-                            aria-hidden="true"
-                          />
-                        </button>
+                        <Dropdown
+                          key={option.label}
+                          value={promptOptionValues[option.label] ?? ""}
+                          options={option.options}
+                          placeholder={option.label}
+                          menuTitle={option.label}
+                          menuWidth={option.menuWidth}
+                          size="sm"
+                          variant="ghost"
+                          onChange={(value) =>
+                            setPromptOptionValues((current) => ({
+                              ...current,
+                              [option.label]: value,
+                            }))
+                          }
+                        />
                       ))}
                     </div>
                   </div>
@@ -558,7 +583,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
               </div>
             </div>
 
-            <div className="bottom-0 mx-auto absolute z-50 h-[600px] w-full max-w-5xl translate-y-[35%] rounded-4xl border border-white/70 bg-madoo-paper p-6 shadow-[0_0_0_8px_rgba(255,255,255,0.46),0_0_0_9px_rgba(255,255,255,0.72),0_28px_70px_rgba(40,42,50,0.16),inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-1px_0_rgba(130,140,160,0.18)] backdrop-blur-md">
+            <div className="bottom-0 mx-auto absolute z-50 h-[600px] w-full max-w-5xl translate-y-[35%] rounded-4xl border border-white/70 bg-madoo-paper p-6 outline outline-1 outline-white/70 backdrop-blur-md">
 
             </div>
           </div>
@@ -615,7 +640,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                     <p className="mt-1 line-clamp-1 text-[12px] leading-4 text-[#6f6961]">{template.description}</p>
                   </div>
 
-                  <div className="pointer-events-none absolute right-3 top-3 flex translate-y-1 items-center gap-1.5 rounded-full border border-black/10 bg-white/90 px-2.5 py-1.5 text-[#111111] opacity-0 shadow-[0_10px_24px_rgba(17,17,17,0.12)] backdrop-blur-sm transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                  <div className="pointer-events-none absolute right-3 top-3 flex translate-y-1 items-center gap-1.5 rounded-full border border-black/10 bg-white/90 px-2.5 py-1.5 text-[#111111] opacity-0 backdrop-blur-sm transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
                     <span className="whitespace-nowrap text-[11px] font-semibold leading-none">{copy.templates.hover}</span>
                     <TemplateHoverArrow className="h-5 w-5 rotate-[16deg]" aria-hidden="true" />
                   </div>

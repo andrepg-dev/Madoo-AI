@@ -259,12 +259,10 @@
 
 .madoo-hero-float-email {
   animation: madoo-hero-float-email 8s ease-in-out infinite;
-  filter: drop-shadow(0 28px 34px rgb(var(--madoo-ink-shadow-rgb) / 0.08));
 }
 
 .madoo-hero-float-browser {
   animation: madoo-hero-float-browser 9s ease-in-out infinite;
-  filter: drop-shadow(0 30px 38px rgb(var(--madoo-ink-shadow-rgb) / 0.09));
 }
 
 .madoo-prompt-textarea::-webkit-scrollbar {
