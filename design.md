@@ -8,6 +8,7 @@ When adapting a reference design, copy the useful layout idea, not the whole pag
 - Use the app's current fonts and Tailwind conventions.
 - Prefer `madoo-paper-border` and `madoo-paper-border-hover` for card edges instead of visible hard borders.
 - When saying "shadow as border" or "border shadow", match the button/card border weight: a subtle zero-blur box-shadow ring, usually `0 0 0 0.5px rgb(... / alpha)`. Do not use thick 1px borders by default, and do not add blur, large spread, halo, or drop-shadow unless explicitly requested.
+- Avoid decorative shadow-on-shadow elevation. Shadows are only for border/ring treatment by default (`--shadow-border*`, `madoo-paper-border`, or equivalent zero-blur rings). Use blur, spread, halo, or drop-shadow only when explicitly specified.
 - Use Madoo button styling: compact rounded-lg buttons, dark primary action, white secondary action with paper shadow.
 - Official Madoo AI page background is `#f3f4f6` via `bg-madoo-page`; use it for the body/page shell unless a specific section needs its own surface.
 - Keep cards compact and aligned with existing landing-page scale.

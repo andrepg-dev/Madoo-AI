@@ -18,9 +18,7 @@
 }
 
 .madoo-textarea-wrapper:focus-within {
-  box-shadow:
-    var(--shadow-border-accent),
-    0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: var(--shadow-border-accent);
 }
 
 /*

@@ -228,11 +228,10 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         <div
           style={{
             background: "var(--surface)",
-            border: "1px solid var(--border)",
+            border: "none",
             borderRadius: 18,
             padding: 4,
-            boxShadow:
-              "0 1px 0 rgba(0,0,0,0.02), 0 12px 40px -12px rgba(60, 50, 40, 0.12)",
+            boxShadow: "var(--shadow-border)",
             transition: "box-shadow 0.2s, border-color 0.2s",
           }}
         >

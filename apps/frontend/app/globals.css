@@ -159,7 +159,7 @@ select:focus-visible {
 
 /*
  * Los wrappers del Design System (Input/Textarea/Select) ya pintan el
- * estado focus en el wrapper (border + halo). Si dejamos que el control
+ * estado focus en el wrapper con shadow-border. Si dejamos que el control
  * nativo dibuje tambien su outline, queda un anillo doble desfasado.
  */
 .madoo-input-wrapper :focus-visible,

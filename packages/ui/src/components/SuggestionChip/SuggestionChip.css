@@ -4,6 +4,7 @@
   gap: 6px;
   padding: 7px 12px;
   border-radius: 999px;
+  border: none;
   background: var(--surface);
   box-shadow: var(--shadow-border);
   font-size: var(--font-size-sm);
@@ -30,7 +31,7 @@
 .madoo-chip--accent {
   background: var(--accent-soft);
   color: var(--accent-deep);
-  box-shadow: none;
+  box-shadow: var(--shadow-border-accent);
 }
 
 .madoo-chip--accent:hover {

@@ -11,6 +11,7 @@
   gap: 6px;
   padding: 6px 10px;
   border-radius: 7px;
+  border: none;
   background: var(--surface-2);
   box-shadow: var(--shadow-border);
   font-size: var(--font-size-sm);
@@ -23,13 +24,13 @@
 }
 
 .madoo-pill__trigger:hover {
-  background: var(--surface);
-  box-shadow: var(--shadow-border-strong);
+  background: var(--accent-soft);
+  box-shadow: var(--shadow-border);
 }
 
 .madoo-pill__trigger[aria-expanded="true"] {
-  background: var(--surface);
-  box-shadow: var(--shadow-border-ink);
+  background: var(--accent-soft);
+  box-shadow: var(--shadow-border);
 }
 
 .madoo-pill__label {
