@@ -15,11 +15,6 @@ const SHADOWS = [
   { name: "border-soft", token: "--shadow-border-soft" },
   { name: "border-strong", token: "--shadow-border-strong" },
   { name: "border-accent", token: "--shadow-border-accent" },
-  { name: "xs", token: "--shadow-xs" },
-  { name: "sm", token: "--shadow-sm" },
-  { name: "md", token: "--shadow-md" },
-  { name: "lg", token: "--shadow-lg" },
-  { name: "xl", token: "--shadow-xl" },
   { name: "inner-rule", token: "--shadow-inner-rule" },
 ];
 

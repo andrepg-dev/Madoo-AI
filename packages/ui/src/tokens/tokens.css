@@ -116,11 +116,6 @@
   --font-weight-semibold: 600;
 
   /* ── Shadows ─────────────────────────────────────────────────── */
-  --shadow-xs: 0 1px 0 rgb(var(--ink-shadow-rgb) / 0.03);
-  --shadow-sm: 0 1px 2px rgb(var(--ink-shadow-rgb) / 0.06);
-  --shadow-md: 0 12px 32px -10px rgb(var(--ink-shadow-rgb) / 0.14);
-  --shadow-lg: 0 24px 70px rgb(var(--ink-shadow-rgb) / 0.16);
-  --shadow-xl: 0 28px 90px rgb(7 17 35 / 0.28);
   --shadow-border: inset 0 0 0 1px var(--border);
   --shadow-border-soft: inset 0 0 0 1px var(--border-soft);
   --shadow-border-strong: inset 0 0 0 1px var(--ink-faint);

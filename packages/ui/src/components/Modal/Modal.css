@@ -17,7 +17,7 @@
   max-width: 480px;
   background: var(--surface);
   border-radius: 16px;
-  box-shadow: var(--shadow-border), var(--shadow-xl);
+  box-shadow: var(--shadow-border);
   display: flex;
   flex-direction: column;
   max-height: 90vh;

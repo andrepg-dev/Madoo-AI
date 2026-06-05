@@ -395,7 +395,7 @@ select {
 }
 
 .client-template:hover {
-  box-shadow: var(--shadow-border-rule-hover), var(--shadow-sm);
+  box-shadow: var(--shadow-border-rule-hover);
 }
 
 .client-template span {

@@ -47,7 +47,7 @@
   min-width: 180px;
   background: var(--surface);
   border-radius: 9px;
-  box-shadow: var(--shadow-border), var(--shadow-md);
+  box-shadow: var(--shadow-border);
   padding: 4px;
   z-index: var(--z-popover);
   display: flex;

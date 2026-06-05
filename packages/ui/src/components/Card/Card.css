@@ -20,7 +20,7 @@
 
 .madoo-card--lg {
   border-radius: 18px;
-  box-shadow: var(--shadow-border), var(--shadow-xs), var(--shadow-lg);
+  box-shadow: var(--shadow-border);
 }
 
 .madoo-card--interactive {

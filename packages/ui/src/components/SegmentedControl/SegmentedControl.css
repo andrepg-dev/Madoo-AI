@@ -33,7 +33,7 @@
   background: var(--surface);
   color: var(--ink);
   font-weight: var(--font-weight-semibold);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-border-soft);
 }
 
 .madoo-segmented--minimal {
