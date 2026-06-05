@@ -4,7 +4,7 @@
 
 ### `components/home/TemplateCard.tsx`
 
-Solo swap del `Icon`: ahora viene de `@madoo/ui`. El resto del card
+Solo swap del `Icon`: ahora viene de `@madoo/design-system`. El resto del card
 (hover lift, gradient overlay del CTA, badge "PRO" gold-on-dark) se
 mantiene custom: tiene comportamiento muy específico (transformación al
 hover, overlay condicional con CTA dinámico premium/free) que el `Card`
@@ -12,7 +12,7 @@ genérico del DS no cubre.
 
 ### `components/home/GeneratingScreen.tsx`
 
-Solo swap del `Icon` a `@madoo/ui`. Se mantienen el círculo accent con
+Solo swap del `Icon` a `@madoo/design-system`. Se mantienen el círculo accent con
 sparkle giratoria + animación pulse, y el listado de pasos con checks
 animados — son piezas one-off de marketing, no primitivas reutilizables.
 

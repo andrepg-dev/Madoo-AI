@@ -1,0 +1,85 @@
+.madoo-checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.madoo-checkbox--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.madoo-checkbox__control {
+  position: relative;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.madoo-checkbox__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: inherit;
+}
+
+.madoo-checkbox__input:checked + .madoo-checkbox__control {
+  background: var(--accent-deep);
+  box-shadow: var(--shadow-border-accent);
+}
+
+.madoo-checkbox__input:focus-visible + .madoo-checkbox__control {
+  box-shadow:
+    var(--shadow-border-accent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  outline: none;
+}
+
+.madoo-checkbox__check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-fg);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.madoo-checkbox__input:checked ~ .madoo-checkbox__control .madoo-checkbox__check,
+.madoo-checkbox__input:checked + .madoo-checkbox__control .madoo-checkbox__check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.madoo-checkbox__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.madoo-checkbox__label {
+  font-weight: var(--font-weight-medium);
+}
+
+.madoo-checkbox__description {
+  color: var(--ink-faint);
+  font-size: 12px;
+}

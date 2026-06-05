@@ -1,0 +1,60 @@
+.madoo-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.madoo-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  height: 34px;
+  padding: 0 36px 0 12px;
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: var(--shadow-border);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--ink);
+  cursor: pointer;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.madoo-select--sm {
+  height: 28px;
+  font-size: 12px;
+  padding: 0 30px 0 10px;
+}
+
+.madoo-select--lg {
+  height: 40px;
+  padding: 0 40px 0 14px;
+}
+
+.madoo-select:focus {
+  outline: none;
+  box-shadow:
+    var(--shadow-border-accent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.madoo-select--invalid {
+  box-shadow: var(--shadow-border-danger);
+}
+
+.madoo-select-wrapper__chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--ink-faint);
+}
+
+.madoo-select:disabled {
+  cursor: not-allowed;
+  background: var(--surface-2);
+  color: var(--ink-faint);
+}

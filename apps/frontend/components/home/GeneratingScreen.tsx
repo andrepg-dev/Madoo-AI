@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Icon } from "@madoo/ui";
+import { Icon } from "@madoo/design-system";
 import { consumeEmailSseStream, type StreamEmailEvent } from "@/hooks/use-emails";
 import { shortEmailId } from "@/lib/email-id";
 

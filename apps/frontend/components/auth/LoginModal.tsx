@@ -8,7 +8,7 @@ import { clearPendingPrompt, type StoredPrompt } from "@/lib/storage";
 import { useAuthStore } from "@/stores/auth";
 import { useWorkspaceStore } from "@/stores/workspace";
 import type { MyWorkspace, User } from "@madoo/shared";
-import { Banner, Modal } from "@madoo/ui";
+import { Banner, Modal } from "@madoo/design-system";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 

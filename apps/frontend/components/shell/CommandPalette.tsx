@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { Icon, Kbd, type IconName } from "@madoo/ui";
+import { Icon, Kbd, type IconName } from "@madoo/design-system";
 import { assistantApi } from "@/actions/assistant";
 import { ApiError } from "@/lib/api/fetch-wrapper";
 

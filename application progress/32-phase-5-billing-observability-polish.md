@@ -66,8 +66,8 @@ polish primitives (toasts/skeletons/error boundaries).
   - Replaced static “Free plan” widget with live billing usage card (plan + contacts used + CTA).
 
 - **Global UI polish primitives**:
-  - Added `Skeleton` component in `@madoo/ui`.
-  - Added `Toaster` + `useToast` in `@madoo/ui`.
+  - Added `Skeleton` component in `@madoo/design-system`.
+  - Added `Toaster` + `useToast` in `@madoo/design-system`.
   - Wired toast provider in frontend layout.
   - Added reusable `ErrorScreen` and route-level App Router error boundaries:
     - `app/error.tsx`

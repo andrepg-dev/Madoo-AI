@@ -2,13 +2,13 @@
 
 ## Contexto
 
-Fase de integración del paquete `@madoo/ui` (design system propio, en
-`packages/ui`) dentro de `apps/frontend`. Antes de este paso el DS solo se
+Fase de integración del paquete `@madoo/design-system` (design system propio, en
+`packages/design-system`) dentro de `apps/frontend`. Antes de este paso el DS solo se
 consumía desde Storybook; la app web seguía usando estilos inline ad-hoc.
 
 Antes de empezar, fix puntual al DS:
 
-- `packages/ui/src/tokens/base.css` tenía una regla global
+- `packages/design-system/src/tokens/base.css` tenía una regla global
   `:focus-visible` que pintaba un `outline: 2px solid var(--accent)` con
   `outline-offset: 2px` a todo `input`/`textarea`/`select`. Esa regla
   ganaba sobre el `outline: none` declarado en cada componente, así que
@@ -22,11 +22,11 @@ Antes de empezar, fix puntual al DS:
 
 ### Wiring del paquete
 
-- `apps/frontend/package.json`: `@madoo/ui: workspace:*` agregado a
+- `apps/frontend/package.json`: `@madoo/design-system: workspace:*` agregado a
   `dependencies`.
 - `apps/frontend/next.config.ts`: `transpilePackages` ahora incluye
-  `@madoo/ui` (el paquete expone TS source, no build).
-- `apps/frontend/app/layout.tsx`: import de `@madoo/ui/tokens.css` antes
+  `@madoo/design-system` (el paquete expone TS source, no build).
+- `apps/frontend/app/layout.tsx`: import de `@madoo/design-system/tokens.css` antes
   de `globals.css`. Los tokens del DS son superset compatible de los
   globals de la app (mismas variables base + radios/sombras/tipografía
   semánticas que los componentes consumen).
@@ -46,10 +46,10 @@ Reemplazo de las primitivas inline por componentes del DS:
   `leadingIcon`.
 - Filtro de categorías (botones manuales en una pildora) →
   `SegmentedControl` con `items={[{value, label}]}`.
-- `PromptPill` ahora viene de `@madoo/ui` en lugar del local
-  `@/components/home/PromptPill`. El archivo local quedó huérfano (no
+- `Dropdown` ahora viene de `@madoo/design-system` en lugar del local
+  `@/components/home/Dropdown`. El archivo local quedó huérfano (no
   hay otros consumers), pendiente de borrar en una pasada de cleanup.
-- `Icon` ahora viene de `@madoo/ui` (los nombres `sparkle` y `plus` que
+- `Icon` ahora viene de `@madoo/design-system` (los nombres `sparkle` y `plus` que
   la home usa están soportados).
 
 Lo que se mantiene como markup propio:
@@ -66,8 +66,8 @@ Lo que se mantiene como markup propio:
 
 - Correr `pnpm install` en la raíz para que la nueva workspace dep se
   enlace.
-- Borrar `apps/frontend/components/home/PromptPill.tsx` cuando se
+- Borrar `apps/frontend/components/home/Dropdown.tsx` cuando se
   confirme que ningún branch en vuelo lo usa.
 - Migrar las pantallas restantes (`EditorScreen`, `GeneratingScreen`,
   `auth/LoginModal`, paneles de `analytics`/`campaigns`/`contacts`) a
-  `@madoo/ui` en pasadas siguientes.
+  `@madoo/design-system` en pasadas siguientes.

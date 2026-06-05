@@ -3,7 +3,7 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { AppShell } from "@/components/shell/AppShell";
 import { siteConfig } from "@/lib/site";
-import "@madoo/ui/tokens.css";
+import "@madoo/design-system/tokens.css";
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";

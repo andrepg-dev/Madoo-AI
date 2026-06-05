@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Button, Card, Skeleton } from "@madoo/ui";
+import { Button, Card, Skeleton } from "@madoo/design-system";
 import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
 import { WORKSPACE_COOKIE, readCookie } from "@/lib/cookies";
 import { useWorkspaceStore } from "@/stores/workspace";

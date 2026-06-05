@@ -22,7 +22,7 @@ Implemented from the "Mailmint AI.html" design, rebranded to **Madoo AI** with t
 - **Theming:** `data-theme="warm"` and `data-density="cozy"` on `<html>`. CSS variables in `app/globals.css` cover default / warm / indigo themes plus animations.
 - **Routes (all static):** `/`, `/campaigns`, `/contacts`, `/analytics`, `/domain`.
 - **Shell:** `Sidebar`, `TopBar`, `AppShell`.
-- **Home flow:** `HomeScreen` (state machine: `home` → `generating` → `editor`) with `PromptPill`, `TemplateCard`, `GeneratingScreen`, `EditorScreen`.
+- **Home flow:** `HomeScreen` (state machine: `home` → `generating` → `editor`) with `Dropdown`, `TemplateCard`, `GeneratingScreen`, `EditorScreen`.
 - **Templates:** 12 hand-rendered variants in `components/templates/TemplatePreview.tsx`.
 - **Other screens:** `ContactsScreen`, `CampaignsScreen` (+ 5-step `ComposeModal`), `AnalyticsScreen`, `DomainScreen`.
 - **Mock data:** `lib/data.ts` (TEMPLATES, SEGMENTS, MOCK_CONTACTS, MOCK_CAMPAIGNS, DRAFT_EMAILS, EMAIL_VARIABLES, helpers `generateSubject`, `altSubject`, `generateBody`).
@@ -137,7 +137,7 @@ apps/frontend/lib/{data,env,api,google-gsi}.ts
 apps/frontend/components/icons/Icon.tsx
 apps/frontend/components/templates/TemplatePreview.tsx
 apps/frontend/components/shell/{Sidebar,TopBar,AppShell}.tsx
-apps/frontend/components/home/{HomeScreen,PromptPill,TemplateCard,GeneratingScreen,EditorScreen}.tsx
+apps/frontend/components/home/{HomeScreen,Dropdown,TemplateCard,GeneratingScreen,EditorScreen}.tsx
 apps/frontend/components/contacts/ContactsScreen.tsx
 apps/frontend/components/campaigns/{CampaignsScreen,ComposeModal}.tsx
 apps/frontend/components/analytics/AnalyticsScreen.tsx

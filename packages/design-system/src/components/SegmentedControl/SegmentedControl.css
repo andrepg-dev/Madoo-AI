@@ -1,0 +1,46 @@
+.madoo-segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgb(255 255 255 / 0.56);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-border);
+  backdrop-filter: blur(18px) saturate(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  overflow-x: auto;
+  font-family: var(--font-sans);
+}
+
+.madoo-segmented__item {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.madoo-segmented__item:hover {
+  color: var(--ink);
+}
+
+.madoo-segmented__item[aria-pressed="true"] {
+  background: transparent;
+  color: var(--ink);
+  font-weight: var(--font-weight-medium);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--rule-rgb) / 0.34);
+}
+
+.madoo-segmented--minimal {
+  box-shadow: var(--shadow-border);
+  background: transparent;
+  padding: 0;
+  gap: 6px;
+}

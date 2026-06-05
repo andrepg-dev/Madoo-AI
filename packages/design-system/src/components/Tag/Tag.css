@@ -1,0 +1,53 @@
+.madoo-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: var(--radius-lg);
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-mono);
+  width: fit-content;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+.madoo-tag--neutral {
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+
+.madoo-tag--accent {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+.madoo-tag--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.madoo-tag--warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.madoo-tag--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.madoo-tag--info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.madoo-tag--sans {
+  font-family: var(--font-sans);
+}
+
+.madoo-tag--sm {
+  padding: 2px 6px;
+  font-size: 10.5px;
+  border-radius: var(--radius-lg);
+}

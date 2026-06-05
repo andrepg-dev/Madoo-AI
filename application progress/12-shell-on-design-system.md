@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Continuación del onboarding de `apps/frontend` al paquete `@madoo/ui`.
+Continuación del onboarding de `apps/frontend` al paquete `@madoo/design-system`.
 Este batch cubre el chrome de la app: `AppShell`, `Sidebar`, `TopBar`.
 
 ## Cambios
@@ -14,7 +14,7 @@ primitivas visuales que migrar.
 
 ### `components/shell/Sidebar.tsx`
 
-- `Icon` ahora viene de `@madoo/ui` (antes `@/components/icons/Icon`).
+- `Icon` ahora viene de `@madoo/design-system` (antes `@/components/icons/Icon`).
 - Pill "BETA" inline → `<Badge tone="accent">`.
 - Botón "Upgrade to Pro" inline → `<Button variant="primary" size="sm" block>`.
 - Card de "Free plan" → `<Card surface="secondary" padded>`.
@@ -25,7 +25,7 @@ primitivas visuales que migrar.
 
 ### `components/shell/TopBar.tsx`
 
-- `Icon` ahora viene de `@madoo/ui`.
+- `Icon` ahora viene de `@madoo/design-system`.
 - Search input + icono absolute → `<Input variant="filled"
   startAdornment={<Icon name="search">}>`.
 - Botón de notificaciones (cuadrado con border) → `<IconButton

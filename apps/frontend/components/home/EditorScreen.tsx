@@ -15,7 +15,7 @@ import {
   Modal,
   SegmentedControl,
   Textarea,
-} from "@madoo/ui";
+} from "@madoo/design-system";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   type ChangeEvent,

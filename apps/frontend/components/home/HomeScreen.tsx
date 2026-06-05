@@ -28,12 +28,12 @@ import { useAuthStore } from "@/stores/auth";
 import {
   Banner,
   Button,
+  Dropdown,
   Icon,
-  PromptPill,
   SegmentedControl,
   SuggestionChip,
   Textarea,
-} from "@madoo/ui";
+} from "@madoo/design-system";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { TemplateCard } from "./TemplateCard";
@@ -263,23 +263,29 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
               flexWrap: "wrap",
             }}
           >
-            <PromptPill
+            <Dropdown
               label="Tone"
               value={tone}
               options={PROMPT_TONES}
               onChange={setTone}
+              size="sm"
+              variant="ghost"
             />
-            <PromptPill
+            <Dropdown
               label="Length"
               value={length}
               options={PROMPT_LENGTHS}
               onChange={setLength}
+              size="sm"
+              variant="ghost"
             />
-            <PromptPill
+            <Dropdown
               label="Audience"
               value={audience}
               options={PROMPT_AUDIENCES}
               onChange={setAudience}
+              size="sm"
+              variant="ghost"
             />
             <div style={{ flex: 1 }} />
             <Button

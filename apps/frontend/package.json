@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@madoo/shared": "workspace:*",
-    "@madoo/ui": "workspace:*",
+    "@madoo/design-system": "workspace:*",
     "@sentry/nextjs": "^10.52.0",
     "@tanstack/react-query": "^5.62.7",
     "axios": "^1.7.9",

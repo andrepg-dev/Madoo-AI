@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, IBM_Plex_Sans, Inter } from "next/font/google";
+import "@madoo/design-system/tokens.css";
 import { LandingFooter } from "../components/LandingFooter";
 import "./globals.css";
 

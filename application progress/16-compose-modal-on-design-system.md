@@ -50,4 +50,4 @@ condicional).
 
 - Próximo batch (6): cleanup — borrar
   `apps/frontend/components/icons/Icon.tsx` y
-  `apps/frontend/components/home/PromptPill.tsx` (ya nadie los usa).
+  `apps/frontend/components/home/Dropdown.tsx` (ya nadie los usa).

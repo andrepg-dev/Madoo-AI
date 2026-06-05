@@ -5,7 +5,7 @@ import { workspacesApi, workspacesKeys } from "@/actions/workspaces.client";
 import { readCookie, WORKSPACE_COOKIE, writeCookie } from "@/lib/cookies";
 import { useSidebarStore } from "@/stores/sidebar";
 import { PLAN_DISPLAY_NAMES, PLAN_LIMITS, type Plan } from "@madoo/shared";
-import { Button, Card, Icon, ProgressBar, type IconName } from "@madoo/ui";
+import { Button, Card, Icon, ProgressBar, type IconName } from "@madoo/design-system";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";

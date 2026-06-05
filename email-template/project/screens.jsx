@@ -411,9 +411,9 @@ const HomeScreen = ({ onGenerate, onSelectTemplate, brand }) => {
 
           {/* CONTROL ROW */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderTop: '1px solid var(--border-soft)', flexWrap: 'wrap' }}>
-            <PromptPill label="Tone" value={tone} options={['Friendly', 'Professional', 'Bold', 'Witty', 'Urgent']} onChange={setTone}/>
-            <PromptPill label="Length" value={length} options={['Short', 'Medium', 'Long']} onChange={setLength}/>
-            <PromptPill label="Audience" value={audience} options={['Existing customers', 'New signups', 'Free users', 'Lapsed users', 'Internal team']} onChange={setAudience}/>
+            <Dropdown label="Tone" value={tone} options={['Friendly', 'Professional', 'Bold', 'Witty', 'Urgent']} onChange={setTone}/>
+            <Dropdown label="Length" value={length} options={['Short', 'Medium', 'Long']} onChange={setLength}/>
+            <Dropdown label="Audience" value={audience} options={['Existing customers', 'New signups', 'Free users', 'Lapsed users', 'Internal team']} onChange={setAudience}/>
             <button title="Add brand kit" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 7, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--ink-faint)', fontSize: 12.5, cursor: 'pointer' }}>
               <Icon name="plus" size={12}/> Brand kit
             </button>
@@ -492,7 +492,7 @@ const HomeScreen = ({ onGenerate, onSelectTemplate, brand }) => {
 };
 
 // ============ PROMPT PILL ============
-const PromptPill = ({ label, value, options, onChange }) => {
+const Dropdown = ({ label, value, options, onChange }) => {
   const [open, setOpen] = useStateS(false);
   const ref = useRefS(null);
   useEffectS(() => {

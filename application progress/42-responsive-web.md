@@ -11,8 +11,8 @@ Investigator agent mapped ~40 non-responsive offenders across:
 - `apps/frontend/components/{analytics, campaigns, contacts, domain, home}` screens
 - `apps/frontend/components/campaigns/{ComposeModal, CampaignDetailModal}`
 - `apps/frontend/components/home/EditorScreen`
-- `packages/ui/src/components/Modal/Modal.css`
-- `packages/ui/src/components/Toast/Toaster.css`
+- `packages/design-system/src/components/Modal/Modal.css`
+- `packages/design-system/src/components/Toast/Toaster.css`
 
 ## Changes
 
@@ -46,8 +46,8 @@ Investigator agent mapped ~40 non-responsive offenders across:
 - `HomeScreen.tsx` — section paddings replaced with `madoo-home-*` classes that scale at 900 / 600 px; hero h1 fontSize uses `clamp(32px, 7vw, 52px)`.
 
 ### Modals
-- `packages/ui/src/components/Modal/Modal.css` — below 640px modals slide up from bottom edge (overlay padding 12px, full-width, rounded top corners); footer wraps.
-- `packages/ui/src/components/Toast/Toaster.css` — toaster stretches edge-to-edge below 480px; toast `min-width` clamps to viewport.
+- `packages/design-system/src/components/Modal/Modal.css` — below 640px modals slide up from bottom edge (overlay padding 12px, full-width, rounded top corners); footer wraps.
+- `packages/design-system/src/components/Toast/Toaster.css` — toaster stretches edge-to-edge below 480px; toast `min-width` clamps to viewport.
 - `ComposeModal.tsx` — `1fr 280px` two-column block collapses below 760px; schedule cards 2 → 1 col; review summary uses `madoo-grid-label`.
 - `CampaignDetailModal.tsx` — detail rows use `madoo-grid-label`.
 - `EditorScreen.tsx` — right aside (390px) stacks under main editor below 900px (`madoo-editor-shell` flex-direction column, aside `max-height: 60vh`).

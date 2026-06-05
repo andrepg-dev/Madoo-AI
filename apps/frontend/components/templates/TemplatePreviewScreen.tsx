@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Icon, useToast } from "@madoo/ui";
+import { Button, Icon, useToast } from "@madoo/design-system";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";

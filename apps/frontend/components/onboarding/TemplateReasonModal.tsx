@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Modal } from "@madoo/ui";
+import { Button, Modal } from "@madoo/design-system";
 
 export const TEMPLATE_CREATION_REASON_OPTIONS = [
   {

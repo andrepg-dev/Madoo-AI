@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Banner, Button, Card } from "@madoo/ui";
+import { Banner, Button, Card } from "@madoo/design-system";
 import * as Sentry from "@sentry/nextjs";
 
 export function ErrorScreen({

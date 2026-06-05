@@ -1,0 +1,51 @@
+.madoo-card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-border);
+  padding: 16px;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  transition:
+    box-shadow var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.madoo-card--surface-2 {
+  background: var(--surface-2);
+}
+
+.madoo-card--padded {
+  padding: 22px;
+}
+
+.madoo-card--lg {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-border);
+}
+
+.madoo-card--interactive {
+  cursor: pointer;
+  text-align: left;
+}
+
+.madoo-card--interactive:hover {
+  box-shadow: var(--shadow-border-rule-hover);
+}
+
+.madoo-card--selected {
+  background: var(--surface-2);
+  box-shadow: var(--shadow-border-accent);
+}
+
+.madoo-card__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  margin: 0 0 6px;
+}
+
+.madoo-card__description {
+  font-size: var(--font-size-sm);
+  color: var(--ink-faint);
+  margin: 0;
+  line-height: 1.5;
+}

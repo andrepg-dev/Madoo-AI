@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Icon } from "@madoo/ui";
+import { Icon } from "@madoo/design-system";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
 import type { Template } from "@/lib/data";
 

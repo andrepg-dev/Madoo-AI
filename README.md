@@ -11,7 +11,7 @@ Monorepo con Turborepo + pnpm workspaces.
 │   └── backend/    # App de backend
 ├── packages/
 │   ├── shared/     # Tipos y utilidades compartidas
-│   └── ui/         # Design system (@madoo/ui) + Storybook
+│   └── design-system/ # Design system (@madoo/design-system) + Storybook
 ├── turbo.json
 ├── pnpm-workspace.yaml
 └── package.json
@@ -26,11 +26,11 @@ pnpm build        # Build de todos los workspaces
 pnpm lint         # Lint de todos los workspaces
 ```
 
-### Design system (`@madoo/ui`)
+### Design system (`@madoo/design-system`)
 
 ```bash
-pnpm --filter @madoo/ui dev         # Storybook en http://localhost:6006
-pnpm --filter @madoo/ui build       # Build estatico de Storybook
+pnpm --filter @madoo/design-system dev         # Storybook en http://localhost:6006
+pnpm --filter @madoo/design-system build       # Build estatico de Storybook
 ```
 
-Mas detalles en [`packages/ui/README.md`](./packages/ui/README.md).
+Mas detalles en [`packages/design-system/README.md`](./packages/design-system/README.md).

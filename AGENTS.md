@@ -21,7 +21,7 @@ Use TypeScript and React functional components. Prefer existing patterns before 
 
 ## Testing Guidelines
 
-There is no broad test suite yet. Add focused tests next to risky logic, using `*.test.ts` or `*.test.tsx` naming. For UI package work, prefer Storybook stories in `packages/ui/src/**/*.stories.tsx`. For API and shared contract changes, verify schema parsing and DTO serialization paths. Run the smallest relevant command first, then broader Turbo tasks when needed.
+There is no broad test suite yet. Add focused tests next to risky logic, using `*.test.ts` or `*.test.tsx` naming. For UI package work, prefer Storybook stories in `packages/design-system/src/**/*.stories.tsx`. For API and shared contract changes, verify schema parsing and DTO serialization paths. Run the smallest relevant command first, then broader Turbo tasks when needed.
 
 ## Commit & Pull Request Guidelines
 

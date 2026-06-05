@@ -17,7 +17,7 @@ import {
   Kbd,
   Modal,
   type IconName,
-} from "@madoo/ui";
+} from "@madoo/design-system";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";

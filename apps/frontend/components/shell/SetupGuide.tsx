@@ -1,7 +1,7 @@
 "use client";
 
 import { useEmails } from "@/hooks/use-emails";
-import { Icon } from "@madoo/ui";
+import { Icon } from "@madoo/design-system";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 

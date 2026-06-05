@@ -11,7 +11,7 @@ import {
   type BillingInterval,
   type Plan,
 } from "@madoo/shared";
-import { Banner, Button, Card, Icon, ProgressBar, Skeleton } from "@madoo/ui";
+import { Banner, Button, Card, Icon, ProgressBar, Skeleton } from "@madoo/design-system";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
