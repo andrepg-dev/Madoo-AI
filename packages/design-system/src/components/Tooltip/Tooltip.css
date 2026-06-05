@@ -12,6 +12,7 @@
   --_tooltip-shadow-border: var(--shadow-border-ink);
   --_tooltip-offset: 10px;
   --_tooltip-arrow-size: 8px;
+  --_tooltip-hidden-transform: translate3d(0, 2px, 0) scale(0.98);
 
   position: absolute;
   z-index: var(--z-popover);
@@ -33,11 +34,13 @@
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transform: translate3d(0, 2px, 0) scale(0.98);
+  transform: var(--_tooltip-hidden-transform);
+  transform-origin: center;
   transition:
-    opacity var(--duration-fast) var(--ease-out),
-    visibility var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
+    opacity 140ms var(--ease-out),
+    visibility 140ms var(--ease-out),
+    transform 180ms var(--ease-out);
+  will-change: opacity, transform;
 }
 
 .madoo-tooltip:hover .madoo-tooltip__content,
@@ -64,10 +67,24 @@
   width: var(--_tooltip-arrow-size);
   height: var(--_tooltip-arrow-size);
   background: var(--_tooltip-bg);
+  box-shadow: var(--_tooltip-shadow-border);
   rotate: 45deg;
+  opacity: 0;
+  transform: scale(0.75);
+  transition:
+    opacity 140ms var(--ease-out),
+    transform 180ms var(--ease-out);
+}
+
+.madoo-tooltip:hover .madoo-tooltip__arrow,
+.madoo-tooltip:focus-within .madoo-tooltip__arrow {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .madoo-tooltip[data-side="top"] .madoo-tooltip__content {
+  --_tooltip-hidden-transform: translate3d(0, 3px, 0) scale(0.98);
+
   bottom: calc(100% + var(--_tooltip-offset));
 }
 
@@ -76,6 +93,8 @@
 }
 
 .madoo-tooltip[data-side="bottom"] .madoo-tooltip__content {
+  --_tooltip-hidden-transform: translate3d(0, -3px, 0) scale(0.98);
+
   top: calc(100% + var(--_tooltip-offset));
 }
 
@@ -84,6 +103,8 @@
 }
 
 .madoo-tooltip[data-side="left"] .madoo-tooltip__content {
+  --_tooltip-hidden-transform: translate3d(3px, 0, 0) scale(0.98);
+
   right: calc(100% + var(--_tooltip-offset));
 }
 
@@ -92,6 +113,8 @@
 }
 
 .madoo-tooltip[data-side="right"] .madoo-tooltip__content {
+  --_tooltip-hidden-transform: translate3d(-3px, 0, 0) scale(0.98);
+
   left: calc(100% + var(--_tooltip-offset));
 }
 
@@ -175,7 +198,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .madoo-tooltip__content {
+  .madoo-tooltip__content,
+  .madoo-tooltip__arrow {
     transition: none;
     transform: none;
   }

@@ -8,7 +8,16 @@
   justify-content: center;
   z-index: var(--z-modal);
   padding: 24px;
-  animation: madoo-fade-in 0.2s ease-out;
+  will-change: opacity, backdrop-filter;
+}
+
+.madoo-modal-overlay[data-state="open"] {
+  animation: madoo-modal-overlay-in 180ms var(--ease-out) both;
+}
+
+.madoo-modal-overlay[data-state="closed"] {
+  pointer-events: none;
+  animation: madoo-modal-overlay-out 170ms ease-in both;
 }
 
 .madoo-modal {
@@ -16,7 +25,7 @@
   width: 100%;
   max-width: 480px;
   background: var(--surface);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   box-shadow: var(--shadow-border);
   display: flex;
   flex-direction: column;
@@ -24,6 +33,30 @@
   overflow: hidden;
   font-family: var(--font-sans);
   color: var(--ink);
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.madoo-modal[data-state="open"] {
+  animation: madoo-modal-in 220ms var(--ease-out) both;
+}
+
+.madoo-modal[data-state="closed"] {
+  animation: madoo-modal-out 170ms ease-in both;
+}
+
+.madoo-modal[data-state="open"] .madoo-modal__header,
+.madoo-modal[data-state="open"] .madoo-modal__body,
+.madoo-modal[data-state="open"] .madoo-modal__footer {
+  animation: madoo-modal-content-in 220ms var(--ease-out) both;
+}
+
+.madoo-modal[data-state="open"] .madoo-modal__body {
+  animation-delay: 24ms;
+}
+
+.madoo-modal[data-state="open"] .madoo-modal__footer {
+  animation-delay: 36ms;
 }
 
 .madoo-modal--sm {
@@ -79,7 +112,7 @@
 .madoo-modal__close {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-pill);
   border: none;
   background: var(--surface-2);
   cursor: pointer;
@@ -87,12 +120,20 @@
   align-items: center;
   justify-content: center;
   color: var(--ink-soft);
-  transition: background var(--duration-fast) var(--ease-out);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 }
 
 .madoo-modal__close:hover {
   background: var(--border);
   color: var(--ink);
+  transform: scale(1.04);
+}
+
+.madoo-modal__close:active {
+  transform: scale(0.98);
 }
 
 .madoo-modal__body {
@@ -123,7 +164,7 @@
   .madoo-modal--xl {
     max-width: 100%;
     max-height: 95vh;
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
   }
 
   .madoo-modal__header {
@@ -136,5 +177,105 @@
 
   .madoo-modal__footer {
     padding: 12px 16px;
+  }
+}
+
+@keyframes madoo-modal-overlay-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+@keyframes madoo-modal-overlay-out {
+  from {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+  to {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+}
+
+@keyframes madoo-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes madoo-modal-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(5px) scale(0.99);
+  }
+}
+
+@keyframes madoo-modal-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .madoo-modal {
+    transform-origin: bottom center;
+  }
+
+  @keyframes madoo-modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes madoo-modal-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .madoo-modal-overlay,
+  .madoo-modal,
+  .madoo-modal__header,
+  .madoo-modal__body,
+  .madoo-modal__footer,
+  .madoo-modal__close {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .madoo-modal__close:hover,
+  .madoo-modal__close:active {
+    transform: none;
   }
 }

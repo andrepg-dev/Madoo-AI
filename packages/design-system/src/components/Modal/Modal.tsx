@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useState,
   type HTMLAttributes,
   type MouseEvent,
   type ReactNode,
@@ -7,6 +8,8 @@ import {
 import { cx } from "../../lib/cx";
 import { Icon } from "../Icon";
 import "./Modal.css";
+
+const MODAL_EXIT_MS = 170;
 
 export type ModalSize = "sm" | "md" | "lg" | "xl";
 
@@ -26,6 +29,22 @@ export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"
   closeOnOverlayClick?: boolean;
 }
 
+function useModalPresence(open: boolean) {
+  const [present, setPresent] = useState(open);
+
+  useEffect(() => {
+    if (open) {
+      setPresent(true);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setPresent(false), MODAL_EXIT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+
+  return present;
+}
+
 export function Modal({
   open,
   onClose,
@@ -40,6 +59,8 @@ export function Modal({
   children,
   ...rest
 }: ModalProps) {
+  const present = useModalPresence(open);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -49,9 +70,10 @@ export function Modal({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!present) return null;
 
   const handleOverlayClick = () => {
+    if (!open) return;
     if (closeOnOverlayClick) onClose();
   };
   const stop = (e: MouseEvent) => e.stopPropagation();
@@ -60,12 +82,15 @@ export function Modal({
     <div
       className="madoo-modal-overlay"
       role="presentation"
+      data-state={open ? "open" : "closed"}
+      aria-hidden={!open}
       onClick={handleOverlayClick}
     >
       <div
         role="dialog"
         aria-modal="true"
         onClick={stop}
+        data-state={open ? "open" : "closed"}
         className={cx("madoo-modal", `madoo-modal--${size}`, className)}
         {...rest}
       >
