@@ -255,7 +255,7 @@ const localeCopy = {
         { name: "Gran noticia: Y Combinator nos respaldó 🚀", description: "Anuncio potente de inversión startup." },
         { name: "Tu próximo hogar está a un clic — Hopta", description: "Oferta inmobiliaria limpia en español." },
         { name: "40% de descuento — sin exclusiones", description: "Promo Black Friday de alto contraste." },
-        { name: "Emails hermosos en segundos — Madoo AI", description: "Layout editorial para update de producto." },
+        { name: "Emails hermosos en segundos — Madoo AI", description: "Layout claro para update de producto." },
         {
           name: "Y Combinator nos respaldó oficialmente — lo que sigue",
           description: "Nota de hito para inversionistas.",
@@ -416,7 +416,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
       <main lang={locale} className="relative min-h-screen w-full">
         <div className="relative z-50 bg-madoo-page px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
-          <div className="madoo-hero-box relative mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start rounded-2xl gap-9 pt-36 font-ibm-plex-sans sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-64 xl:max-w-[calc(100vw-2rem)]">
+          <div className="madoo-hero-box relative mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start rounded-2xl gap-9 pt-36 font-ibm-plex-sans sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-[260px] 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
             <div className="absolute left-0 right-0 top-0 z-30">
               <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
             </div>

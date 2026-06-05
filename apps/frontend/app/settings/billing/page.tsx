@@ -279,8 +279,8 @@ function BillingPageContent() {
                     Current plan
                   </div>
                   <div
-                    className="serif"
-                    style={{ fontSize: 26, fontWeight: 400, marginTop: 4, letterSpacing: -0.3 }}
+                    className="display"
+                    style={{ fontSize: 26, fontWeight: 600, marginTop: 4, letterSpacing: 0 }}
                   >
                     {PLAN_DISPLAY_NAMES[currentPlan]}
                   </div>
@@ -351,12 +351,12 @@ function BillingPageContent() {
             <Icon name="sparkle" size={12} /> Pricing that grows with you
           </div>
           <h1
-            className="serif"
+            className="display"
             style={{
               fontSize: 44,
               fontWeight: 400,
               lineHeight: 1.05,
-              letterSpacing: -0.8,
+              letterSpacing: 0,
               margin: "16px 0 0",
               color: "var(--ink)",
             }}
@@ -504,7 +504,7 @@ function BillingPageContent() {
                   </div>
                 )}
 
-                <div className="serif" style={{ fontSize: 28, fontWeight: 400, letterSpacing: -0.3, lineHeight: 1 }}>
+                <div className="display" style={{ fontSize: 28, fontWeight: 600, letterSpacing: 0, lineHeight: 1 }}>
                   {plan.name}
                 </div>
                 <div
@@ -529,7 +529,7 @@ function BillingPageContent() {
                 >
                   <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.65 }}>$</div>
-                    <div className="serif" style={{ fontSize: 50, fontWeight: 400, letterSpacing: -1.5, lineHeight: 1 }}>
+                    <div className="display" style={{ fontSize: 50, fontWeight: 600, letterSpacing: 0, lineHeight: 1 }}>
                       {displayPrice}
                     </div>
                     <div style={{ fontSize: 12, color: isHighlight ? "rgba(250,247,240,0.55)" : "var(--ink-faint)", fontWeight: 500 }}>
@@ -759,8 +759,8 @@ function BillingPageContent() {
               <Icon name="sparkle" size={12} /> The Madoo switch
             </div>
             <div
-              className="serif"
-              style={{ fontSize: 28, fontWeight: 400, marginTop: 6, lineHeight: 1.1, letterSpacing: -0.3 }}
+              className="display"
+              style={{ fontSize: 28, fontWeight: 600, marginTop: 6, lineHeight: 1.1, letterSpacing: 0 }}
             >
               Coming from Mailchimp or Klaviyo?
             </div>
@@ -823,8 +823,8 @@ function BillingPageContent() {
         <div style={{ marginTop: 52 }}>
           <div style={{ textAlign: "center", maxWidth: 540, margin: "0 auto 24px" }}>
             <h2
-              className="serif"
-              style={{ fontSize: 34, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}
+              className="display"
+              style={{ fontSize: 34, fontWeight: 600, margin: 0, letterSpacing: 0 }}
             >
               Common questions
             </h2>

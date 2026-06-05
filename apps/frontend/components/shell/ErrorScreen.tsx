@@ -27,7 +27,7 @@ export function ErrorScreen({
       <div style={{ maxWidth: 560, margin: "80px auto", padding: "0 24px" }}>
         <Card padded>
           <h2
-            className="serif"
+            className="display"
             style={{ fontSize: 26, fontWeight: 400, marginBottom: 8, letterSpacing: -0.3 }}
           >
             {title}

@@ -15,7 +15,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
     overflow: "hidden",
     position: "relative",
   };
-  const serif: React.CSSProperties = { fontFamily: "" };
+  const displayText: React.CSSProperties = { fontFamily: "var(--font-display)", fontWeight: 600 };
 
   if (preview === "launch") {
     return (
@@ -28,7 +28,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
           <div style={{ fontSize: 7 * scale, letterSpacing: "0.1em", textTransform: "uppercase" as const, opacity: 0.45, fontWeight: 600 }}>
             PRODUCT LAUNCH
           </div>
-          <div style={{ fontSize: 18 * scale, ...serif, lineHeight: 1.05, fontWeight: 500, letterSpacing: -0.4 }}>
+          <div style={{ fontSize: 18 * scale, ...displayText, lineHeight: 1.05, letterSpacing: 0 }}>
             Something new
             <br />
             is shipping.
@@ -60,28 +60,28 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
     );
   }
 
-  if (preview === "editorial") {
+  if (preview === "newsletter") {
     return (
       <div style={wrap}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 6 * scale, letterSpacing: "0.08em", textTransform: "uppercase" as const, opacity: 0.5, fontFamily: "system-ui, sans-serif" }}>
-          <span>The Editorial · Vol. 12</span>
+          <span>Product Brief · Vol. 12</span>
           <span>May 2026</span>
         </div>
         <div style={{ borderBottom: `1.5px solid ${accent}20`, marginBottom: 2 * scale }} />
-        <div style={{ fontSize: 24 * scale, ...serif, lineHeight: 1.05, fontStyle: "italic", marginTop: 4 * scale, letterSpacing: -0.3 }}>
-          Slow letters,
+        <div style={{ fontSize: 24 * scale, ...displayText, lineHeight: 1.05, marginTop: 4 * scale, letterSpacing: 0 }}>
+          Product notes,
           <br />
-          fast ideas.
+          shipped weekly.
         </div>
         <div style={{ fontSize: 7 * scale, lineHeight: 1.6, opacity: 0.75, marginTop: 2 * scale }}>
-          This week: attention, deep work, and why the inbox is having a moment.
+          This week: launch notes, customer updates, and useful metrics.
         </div>
         <div style={{ borderTop: `1px solid ${accent}15`, paddingTop: 8 * scale, marginTop: 4 * scale, display: "flex", flexDirection: "column", gap: 6 * scale }}>
-          {["The case for writing one thing a day", "Why you should reply slower", "May reading list"].map((t) => (
+          {["Release summary", "Customer highlight", "Metrics to watch"].map((t) => (
             <div key={t} style={{ fontSize: 6.5 * scale, fontWeight: 600, opacity: 0.85, lineHeight: 1.3 }}>{t}</div>
           ))}
         </div>
-        <div style={{ fontSize: 5.5 * scale, opacity: 0.4, marginTop: "auto", fontStyle: "italic", ...serif }}>— Continue reading</div>
+        <div style={{ fontSize: 5.5 * scale, opacity: 0.55, marginTop: "auto", ...displayText }}>Continue reading</div>
       </div>
     );
   }
@@ -99,7 +99,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
               fontWeight: 900,
               lineHeight: 0.88,
               color: accent,
-              letterSpacing: -2,
+              letterSpacing: 0,
               marginTop: 4 * scale,
             }}
           >
@@ -136,7 +136,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
         <div style={{ fontSize: 6.5 * scale, letterSpacing: "0.08em", opacity: 0.5, fontWeight: 600, textTransform: "uppercase" as const, marginBottom: 6 * scale }}>
           Changelog · v2.4
         </div>
-        <div style={{ fontSize: 11 * scale, fontWeight: 700, lineHeight: 1.1, marginBottom: 16 * scale, letterSpacing: -0.3 }}>
+        <div style={{ fontSize: 11 * scale, fontWeight: 700, lineHeight: 1.1, marginBottom: 16 * scale, letterSpacing: 0 }}>
           Product updates
           <br />
           you should know.
@@ -180,7 +180,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
           </div>
         </div>
         <div style={{ flex: 1, background: "#FFFFFF", padding: 14 * scale, display: "flex", flexDirection: "column", gap: 8 * scale }}>
-          <div style={{ fontSize: 17 * scale, ...serif, lineHeight: 1.1 }}>
+          <div style={{ fontSize: 17 * scale, ...displayText, lineHeight: 1.1 }}>
             Hi there,
             <br />
             welcome in.
@@ -236,7 +236,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
       <div style={{ ...wrap, padding: 0, gap: 0 }}>
         <div style={{ background: accent, padding: `${18 * scale}px ${14 * scale}px` }}>
           <div style={{ fontSize: 6.5 * scale, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: bg, opacity: 0.7, marginBottom: 6 * scale }}>You&apos;re invited</div>
-          <div style={{ fontSize: 20 * scale, ...serif, lineHeight: 1.05, color: bg }}>
+          <div style={{ fontSize: 20 * scale, ...displayText, lineHeight: 1.05, color: bg }}>
             An evening
             <br />
             of ideas.
@@ -294,8 +294,8 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
     ];
     return (
       <div style={wrap}>
-        <div style={{ fontSize: 7.5 * scale, ...serif, fontStyle: "italic", opacity: 0.65 }}>The Weekly</div>
-        <div style={{ fontSize: 16 * scale, fontWeight: 700, lineHeight: 1.1, letterSpacing: -0.3 }}>
+        <div style={{ fontSize: 7.5 * scale, ...displayText, opacity: 0.65 }}>The Weekly</div>
+        <div style={{ fontSize: 16 * scale, fontWeight: 700, lineHeight: 1.1, letterSpacing: 0 }}>
           5 things worth
           <br />
           your attention.
@@ -319,7 +319,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
           <div style={{ fontSize: 8 * scale, fontWeight: 700, color: bg, opacity: 0.85 }}>ORDER CONFIRMED</div>
         </div>
         <div style={{ flex: 1, background: "#FFFFFF", padding: 14 * scale, display: "flex", flexDirection: "column", gap: 8 * scale }}>
-          <div style={{ fontSize: 30 * scale, ...serif, lineHeight: 1, fontStyle: "italic" }}>
+          <div style={{ fontSize: 30 * scale, ...displayText, lineHeight: 1 }}>
             Thank
             <br />
             you.
@@ -350,7 +350,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
               <span style={{ fontWeight: 600 }}>$89.00</span>
             </div>
           </div>
-          <div style={{ marginTop: "auto", fontSize: 6 * scale, opacity: 0.45, fontStyle: "italic", ...serif }}>— The team</div>
+          <div style={{ marginTop: "auto", fontSize: 6 * scale, opacity: 0.55, ...displayText }}>The team</div>
         </div>
       </div>
     );
@@ -363,7 +363,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
           <div style={{ fontSize: 6.5 * scale, fontWeight: 700, letterSpacing: "0.1em", color: bg }}>★ NEW FEATURE</div>
         </div>
         <div style={{ flex: 1, background: "#FFFFFF", padding: 14 * scale, display: "flex", flexDirection: "column", gap: 6 * scale }}>
-          <div style={{ fontSize: 14 * scale, fontWeight: 700, lineHeight: 1.15, letterSpacing: -0.3 }}>Meet smart blocks.</div>
+          <div style={{ fontSize: 14 * scale, fontWeight: 700, lineHeight: 1.15, letterSpacing: 0 }}>Meet smart blocks.</div>
           {/* UI mockup area */}
           <div
             style={{
@@ -399,7 +399,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
   if (preview === "survey") {
     return (
       <div style={wrap}>
-        <div style={{ fontSize: 14 * scale, fontWeight: 700, lineHeight: 1.2, letterSpacing: -0.3 }}>How did we do?</div>
+        <div style={{ fontSize: 14 * scale, fontWeight: 700, lineHeight: 1.2, letterSpacing: 0 }}>How did we do?</div>
         <div style={{ fontSize: 7 * scale, opacity: 0.6, marginTop: -2 * scale }}>One quick question.</div>
         <div style={{ display: "flex", gap: 3 * scale, marginTop: 8 * scale }}>
           {[1, 2, 3, 4, 5].map((i) => (
@@ -438,7 +438,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
     return (
       <div style={{ ...wrap, padding: 0, gap: 0 }}>
         <div style={{ background: accent, padding: `${18 * scale}px ${14 * scale}px` }}>
-          <div style={{ fontSize: 20 * scale, ...serif, lineHeight: 1.05, fontStyle: "italic", color: bg }}>
+          <div style={{ fontSize: 20 * scale, ...displayText, lineHeight: 1.05, color: bg }}>
             We&apos;ve missed
             <br />
             you.
@@ -506,7 +506,7 @@ export function TemplatePreview({ template, scale = 1 }: { template: Template; s
               />
             ))}
           </div>
-          <div style={{ fontSize: 16 * scale, fontWeight: 700, color: bg, lineHeight: 1.1, letterSpacing: -0.3 }}>
+          <div style={{ fontSize: 16 * scale, fontWeight: 700, color: bg, lineHeight: 1.1, letterSpacing: 0 }}>
             Bring a friend,
             <br />
             get $20.

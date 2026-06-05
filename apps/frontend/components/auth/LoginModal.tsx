@@ -166,22 +166,21 @@ export function LoginModal() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: "var(--font-instrument-serif), serif",
-            fontStyle: "italic",
-            fontSize: 22,
+            fontFamily: "var(--font-display)",
             fontWeight: 600,
+            fontSize: 22,
           }}
         >
           M
         </div>
 
         <h2
-          className="serif"
+          className="display"
           style={{
             fontSize: 26,
-            fontWeight: 400,
+            fontWeight: 600,
             margin: "16px 0 6px",
-            letterSpacing: -0.4,
+            letterSpacing: 0,
           }}
         >
           Continue to Madoo AI

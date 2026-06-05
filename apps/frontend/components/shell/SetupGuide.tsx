@@ -102,7 +102,7 @@ export function SetupGuide() {
                 <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "var(--ink-faint)", textTransform: "uppercase" }}>
                   Getting started
                 </div>
-                <div className="serif" style={{ fontSize: 22, color: "var(--ink)", marginTop: 2, lineHeight: 1.2 }}>
+                <div className="display" style={{ fontSize: 22, color: "var(--ink)", marginTop: 2, lineHeight: 1.2, fontWeight: 600 }}>
                   Set up your workspace
                 </div>
               </div>

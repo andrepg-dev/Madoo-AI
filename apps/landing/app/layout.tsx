@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree, IBM_Plex_Sans, Instrument_Serif, Inter } from "next/font/google";
+import { Figtree, IBM_Plex_Sans, Inter } from "next/font/google";
 import { LandingFooter } from "../components/LandingFooter";
 import "./globals.css";
 
@@ -21,14 +21,6 @@ const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-ibm-plex-sans",
-  display: "swap",
-});
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
-  variable: "--font-instrument-serif",
   display: "swap",
 });
 
@@ -62,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable} ${instrumentSerif.variable}`}
+      className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable}`}
     >
       <body className={`${inter.className} bg-madoo-page`}>
         <div className="relative min-h-screen w-full bg-madoo-page">

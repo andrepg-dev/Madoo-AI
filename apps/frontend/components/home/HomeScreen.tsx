@@ -196,7 +196,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             templates
           </div>
           <h1
-            className="serif"
+            className="display"
             style={{
               fontSize: "clamp(32px, 7vw, 52px)",
               fontWeight: 400,
@@ -247,7 +247,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
                   void handleGenerate();
                 }
               }}
-              placeholder="e.g. Write a warm product update email for active users — concise, useful, and easy to skim."
+              placeholder="e.g. Write a clear product update email for active users — concise, useful, and easy to skim."
               variant="ghost"
               noResize
               rows={4}
@@ -333,7 +333,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             }}
           >
             <h3
-              className="serif"
+              className="display"
               style={{ margin: 0, fontSize: 28, fontWeight: 400 }}
             >
               Recent emails
@@ -537,12 +537,12 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         >
           <div>
             <h2
-              className="serif"
+              className="display"
               style={{
                 fontSize: 32,
                 fontWeight: 400,
                 margin: 0,
-                letterSpacing: -0.5,
+                letterSpacing: 0,
               }}
             >
               Or start with a template{" "}
@@ -600,7 +600,7 @@ function MarketingSeoSections() {
         <div className="madoo-seo-band">
           <div>
             <p className="madoo-kicker">AI email workspace</p>
-            <h2 className="serif madoo-seo-heading">
+            <h2 className="display madoo-seo-heading">
               Generate better email templates with AI.
             </h2>
           </div>
@@ -627,7 +627,7 @@ function MarketingSeoSections() {
       >
         <div>
           <p className="madoo-kicker">How it works</p>
-          <h2 className="serif madoo-seo-heading">
+          <h2 className="display madoo-seo-heading">
             From idea to export-ready email.
           </h2>
           <ol className="madoo-seo-steps">
@@ -638,7 +638,7 @@ function MarketingSeoSections() {
         </div>
         <div>
           <p className="madoo-kicker">Use cases</p>
-          <h2 className="serif madoo-seo-heading">
+          <h2 className="display madoo-seo-heading">
             Built for repeatable email workflows.
           </h2>
           <div className="madoo-use-case-grid">
@@ -656,7 +656,7 @@ function MarketingSeoSections() {
         <div className="madoo-faq-wrap">
           <div>
             <p className="madoo-kicker">Product FAQ</p>
-            <h2 className="serif madoo-seo-heading">
+            <h2 className="display madoo-seo-heading">
               Learn what Madoo AI does before you generate.
             </h2>
           </div>

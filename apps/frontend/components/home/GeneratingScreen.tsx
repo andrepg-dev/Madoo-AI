@@ -137,7 +137,7 @@ export function GeneratingScreen({
           </div>
         </div>
         <h2
-          className="serif"
+          className="display"
           style={{ fontSize: 32, fontWeight: 400, margin: 0, lineHeight: 1.1 }}
         >
           <span style={{ fontStyle: "italic" }}>Crafting</span> your email

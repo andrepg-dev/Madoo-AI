@@ -1,17 +1,17 @@
 :root {
-  --bg: #FAF7F0;
-  --bg-2: #F4F0E6;
-  --surface: #FFFDF8;
-  --surface-2: #F4F0E6;
-  --ink: #1F1A12;
-  --ink-soft: #5C5246;
-  --ink-faint: #9A8E7F;
-  --border: #E8E1D2;
-  --border-soft: #F0EBDD;
-  --accent: #6B9D7C;
-  --accent-deep: #2F5C42;
-  --accent-soft: #E5EFE6;
-  --accent-fg: #FFFDF8;
+  --bg: #f3f4f6;
+  --bg-2: #eef1f5;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --ink: #101114;
+  --ink-soft: #252a31;
+  --ink-faint: #98a2b3;
+  --border: #d8dee8;
+  --border-soft: #edf2f7;
+  --accent: #071b38;
+  --accent-deep: #031024;
+  --accent-soft: #f3faff;
+  --accent-fg: #ffffff;
   --background: var(--surface);
   --foreground: var(--ink);
   --card: var(--surface);
@@ -25,10 +25,10 @@
 }
 
 [data-theme="warm"] {
-  --bg: #FBF5EC;
-  --accent: #C97B4F;
-  --accent-deep: #6B3A1E;
-  --accent-soft: #F5E4D5;
+  --bg: #f3f4f6;
+  --accent: #071b38;
+  --accent-deep: #031024;
+  --accent-soft: #f3faff;
 }
 
 [data-theme="indigo"] {
@@ -168,8 +168,9 @@ select:focus-visible {
   outline: none;
 }
 
-.serif {
-  font-family: var(--font-instrument-serif), Georgia, serif;
+.display {
+  font-family: var(--font-display);
+  font-style: normal;
 }
 
 .mono {

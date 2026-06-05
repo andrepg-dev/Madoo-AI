@@ -26,7 +26,7 @@ export default function SettingsPage() {
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
       <div style={{ padding: "32px 40px 60px", maxWidth: 720, margin: "0 auto" }}>
-        <h1 className="serif" style={{ fontSize: 32, fontWeight: 400, margin: "0 0 6px", letterSpacing: -0.4 }}>
+        <h1 className="display" style={{ fontSize: 32, fontWeight: 600, margin: "0 0 6px", letterSpacing: 0 }}>
           Workspace settings
         </h1>
         <p style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 24 }}>
