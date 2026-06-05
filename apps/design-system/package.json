@@ -1,38 +1,22 @@
 {
-  "name": "@madoo/ui",
+  "name": "@madoo/design-system",
   "version": "0.0.1",
   "private": true,
-  "description": "Madoo AI design system - landing-based components, tokens y Storybook",
-  "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    },
-    "./tokens.css": "./src/tokens/tokens.css",
-    "./fonts.css": "./src/tokens/fonts.css",
-    "./base.css": "./src/tokens/base.css"
-  },
-  "files": [
-    "src"
-  ],
+  "description": "Madoo AI design system Storybook app",
   "scripts": {
-    "dev": "storybook dev -p 6006 --no-open",
-    "storybook": "storybook dev -p 6006",
+    "dev": "storybook dev -p 6008 --no-open",
+    "storybook": "storybook dev -p 6008",
     "build": "storybook build -o storybook-static",
     "build-storybook": "storybook build -o storybook-static",
-    "lint": "echo \"ui lint placeholder\"",
+    "lint": "echo \"design-system lint placeholder\"",
     "clean": "rm -rf storybook-static .turbo node_modules/.vite"
-  },
-  "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.2.0",
-    "@hugeicons/react": "^1.1.6"
+    "@hugeicons/react": "^1.1.6",
+    "@madoo/ui": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@storybook/addon-a11y": "^8.4.7",
@@ -47,8 +31,6 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "storybook": "^8.4.7",
     "typescript": "^5.7.2",
     "vite": "^5.4.11"
