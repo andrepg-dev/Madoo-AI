@@ -16,9 +16,16 @@ type Story = StoryObj<typeof Card>;
 export const Default: Story = {
   render: (args) => (
     <Card {...args} style={{ maxWidth: 360 }}>
-      <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 22 }}>
+      <h4
+        style={{
+          margin: 0,
+          fontFamily: "var(--font-sans)",
+          fontWeight: "var(--font-weight-medium)",
+          fontSize: 16,
+        }}
+      >
         Welcome series
-      </h3>
+      </h4>
       <p style={{ marginTop: 8, color: "var(--ink-soft)", fontSize: 13.5, lineHeight: 1.5 }}>
         Onboard new subscribers in three friendly emails over a week.
       </p>
@@ -30,7 +37,16 @@ export const Large: Story = {
   args: { size: "lg", padded: true },
   render: (args) => (
     <Card {...args} style={{ maxWidth: 420 }}>
-      <h3 style={{ margin: 0 }}>Brand kit</h3>
+      <h4
+        style={{
+          margin: 0,
+          fontFamily: "var(--font-sans)",
+          fontWeight: "var(--font-weight-medium)",
+          fontSize: 16,
+        }}
+      >
+        Brand kit
+      </h4>
       <p style={{ marginTop: 8, color: "var(--ink-soft)", fontSize: 13.5, lineHeight: 1.5 }}>
         Save your colors, fonts and logos so every email feels like you.
       </p>
