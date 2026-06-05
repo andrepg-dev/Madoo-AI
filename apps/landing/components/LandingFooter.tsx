@@ -146,14 +146,9 @@ export function LandingFooter() {
   const pathname = usePathname();
   const locale = getFooterLocale(pathname);
   const footer = footerContent.find((item) => item.locale === locale) ?? footerContent[0]!;
-  const hasPricingBackground = pathname === "/pricing";
 
   return (
     <footer className="relative z-10 px-4 pb-10 sm:px-8">
-      {hasPricingBackground ? (
-        <div className="madoo-pattern-background absolute inset-0 z-0" />
-      ) : null}
-
       <div className="madoo-paper-border relative z-10 mx-auto grid w-full max-w-7xl gap-12 rounded-[28px] bg-white px-8 py-12 font-ibm-plex-sans text-[#1f1d1a] md:grid-cols-[1fr_4fr] md:px-12 md:py-14">
         <div className="flex flex-col justify-between gap-10">
           <Link className="flex w-fit cursor-pointer items-center gap-2.5" href="/" aria-label="Madoo AI home">

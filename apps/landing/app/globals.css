@@ -37,18 +37,6 @@
 :root {
   --madoo-rule-rgb: 12 52 106;
   --madoo-ink-shadow-rgb: 16 17 20;
-  --madoo-page-pattern-line: #f3f4f6;
-}
-
-.madoo-pattern-background {
-  background-color: #ffffff;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 2px,
-    var(--madoo-page-pattern-line) 2px,
-    var(--madoo-page-pattern-line) 4px
-  );
 }
 
 .grainient-container {
@@ -72,33 +60,201 @@
   box-shadow: inset 0 0 0 0.5px rgb(var(--madoo-rule-rgb) / 0.28);
 }
 
-.madoo-hero-box {
-  isolation: isolate;
-  background: #ffffff;
-  box-shadow: 0 0 0 0.5px rgb(var(--madoo-ink-shadow-rgb) / 0.14);
-}
-
-.madoo-hero-box::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 2px,
-    var(--madoo-page-pattern-line) 2px,
-    var(--madoo-page-pattern-line) 4px
-  );
-}
-
 .madoo-product-explain-panel {
   background: linear-gradient(180deg, #101114 0%, #050506 100%);
   box-shadow:
     inset 0 0 0 0.5px rgb(255 255 255 / 0.1),
     0 24px 70px rgb(var(--madoo-ink-shadow-rgb) / 0.16);
+}
+
+@property --x-0 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 99%;
+}
+
+@property --c-0 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: hsla(201, 0%, 100%, 1);
+}
+
+@property --s-start-0 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 3%;
+}
+
+@property --s-end-0 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 79%;
+}
+
+@property --y-0 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 35%;
+}
+
+@property --x-1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 98%;
+}
+
+@property --c-1 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: hsla(201, 86%, 74%, 0.34);
+}
+
+@property --s-start-1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 3%;
+}
+
+@property --s-end-1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 79%;
+}
+
+@property --y-1 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 35%;
+}
+
+@property --x-2 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --c-2 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: hsla(201, 0%, 100%, 1);
+}
+
+@property --s-start-2 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 12.889782097301623%;
+}
+
+@property --s-end-2 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 61.77336779387561%;
+}
+
+@property --y-2 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 16%;
+}
+
+@property --x-3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --c-3 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: hsla(199, 100%, 66%, 1);
+}
+
+@property --s-start-3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 3%;
+}
+
+@property --s-end-3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 79%;
+}
+
+@property --y-3 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 90%;
+}
+
+@property --x-4 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 98%;
+}
+
+@property --c-4 {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: hsla(201, 85%, 70%, 1);
+}
+
+@property --s-start-4 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 3%;
+}
+
+@property --s-end-4 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 79%;
+}
+
+@property --y-4 {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 35%;
+}
+
+.madoo-hero-mesh {
+  --y-0: 35%;
+  --c-0: hsla(201, 0%, 100%, 1);
+  --s-start-0: 3%;
+  --s-end-0: 79%;
+  --x-0: 99%;
+  --x-1: 98%;
+  --s-start-1: 3%;
+  --s-end-1: 79%;
+  --c-1: hsla(201, 86%, 74%, 0.34);
+  --y-1: 35%;
+  --y-2: 16%;
+  --c-2: hsla(201, 0%, 100%, 1);
+  --s-start-2: 12.889782097301623%;
+  --s-end-2: 61.77336779387561%;
+  --x-2: 0%;
+  --x-3: 0%;
+  --s-start-3: 3%;
+  --s-end-3: 79%;
+  --c-3: hsla(199, 100%, 66%, 1);
+  --y-3: 90%;
+  --s-start-4: 3%;
+  --s-end-4: 79%;
+  --x-4: 98%;
+  --y-4: 35%;
+  --c-4: hsla(201, 85%, 70%, 1);
+  background-color: hsla(255, 0%, 100%, 1);
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 772 772' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"),
+    radial-gradient(circle at var(--x-0) var(--y-0), var(--c-0) var(--s-start-0), transparent var(--s-end-0)),
+    radial-gradient(circle at var(--x-1) var(--y-1), var(--c-1) var(--s-start-1), transparent var(--s-end-1)),
+    radial-gradient(circle at var(--x-2) var(--y-2), var(--c-2) var(--s-start-2), transparent var(--s-end-2)),
+    radial-gradient(circle at var(--x-3) var(--y-3), var(--c-3) var(--s-start-3), transparent var(--s-end-3)),
+    radial-gradient(circle at var(--x-4) var(--y-4), var(--c-4) var(--s-start-4), transparent var(--s-end-4));
+  animation: ani-madoo-hero-mesh 10s linear infinite alternate;
+  background-blend-mode: overlay, normal, normal, normal, normal, normal;
+  contain: paint;
+  will-change: transform, opacity;
 }
 
 .madoo-hero-float-email {
@@ -148,6 +304,64 @@
   animation: madoo-provider-marquee 200s linear infinite;
 }
 
+@keyframes ani-madoo-hero-mesh {
+  0% {
+    --y-0: 35%;
+    --c-0: hsla(201, 0%, 100%, 1);
+    --s-start-0: 3%;
+    --s-end-0: 79%;
+    --x-0: 99%;
+    --x-1: 98%;
+    --s-start-1: 3%;
+    --s-end-1: 79%;
+    --c-1: hsla(201, 86%, 74%, 0.34);
+    --y-1: 35%;
+    --y-2: 16%;
+    --c-2: hsla(201, 0%, 100%, 1);
+    --s-start-2: 12.889782097301623%;
+    --s-end-2: 61.77336779387561%;
+    --x-2: 0%;
+    --x-3: 0%;
+    --s-start-3: 3%;
+    --s-end-3: 79%;
+    --c-3: hsla(199, 100%, 66%, 1);
+    --y-3: 90%;
+    --s-start-4: 3%;
+    --s-end-4: 79%;
+    --x-4: 98%;
+    --y-4: 35%;
+    --c-4: hsla(201, 85%, 70%, 1);
+  }
+
+  100% {
+    --y-0: 99%;
+    --c-0: hsla(206, 0%, 100%, 1);
+    --s-start-0: 17.27356456140636%;
+    --s-end-0: 67%;
+    --x-0: 67%;
+    --x-1: 62%;
+    --s-start-1: 4%;
+    --s-end-1: 67%;
+    --c-1: hsla(206, 84%, 76%, 0.45);
+    --y-1: 100%;
+    --y-2: 55%;
+    --c-2: hsla(199, 0%, 100%, 1);
+    --s-start-2: 4%;
+    --s-end-2: 45.618139064733306%;
+    --x-2: 16%;
+    --x-3: 24%;
+    --s-start-3: 4%;
+    --s-end-3: 67%;
+    --c-3: hsla(198, 0%, 100%, 1);
+    --y-3: 16%;
+    --s-start-4: 4%;
+    --s-end-4: 67%;
+    --x-4: 62%;
+    --y-4: 100%;
+    --c-4: hsla(206, 87%, 70%, 1);
+  }
+}
+
 @keyframes madoo-hero-float-email {
   0%,
   100% {
@@ -171,6 +385,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .madoo-hero-mesh,
   .madoo-hero-float-email,
   .madoo-hero-float-browser {
     animation: none;

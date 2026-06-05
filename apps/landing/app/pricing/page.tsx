@@ -15,8 +15,6 @@ const pricingHeaderCopy = {
 export default function PricingPage() {
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-white font-ibm-plex-sans">
-      <div className="madoo-pattern-background absolute inset-0 z-0" />
-
       <LandingHeader copy={pricingHeaderCopy} sectionHrefPrefix="/" />
 
       <section className="relative z-10 min-h-screen w-full">

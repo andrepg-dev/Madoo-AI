@@ -147,8 +147,8 @@ const localeCopy = {
       mobileMenu: "Open navigation",
     },
     hero: {
-      titleStart: "AI",
-      titleAccent: "Email Builder",
+      titleStart: "AI Email Builder",
+      titleAccent: "",
       subtitle: "Design your email template with AI",
       placeholderPrefix: "Hi Madoo, ",
       placeholders: [
@@ -416,7 +416,9 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
       <main lang={locale} className="relative min-h-screen w-full">
         <div className="relative z-50 bg-madoo-page px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
-          <div className="madoo-hero-box relative mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start rounded-2xl gap-9 pt-36 font-ibm-plex-sans sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-[260px] 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
+          <div className="relative isolate mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-9 overflow-hidden rounded-2xl pt-36 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-[260px] 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
+            <div className="madoo-hero-mesh absolute inset-0 z-0 rounded-2xl" />
+
             <div className="absolute left-0 right-0 top-0 z-30">
               <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
             </div>
@@ -430,6 +432,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
               className="madoo-hero-float-email pointer-events-none absolute right-[max(3rem,calc(50%-42rem))] top-[15%] z-0 hidden h-auto w-[13.5rem] select-none xl:block 2xl:w-[17.5rem]"
               priority
             />
+
             <Image
               src="/floating-icons/browser-template-cut.png"
               alt=""
@@ -440,16 +443,17 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
               priority
             />
 
+
             <div className="relative z-10 flex flex-col gap-1.5">
-              <h3 className="text-center text-5xl font-medium leading-[0.94] tracking-normal text-[#071b38]">
+              <h3 className="text-center text-5xl font-medium leading-[0.94] tracking-normal text-black">
                 <span>{copy.hero.titleStart}</span>{" "}
                 <span className="relative inline-flex items-center justify-center">
-                  <span className="bg-gradient-to-r from-[#6d28d9] via-[#7c3aed] via-[#2563eb] via-[#0284c7] to-[#1d4ed8] bg-clip-text font-semibold text-transparent">
+                  <span className="font-semibold text-black">
                     {copy.hero.titleAccent}
                   </span>
                 </span>
               </h3>
-              <h4 className="mt-1.5 text-center text-lg font-light text-zinc-700">
+              <h4 className="mt-1.5 text-center text-lg font-light text-black">
                 {copy.hero.subtitle}
               </h4>
             </div>
@@ -517,12 +521,8 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                 </div>
               </div>
 
-              <p className="cursor-pointer text-center text-xs text-zinc-400 underline decoration-dashed decoration-1 transition-all hover:text-zinc-950 hover:decoration-wavy">
-                {copy.hero.explore}
-              </p>
-
-              <div className="mt-7 text-sm">
-                <h6 className="text-xs font-light text-zinc-800">{copy.hero.exportLabel}</h6>
+              <div className="mt-2 text-sm text-center">
+                <h6 className="text-xs font-light text-zinc-600">{copy.hero.exportLabel}</h6>
                 <div className="mt-3 w-[700px] overflow-hidden">
                   <div className="madoo-provider-marquee flex w-max gap-3">
                     {movingExportProviders.map((provider, index) => (

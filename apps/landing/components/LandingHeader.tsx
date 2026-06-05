@@ -79,7 +79,7 @@ export function LandingHeader({
               alt=""
               aria-hidden="true"
             />
-            <span className="font-medium leading-none tracking-normal text-madoo-logo">
+            <span className="font-medium leading-none tracking-normal text-black">
               Madoo AI
             </span>
           </Link>
