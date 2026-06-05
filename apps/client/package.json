@@ -4,9 +4,9 @@
   "private": true,
   "description": "Madoo AI client platform",
   "scripts": {
-    "dev": "next dev --port 3002",
+    "dev": "next dev --port 3003",
     "build": "next build",
-    "start": "next start --port 3002",
+    "start": "next start --port 3003",
     "lint": "next lint",
     "clean": "rm -rf .next dist .turbo"
   },

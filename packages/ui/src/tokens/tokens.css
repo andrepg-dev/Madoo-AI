@@ -32,7 +32,6 @@
   --rule: #0c346a;
   --rule-rgb: 12 52 106;
   --ink-shadow-rgb: 16 17 20;
-  --page-pattern-line: #f3f4f6;
 
   /* ── Landing compatibility aliases ───────────────────────────── */
   --madoo-ink: var(--ink);
@@ -51,7 +50,6 @@
   --madoo-link: var(--link);
   --madoo-rule-rgb: var(--rule-rgb);
   --madoo-ink-shadow-rgb: var(--ink-shadow-rgb);
-  --madoo-page-pattern-line: var(--page-pattern-line);
 
   /* ── Status ──────────────────────────────────────────────────── */
   --danger: #b42318;
@@ -142,18 +140,7 @@
   --z-toast: 300;
 }
 
-/* ── Shared visual patterns ────────────────────────────────────── */
-.madoo-pattern-background {
-  background-color: var(--surface);
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 2px,
-    var(--page-pattern-line) 2px,
-    var(--page-pattern-line) 4px
-  );
-}
-
+/* ── Shared visual helpers ─────────────────────────────────────── */
 .madoo-paper-border {
   box-shadow: var(--shadow-border-rule);
 }
@@ -178,13 +165,7 @@
   z-index: 0;
   pointer-events: none;
   border-radius: inherit;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 2px,
-    var(--page-pattern-line) 2px,
-    var(--page-pattern-line) 4px
-  );
+  box-shadow: var(--shadow-border-rule);
 }
 
 /* ── Themes ────────────────────────────────────────────────────── */
@@ -210,7 +191,6 @@
   --accent-deep: #dfe5ef;
   --accent-soft: #23272f;
   --accent-fg: #101114;
-  --page-pattern-line: #17191d;
 }
 
 [data-density="compact"] {

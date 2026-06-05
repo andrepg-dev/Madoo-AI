@@ -106,5 +106,4 @@ etc. — agregar un tema nuevo es declarar `[data-theme="..."]` en
    ```
 
 > Nota: `tokens.css` del DS ahora incluye helpers usados por la landing:
-> `.madoo-pattern-background`, `.madoo-paper-border`,
-> `.madoo-paper-border-hover` y `.madoo-hero-shell`.
+> `.madoo-paper-border`, `.madoo-paper-border-hover` y `.madoo-hero-shell`.

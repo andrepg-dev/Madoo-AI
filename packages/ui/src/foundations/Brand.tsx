@@ -35,13 +35,13 @@ export function BrandSystem() {
       }}
     >
       <section
-        className="madoo-pattern-background"
         style={{
           position: "relative",
           overflow: "hidden",
           borderRadius: "var(--radius-shell)",
           minHeight: 320,
           padding: 12,
+          background: "var(--surface)",
           boxShadow: "inset 0 0 0 0.5px rgb(var(--ink-shadow-rgb) / 0.14)",
         }}
       >
