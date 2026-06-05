@@ -1,4 +1,6 @@
 .madoo-select {
+  --_select-enter-x: 3px;
+  --_select-exit-x: 2px;
   --_select-radius: var(--radius-lg);
   --_select-trigger-bg: var(--surface);
   --_select-trigger-shadow: var(--shadow-border);
@@ -79,9 +81,28 @@
     color var(--duration-fast) var(--ease-out);
 }
 
+.madoo-select__trigger[data-state="open"] {
+  background: var(--surface);
+  box-shadow: var(--shadow-border-rule-hover);
+}
+
 .madoo-select__trigger:hover {
   background: var(--surface);
   box-shadow: var(--shadow-border-rule-hover);
+}
+
+.madoo-select__chevron {
+  display: inline-flex;
+  color: var(--ink-faint);
+  transform-origin: center;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.madoo-select__trigger[data-state="open"] .madoo-select__chevron {
+  color: var(--ink-muted);
+  transform: rotate(180deg);
 }
 
 .madoo-select__value {
@@ -102,13 +123,26 @@
   background: var(--_select-menu-bg);
   box-shadow: var(--_select-menu-shadow);
   padding: var(--_select-menu-padding);
-  animation: madoo-select-in var(--duration-base) var(--ease-out);
-  transform-origin: top;
+  transform-origin: top left;
+  will-change: opacity, transform;
+}
+
+.madoo-select__menu[data-state="open"] {
+  animation: madoo-select-in 220ms var(--ease-out) both;
+}
+
+.madoo-select__menu[data-state="closed"] {
+  pointer-events: none;
+  animation: madoo-select-out 160ms ease-in both;
 }
 
 .madoo-select--align-end .madoo-select__menu {
+  --_select-enter-x: -3px;
+  --_select-exit-x: -2px;
+
   right: 0;
   left: auto;
+  transform-origin: top right;
 }
 
 .madoo-select__menu-title {
@@ -138,13 +172,20 @@
   text-align: left;
   transition:
     background var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.madoo-select__menu[data-state="open"] .madoo-select__option {
+  animation: madoo-select-option-in 180ms var(--ease-out) both;
+  animation-delay: var(--_option-delay, 0ms);
 }
 
 .madoo-select__option:hover,
 .madoo-select__option:focus-visible {
   background: var(--surface-2);
   outline: none;
+  transform: translateX(1px);
 }
 
 .madoo-select__option[aria-selected="true"],
@@ -179,7 +220,14 @@
   font-size: var(--font-size-base);
   color: var(--ink);
   cursor: pointer;
-  transition: box-shadow var(--duration-fast) var(--ease-out);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.madoo-native-select:hover:not(:disabled) {
+  background: var(--surface-2);
+  box-shadow: var(--shadow-border-rule-hover);
 }
 
 .madoo-native-select--sm {
@@ -211,6 +259,12 @@
   transform: translateY(-50%);
   pointer-events: none;
   color: var(--ink-faint);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.madoo-native-select-wrapper:focus-within .madoo-native-select-wrapper__chevron,
+.madoo-native-select-wrapper:hover .madoo-native-select-wrapper__chevron {
+  color: var(--ink-muted);
 }
 
 .madoo-native-select:disabled {
@@ -222,10 +276,49 @@
 @keyframes madoo-select-in {
   from {
     opacity: 0;
-    transform: translateY(-4px) scale(0.98);
+    transform: translate3d(var(--_select-enter-x), -5px, 0) scale(0.992);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes madoo-select-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes madoo-select-option-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .madoo-select__trigger,
+  .madoo-select__chevron,
+  .madoo-select__menu,
+  .madoo-select__option,
+  .madoo-native-select,
+  .madoo-native-select-wrapper__chevron {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .madoo-select__option:hover,
+  .madoo-select__option:focus-visible {
+    transform: none;
   }
 }

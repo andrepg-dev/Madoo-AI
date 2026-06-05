@@ -16,6 +16,8 @@ import {
 import { cx } from "../../lib/cx";
 import "./Dropdown.css";
 
+const DROPDOWN_EXIT_MS = 160;
+
 interface DropdownContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -29,6 +31,22 @@ function useDropdown() {
     throw new Error("Dropdown components must be used inside <Dropdown />");
   }
   return context;
+}
+
+function useDropdownPresence(open: boolean) {
+  const [present, setPresent] = useState(open);
+
+  useEffect(() => {
+    if (open) {
+      setPresent(true);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setPresent(false), DROPDOWN_EXIT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+
+  return present;
 }
 
 export interface DropdownProps extends HTMLAttributes<HTMLDivElement> {
@@ -97,6 +115,7 @@ export function DropdownTrigger({
   const triggerProps = {
     "aria-haspopup": "menu" as const,
     "aria-expanded": open,
+    "data-state": open ? "open" : "closed",
     className: cx("madoo-dropdown__trigger", className),
     onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
       onClick?.(event);
@@ -126,6 +145,7 @@ export function DropdownTrigger({
       onClick={triggerProps.onClick}
       aria-haspopup="menu"
       aria-expanded={open}
+      data-state={open ? "open" : "closed"}
       {...rest}
     >
       {children}
@@ -145,11 +165,14 @@ export function DropdownContent({
   ...rest
 }: DropdownContentProps) {
   const { open } = useDropdown();
-  if (!open) return null;
+  const present = useDropdownPresence(open);
+  if (!present) return null;
 
   return (
     <div
       role="menu"
+      aria-hidden={!open}
+      data-state={open ? "open" : "closed"}
       className={cx(
         "madoo-dropdown__content",
         align === "end" && "madoo-dropdown__content--align-end",

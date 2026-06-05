@@ -5,11 +5,14 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type SelectHTMLAttributes,
 } from "react";
 import { cx } from "../../lib/cx";
 import { Icon } from "../Icon";
 import "./Select.css";
+
+const SELECT_EXIT_MS = 160;
 
 export type SelectSize = "sm" | "md" | "lg";
 export type SelectVariant = "default" | "ghost" | "surface";
@@ -57,6 +60,22 @@ function normalizeOption(option: SelectOption) {
   return typeof option === "string" ? { label: option, value: option } : option;
 }
 
+function useSelectPresence(open: boolean) {
+  const [present, setPresent] = useState(open);
+
+  useEffect(() => {
+    if (open) {
+      setPresent(true);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setPresent(false), SELECT_EXIT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+
+  return present;
+}
+
 export function Select({
   value,
   options,
@@ -75,6 +94,7 @@ export function Select({
   const normalizedOptions = useMemo(() => options.map(normalizeOption), [options]);
   const selected = normalizedOptions.find((option) => option.value === value);
   const displayValue = selected?.label ?? (value || placeholder);
+  const menuPresent = useSelectPresence(open);
 
   useEffect(() => {
     const onDoc = (event: MouseEvent) => {
@@ -107,24 +127,29 @@ export function Select({
         aria-label={label}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls={open ? listboxId : undefined}
+        aria-controls={menuPresent ? listboxId : undefined}
+        data-state={open ? "open" : "closed"}
         onClick={() => setOpen((current) => !current)}
       >
         <span className="madoo-select__value">{displayValue}</span>
-        <Icon name="chevronDown" size={size === "lg" ? 22 : 12} />
+        <span className="madoo-select__chevron" aria-hidden="true">
+          <Icon name="chevronDown" size={size === "lg" ? 22 : 12} />
+        </span>
       </button>
 
-      {open ? (
+      {menuPresent ? (
         <div
           id={listboxId}
           role="listbox"
+          aria-hidden={!open}
+          data-state={open ? "open" : "closed"}
           className="madoo-select__menu"
           style={menuWidth ? { minWidth: menuWidth } : undefined}
         >
           {menuTitle ?? label ? (
             <div className="madoo-select__menu-title">{menuTitle ?? label}</div>
           ) : null}
-          {normalizedOptions.map((option) => {
+          {normalizedOptions.map((option, index) => {
             const selectedOption = option.value === value;
 
             return (
@@ -135,6 +160,7 @@ export function Select({
                 aria-selected={selectedOption}
                 disabled={option.disabled}
                 className="madoo-select__option"
+                style={{ "--_option-delay": `${Math.min(index, 4) * 16}ms` } as CSSProperties}
                 onClick={() => {
                   if (option.disabled) return;
                   onChange(option.value);
