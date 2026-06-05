@@ -50,7 +50,6 @@
 
 .madoo-select--ghost .madoo-select__trigger:hover {
   background: rgb(var(--rule-rgb) / 0.06);
-  box-shadow: var(--shadow-border-rule);
 }
 
 .madoo-select--surface {
@@ -89,6 +88,12 @@
 .madoo-select__trigger:hover {
   background: var(--surface);
   box-shadow: var(--shadow-border-rule-hover);
+}
+
+.madoo-select--ghost .madoo-select__trigger[data-state="open"],
+.madoo-select--ghost .madoo-select__trigger:hover {
+  background: rgb(var(--rule-rgb) / 0.06);
+  box-shadow: none;
 }
 
 .madoo-select__chevron {

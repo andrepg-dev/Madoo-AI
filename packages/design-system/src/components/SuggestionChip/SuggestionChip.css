@@ -31,10 +31,11 @@
 .madoo-chip--accent {
   background: var(--accent-soft);
   color: var(--accent-deep);
-  box-shadow: var(--shadow-border-accent);
+  box-shadow: var(--shadow-border-rule);
 }
 
 .madoo-chip--accent:hover {
   background: var(--accent);
   color: var(--accent-fg);
+  box-shadow: var(--shadow-border-rule-hover);
 }
