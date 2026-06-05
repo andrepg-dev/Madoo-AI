@@ -558,7 +558,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
               </div>
             </div>
 
-            <div className="bottom-0 mx-auto absolute z-50 max-w-5xl w-full translate-y-[35%] h-[600px] p-6 bg-madoo-paper ring-8 ring-[#E5E5E5] rounded-4xl">
+            <div className="bottom-0 mx-auto absolute z-50 h-[600px] w-full max-w-5xl translate-y-[35%] rounded-4xl border border-white/70 bg-madoo-paper p-6 shadow-[0_0_0_8px_rgba(255,255,255,0.46),0_0_0_9px_rgba(255,255,255,0.72),0_28px_70px_rgba(40,42,50,0.16),inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-1px_0_rgba(130,140,160,0.18)] backdrop-blur-md">
 
             </div>
           </div>
