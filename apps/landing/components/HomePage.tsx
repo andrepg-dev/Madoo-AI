@@ -416,13 +416,16 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
       <main lang={locale} className="relative min-h-screen w-full">
         <div className="relative z-50 bg-madoo-page px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
-          <div className="relative isolate mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-9 overflow-hidden rounded-2xl pt-36 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-[260px] 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
-            <iframe
-              src="https://colorflow-embed.b-cdn.net/embed.html#e=_E0_BFec"
-              title="Colorflow hero background"
+          <div className="relative isolate mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-9 overflow-visible rounded-2xl pt-36 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-[260px] 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
+            <video
+              src="/background-video.mp4"
               aria-hidden="true"
-              frameBorder={0}
-              className="pointer-events-none absolute inset-0 z-0 h-full w-full rounded-2xl"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              className="pointer-events-none absolute inset-0 z-0 h-full w-full rounded-2xl object-cover"
             />
 
             <div className="absolute left-0 right-0 top-0 z-30">
