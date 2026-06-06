@@ -105,10 +105,17 @@ function NavIcon({
   icon: NavItem["icon"];
   size?: number;
 }) {
-  return icon === "home" ? (
-    <HomeSmileIcon size={size} />
-  ) : (
-    <AppIcon icon={icon} size={size} />
+  return (
+    <span
+      className="inline-flex shrink-0 items-center justify-center"
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+    >
+      {icon === "home" ? (
+        <HomeSmileIcon size={size} />
+      ) : (
+        <AppIcon icon={icon} size={size} />
+      )}
+    </span>
   );
 }
 
@@ -133,7 +140,7 @@ export function Sidebar() {
       className={cx(
         "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-madoo-surface py-3 shadow-[inset_-1px_0_0_var(--border-soft)] transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
         collapsed
-          ? "w-[60px] overflow-hidden px-3"
+          ? "w-[60px] px-3"
           : "w-[260px] px-3",
       )}
     >
