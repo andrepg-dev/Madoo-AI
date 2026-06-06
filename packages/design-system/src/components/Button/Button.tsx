@@ -1,6 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cx } from "../../lib/cx";
-import "./Button.css";
 
 export type ButtonVariant =
   | "primary"
@@ -25,6 +24,27 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   block?: boolean;
 }
 
+const variantClasses: Record<ButtonVariant, string> = {
+  primary:
+    "bg-madoo-ink text-madoo-accent-fg enabled:hover:bg-madoo-ink-soft disabled:bg-madoo-surface-2 disabled:text-madoo-ink-faint disabled:opacity-100",
+  accent:
+    "bg-madoo-accent text-madoo-accent-fg enabled:hover:bg-madoo-accent-deep disabled:bg-madoo-surface-2 disabled:text-madoo-ink-faint disabled:opacity-100",
+  secondary:
+    "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)] enabled:hover:bg-madoo-surface-2",
+  ghost:
+    "bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
+  dashed:
+    "bg-transparent text-madoo-ink-faint shadow-[var(--shadow-border)] enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink-soft",
+  danger:
+    "bg-madoo-danger text-white enabled:hover:bg-[#87311f]",
+};
+
+const sizeClasses: Record<ButtonSize, string> = {
+  sm: "gap-1.5 px-2.5 py-1.5 text-[12.5px]",
+  md: "px-3.5 py-2 text-[13.5px]",
+  lg: "px-4 py-2.5 text-[13.5px]",
+};
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     variant = "primary",
@@ -45,10 +65,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       className={cx(
-        "madoo-btn",
-        `madoo-btn--${variant}`,
-        `madoo-btn--${size}`,
-        block && "madoo-btn--block",
+        "inline-flex cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-lg)] border-0 font-madoo-sans font-medium leading-none no-underline transition-[background,color,box-shadow,opacity] duration-[var(--duration-fast)] ease-[var(--ease-out)] disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60",
+        variantClasses[variant],
+        sizeClasses[size],
+        block && "w-full",
         className,
       )}
       {...rest}
@@ -56,7 +76,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {leftIcon}
       {children}
       {rightIcon}
-      {shortcut ? <kbd className="madoo-btn__kbd">{shortcut}</kbd> : null}
+      {shortcut ? (
+        <kbd
+          className={cx(
+            "ml-1 inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-white/10 font-madoo-mono text-[10.5px] font-medium leading-none text-inherit",
+            ["secondary", "ghost", "dashed"].includes(variant) &&
+              "bg-madoo-bg-2 text-madoo-ink-soft shadow-[var(--shadow-border)]",
+          )}
+        >
+          {shortcut}
+        </kbd>
+      ) : null}
     </button>
   );
 });

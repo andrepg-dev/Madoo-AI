@@ -1,6 +1,5 @@
 import type { HTMLAttributes } from "react";
 import { cx } from "../../lib/cx";
-import "./Kbd.css";
 
 export interface KbdProps extends HTMLAttributes<HTMLElement> {
   /** Tema sobre fondo oscuro (Botones primary, ink) */
@@ -12,9 +11,10 @@ export function Kbd({ inverse, size = "md", className, children, ...rest }: KbdP
   return (
     <kbd
       className={cx(
-        "madoo-kbd",
-        inverse && "madoo-kbd--inverse",
-        size === "lg" && "madoo-kbd--lg",
+        "inline-flex h-6 w-6 shrink-0 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-madoo-bg-2 font-madoo-mono text-[10.5px] font-medium leading-none text-madoo-ink-soft shadow-[var(--shadow-border)]",
+        inverse &&
+          "bg-white/15 text-inherit shadow-[inset_0_0_0_0.5px_rgb(255_255_255_/_0.22)]",
+        size === "lg" && "h-7 w-7 text-xs",
         className,
       )}
       {...rest}

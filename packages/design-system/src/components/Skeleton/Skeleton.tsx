@@ -1,6 +1,5 @@
 import type { CSSProperties, HTMLAttributes } from "react";
 import { cx } from "../../lib/cx";
-import "./Skeleton.css";
 
 export interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {
   variant?: "block" | "text" | "circle";
@@ -25,9 +24,9 @@ export function Skeleton({
     <div
       aria-hidden="true"
       className={cx(
-        "madoo-skeleton",
-        variant === "text" && "madoo-skeleton--text",
-        variant === "circle" && "madoo-skeleton--circle",
+        "block w-full animate-madoo-skeleton-shimmer rounded-[var(--radius-lg)] bg-[linear-gradient(90deg,var(--surface-2,rgba(0,0,0,0.05))_0%,var(--surface-3,rgba(0,0,0,0.08))_50%,var(--surface-2,rgba(0,0,0,0.05))_100%)] bg-[length:200%_100%] motion-reduce:animate-none motion-reduce:opacity-70",
+        variant === "text" && "h-3",
+        variant === "circle" && "rounded-full",
         className,
       )}
       style={finalStyle}

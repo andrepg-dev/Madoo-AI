@@ -1,6 +1,5 @@
 import type { HTMLAttributes } from "react";
 import { cx } from "../../lib/cx";
-import "./ProgressBar.css";
 
 export interface ProgressBarProps extends HTMLAttributes<HTMLDivElement> {
   /** Valor entre 0 y 100 */
@@ -9,6 +8,12 @@ export interface ProgressBarProps extends HTMLAttributes<HTMLDivElement> {
   variant?: "default" | "thin";
   label?: string;
 }
+
+const fillToneClasses = {
+  accent: "bg-madoo-accent",
+  success: "bg-madoo-success",
+  ink: "bg-madoo-ink",
+} satisfies Record<NonNullable<ProgressBarProps["tone"]>, string>;
 
 export function ProgressBar({
   value,
@@ -27,15 +32,19 @@ export function ProgressBar({
       aria-valuemax={100}
       aria-label={label}
       className={cx(
-        "madoo-progress",
-        "madoo-progress--inline",
-        variant === "thin" && "madoo-progress--thin",
-        tone !== "accent" && `madoo-progress--${tone}`,
+        "flex w-full overflow-hidden rounded-full bg-madoo-surface-2",
+        variant === "thin" ? "h-[3px] rounded-none" : "h-1.5",
         className,
       )}
       {...rest}
     >
-      <div className="madoo-progress__fill" style={{ width: `${clamped}%` }} />
+      <div
+        className={cx(
+          "h-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-out)]",
+          fillToneClasses[tone],
+        )}
+        style={{ width: `${clamped}%` }}
+      />
     </div>
   );
 }

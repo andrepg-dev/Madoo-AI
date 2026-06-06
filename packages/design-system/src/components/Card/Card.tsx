@@ -5,7 +5,6 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "../../lib/cx";
-import "./Card.css";
 
 export type CardSize = "md" | "lg";
 
@@ -14,6 +13,9 @@ interface BaseCardProps {
   surface?: "primary" | "secondary";
   padded?: boolean;
 }
+
+const cardBase =
+  "rounded-[var(--radius-lg)] bg-madoo-surface p-4 font-madoo-sans text-madoo-ink shadow-[var(--shadow-border)] transition-[background,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]";
 
 export interface CardProps
   extends BaseCardProps,
@@ -27,10 +29,10 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
     <div
       ref={ref}
       className={cx(
-        "madoo-card",
-        size === "lg" && "madoo-card--lg",
-        surface === "secondary" && "madoo-card--surface-2",
-        padded && "madoo-card--padded",
+        cardBase,
+        size === "lg" && "rounded-[var(--radius-lg)]",
+        surface === "secondary" && "bg-madoo-surface-2",
+        padded && "p-[22px]",
         className,
       )}
       {...rest}
@@ -70,19 +72,22 @@ export const SelectableCard = forwardRef<HTMLButtonElement, SelectableCardProps>
         type={type}
         aria-pressed={selected}
         className={cx(
-          "madoo-card",
-          "madoo-card--interactive",
-          size === "lg" && "madoo-card--lg",
-          surface === "secondary" && "madoo-card--surface-2",
-          padded && "madoo-card--padded",
-          selected && "madoo-card--selected",
+          cardBase,
+          "cursor-pointer appearance-none text-left hover:shadow-[var(--shadow-border-rule-hover)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-border-rule-hover)]",
+          size === "lg" && "rounded-[var(--radius-lg)]",
+          surface === "secondary" && "bg-madoo-surface-2",
+          padded && "p-[22px]",
+          selected &&
+            "bg-madoo-surface-2 shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)_/_0.34)] hover:shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)_/_0.34)] focus-visible:shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)_/_0.34)]",
           className,
         )}
         {...rest}
       >
-        {title ? <div className="madoo-card__title">{title}</div> : null}
+        {title ? <div className="mb-1.5 text-[14px] font-medium">{title}</div> : null}
         {description ? (
-          <p className="madoo-card__description">{description}</p>
+          <p className="m-0 text-[12.5px] leading-[1.5] text-madoo-ink-faint">
+            {description}
+          </p>
         ) : null}
         {children}
       </button>

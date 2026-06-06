@@ -1,6 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cx } from "../../lib/cx";
-import "./SuggestionChip.css";
 
 export interface SuggestionChipProps
   extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -22,8 +21,11 @@ export const SuggestionChip = forwardRef<
       type={type}
       aria-pressed={pressed}
       className={cx(
-        "madoo-chip",
-        variant === "accent" && "madoo-chip--accent",
+        "inline-flex cursor-pointer items-center gap-1.5 rounded-full border-0 px-3 py-[7px] font-madoo-sans text-[12.5px] transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
+        variant === "accent"
+          ? "bg-madoo-accent-soft text-madoo-accent-deep shadow-[var(--shadow-border-rule)] hover:bg-madoo-accent hover:text-madoo-accent-fg hover:shadow-[var(--shadow-border-rule-hover)]"
+          : "bg-madoo-surface text-madoo-ink-soft shadow-[var(--shadow-border)] hover:bg-madoo-surface-2 hover:text-madoo-ink",
+        pressed && "bg-madoo-ink text-madoo-accent-fg shadow-[var(--shadow-border-ink)]",
         className,
       )}
       {...rest}

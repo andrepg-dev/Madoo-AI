@@ -1,6 +1,5 @@
 import type { HTMLAttributes } from "react";
 import { cx } from "../../lib/cx";
-import "./Spinner.css";
 
 export interface SpinnerProps extends HTMLAttributes<HTMLSpanElement> {
   size?: "sm" | "md" | "lg";
@@ -19,8 +18,10 @@ export function Spinner({
       aria-live="polite"
       aria-label={label}
       className={cx(
-        "madoo-spinner",
-        size !== "md" && `madoo-spinner--${size}`,
+        "inline-block animate-spin rounded-full border-current border-r-transparent",
+        size === "sm" && "h-3 w-3 border-[1.5px]",
+        size === "md" && "h-[18px] w-[18px] border-2",
+        size === "lg" && "h-7 w-7 border-[3px]",
         className,
       )}
       {...rest}

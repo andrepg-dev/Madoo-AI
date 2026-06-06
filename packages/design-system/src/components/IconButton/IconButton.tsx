@@ -1,6 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cx } from "../../lib/cx";
-import "./IconButton.css";
 
 export type IconButtonVariant = "soft" | "solid" | "outline" | "ghost" | "accent";
 export type IconButtonSize = "sm" | "md" | "lg";
@@ -13,6 +12,22 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   /** Contenido (normalmente <Icon />) */
   children: ReactNode;
 }
+
+const variantClasses: Record<IconButtonVariant, string> = {
+  soft: "bg-madoo-surface-2 text-madoo-ink-soft enabled:hover:bg-madoo-surface enabled:hover:text-madoo-ink",
+  solid: "bg-madoo-ink text-madoo-accent-fg enabled:hover:bg-madoo-ink-soft",
+  outline:
+    "bg-madoo-surface text-madoo-ink-soft shadow-[var(--shadow-border)] enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
+  ghost: "bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
+  accent:
+    "bg-madoo-accent text-madoo-accent-fg enabled:hover:bg-madoo-accent-deep",
+};
+
+const sizeClasses: Record<IconButtonSize, string> = {
+  sm: "h-7 w-7",
+  md: "h-8 w-8",
+  lg: "h-10 w-10",
+};
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   function IconButton(
@@ -31,9 +46,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         ref={ref}
         type={type}
         className={cx(
-          "madoo-icon-btn",
-          variant !== "soft" && `madoo-icon-btn--${variant}`,
-          `madoo-icon-btn--${size}`,
+          "inline-flex cursor-pointer items-center justify-center rounded-[var(--radius-lg)] border-0 transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] disabled:cursor-not-allowed disabled:opacity-60",
+          variantClasses[variant],
+          sizeClasses[size],
           className,
         )}
         {...rest}
