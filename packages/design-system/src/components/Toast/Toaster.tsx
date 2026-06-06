@@ -11,7 +11,6 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "../../lib/cx";
-import "./Toaster.css";
 
 export type ToastTone = "default" | "success" | "danger" | "warn";
 
@@ -24,6 +23,15 @@ export type Toast = {
 };
 
 type ToastInput = Omit<Toast, "id"> & { id?: string };
+
+const toastToneClasses: Record<ToastTone, string> = {
+  default: "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)]",
+  success:
+    "bg-[rgba(232,248,240,0.96)] text-[#1f5c43] shadow-[inset_0_0_0_1px_rgba(36,132,96,0.45)]",
+  danger:
+    "bg-[rgba(252,232,228,0.96)] text-[#802018] shadow-[inset_0_0_0_1px_rgba(180,60,50,0.4)]",
+  warn: "bg-[rgba(252,244,224,0.96)] text-[#6c4a14] shadow-[inset_0_0_0_1px_rgba(196,132,36,0.4)]",
+};
 
 type ToastContextValue = {
   toast: (t: ToastInput) => string;
@@ -80,32 +88,31 @@ export function Toaster({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="madoo-toaster" role="region" aria-label="Notifications">
+      <div
+        className="pointer-events-none fixed bottom-6 right-6 z-[var(--z-toast)] flex max-w-[calc(100vw-32px)] flex-col gap-2 max-[480px]:inset-x-3 max-[480px]:bottom-3 max-[480px]:max-w-none"
+        role="region"
+        aria-label="Notifications"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}
             className={cx(
-              "madoo-toast",
-              t.tone && t.tone !== "default" && `madoo-toast--${t.tone}`,
+              "pointer-events-auto flex w-full min-w-[min(240px,100%)] max-w-[360px] animate-madoo-toast-in items-start gap-2.5 rounded-[var(--radius-lg)] px-3.5 py-2.5 text-[13px] leading-[1.4] motion-reduce:animate-none",
+              toastToneClasses[t.tone ?? "default"],
             )}
             role="status"
           >
-            <div style={{ flex: 1 }}>
-              <div className="madoo-toast__title">{t.title}</div>
-              {t.body ? <div className="madoo-toast__body">{t.body}</div> : null}
+            <div className="flex-1">
+              <div className="text-[13px] font-medium">{t.title}</div>
+              {t.body ? (
+                <div className="mt-0.5 text-[12.5px] opacity-85">{t.body}</div>
+              ) : null}
             </div>
             <button
               type="button"
               aria-label="Dismiss"
               onClick={() => dismiss(t.id)}
-              style={{
-                all: "unset",
-                cursor: "pointer",
-                color: "inherit",
-                fontSize: 14,
-                lineHeight: 1,
-                opacity: 0.6,
-              }}
+              className="cursor-pointer border-0 bg-transparent p-0 text-sm leading-none text-inherit opacity-60"
             >
               ×
             </button>

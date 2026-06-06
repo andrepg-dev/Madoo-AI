@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "../../lib/cx";
-import "./Tooltip.css";
 
 export type TooltipSide = "top" | "right" | "bottom" | "left";
 export type TooltipAlign = "start" | "center" | "end";
@@ -24,6 +23,54 @@ export interface TooltipProps extends Omit<
   align?: TooltipAlign;
   tone?: TooltipTone;
   disabled?: boolean;
+}
+
+const toneClasses: Record<TooltipTone, string> = {
+  ink: "bg-madoo-ink text-madoo-accent-fg shadow-[var(--shadow-border-ink)] [--tooltip-bg:var(--ink)]",
+  light:
+    "bg-madoo-surface text-madoo-ink-soft shadow-[var(--shadow-border)] [--tooltip-bg:var(--surface)]",
+  accent:
+    "bg-madoo-accent text-madoo-accent-fg shadow-[var(--shadow-border-accent)] [--tooltip-bg:var(--accent)]",
+};
+
+const sideClasses: Record<TooltipSide, string> = {
+  top: "bottom-[calc(100%+10px)]",
+  bottom: "top-[calc(100%+10px)]",
+  left: "right-[calc(100%+10px)]",
+  right: "left-[calc(100%+10px)]",
+};
+
+function alignClasses(side: TooltipSide, align: TooltipAlign) {
+  if (side === "top" || side === "bottom") {
+    if (align === "start") return "left-0";
+    if (align === "end") return "right-0";
+    return "left-1/2 -translate-x-1/2";
+  }
+
+  if (align === "start") return "top-0";
+  if (align === "end") return "bottom-0";
+  return "top-1/2 -translate-y-1/2";
+}
+
+function arrowClasses(side: TooltipSide, align: TooltipAlign) {
+  if (side === "top") {
+    if (align === "start") return "-bottom-1 left-3";
+    if (align === "end") return "-bottom-1 right-3";
+    return "-bottom-1 left-[calc(50%-4px)]";
+  }
+  if (side === "bottom") {
+    if (align === "start") return "-top-1 left-3";
+    if (align === "end") return "-top-1 right-3";
+    return "-top-1 left-[calc(50%-4px)]";
+  }
+  if (side === "left") {
+    if (align === "start") return "right-[-4px] top-2.5";
+    if (align === "end") return "bottom-2.5 right-[-4px]";
+    return "right-[-4px] top-[calc(50%-4px)]";
+  }
+  if (align === "start") return "left-[-4px] top-2.5";
+  if (align === "end") return "bottom-2.5 left-[-4px]";
+  return "left-[-4px] top-[calc(50%-4px)]";
 }
 
 export const Tooltip = forwardRef<HTMLSpanElement, TooltipProps>(
@@ -62,7 +109,10 @@ export const Tooltip = forwardRef<HTMLSpanElement, TooltipProps>(
     return (
       <span
         ref={ref}
-        className={cx("madoo-tooltip", className)}
+        className={cx(
+          "group relative inline-flex w-max max-w-full align-middle",
+          className,
+        )}
         data-side={side}
         data-align={align}
         data-tone={tone}
@@ -74,10 +124,21 @@ export const Tooltip = forwardRef<HTMLSpanElement, TooltipProps>(
           <span
             id={tooltipId}
             role="tooltip"
-            className="madoo-tooltip__content"
+            className={cx(
+              "invisible pointer-events-none absolute z-[var(--z-popover)] inline-flex w-max max-w-[min(280px,calc(100vw-32px))] origin-center scale-[0.98] items-center rounded-[var(--radius-lg)] px-2.5 py-[7px] text-left font-madoo-sans text-[12.5px] font-medium leading-[1.35] whitespace-normal opacity-0 transition-[opacity,visibility,transform] duration-150 ease-[var(--ease-out)] group-hover:visible group-hover:scale-100 group-hover:opacity-100 group-focus-within:visible group-focus-within:scale-100 group-focus-within:opacity-100",
+              toneClasses[tone],
+              sideClasses[side],
+              alignClasses(side, align),
+            )}
           >
             {content}
-            <span className="madoo-tooltip__arrow" aria-hidden="true" />
+            <span
+              className={cx(
+                "absolute -z-10 h-2 w-2 rotate-45 bg-[var(--tooltip-bg)] opacity-0 shadow-[inherit] transition-[opacity,transform] duration-150 ease-[var(--ease-out)] group-hover:opacity-100 group-focus-within:opacity-100",
+                arrowClasses(side, align),
+              )}
+              aria-hidden="true"
+            />
           </span>
         ) : null}
       </span>
