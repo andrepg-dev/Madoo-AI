@@ -179,7 +179,7 @@ export function DropdownContent({
       aria-hidden={!open}
       data-state={open ? "open" : "closed"}
       className={cx(
-        "absolute left-0 top-[calc(100%+8px)] z-[var(--z-popover)] flex min-w-[180px] origin-top-left flex-col gap-0.5 rounded-[var(--radius-lg)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-border)] will-change-[opacity,transform] [--madoo-dropdown-enter-x:-3px] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
+        "absolute left-0 top-[calc(100%+8px)] z-[var(--z-popover)] flex min-w-[180px] origin-top-left flex-col gap-0.5 rounded-[var(--radius-lg)] bg-[var(--surface)]  shadow-[var(--shadow-border)] will-change-[opacity,transform] [--madoo-dropdown-enter-x:-3px] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
         align === "end" &&
           "left-auto right-0 origin-top-right [--madoo-dropdown-enter-x:3px]",
         className,

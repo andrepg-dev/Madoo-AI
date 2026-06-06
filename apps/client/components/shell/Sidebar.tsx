@@ -121,16 +121,26 @@ export function Sidebar() {
   return (
     <aside
       className={cx(
-        "flex h-[100dvh] flex-col gap-2.5 bg-madoo-surface py-3 shadow-[inset_-1px_0_0_var(--border-soft)] transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+        "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-madoo-surface py-3 shadow-[inset_-1px_0_0_var(--border-soft)] transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
         collapsed ? "w-16 px-2.5" : "w-[260px] px-3",
       )}
     >
-      <div className="flex min-h-[30px] items-center justify-between px-0.5">
+      <div
+        className={cx(
+          "relative flex min-h-[30px] items-center px-0.5",
+          collapsed ? "justify-center" : "justify-between",
+        )}
+      >
         <IconButton
           aria-label="Madoo home"
           size="sm"
           variant="ghost"
           onClick={() => router.push("/")}
+          className={cx(
+            "transition-opacity duration-[var(--duration-fast)]",
+            collapsed &&
+              "group-hover/sidebar:pointer-events-none group-hover/sidebar:opacity-0",
+          )}
         >
           <Image
             alt="Madoo"
@@ -150,6 +160,10 @@ export function Sidebar() {
             setCollapsed((value) => !value);
             setWorkspaceOpen(false);
           }}
+          className={cx(
+            collapsed &&
+              "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 shadow-[var(--shadow-border)] transition-[opacity,transform] duration-[var(--duration-fast)] group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
+          )}
         >
           <AppIcon icon={collapsed ? PanelRightIcon : PanelLeftIcon} size={15} />
         </IconButton>
@@ -163,7 +177,7 @@ export function Sidebar() {
               size="md"
               variant="outline"
             >
-              <Avatar name={workspace.name} size="xs" />
+              <Avatar name={workspace.name} size="sm" />
             </IconButton>
           ) : (
             <Button
@@ -172,7 +186,7 @@ export function Sidebar() {
               rightIcon={<AppIcon icon={ArrowDown01Icon} size={13} />}
               size="sm"
               variant="ghost"
-              className="!min-h-8 !justify-start !px-2 !font-normal"
+              className="!justify-start px-1! py-1! pr-3! !font-normal"
             >
               <span className="min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap">
                 {workspace.name}
@@ -183,7 +197,7 @@ export function Sidebar() {
 
         <DropdownContent className="!grid w-80 gap-2 !p-2">
           <div className="flex items-center gap-2.5 p-1">
-            <Avatar name={workspace.name} size="md" />
+            <Avatar name={workspace.name} size="sm" />
             <div className="min-w-0">
               <span className="text-[length:var(--font-size-base)] font-normal">
                 {workspace.name}
