@@ -23,7 +23,7 @@ function getInitials(name?: string) {
 
 const sizeClasses: Record<AvatarSize, string> = {
   xs: "h-[22px] w-[22px] text-[11px]",
-  sm: "h-7 w-7 text-[13px]",
+  sm: "h-6.5 w-6.5 ml-[1px] text-[13px]",
   md: "h-8 w-8 text-[15px]",
   lg: "h-11 w-11 text-[22px]",
   xl: "h-16 w-16 text-[28px]",
@@ -49,7 +49,7 @@ export function Avatar({
   return (
     <div
       className={cx(
-        "inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-[6px] font-madoo-display font-medium uppercase not-italic",
+        "inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-[7.5px] font-madoo-display font-medium uppercase not-italic",
         sizeClasses[size],
         toneClasses[tone],
         circle && "rounded-full",
