@@ -1,6 +1,7 @@
 import "@madoo/design-system/base.css";
 import "@madoo/design-system/tokens.css";
 import { AppProviders } from "@/components/providers/AppProviders";
+import { ClientShell } from "@/components/shell/ClientShell";
 import type { Metadata, Viewport } from "next";
 import { Figtree, IBM_Plex_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -60,7 +61,9 @@ export default function RootLayout({
       className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable} ${jetbrains.variable}`}
     >
       <body>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <ClientShell>{children}</ClientShell>
+        </AppProviders>
       </body>
     </html>
   );
