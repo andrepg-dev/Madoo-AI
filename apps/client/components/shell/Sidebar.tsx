@@ -133,14 +133,14 @@ export function Sidebar() {
       className={cx(
         "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-madoo-surface py-3 shadow-[inset_-1px_0_0_var(--border-soft)] transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
         collapsed
-          ? "w-16 items-center px-2.5"
+          ? "w-[60px] overflow-hidden px-3"
           : "w-[260px] px-3",
       )}
     >
       <div
         className={cx(
           "relative flex min-h-[30px] items-center",
-          collapsed ? "w-full justify-center px-0" : "w-full justify-between px-0.5",
+          "w-full justify-between px-0.5",
         )}
       >
         <IconButton
@@ -187,37 +187,47 @@ export function Sidebar() {
       <Dropdown
         open={workspaceOpen}
         onOpenChange={setWorkspaceOpen}
-        className={cx("w-full", collapsed && "flex justify-center")}
+        className="w-full"
       >
         <DropdownTrigger asChild>
-          {collapsed ? (
-            <IconButton
-              aria-label="Open workspace switcher"
-              size="md"
-              variant="outline"
-            >
-              <Avatar name={workspace.name} size="xs" />
-            </IconButton>
-          ) : (
-            <Button
-              block
-              leftIcon={
-                <Avatar
-                  name={workspace.name}
-                  size="xs"
-                  className="bg-madoo-rule"
-                />
-              }
-              rightIcon={<AppIcon icon={ArrowDown01Icon} size={13} />}
-              size="sm"
-              variant="ghost"
-              className="justify-start! px-1! py-1! pr-3! font-normal!"
-            >
-              <span className="min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap">
-                {workspace.name}
+          <Button
+            aria-label="Open workspace switcher"
+            block
+            leftIcon={
+              <Avatar
+                name={workspace.name}
+                size="xs"
+                className="bg-madoo-rule"
+              />
+            }
+            rightIcon={
+              <span
+                className={cx(
+                  "ml-auto inline-flex overflow-hidden transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+                  collapsed
+                    ? "max-w-0 opacity-0"
+                    : "max-w-4 opacity-100",
+                )}
+              >
+                <AppIcon icon={ArrowDown01Icon} size={13} />
               </span>
-            </Button>
-          )}
+            }
+            size="sm"
+            variant={collapsed ? "secondary" : "ghost"}
+            className={cx(
+              "h-8! min-h-8! overflow-hidden py-0! font-normal! transition-[width,padding,background,color,box-shadow] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+              "justify-start! gap-2! px-1! pr-3!",
+            )}
+          >
+            <span
+              className={cx(
+                "min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+                collapsed ? "max-w-0 opacity-0" : "max-w-44 opacity-100",
+              )}
+            >
+              {workspace.name}
+            </span>
+          </Button>
         </DropdownTrigger>
 
         <DropdownContent className="!grid w-80 gap-2 !p-2">
@@ -268,29 +278,13 @@ export function Sidebar() {
 
       <nav
         aria-label="Primary navigation"
-        className={cx("grid gap-1 pt-0.5", collapsed && "justify-items-center")}
+        className="grid w-full gap-1 pt-0.5"
       >
         {primaryItems.map((item) => {
           const active = isActive(item.href);
-          return collapsed ? (
-            <IconButton
-              aria-current={active ? "page" : undefined}
-              aria-label={item.label}
-              key={item.href}
-              size="md"
-              variant="ghost"
-              onClick={() => router.push(item.href)}
-              className={cx(
-                "rounded-[var(--radius-lg)]! transition-colors! duration-75!",
-                active
-                  ? "bg-madoo-accent! text-madoo-accent-fg! hover:bg-madoo-accent-deep! hover:text-madoo-accent-fg!"
-                  : "bg-transparent! text-madoo-ink-soft! hover:bg-[rgb(var(--rule-rgb)_/_0.12)]! hover:text-madoo-accent!",
-              )}
-            >
-              <NavIcon icon={item.icon} size={15} />
-            </IconButton>
-          ) : (
+          return (
             <Button
+              aria-label={item.label}
               aria-current={active ? "page" : undefined}
               block
               key={item.href}
@@ -299,18 +293,28 @@ export function Sidebar() {
               variant="ghost"
               onClick={() => router.push(item.href)}
               className={cx(
-                "gap-2.5! py-0! text-[length:var(--font-size-base)]! transition-colors! duration-75!",
+                "h-[32px]! min-h-[32px]! overflow-hidden py-0! text-[length:var(--font-size-base)]! transition-[width,padding,background,color] duration-[var(--duration-base)] ease-[var(--ease-out)]",
                 active
                   ? "bg-madoo-accent! font-normal! text-madoo-accent-fg! hover:bg-madoo-accent-deep! hover:text-madoo-accent-fg!"
                   : "bg-transparent! font-normal! text-madoo-ink-soft! hover:bg-[rgb(var(--rule-rgb)_/_0.12)]! hover:text-madoo-accent!",
-                "h-[32px]! min-h-[32px]! justify-start! px-2.5!",
+                "justify-start! gap-2.5! px-2.5!",
               )}
             >
-              <span className="min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap">
+              <span
+                className={cx(
+                  "min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+                  collapsed ? "max-w-0 opacity-0" : "max-w-36 opacity-100",
+                )}
+              >
                 {item.label}
               </span>
               {item.shortcut ? (
-                <span className="ml-auto inline-flex gap-0.5">
+                <span
+                  className={cx(
+                    "ml-auto inline-flex gap-0.5 overflow-hidden transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+                    collapsed ? "max-w-0 opacity-0" : "max-w-12 opacity-100",
+                  )}
+                >
                   <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">⌘</Kbd>
                   <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">
                     {item.shortcut}
@@ -343,7 +347,7 @@ export function Sidebar() {
       <div
         className={cx(
           "flex w-full gap-1.5 justify-between",
-          collapsed && "grid justify-items-center",
+          collapsed && "grid",
         )}
       >
         <Button
