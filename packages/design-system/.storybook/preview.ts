@@ -1,6 +1,7 @@
 import { withThemeByDataAttribute } from "@storybook/addon-themes";
 import type { Preview } from "@storybook/react";
 
+import "../src/tailwind.css";
 import "../src/tokens/base.css";
 import "../src/tokens/fonts.css";
 import "../src/tokens/tokens.css";

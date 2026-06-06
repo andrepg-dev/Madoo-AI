@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+@source "./components/**/*.{ts,tsx}";
+@source "./foundations/**/*.{ts,tsx,mdx}";
+
+@theme {
+  --font-madoo-sans: var(--font-sans);
+  --font-madoo-display: var(--font-display);
+  --font-madoo-mono: var(--font-mono);
+
+  --color-madoo-bg: var(--bg);
+  --color-madoo-bg-2: var(--bg-2);
+  --color-madoo-surface: var(--surface);
+  --color-madoo-surface-2: var(--surface-2);
+  --color-madoo-surface-blue: var(--surface-blue);
+  --color-madoo-ink: var(--ink);
+  --color-madoo-ink-soft: var(--ink-soft);
+  --color-madoo-ink-muted: var(--ink-muted);
+  --color-madoo-ink-faint: var(--ink-faint);
+  --color-madoo-border: var(--border);
+  --color-madoo-accent: var(--accent);
+  --color-madoo-accent-deep: var(--accent-deep);
+  --color-madoo-accent-soft: var(--accent-soft);
+  --color-madoo-accent-fg: var(--accent-fg);
+  --color-madoo-danger: var(--danger);
+  --color-madoo-danger-soft: var(--danger-soft);
+  --color-madoo-warn: var(--warn);
+  --color-madoo-warn-soft: var(--warn-soft);
+  --color-madoo-success: var(--success);
+  --color-madoo-success-soft: var(--success-soft);
+  --color-madoo-info: var(--info);
+  --color-madoo-info-soft: var(--info-soft);
+
+  --animate-madoo-dropdown-in: madoo-dropdown-drop-in 220ms var(--ease-out) both;
+  --animate-madoo-dropdown-out: madoo-dropdown-drop-out 160ms ease-in both;
+  --animate-madoo-dropdown-item-in: madoo-dropdown-item-in 180ms var(--ease-out)
+    both;
+  --animate-madoo-select-in: madoo-select-in 220ms var(--ease-out) both;
+  --animate-madoo-select-out: madoo-select-out 160ms ease-in both;
+  --animate-madoo-select-option-in: madoo-select-option-in 180ms var(--ease-out)
+    both;
+  --animate-madoo-modal-overlay-in: madoo-modal-overlay-in 180ms var(--ease-out)
+    both;
+  --animate-madoo-modal-overlay-out: madoo-modal-overlay-out 170ms ease-in both;
+  --animate-madoo-modal-in: madoo-modal-in 220ms var(--ease-out) both;
+  --animate-madoo-modal-out: madoo-modal-out 170ms ease-in both;
+  --animate-madoo-modal-content-in: madoo-modal-content-in 220ms var(--ease-out)
+    both;
+  --animate-madoo-toast-in: madoo-toast-in 160ms ease-out both;
+  --animate-madoo-skeleton-shimmer: madoo-skeleton-shimmer 1.4s ease-in-out
+    infinite;
+  --animate-madoo-checkbox-control-in: madoo-checkbox-control-in 170ms
+    var(--ease-out) both;
+  --animate-madoo-checkbox-fill-pulse: madoo-checkbox-fill-pulse 280ms
+    var(--ease-out) both;
+}
+
+@keyframes madoo-dropdown-drop-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--madoo-dropdown-enter-x, -3px), -5px, 0)
+      scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes madoo-dropdown-drop-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes madoo-dropdown-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes madoo-select-in {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--madoo-select-enter-x, 3px), -5px, 0)
+      scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes madoo-select-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes madoo-select-option-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes madoo-modal-overlay-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+@keyframes madoo-modal-overlay-out {
+  from {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+  to {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+}
+
+@keyframes madoo-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes madoo-modal-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(5px) scale(0.99);
+  }
+}
+
+@keyframes madoo-modal-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes madoo-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes madoo-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes madoo-checkbox-control-in {
+  0% {
+    transform: scale(0.94);
+  }
+  65% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes madoo-checkbox-fill-pulse {
+  0% {
+    opacity: 0.32;
+    transform: scale(0.72);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.65);
+  }
+}

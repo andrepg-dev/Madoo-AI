@@ -1,3 +1,5 @@
+@import "@madoo/design-system/tailwind.css";
+
 :root {
   --bg: #f3f4f6;
   --bg-2: #eef1f5;
@@ -150,22 +152,11 @@ input::placeholder {
 }
 
 button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+input:not([data-madoo-control]):focus-visible,
+textarea:not([data-madoo-control]):focus-visible,
+select:not([data-madoo-control]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-/*
- * Los wrappers del Design System (Input/Textarea/Select) ya pintan el
- * estado focus en el wrapper con shadow-border. Si dejamos que el control
- * nativo dibuje tambien su outline, queda un anillo doble desfasado.
- */
-.madoo-input-wrapper :focus-visible,
-.madoo-textarea-wrapper :focus-visible,
-.madoo-select:focus-visible {
-  outline: none;
 }
 
 .display {

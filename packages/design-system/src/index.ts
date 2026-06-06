@@ -6,9 +6,10 @@
  *
  *   import { Button, Input, Modal } from "@madoo/design-system";
  *
- * Recuerda importar tambien los tokens base:
+ * Recuerda importar tokens y Tailwind entry:
  *
  *   import "@madoo/design-system/tokens.css";
+ *   import "@madoo/design-system/tailwind.css";
  */
 
 export * from "./components/Avatar";

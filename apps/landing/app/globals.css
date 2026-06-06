@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "@madoo/design-system/tailwind.css";
 
 @theme {
   --font-figtree:

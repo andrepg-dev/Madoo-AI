@@ -30,23 +30,12 @@ input::placeholder {
 }
 
 button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
+input:not([data-madoo-control]):focus-visible,
+textarea:not([data-madoo-control]):focus-visible,
+select:not([data-madoo-control]):focus-visible,
 [role="button"]:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-}
-
-/*
- * Los componentes del DS (Input/Textarea/Select) ya pintan el estado
- * focus en el wrapper (border + halo). Si dejamos que el control nativo
- * dibuje también su propio outline, queda un anillo doble desfasado.
- */
-.madoo-input-wrapper :focus-visible,
-.madoo-textarea-wrapper :focus-visible,
-.madoo-select:focus-visible {
-  outline: none;
 }
 
 .madoo-mono {

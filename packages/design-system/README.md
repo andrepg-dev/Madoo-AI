@@ -1,7 +1,7 @@
 # `@madoo/design-system` — Madoo Design System
 
-Design system del monorepo Madoo AI: componentes React + tokens CSS +
-Storybook como playground/documentacion. Este es el nuevo sistema visual del
+Design system del monorepo Madoo AI: componentes React con Tailwind v4 +
+tokens compartidos + Storybook como playground/documentacion. Este es el nuevo sistema visual del
 pivot, basado en la landing page: blanco limpio, gris frio, tinta casi
 negra, azul profundo y acento azul-violeta.
 
@@ -32,9 +32,10 @@ packages/design-system/
 │   │   ├── tokens.css   ← variables, aliases landing y helpers visuales
 │   │   ├── fonts.css    ← carga Figtree, IBM Plex Sans, Inter, JetBrains Mono
 │   │   └── base.css     ← reset minimal y helper .madoo-mono
+│   ├── tailwind.css     ← Tailwind v4 entry + @theme + @source del paquete
 │   ├── lib/cx.ts        ← helper className
 │   ├── foundations/     ← stories de tokens, color y tipografia
-│   └── components/      ← un folder por componente con CSS y stories
+│   └── components/      ← un folder por componente con Tailwind classes y stories
 ├── .storybook/          ← config Storybook (vite + a11y + themes)
 └── package.json
 ```
@@ -74,6 +75,8 @@ packages/design-system/
   que ilustraciones genericas.
 - **App densa, landing amplia**: componentes compactos para plataforma; panels
   grandes solo para marketing, modales o previews.
+- **Tailwind native**: componentes no importan CSS propio; sus estados,
+  variantes y responsive styles viven en `className`.
 - **Tokens compartidos**: `--madoo-*` aliases replican la landing para que
   `@madoo/landing` y `@madoo/frontend` converjan.
 - **Shadow-border only**: edges, dividers y estados usan `box-shadow` con
@@ -95,15 +98,20 @@ etc. — agregar un tema nuevo es declarar `[data-theme="..."]` en
      "@madoo/design-system": "workspace:*"
    }
    ```
-2. En `apps/frontend/app/layout.tsx`:
+2. En `apps/frontend/app/layout.tsx`, cargar tokens:
    ```tsx
    import "@madoo/design-system/tokens.css";
    import "./globals.css";
    ```
-3. Importar componentes:
+3. En `apps/frontend/app/globals.css`, cargar Tailwind desde el DS:
+   ```css
+   @import "@madoo/design-system/tailwind.css";
+   ```
+4. Importar componentes:
    ```tsx
    import { Button, Modal, Banner } from "@madoo/design-system";
    ```
 
-> Nota: `tokens.css` del DS ahora incluye helpers usados por la landing:
-> `.madoo-paper-border`, `.madoo-paper-border-hover` y `.madoo-hero-shell`.
+> Nota: `tailwind.css` declara el theme `madoo-*` y hace `@source` de los
+> componentes del paquete para que Tailwind compile las clases usadas por el
+> design system desde cualquier app consumidora.

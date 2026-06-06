@@ -11,6 +11,7 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./tailwind.css": "./src/tailwind.css",
     "./tokens.css": "./src/tokens/tokens.css",
     "./fonts.css": "./src/tokens/fonts.css",
     "./base.css": "./src/tokens/base.css"
@@ -43,13 +44,16 @@
     "@storybook/react": "^8.4.7",
     "@storybook/react-vite": "^8.4.7",
     "@storybook/test": "^8.6.18",
+    "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
+    "postcss": "^8.5.15",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "storybook": "^8.4.7",
+    "tailwindcss": "^4.3.0",
     "typescript": "^5.7.2",
     "vite": "^5.4.11"
   }
