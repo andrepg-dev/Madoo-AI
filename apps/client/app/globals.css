@@ -12,3 +12,36 @@ body {
 body {
   overflow: hidden;
 }
+
+.madoo-prompt-textarea {
+  scrollbar-color: #555555 transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.madoo-paper-border {
+  box-shadow: inset 0 0 0 0.5px rgb(12 52 106 / 0.18);
+}
+
+.madoo-prompt-textarea::-webkit-scrollbar {
+  width: 18px;
+}
+
+.madoo-prompt-textarea::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 32px 12px;
+}
+
+.madoo-prompt-textarea::-webkit-scrollbar-thumb {
+  background: #555555;
+  border: 7px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  min-height: 56px;
+}
+
+.madoo-prompt-textarea::-webkit-scrollbar-thumb:hover {
+  background: #3f3f3f;
+  border: 7px solid transparent;
+  background-clip: padding-box;
+}
