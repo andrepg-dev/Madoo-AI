@@ -98,8 +98,18 @@ function HomeSmileIcon({ size = 15 }: { size?: number }) {
   );
 }
 
-function NavIcon({ icon, size = 15 }: { icon: NavItem["icon"]; size?: number }) {
-  return icon === "home" ? <HomeSmileIcon size={size} /> : <AppIcon icon={icon} size={size} />;
+function NavIcon({
+  icon,
+  size = 15,
+}: {
+  icon: NavItem["icon"];
+  size?: number;
+}) {
+  return icon === "home" ? (
+    <HomeSmileIcon size={size} />
+  ) : (
+    <AppIcon icon={icon} size={size} />
+  );
 }
 
 export function Sidebar() {
@@ -122,13 +132,15 @@ export function Sidebar() {
     <aside
       className={cx(
         "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-madoo-surface py-3 shadow-[inset_-1px_0_0_var(--border-soft)] transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-        collapsed ? "w-16 px-2.5" : "w-[260px] px-3",
+        collapsed
+          ? "w-16 items-center px-2.5"
+          : "w-[260px] px-3",
       )}
     >
       <div
         className={cx(
-          "relative flex min-h-[30px] items-center px-0.5",
-          collapsed ? "justify-center" : "justify-between",
+          "relative flex min-h-[30px] items-center",
+          collapsed ? "w-full justify-center px-0" : "w-full justify-between px-0.5",
         )}
       >
         <IconButton
@@ -147,7 +159,7 @@ export function Sidebar() {
             height={26}
             src="/madoo-transparent.png"
             width={26}
-            className="rounded-[7px]"
+            className="rounded-[7px] object-contain"
             priority
           />
         </IconButton>
@@ -165,11 +177,18 @@ export function Sidebar() {
               "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 shadow-[var(--shadow-border)] transition-[opacity,transform] duration-[var(--duration-fast)] group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
           )}
         >
-          <AppIcon icon={collapsed ? PanelRightIcon : PanelLeftIcon} size={15} />
+          <AppIcon
+            icon={collapsed ? PanelRightIcon : PanelLeftIcon}
+            size={15}
+          />
         </IconButton>
       </div>
 
-      <Dropdown open={workspaceOpen} onOpenChange={setWorkspaceOpen} className="w-full">
+      <Dropdown
+        open={workspaceOpen}
+        onOpenChange={setWorkspaceOpen}
+        className={cx("w-full", collapsed && "flex justify-center")}
+      >
         <DropdownTrigger asChild>
           {collapsed ? (
             <IconButton
@@ -177,16 +196,22 @@ export function Sidebar() {
               size="md"
               variant="outline"
             >
-              <Avatar name={workspace.name} size="sm" />
+              <Avatar name={workspace.name} size="xs" />
             </IconButton>
           ) : (
             <Button
               block
-              leftIcon={<Avatar name={workspace.name} size="xs" className="bg-madoo-rule" />}
+              leftIcon={
+                <Avatar
+                  name={workspace.name}
+                  size="xs"
+                  className="bg-madoo-rule"
+                />
+              }
               rightIcon={<AppIcon icon={ArrowDown01Icon} size={13} />}
               size="sm"
               variant="ghost"
-              className="!justify-start px-1! py-1! pr-3! !font-normal"
+              className="justify-start! px-1! py-1! pr-3! font-normal!"
             >
               <span className="min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap">
                 {workspace.name}
@@ -241,41 +266,56 @@ export function Sidebar() {
         </DropdownContent>
       </Dropdown>
 
-      <nav aria-label="Primary navigation" className="grid gap-1 pt-0.5">
+      <nav
+        aria-label="Primary navigation"
+        className={cx("grid gap-1 pt-0.5", collapsed && "justify-items-center")}
+      >
         {primaryItems.map((item) => {
           const active = isActive(item.href);
-          return (
+          return collapsed ? (
+            <IconButton
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+              key={item.href}
+              size="md"
+              variant="ghost"
+              onClick={() => router.push(item.href)}
+              className={cx(
+                "rounded-[var(--radius-lg)]! transition-colors! duration-75!",
+                active
+                  ? "bg-madoo-accent! text-madoo-accent-fg! hover:bg-madoo-accent-deep! hover:text-madoo-accent-fg!"
+                  : "bg-transparent! text-madoo-ink-soft! hover:bg-[rgb(var(--rule-rgb)_/_0.12)]! hover:text-madoo-accent!",
+              )}
+            >
+              <NavIcon icon={item.icon} size={15} />
+            </IconButton>
+          ) : (
             <Button
               aria-current={active ? "page" : undefined}
               block
               key={item.href}
               leftIcon={<NavIcon icon={item.icon} size={15} />}
               size="sm"
-              title={collapsed ? item.label : undefined}
               variant="ghost"
               onClick={() => router.push(item.href)}
               className={cx(
-                "!h-[32px] !min-h-[32px] !gap-2.5 !py-0 !text-[length:var(--font-size-base)] !transition-colors !duration-75",
+                "gap-2.5! py-0! text-[length:var(--font-size-base)]! transition-colors! duration-75!",
                 active
-                  ? "!bg-madoo-accent !font-normal !text-madoo-accent-fg hover:!bg-madoo-accent-deep hover:!text-madoo-accent-fg"
-                  : "!bg-transparent !font-normal !text-madoo-ink-soft hover:!bg-[rgb(var(--rule-rgb)_/_0.12)] hover:!text-madoo-accent",
-                collapsed ? "!justify-center !px-0" : "!justify-start !px-2.5",
+                  ? "bg-madoo-accent! font-normal! text-madoo-accent-fg! hover:bg-madoo-accent-deep! hover:text-madoo-accent-fg!"
+                  : "bg-transparent! font-normal! text-madoo-ink-soft! hover:bg-[rgb(var(--rule-rgb)_/_0.12)]! hover:text-madoo-accent!",
+                "h-[32px]! min-h-[32px]! justify-start! px-2.5!",
               )}
             >
-              {!collapsed ? (
-                <>
-                  <span className="min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap">
-                    {item.label}
-                  </span>
-                  {item.shortcut ? (
-                    <span className="ml-auto inline-flex gap-0.5">
-                      <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">⌘</Kbd>
-                      <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">
-                        {item.shortcut}
-                      </Kbd>
-                    </span>
-                  ) : null}
-                </>
+              <span className="min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap">
+                {item.label}
+              </span>
+              {item.shortcut ? (
+                <span className="ml-auto inline-flex gap-0.5">
+                  <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">⌘</Kbd>
+                  <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">
+                    {item.shortcut}
+                  </Kbd>
+                </span>
               ) : null}
             </Button>
           );
@@ -300,7 +340,12 @@ export function Sidebar() {
         </div>
       ) : null}
 
-      <div className={cx("flex gap-1.5 w-full justify-between", collapsed && "grid")}>
+      <div
+        className={cx(
+          "flex w-full gap-1.5 justify-between",
+          collapsed && "grid justify-items-center",
+        )}
+      >
         <Button
           aria-label="Open user profile"
           block
@@ -308,13 +353,16 @@ export function Sidebar() {
           size="sm"
           variant="ghost"
           className="w-max"
-        >
-        </Button>
+        />
 
         <Button
           aria-label="Open inbox menu"
           leftIcon={<AppIcon icon={InboxIcon} size={15} />}
-          rightIcon={!collapsed ? <AppIcon icon={ArrowDown01Icon} size={12} /> : undefined}
+          rightIcon={
+            !collapsed ? (
+              <AppIcon icon={ArrowDown01Icon} size={12} />
+            ) : undefined
+          }
           size="sm"
           variant="ghost"
           className="w-max"
