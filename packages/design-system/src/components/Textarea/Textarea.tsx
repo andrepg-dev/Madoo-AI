@@ -4,7 +4,6 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { cx } from "../../lib/cx";
-import "./Textarea.css";
 
 export type TextareaVariant = "default" | "filled" | "ghost";
 
@@ -17,6 +16,17 @@ export interface TextareaProps
   /** Desactiva el resize vertical nativo */
   noResize?: boolean;
 }
+
+const fieldClasses = "flex flex-col gap-1.5 font-madoo-sans";
+const labelClasses =
+  "text-[11px] font-medium uppercase tracking-[0.3px] text-madoo-ink-faint";
+const hintClasses = "text-[11.5px] leading-[1.4] text-madoo-ink-faint";
+
+const wrapperVariantClasses: Record<TextareaVariant, string> = {
+  default: "bg-madoo-surface shadow-[var(--shadow-border)]",
+  filled: "bg-madoo-surface-2 shadow-[var(--shadow-border)]",
+  ghost: "bg-transparent shadow-none focus-within:shadow-none",
+};
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   function Textarea(
@@ -38,36 +48,40 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const describedBy = error ? `${taId}-error` : hint ? `${taId}-hint` : undefined;
 
     return (
-      <div className="madoo-field">
+      <div className={fieldClasses}>
         {label ? (
-          <label htmlFor={taId} className="madoo-field__label">
+          <label htmlFor={taId} className={labelClasses}>
             {label}
           </label>
         ) : null}
         <div
           className={cx(
-            "madoo-textarea-wrapper",
-            variant !== "default" && `madoo-textarea-wrapper--${variant}`,
-            error && "madoo-textarea-wrapper--invalid",
+            "relative flex rounded-[var(--radius-lg)] transition-[box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-within:shadow-[var(--shadow-border-accent)]",
+            wrapperVariantClasses[variant],
+            error && "shadow-[var(--shadow-border-danger)]",
             className,
           )}
         >
           <textarea
             id={taId}
             ref={ref}
+            data-madoo-control="true"
             rows={rows}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
-            className={cx("madoo-textarea", noResize && "madoo-textarea--no-resize")}
+            className={cx(
+              "min-h-24 w-full flex-1 resize-y border-0 bg-transparent px-3.5 py-3 font-[inherit] text-[14px] leading-[1.55] text-madoo-ink outline-none focus-visible:outline-none",
+              noResize && "resize-none",
+            )}
             {...rest}
           />
         </div>
         {error ? (
-          <span id={`${taId}-error`} className="madoo-field__hint madoo-field__hint--error">
+          <span id={`${taId}-error`} className={cx(hintClasses, "text-madoo-danger")}>
             {error}
           </span>
         ) : hint ? (
-          <span id={`${taId}-hint`} className="madoo-field__hint">
+          <span id={`${taId}-hint`} className={hintClasses}>
             {hint}
           </span>
         ) : null}

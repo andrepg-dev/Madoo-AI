@@ -5,7 +5,6 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "../../lib/cx";
-import "./Input.css";
 
 export type InputSize = "sm" | "md" | "lg";
 export type InputVariant = "default" | "filled" | "ghost";
@@ -22,6 +21,23 @@ export interface InputProps
   inputSize?: InputSize;
   variant?: InputVariant;
 }
+
+const fieldClasses = "flex flex-col gap-1.5 font-madoo-sans";
+const labelClasses =
+  "text-[11px] font-medium uppercase tracking-[0.3px] text-madoo-ink-faint";
+const hintClasses = "text-[11.5px] leading-[1.4] text-madoo-ink-faint";
+
+const wrapperSizeClasses: Record<InputSize, string> = {
+  sm: "h-7",
+  md: "h-[34px]",
+  lg: "h-10",
+};
+
+const wrapperVariantClasses: Record<InputVariant, string> = {
+  default: "bg-madoo-surface shadow-[var(--shadow-border)]",
+  filled: "bg-madoo-surface-2 shadow-[var(--shadow-border)]",
+  ghost: "bg-transparent shadow-none focus-within:shadow-none",
+};
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
@@ -43,44 +59,51 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const describedBy = error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined;
 
   return (
-    <div className="madoo-field">
+    <div className={fieldClasses}>
       {label ? (
-        <label htmlFor={inputId} className="madoo-field__label">
+        <label htmlFor={inputId} className={labelClasses}>
           {label}
         </label>
       ) : null}
       <div
         className={cx(
-          "madoo-input-wrapper",
-          variant !== "default" && `madoo-input-wrapper--${variant}`,
-          `madoo-input-wrapper--${inputSize}`,
-          error && "madoo-input-wrapper--invalid",
+          "relative flex items-center rounded-[var(--radius-lg)] transition-[box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-within:shadow-[var(--shadow-border-accent),0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)]",
+          wrapperVariantClasses[variant],
+          wrapperSizeClasses[inputSize],
+          error &&
+            "shadow-[var(--shadow-border-danger)] focus-within:shadow-[var(--shadow-border-danger),0_0_0_3px_color-mix(in_srgb,var(--danger)_18%,transparent)]",
           className,
         )}
       >
         {startAdornment ? (
-          <span className="madoo-input__addon">{startAdornment}</span>
+          <span className="flex items-center pl-2.5 text-madoo-ink-faint">
+            {startAdornment}
+          </span>
         ) : null}
         <input
           id={inputId}
           ref={ref}
+          data-madoo-control="true"
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className="madoo-input"
+          className={cx(
+            "h-full w-full flex-1 border-0 bg-transparent px-3 font-[inherit] text-[14px] text-madoo-ink outline-none focus-visible:outline-none disabled:cursor-not-allowed disabled:text-madoo-ink-faint",
+            inputSize === "sm" && "px-2.5 text-[11.5px]",
+          )}
           {...rest}
         />
         {endAdornment ? (
-          <span className="madoo-input__addon madoo-input__addon--right">
+          <span className="flex items-center pr-2.5 text-madoo-ink-faint">
             {endAdornment}
           </span>
         ) : null}
       </div>
       {error ? (
-        <span id={`${inputId}-error`} className="madoo-field__hint madoo-field__hint--error">
+        <span id={`${inputId}-error`} className={cx(hintClasses, "text-madoo-danger")}>
           {error}
         </span>
       ) : hint ? (
-        <span id={`${inputId}-hint`} className="madoo-field__hint">
+        <span id={`${inputId}-hint`} className={hintClasses}>
           {hint}
         </span>
       ) : null}

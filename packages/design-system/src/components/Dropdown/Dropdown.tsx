@@ -14,7 +14,6 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "../../lib/cx";
-import "./Dropdown.css";
 
 const DROPDOWN_EXIT_MS = 160;
 
@@ -90,7 +89,11 @@ export function Dropdown({
 
   return (
     <DropdownContext.Provider value={{ open, setOpen }}>
-      <div ref={rootRef} className={cx("madoo-dropdown", className)} {...rest}>
+      <div
+        ref={rootRef}
+        className={cx("relative inline-flex font-madoo-sans", className)}
+        {...rest}
+      >
         {children}
       </div>
     </DropdownContext.Provider>
@@ -116,7 +119,10 @@ export function DropdownTrigger({
     "aria-haspopup": "menu" as const,
     "aria-expanded": open,
     "data-state": open ? "open" : "closed",
-    className: cx("madoo-dropdown__trigger", className),
+    className: cx(
+      "inline-flex cursor-pointer items-center justify-center rounded-[var(--radius-lg)] border-0 bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-border)] transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] hover:shadow-[var(--shadow-border-rule-hover)] data-[state=open]:bg-[var(--surface-2)] data-[state=open]:shadow-[var(--shadow-border-rule-hover)]",
+      className,
+    ),
     onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
       onClick?.(event);
       if (!event.defaultPrevented) setOpen(!open);
@@ -131,9 +137,8 @@ export function DropdownTrigger({
       ...triggerProps,
       ...rest,
       className: cx(
-        "madoo-dropdown__trigger",
+        triggerProps.className,
         (child.props as { className?: string }).className,
-        className,
       ),
     });
   }
@@ -141,7 +146,7 @@ export function DropdownTrigger({
   return (
     <button
       type="button"
-      className={cx("madoo-dropdown__trigger", className)}
+      className={triggerProps.className}
       onClick={triggerProps.onClick}
       aria-haspopup="menu"
       aria-expanded={open}
@@ -174,8 +179,9 @@ export function DropdownContent({
       aria-hidden={!open}
       data-state={open ? "open" : "closed"}
       className={cx(
-        "madoo-dropdown__content",
-        align === "end" && "madoo-dropdown__content--align-end",
+        "absolute left-0 top-[calc(100%+8px)] z-[var(--z-popover)] flex min-w-[180px] origin-top-left flex-col gap-0.5 rounded-[var(--radius-lg)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-border)] will-change-[opacity,transform] [--madoo-dropdown-enter-x:-3px] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
+        align === "end" &&
+          "left-auto right-0 origin-top-right [--madoo-dropdown-enter-x:3px]",
         className,
       )}
       {...rest}
@@ -204,7 +210,10 @@ export function DropdownItem({
     <button
       type="button"
       role="menuitem"
-      className={cx("madoo-dropdown__item", className)}
+      className={cx(
+        "flex w-full cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-md)] border-0 bg-transparent px-2.5 py-[9px] text-left font-[inherit] text-[14px] leading-[1.2] text-[var(--ink)] transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none disabled:cursor-not-allowed disabled:text-[var(--ink-faint)]",
+        className,
+      )}
       onClick={(event) => {
         onClick?.(event);
         if (event.defaultPrevented || rest.disabled) return;
