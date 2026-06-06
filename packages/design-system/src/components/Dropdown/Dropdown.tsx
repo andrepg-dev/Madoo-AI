@@ -120,7 +120,7 @@ export function DropdownTrigger({
     "aria-expanded": open,
     "data-state": open ? "open" : "closed",
     className: cx(
-      "inline-flex cursor-pointer items-center justify-center rounded-[var(--radius-lg)] border-0 bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-border)] transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] hover:shadow-[var(--shadow-border-rule-hover)] data-[state=open]:bg-[var(--surface-2)] data-[state=open]:shadow-[var(--shadow-border-rule-hover)]",
+      "inline-flex cursor-pointer items-center justify-center rounded-[var(--radius-lg)] border-0 bg-[var(--surface)] text-[color:var(--ink)] shadow-[var(--shadow-border)] transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] hover:shadow-[var(--shadow-border-rule-hover)] data-[state=open]:bg-[var(--surface-2)] data-[state=open]:shadow-[var(--shadow-border-rule-hover)]",
       className,
     ),
     onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
@@ -211,7 +211,7 @@ export function DropdownItem({
       type="button"
       role="menuitem"
       className={cx(
-        "flex w-full cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-md)] border-0 bg-transparent px-2.5 py-[9px] text-left font-[inherit] text-[14px] leading-[1.2] text-[var(--ink)] transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none disabled:cursor-not-allowed disabled:text-[var(--ink-faint)]",
+        "flex w-full cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-md)] border-0 bg-transparent px-2.5 py-[9px] text-left font-[inherit] text-[14px] leading-[1.2] text-[color:var(--ink)] transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none disabled:cursor-not-allowed disabled:text-[color:var(--ink-faint)]",
         className,
       )}
       onClick={(event) => {

@@ -3,17 +3,13 @@
 import {
   Add01Icon,
   ArrowDown01Icon,
-  BoltIcon,
   GiftIcon,
-  Home01Icon,
-  PanelLeftCloseIcon,
-  PanelLeftOpenIcon,
+  InboxIcon,
+  PanelLeftIcon,
+  PanelRightIcon,
   Plug01Icon,
   Search01Icon,
-  Settings01Icon,
   Tick02Icon,
-  UserAdd01Icon,
-  UserIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
@@ -21,24 +17,28 @@ import {
   Badge,
   Button,
   Card,
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
   IconButton,
   Kbd,
   ProgressBar,
-  SelectableCard,
+  cx,
 } from "@madoo/design-system";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 
 type NavItem = {
   href: string;
   label: string;
-  icon: IconSvgElement;
+  icon: IconSvgElement | "home";
   shortcut?: string;
 };
 
 const primaryItems: NavItem[] = [
-  { href: "/", label: "Home", icon: Home01Icon },
+  { href: "/", label: "Home", icon: "home" },
   { href: "/search", label: "Search", icon: Search01Icon, shortcut: "K" },
   { href: "/providers", label: "Providers", icon: Plug01Icon },
 ];
@@ -57,9 +57,49 @@ function AppIcon({ icon, size = 20 }: { icon: IconSvgElement; size?: number }) {
       icon={icon}
       primaryColor="currentColor"
       size={size}
-      strokeWidth={1.7}
+      strokeWidth={1.35}
     />
   );
+}
+
+function HomeSmileIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+    >
+      <path
+        d="M22 10.5L12.8825 2.82207C12.6355 2.61407 12.3229 2.5 12 2.5C11.6771 2.5 11.3645 2.61407 11.1175 2.82207L2 10.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20.5 5V15.5C20.5 18.3284 20.5 19.7426 19.6213 20.6213C18.7426 21.5 17.3284 21.5 14.5 21.5H9.5C6.67157 21.5 5.25736 21.5 4.37868 20.6213C3.5 19.7426 3.5 18.3284 3.5 15.5V9.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M15.0002 17C14.2007 17.6224 13.1504 18 12.0002 18C10.8499 18 9.79971 17.6224 9.00018 17"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function NavIcon({ icon, size = 15 }: { icon: NavItem["icon"]; size?: number }) {
+  return icon === "home" ? <HomeSmileIcon size={size} /> : <AppIcon icon={icon} size={size} />;
 }
 
 export function Sidebar() {
@@ -73,8 +113,6 @@ export function Sidebar() {
     Math.round((workspace.creditsLeft / workspace.creditsTotal) * 100),
   );
 
-  const width = collapsed ? 64 : 244;
-
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname?.startsWith(href);
@@ -82,13 +120,12 @@ export function Sidebar() {
 
   return (
     <aside
-      style={{
-        ...styles.sidebar,
-        width,
-        paddingInline: collapsed ? 10 : 12,
-      }}
+      className={cx(
+        "flex h-[100dvh] flex-col gap-2.5 bg-madoo-surface py-3 shadow-[inset_-1px_0_0_var(--border-soft)] transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+        collapsed ? "w-16 px-2.5" : "w-[260px] px-3",
+      )}
     >
-      <div style={styles.logoRow}>
+      <div className="flex min-h-[30px] items-center justify-between px-0.5">
         <IconButton
           aria-label="Madoo home"
           size="sm"
@@ -100,7 +137,7 @@ export function Sidebar() {
             height={26}
             src="/madoo-transparent.png"
             width={26}
-            style={{ borderRadius: 7 }}
+            className="rounded-[7px]"
             priority
           />
         </IconButton>
@@ -114,103 +151,83 @@ export function Sidebar() {
             setWorkspaceOpen(false);
           }}
         >
-          <AppIcon icon={collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon} size={18} />
+          <AppIcon icon={collapsed ? PanelRightIcon : PanelLeftIcon} size={15} />
         </IconButton>
       </div>
 
-      <div style={{ position: "relative" }}>
-        {collapsed ? (
-          <IconButton
-            aria-label="Open workspace switcher"
-            aria-expanded={workspaceOpen}
-            size="md"
-            variant="outline"
-            onClick={() => setWorkspaceOpen((value) => !value)}
-          >
-            <Avatar name={workspace.name} size="xs" />
-          </IconButton>
-        ) : (
-          <Button
-            aria-expanded={workspaceOpen}
-            aria-haspopup="menu"
-            block
-            leftIcon={<Avatar name={workspace.name} size="xs" />}
-            rightIcon={<AppIcon icon={ArrowDown01Icon} size={16} />}
-            size="sm"
-            variant="ghost"
-            onClick={() => setWorkspaceOpen((value) => !value)}
-            style={styles.workspaceButton}
-          >
-            <span style={styles.workspaceName}>{workspace.name}</span>
-          </Button>
-        )}
-
-        {workspaceOpen && !collapsed ? (
-          <Card role="menu" style={styles.workspaceMenu}>
-            <div style={styles.menuIdentity}>
-              <Avatar name={workspace.name} size="md" />
-              <div style={{ minWidth: 0 }}>
-                <strong style={styles.compactStrong}>{workspace.name}</strong>
-              </div>
-            </div>
-
-            <div style={styles.menuActions}>
-              <Button size="sm" variant="ghost" leftIcon={<AppIcon icon={Settings01Icon} size={16} />}>
-                Settings
-              </Button>
-              <Button size="sm" variant="ghost" leftIcon={<AppIcon icon={UserAdd01Icon} size={16} />}>
-                Invite
-              </Button>
-            </div>
-
-            <Card surface="secondary" style={styles.menuUpgrade}>
-              <div style={styles.cardTitleRow}>
-                <AppIcon icon={BoltIcon} size={18} />
-                <strong style={styles.compactStrong}>Turn Pro</strong>
-              </div>
-              <Button size="sm" variant="primary">
-                Upgrade
-              </Button>
-            </Card>
-
-            <Card surface="secondary" style={styles.menuCredits}>
-              <div style={styles.spaceBetween}>
-                <strong style={styles.compactStrong}>Credits</strong>
-                <span style={styles.muted}>{workspace.creditsLeft} left</span>
-              </div>
-              <ProgressBar value={creditsPct} tone="ink" label="Credits left" />
-              <span style={styles.muted}>Daily credits reset at midnight UTC</span>
-            </Card>
-
-            <div style={styles.workspaceList}>
-              <span style={styles.muted}>All workspaces</span>
-              <Button
-                block
-                size="sm"
-                variant="ghost"
-                leftIcon={<Avatar name={workspace.name} size="xs" />}
-                rightIcon={<AppIcon icon={Tick02Icon} size={16} />}
-                style={styles.workspaceListButton}
-              >
-                <span style={styles.truncate}>{workspace.name}</span>
-                <Badge tone="neutral">FREE</Badge>
-              </Button>
-            </div>
-
+      <Dropdown open={workspaceOpen} onOpenChange={setWorkspaceOpen} className="w-full">
+        <DropdownTrigger asChild>
+          {collapsed ? (
+            <IconButton
+              aria-label="Open workspace switcher"
+              size="md"
+              variant="outline"
+            >
+              <Avatar name={workspace.name} size="xs" />
+            </IconButton>
+          ) : (
             <Button
               block
+              leftIcon={<Avatar name={workspace.name} size="xs" className="bg-madoo-rule" />}
+              rightIcon={<AppIcon icon={ArrowDown01Icon} size={13} />}
               size="sm"
               variant="ghost"
-              leftIcon={<AppIcon icon={Add01Icon} size={17} />}
-              style={styles.createWorkspaceButton}
+              className="!min-h-8 !justify-start !px-2 !font-normal"
             >
-              Create workspace
+              <span className="min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap">
+                {workspace.name}
+              </span>
             </Button>
-          </Card>
-        ) : null}
-      </div>
+          )}
+        </DropdownTrigger>
 
-      <nav aria-label="Primary navigation" style={styles.nav}>
+        <DropdownContent className="!grid w-80 gap-2 !p-2">
+          <div className="flex items-center gap-2.5 p-1">
+            <Avatar name={workspace.name} size="md" />
+            <div className="min-w-0">
+              <span className="text-[length:var(--font-size-base)] font-normal">
+                {workspace.name}
+              </span>
+            </div>
+          </div>
+
+          <Card surface="secondary" className="grid gap-2 !p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[length:var(--font-size-base)] font-normal">
+                Credits
+              </span>
+              <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+                {workspace.creditsLeft} left
+              </span>
+            </div>
+            <ProgressBar value={creditsPct} tone="ink" label="Credits left" />
+            <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+              Daily credits reset at midnight UTC
+            </span>
+          </Card>
+
+          <div className="grid gap-1.5 p-1">
+            <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+              All workspaces
+            </span>
+            <DropdownItem className="!px-0">
+              <Avatar name={workspace.name} size="xs" />
+              <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                {workspace.name}
+              </span>
+              <Badge tone="neutral">FREE</Badge>
+              <AppIcon icon={Tick02Icon} size={13} />
+            </DropdownItem>
+          </div>
+
+          <DropdownItem className="!justify-start !text-[length:var(--font-size-base)] !font-normal">
+            <AppIcon icon={Add01Icon} size={14} />
+            Create workspace
+          </DropdownItem>
+        </DropdownContent>
+      </Dropdown>
+
+      <nav aria-label="Primary navigation" className="grid gap-1 pt-0.5">
         {primaryItems.map((item) => {
           const active = isActive(item.href);
           return (
@@ -218,27 +235,30 @@ export function Sidebar() {
               aria-current={active ? "page" : undefined}
               block
               key={item.href}
-              leftIcon={<AppIcon icon={item.icon} size={18} />}
+              leftIcon={<NavIcon icon={item.icon} size={15} />}
               size="sm"
               title={collapsed ? item.label : undefined}
               variant="ghost"
               onClick={() => router.push(item.href)}
-              style={{
-                ...styles.navButton,
-                background: active ? "var(--surface-2)" : "transparent",
-                color: active ? "var(--ink)" : "var(--ink-soft)",
-                fontWeight: active ? 600 : 500,
-                justifyContent: collapsed ? "center" : "flex-start",
-                paddingInline: collapsed ? 0 : 10,
-              }}
+              className={cx(
+                "!h-[32px] !min-h-[32px] !gap-2.5 !py-0 !text-[length:var(--font-size-base)] !transition-colors !duration-75",
+                active
+                  ? "!bg-madoo-accent !font-normal !text-madoo-accent-fg hover:!bg-madoo-accent-deep hover:!text-madoo-accent-fg"
+                  : "!bg-transparent !font-normal !text-madoo-ink-soft hover:!bg-[rgb(var(--rule-rgb)_/_0.12)] hover:!text-madoo-accent",
+                collapsed ? "!justify-center !px-0" : "!justify-start !px-2.5",
+              )}
             >
               {!collapsed ? (
                 <>
-                  <span style={styles.navLabel}>{item.label}</span>
+                  <span className="min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap">
+                    {item.label}
+                  </span>
                   {item.shortcut ? (
-                    <span style={styles.shortcut}>
-                      <Kbd>⌘</Kbd>
-                      <Kbd>{item.shortcut}</Kbd>
+                    <span className="ml-auto inline-flex gap-0.5">
+                      <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">⌘</Kbd>
+                      <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">
+                        {item.shortcut}
+                      </Kbd>
                     </span>
                   ) : null}
                 </>
@@ -248,210 +268,44 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
 
       {!collapsed ? (
-        <>
-          <SelectableCard style={styles.bottomCard}>
-            <span style={styles.bottomCopy}>
-              <strong>Share Madoo</strong>
-              <small style={styles.muted}>100 credits per paid referral</small>
+        <div className="madoo-paper-border flex min-h-[68px] items-center justify-between gap-3 rounded-[var(--radius-xl)] bg-madoo-bg-2/50 px-3.5 py-3">
+          <span className="grid min-w-0 flex-1 gap-1">
+            <span className="truncate font-madoo-sans text-[length:var(--font-size-base)] leading-none text-madoo-ink">
+              Share Madoo
             </span>
-            <span style={styles.roundIcon}>
-              <AppIcon icon={GiftIcon} size={19} />
+            <span className="truncate text-[length:var(--font-size-xs)] leading-none">
+              100 credits per paid referral
             </span>
-          </SelectableCard>
-
-          <SelectableCard style={styles.bottomCard}>
-            <span style={styles.bottomCopy}>
-              <strong>Upgrade to Pro</strong>
-              <small style={styles.muted}>Unlock more capacity</small>
-            </span>
-            <span style={{ ...styles.roundIcon, background: "var(--accent-soft)" }}>
-              <AppIcon icon={BoltIcon} size={20} />
-            </span>
-          </SelectableCard>
-        </>
+          </span>
+          <span className="madoo-paper-border grid h-10 w-10 shrink-0 place-items-center rounded-full bg-madoo-bg">
+            <AppIcon icon={GiftIcon} size={18} />
+          </span>
+        </div>
       ) : null}
 
-      <Button
-        aria-label="Open user profile"
-        block
-        leftIcon={<Avatar name="Andre Ponce" size="xs" circle />}
-        rightIcon={!collapsed ? <AppIcon icon={UserIcon} size={18} /> : undefined}
-        size="sm"
-        variant="ghost"
-        style={{
-          ...styles.userButton,
-          justifyContent: collapsed ? "center" : "flex-start",
-          paddingInline: collapsed ? 0 : 8,
-        }}
-      >
-        {!collapsed ? (
-          <span style={styles.bottomCopy}>
-            <strong style={styles.truncate}>Andre Ponce</strong>
-            <small style={styles.muted}>andre@madoo.ai</small>
-          </span>
-        ) : null}
-      </Button>
+      <div className={cx("flex gap-1.5 w-full justify-between", collapsed && "grid")}>
+        <Button
+          aria-label="Open user profile"
+          block
+          leftIcon={<Avatar name="Andre Ponce" size="xs" circle />}
+          size="sm"
+          variant="ghost"
+          className="w-max"
+        >
+        </Button>
+
+        <Button
+          aria-label="Open inbox menu"
+          leftIcon={<AppIcon icon={InboxIcon} size={15} />}
+          rightIcon={!collapsed ? <AppIcon icon={ArrowDown01Icon} size={12} /> : undefined}
+          size="sm"
+          variant="ghost"
+          className="w-max"
+        />
+      </div>
     </aside>
   );
 }
-
-const styles = {
-  sidebar: {
-    display: "flex",
-    height: "100dvh",
-    flexDirection: "column",
-    gap: 10,
-    paddingBlock: 12,
-    background: "var(--surface)",
-    boxShadow: "inset -1px 0 0 var(--border-soft)",
-    transition: "width var(--duration-base) var(--ease-out)",
-  },
-  logoRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    minHeight: 30,
-    paddingInline: 2,
-  },
-  workspaceButton: {
-    minHeight: 34,
-    justifyContent: "flex-start",
-    paddingInline: 8,
-  },
-  workspaceName: {
-    minWidth: 0,
-    flex: 1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    fontSize: "var(--font-size-base)",
-    fontWeight: 500,
-    textAlign: "left",
-  },
-  workspaceMenu: {
-    position: "absolute",
-    left: 0,
-    top: "calc(100% + 8px)",
-    zIndex: 40,
-    display: "grid",
-    width: 320,
-    gap: 8,
-    padding: 8,
-  },
-  menuIdentity: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: 4,
-  },
-  muted: {
-    color: "var(--ink-muted)",
-    fontSize: "var(--font-size-sm)",
-  },
-  compactStrong: {
-    fontSize: "var(--font-size-base)",
-    fontWeight: 600,
-  },
-  menuActions: {
-    display: "flex",
-    gap: 6,
-  },
-  menuUpgrade: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    padding: 10,
-  },
-  menuCredits: {
-    display: "grid",
-    gap: 8,
-    padding: 10,
-  },
-  cardTitleRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-  },
-  spaceBetween: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  workspaceList: {
-    display: "grid",
-    gap: 6,
-    padding: 4,
-  },
-  workspaceListButton: {
-    justifyContent: "flex-start",
-    gap: 8,
-    paddingInline: 0,
-  },
-  createWorkspaceButton: {
-    justifyContent: "flex-start",
-    fontSize: "var(--font-size-base)",
-  },
-  nav: {
-    display: "grid",
-    gap: 4,
-    paddingTop: 2,
-  },
-  navButton: {
-    minHeight: 34,
-    gap: 10,
-    fontSize: "var(--font-size-base)",
-  },
-  navLabel: {
-    minWidth: 0,
-    flex: 1,
-    overflow: "hidden",
-    textAlign: "left",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  shortcut: {
-    display: "inline-flex",
-    gap: 4,
-    marginLeft: "auto",
-  },
-  truncate: {
-    minWidth: 0,
-    flex: 1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  bottomCard: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    minHeight: 68,
-    padding: 10,
-  },
-  bottomCopy: {
-    display: "grid",
-    minWidth: 0,
-    gap: 2,
-    flex: 1,
-  },
-  roundIcon: {
-    display: "grid",
-    width: 34,
-    height: 34,
-    flex: "0 0 auto",
-    placeItems: "center",
-    borderRadius: "var(--radius-pill)",
-    background: "var(--surface)",
-    boxShadow: "var(--shadow-border-rule)",
-  },
-  userButton: {
-    minHeight: 34,
-    gap: 8,
-  },
-} satisfies Record<string, CSSProperties>;

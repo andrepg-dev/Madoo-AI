@@ -144,7 +144,7 @@ export function Select({
       <button
         type="button"
         className={cx(
-          "group inline-flex min-h-[var(--select-height)] cursor-pointer items-center justify-between gap-[var(--select-gap)] whitespace-nowrap rounded-[var(--select-radius)] border-0 bg-[var(--select-bg)] p-[var(--select-padding)] font-[inherit] font-normal leading-none text-[var(--ink)] shadow-[var(--select-shadow)] transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface)] hover:shadow-[var(--shadow-border-rule-hover)] data-[state=open]:bg-[var(--surface)] data-[state=open]:shadow-[var(--shadow-border-rule-hover)]",
+          "group inline-flex min-h-[var(--select-height)] cursor-pointer items-center justify-between gap-[var(--select-gap)] whitespace-nowrap rounded-[var(--select-radius)] border-0 bg-[var(--select-bg)] p-[var(--select-padding)] font-[inherit] font-normal leading-none text-[color:var(--ink)] shadow-[var(--select-shadow)] transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface)] hover:shadow-[var(--shadow-border-rule-hover)] data-[state=open]:bg-[var(--surface)] data-[state=open]:shadow-[var(--shadow-border-rule-hover)]",
           variant === "ghost" &&
             "hover:bg-[rgb(var(--rule-rgb)_/_0.06)] hover:shadow-none data-[state=open]:bg-[rgb(var(--rule-rgb)_/_0.06)] data-[state=open]:shadow-none",
         )}
@@ -157,7 +157,7 @@ export function Select({
       >
         <span className="overflow-hidden text-ellipsis">{displayValue}</span>
         <span
-          className="inline-flex origin-center text-[var(--ink-faint)] transition-[color,transform] duration-[var(--duration-base)] ease-[var(--ease-out)] group-data-[state=open]:rotate-180 group-data-[state=open]:text-[var(--ink-muted)]"
+          className="inline-flex origin-center text-[color:var(--ink-faint)] transition-[color,transform] duration-[var(--duration-base)] ease-[var(--ease-out)] group-data-[state=open]:rotate-180 group-data-[state=open]:text-[color:var(--ink-muted)]"
           aria-hidden="true"
         >
           <Icon name="chevronDown" size={size === "lg" ? 22 : 12} />
@@ -178,7 +178,7 @@ export function Select({
           style={menuWidth ? { minWidth: menuWidth } : undefined}
         >
           {menuTitle ?? label ? (
-            <div className="p-[var(--select-option-padding)] text-[var(--select-menu-title)] font-medium leading-none text-[var(--ink-muted)]">
+            <div className="p-[var(--select-option-padding)] text-[length:var(--select-menu-title)] font-medium leading-none text-[color:var(--ink-muted)]">
               {menuTitle ?? label}
             </div>
           ) : null}
@@ -192,7 +192,7 @@ export function Select({
                 role="option"
                 aria-selected={selectedOption}
                 disabled={option.disabled}
-                className="flex w-full animate-madoo-select-option-in cursor-pointer items-center justify-between gap-4 rounded-[var(--radius-lg)] border-0 bg-transparent p-[var(--select-option-padding)] text-left font-[inherit] font-normal leading-[1.2] text-[var(--ink)] transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none aria-selected:bg-transparent disabled:cursor-not-allowed disabled:text-[var(--ink-faint)] motion-reduce:animate-none"
+                className="flex w-full animate-madoo-select-option-in cursor-pointer items-center justify-between gap-4 rounded-[var(--radius-lg)] border-0 bg-transparent p-[var(--select-option-padding)] text-left font-[inherit] font-normal leading-[1.2] text-[color:var(--ink)] transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none aria-selected:bg-transparent disabled:cursor-not-allowed disabled:text-[color:var(--ink-faint)] motion-reduce:animate-none"
                 style={{ animationDelay: `${Math.min(index, 4) * 16}ms` }}
                 onClick={() => {
                   if (option.disabled) return;
@@ -243,7 +243,7 @@ export const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
             data-madoo-control="true"
             aria-invalid={error ? true : undefined}
             className={cx(
-              "w-full cursor-pointer appearance-none rounded-[var(--radius-lg)] border-0 bg-[var(--surface)] font-madoo-sans text-[var(--ink)] shadow-[var(--shadow-border)] transition-[background,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] enabled:hover:bg-[var(--surface-2)] enabled:hover:shadow-[var(--shadow-border-rule-hover)] focus:outline-none focus:shadow-[var(--shadow-border-accent),0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)] focus-visible:outline-none",
+              "w-full cursor-pointer appearance-none rounded-[var(--radius-lg)] border-0 bg-[var(--surface)] font-madoo-sans text-[color:var(--ink)] shadow-[var(--shadow-border)] transition-[background,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] enabled:hover:bg-[var(--surface-2)] enabled:hover:shadow-[var(--shadow-border-rule-hover)] focus:outline-none focus:shadow-[var(--shadow-border-accent),0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)] focus-visible:outline-none",
               nativeSizeClasses[selectSize],
               error && "shadow-[var(--shadow-border-danger)]",
               className,
@@ -259,7 +259,7 @@ export const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
                 ))}
           </select>
           <span
-            className="pointer-events-none absolute right-3 inline-flex text-[var(--ink-faint)]"
+            className="pointer-events-none absolute right-3 inline-flex text-[color:var(--ink-faint)]"
             aria-hidden="true"
           >
             <Icon name="chevronDown" size={12} />

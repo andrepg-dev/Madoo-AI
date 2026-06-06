@@ -18,8 +18,7 @@ export interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
 
 function getInitials(name?: string) {
   if (!name) return "?";
-  const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map((p) => p[0]).join("");
+  return name[0];
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
@@ -50,7 +49,7 @@ export function Avatar({
   return (
     <div
       className={cx(
-        "inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-[var(--radius-lg)] font-madoo-display font-medium uppercase not-italic",
+        "inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-[6px] font-madoo-display font-medium uppercase not-italic",
         sizeClasses[size],
         toneClasses[tone],
         circle && "rounded-full",
