@@ -31,6 +31,8 @@
   --color-madoo-info: var(--info);
   --color-madoo-info-soft: var(--info-soft);
 
+  --shadow-madoo-border: var(--shadow-border);
+
   --animate-madoo-dropdown-in: madoo-dropdown-drop-in 220ms var(--ease-out) both;
   --animate-madoo-dropdown-out: madoo-dropdown-drop-out 160ms ease-in both;
   --animate-madoo-dropdown-item-in: madoo-dropdown-item-in 180ms var(--ease-out)
@@ -58,7 +60,11 @@
 @keyframes madoo-dropdown-drop-in {
   0% {
     opacity: 0;
-    transform: translate3d(var(--madoo-dropdown-enter-x, -3px), -5px, 0)
+    transform: translate3d(
+        var(--madoo-dropdown-enter-x, -3px),
+        var(--madoo-dropdown-enter-y, -5px),
+        0
+      )
       scale(0.992);
   }
   100% {

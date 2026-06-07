@@ -41,7 +41,10 @@ function useDropdownPresence(open: boolean) {
       return;
     }
 
-    const timeout = window.setTimeout(() => setPresent(false), DROPDOWN_EXIT_MS);
+    const timeout = window.setTimeout(
+      () => setPresent(false),
+      DROPDOWN_EXIT_MS,
+    );
     return () => window.clearTimeout(timeout);
   }, [open]);
 
@@ -100,8 +103,7 @@ export function Dropdown({
   );
 }
 
-export interface DropdownTriggerProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface DropdownTriggerProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   asChild?: boolean;
 }
@@ -161,11 +163,13 @@ export function DropdownTrigger({
 export interface DropdownContentProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   align?: "start" | "end";
+  side?: "bottom" | "top" | "right";
 }
 
 export function DropdownContent({
   children,
   align = "start",
+  side = "bottom",
   className,
   ...rest
 }: DropdownContentProps) {
@@ -173,15 +177,27 @@ export function DropdownContent({
   const present = useDropdownPresence(open);
   if (!present) return null;
 
+  const positionClass =
+    side === "right"
+      ? align === "end"
+        ? "bottom-0 left-[calc(100%+8px)] origin-bottom-left [--madoo-dropdown-enter-x:-5px] [--madoo-dropdown-enter-y:0px]"
+        : "left-[calc(100%+8px)] top-0 origin-top-left [--madoo-dropdown-enter-x:-5px] [--madoo-dropdown-enter-y:0px]"
+      : side === "top"
+        ? align === "end"
+          ? "bottom-[calc(100%+8px)] right-0 origin-bottom-right [--madoo-dropdown-enter-x:3px] [--madoo-dropdown-enter-y:5px]"
+          : "bottom-[calc(100%+8px)] left-0 origin-bottom-left [--madoo-dropdown-enter-x:-3px] [--madoo-dropdown-enter-y:5px]"
+        : align === "end"
+          ? "right-0 top-[calc(100%+8px)] origin-top-right [--madoo-dropdown-enter-x:3px] [--madoo-dropdown-enter-y:-5px]"
+          : "left-0 top-[calc(100%+8px)] origin-top-left [--madoo-dropdown-enter-x:-3px] [--madoo-dropdown-enter-y:-5px]";
+
   return (
     <div
       role="menu"
       aria-hidden={!open}
       data-state={open ? "open" : "closed"}
       className={cx(
-        "absolute left-0 top-[calc(100%+8px)] z-[var(--z-popover)] flex min-w-[180px] origin-top-left flex-col gap-0.5 rounded-[var(--radius-lg)] bg-[var(--surface)]  shadow-[var(--shadow-border)] will-change-[opacity,transform] [--madoo-dropdown-enter-x:-3px] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
-        align === "end" &&
-          "left-auto right-0 origin-top-right [--madoo-dropdown-enter-x:3px]",
+        "absolute z-[var(--z-popover)] flex min-w-[180px] flex-col gap-0.5 rounded-[var(--radius-lg)] bg-[var(--surface)] shadow-[var(--shadow-border)] will-change-[opacity,transform] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
+        positionClass,
         className,
       )}
       {...rest}
@@ -191,8 +207,7 @@ export function DropdownContent({
   );
 }
 
-export interface DropdownItemProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface DropdownItemProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   onSelect?: () => void;
 }

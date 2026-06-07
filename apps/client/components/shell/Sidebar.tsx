@@ -139,9 +139,7 @@ export function Sidebar() {
     <aside
       className={cx(
         "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] py-3 transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-        collapsed
-          ? "w-[60px] px-3"
-          : "w-[260px] px-3",
+        collapsed ? "w-[60px] px-3" : "w-[260px] px-3",
       )}
     >
       <div
@@ -158,7 +156,7 @@ export function Sidebar() {
           className={cx(
             "transition-opacity duration-[var(--duration-fast)]",
             collapsed &&
-            "group-hover/sidebar:pointer-events-none group-hover/sidebar:opacity-0",
+              "group-hover/sidebar:pointer-events-none group-hover/sidebar:opacity-0",
           )}
         >
           <Image
@@ -181,7 +179,7 @@ export function Sidebar() {
           }}
           className={cx(
             collapsed &&
-            "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 transition-[opacity,transform] duration-[var(--duration-fast)] group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
+              "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 transition-[opacity,transform] duration-[var(--duration-fast)] group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
           )}
         >
           <AppIcon
@@ -211,9 +209,7 @@ export function Sidebar() {
               <span
                 className={cx(
                   "ml-auto inline-flex overflow-hidden transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-                  collapsed
-                    ? "max-w-0 opacity-0"
-                    : "max-w-4 opacity-100",
+                  collapsed ? "max-w-0 opacity-0" : "max-w-4 opacity-100",
                 )}
               >
                 <AppIcon icon={ArrowDown01Icon} size={13} />
@@ -276,17 +272,14 @@ export function Sidebar() {
             </DropdownItem>
           </div>
 
-          <DropdownItem className="!justify-start !text-[length:var(--font-size-base)] !font-normal">
+          <DropdownItem className="!justify-start !text-[length:var(--font-size-base)] !font-normal shadow-madoo-border">
             <AppIcon icon={Add01Icon} size={14} />
-            Create workspace
+            New project
           </DropdownItem>
         </DropdownContent>
       </Dropdown>
 
-      <nav
-        aria-label="Primary navigation"
-        className="grid w-full gap-1 pt-0.5"
-      >
+      <nav aria-label="Primary navigation" className="grid w-full gap-1 pt-0.5">
         {primaryItems.map((item) => {
           const active = isActive(item.href);
           return (
@@ -357,14 +350,31 @@ export function Sidebar() {
           collapsed && "grid",
         )}
       >
-        <Button
-          aria-label="Open user profile"
-          block
-          leftIcon={<Avatar name="Andre Ponce" size="xs" circle />}
-          size="sm"
-          variant="ghost"
-          className="w-max"
-        />
+        <Dropdown>
+          <DropdownTrigger asChild>
+            <Button
+              aria-label="Open user profile"
+              block
+              leftIcon={<Avatar name="Andre Ponce" size="xs" circle />}
+              size="sm"
+              variant="ghost"
+              className="w-max"
+            />
+          </DropdownTrigger>
+          <DropdownContent side="top" className="w-56 !p-2">
+            <div className="flex items-center gap-2.5 p-1.5">
+              <Avatar name="Andre Ponce" size="sm" circle />
+              <span className="min-w-0 truncate text-[length:var(--font-size-base)]">
+                Andre Ponce
+              </span>
+            </div>
+            <DropdownItem className="!justify-start">Profile</DropdownItem>
+            <DropdownItem className="!justify-start">Settings</DropdownItem>
+            <DropdownItem className="!justify-start text-madoo-danger">
+              Sign out
+            </DropdownItem>
+          </DropdownContent>
+        </Dropdown>
 
         <Button
           aria-label="Open inbox menu"
