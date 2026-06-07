@@ -327,6 +327,15 @@ export function Sidebar() {
         })}
       </nav>
 
+      <div
+        className={cx(
+          "px-2.5 pt-6 pb-1 font-madoo-sans text-[length:var(--font-size-base)] text-madoo-ink-soft/70 transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+          collapsed ? "max-w-0 overflow-hidden opacity-0" : "max-w-44 opacity-100",
+        )}
+      >
+        Template Projects
+      </div>
+
       <div className="flex-1" />
 
       {!collapsed ? (
