@@ -4,12 +4,16 @@ import {
   Add01Icon,
   ArrowDown01Icon,
   GiftIcon,
+  Grid2X2Icon,
   InboxIcon,
   PanelLeftIcon,
   PanelRightIcon,
   Plug01Icon,
   Search01Icon,
+  StarIcon,
   Tick02Icon,
+  UserIcon,
+  UserMultipleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
@@ -42,6 +46,17 @@ const primaryItems: NavItem[] = [
   { href: "/", label: "Home", icon: "home" },
   { href: "/search", label: "Search", icon: Search01Icon, shortcut: "K" },
   { href: "/providers", label: "Providers", icon: Plug01Icon },
+];
+
+const templateProjectItems: NavItem[] = [
+  { href: "/projects", label: "All projects", icon: Grid2X2Icon },
+  { href: "/projects/starred", label: "Starred", icon: StarIcon },
+  { href: "/projects/created-by-me", label: "Created by me", icon: UserIcon },
+  {
+    href: "/projects/shared-with-me",
+    label: "Shared with me",
+    icon: UserMultipleIcon,
+  },
 ];
 
 const workspace = {
@@ -117,6 +132,61 @@ function NavIcon({
         <AppIcon icon={icon} size={size} />
       )}
     </span>
+  );
+}
+
+type SidebarNavButtonProps = {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  onSelect: (href: string) => void;
+};
+
+function SidebarNavButton({
+  item,
+  active,
+  collapsed,
+  onSelect,
+}: SidebarNavButtonProps) {
+  return (
+    <Button
+      aria-label={item.label}
+      aria-current={active ? "page" : undefined}
+      block
+      leftIcon={<NavIcon icon={item.icon} size={15} />}
+      size="sm"
+      variant="ghost"
+      onClick={() => onSelect(item.href)}
+      className={cx(
+        "h-[32px]! min-h-[32px]! overflow-hidden py-0! text-[length:var(--font-size-base)]! transition-[width,padding,background,color] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+        active
+          ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)]! font-normal! text-madoo-accent-deep! shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)]! hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)]! hover:text-madoo-accent-deep!"
+          : "bg-transparent! font-normal! hover:bg-[rgb(var(--rule-rgb)_/_0.08)]!",
+        "justify-start! gap-2.5! px-2.5!",
+      )}
+    >
+      <span
+        className={cx(
+          "min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+          collapsed ? "max-w-0 opacity-0" : "max-w-36 opacity-100",
+        )}
+      >
+        {item.label}
+      </span>
+      {item.shortcut ? (
+        <span
+          className={cx(
+            "ml-auto inline-flex gap-0.5 overflow-hidden transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+            collapsed ? "max-w-0 opacity-0" : "max-w-12 opacity-100",
+          )}
+        >
+          <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">⌘</Kbd>
+          <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">
+            {item.shortcut}
+          </Kbd>
+        </span>
+      ) : null}
+    </Button>
   );
 }
 
@@ -284,57 +354,43 @@ export function Sidebar() {
         {primaryItems.map((item) => {
           const active = isActive(item.href);
           return (
-            <Button
-              aria-label={item.label}
-              aria-current={active ? "page" : undefined}
-              block
+            <SidebarNavButton
+              active={active}
+              collapsed={collapsed}
+              item={item}
               key={item.href}
-              leftIcon={<NavIcon icon={item.icon} size={15} />}
-              size="sm"
-              variant="ghost"
-              onClick={() => router.push(item.href)}
-              className={cx(
-                "h-[32px]! min-h-[32px]! overflow-hidden py-0! text-[length:var(--font-size-base)]! transition-[width,padding,background,color] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-                active
-                  ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)]! font-normal! text-madoo-accent-deep! shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)]! hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)]! hover:text-madoo-accent-deep!"
-                  : "bg-transparent! font-normal! hover:bg-[rgb(var(--rule-rgb)_/_0.08)]!",
-                "justify-start! gap-2.5! px-2.5!",
-              )}
-            >
-              <span
-                className={cx(
-                  "min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-                  collapsed ? "max-w-0 opacity-0" : "max-w-36 opacity-100",
-                )}
-              >
-                {item.label}
-              </span>
-              {item.shortcut ? (
-                <span
-                  className={cx(
-                    "ml-auto inline-flex gap-0.5 overflow-hidden transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-                    collapsed ? "max-w-0 opacity-0" : "max-w-12 opacity-100",
-                  )}
-                >
-                  <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">⌘</Kbd>
-                  <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">
-                    {item.shortcut}
-                  </Kbd>
-                </span>
-              ) : null}
-            </Button>
+              onSelect={router.push}
+            />
           );
         })}
       </nav>
 
       <div
         className={cx(
-          "px-2.5 pt-6 pb-1 font-madoo-sans text-[length:var(--font-size-base)] text-madoo-ink-soft/70 transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-          collapsed ? "max-w-0 overflow-hidden opacity-0" : "max-w-44 opacity-100",
+          "overflow-hidden px-2.5 pt-6 pb-1 font-madoo-sans text-[length:var(--font-size-base)] text-ellipsis whitespace-nowrap text-madoo-ink-soft/70",
+          collapsed ? "invisible" : "visible",
         )}
       >
         Template Projects
       </div>
+
+      <nav aria-label="Template projects" className="grid w-full gap-1 pt-0.5">
+        {templateProjectItems.map((item) => {
+          const active =
+            item.href === "/projects"
+              ? pathname === item.href
+              : isActive(item.href);
+          return (
+            <SidebarNavButton
+              active={active}
+              collapsed={collapsed}
+              item={item}
+              key={item.href}
+              onSelect={router.push}
+            />
+          );
+        })}
+      </nav>
 
       <div className="flex-1" />
 
