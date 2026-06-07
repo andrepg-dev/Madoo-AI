@@ -4,8 +4,7 @@ import { Button, Card, Icon, SegmentedControl } from "@madoo/design-system";
 import { useState } from "react";
 
 const projectTabs = [
-  { value: "projects", label: "My projects" },
-  { value: "recent", label: "Recently viewed" },
+  { value: "projects", label: "My emails" },
   { value: "templates", label: "Madoo templates" },
 ];
 

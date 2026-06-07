@@ -1,5 +1,8 @@
+"use client";
+
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import { ProjectShowCase } from "@/components/home/project-show-case";
+import { useEffect, useRef } from "react";
 
 const emailProviders = [
   {
@@ -25,14 +28,28 @@ const emailProviders = [
 ];
 
 export default function Page() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = 0.4;
+  }, []);
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center gap-6 overflow-hidden px-4">
-      <img
-        src="/background-photo-4.webp"
-        alt=""
+      <video
+        ref={videoRef}
         aria-hidden="true"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
         className="absolute inset-0 h-[155vh] w-full object-cover"
-      />
+      >
+        <source src="/background-photo-4-a.mp4" type="video/mp4" />
+      </video>
 
       <div className="relative z-50 flex flex-col gap-5 h-[75vh] justify-center pt-36">
         <div className="rounded-full backdrop-blur-md bg-white/80 p-2 px-4 madoo-paper-border w-max text-sm flex items-center gap-2 mx-auto">
@@ -52,7 +69,7 @@ export default function Page() {
             ))}
           </div>
 
-          Connect your templates with your providers
+          Connect your email templates with your providers
         </div>
 
         <h3 className="z-50 text-3xl text-black text-center">Let's craft something, Andre</h3>

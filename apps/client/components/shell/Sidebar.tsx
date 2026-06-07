@@ -181,7 +181,7 @@ export function Sidebar() {
           }}
           className={cx(
             collapsed &&
-            "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 shadow-[var(--shadow-border)] transition-[opacity,transform] duration-[var(--duration-fast)] group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
+            "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 transition-[opacity,transform] duration-[var(--duration-fast)] group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
           )}
         >
           <AppIcon

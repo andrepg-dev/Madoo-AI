@@ -20,16 +20,16 @@ const promptOptions = [
 ] as const;
 
 const placeholders = [
-  "create an email template for my AWS Summit event. Use this link for details: link.com",
-  "turn this product update into a short newsletter for our subscribers.",
-  "make a campaign email for our new feature launch. Target active users and drive trials.",
-  "create a marketer-ready promo email for a limited offer with a clear CTA.",
+  "draft an email template for a product launch with a clear CTA...",
+  "turn this campaign idea into a polished, responsive email layout...",
+  "shape the copy and structure for a newsletter that is easy to scan...",
+  "build an email template that fits the audience and brand voice...",
 ] as const;
 
-const placeholderTypingDelay = 36;
-const placeholderDeletingDelay = 18;
-const placeholderHoldDelay = 3200;
-const placeholderRestartDelay = 420;
+const placeholderTypingDelay = 46;
+const placeholderDeletingDelay = 24;
+const placeholderHoldDelay = 3600;
+const placeholderRestartDelay = 520;
 
 function useTypingPlaceholder(texts: readonly string[]) {
   const [placeholder, setPlaceholder] = useState("");
@@ -96,7 +96,7 @@ export function ClientPromptBox() {
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const hasPrompt = prompt.trim().length > 0;
   const placeholderBody = useTypingPlaceholder(placeholders);
-  const placeholder = `Hi Madoo, ${placeholderBody}`;
+  const placeholder = `Hi Madoo ${placeholderBody}`;
 
   const onPromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
@@ -118,7 +118,7 @@ export function ClientPromptBox() {
 
   return (
     <div className="relative z-[60] flex flex-col gap-2">
-      <div className="madoo-paper-border min-w-[650px] max-w-[calc(100vw-32px)] overflow-visible rounded-3xl bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)_/_0.1)]">
+      <div className="madoo-paper-border min-w-[650px] max-w-[calc(100vw-32px)] overflow-visible rounded-3xl bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] !shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)_/_0.12)]">
         <textarea
           data-madoo-control
           ref={promptTextareaRef}
