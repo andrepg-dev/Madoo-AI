@@ -24,9 +24,9 @@ const hintClasses = "text-[11.5px] leading-[1.4] text-madoo-ink-faint";
 
 const wrapperVariantClasses: Record<TextareaVariant, string> = {
   default:
-    "bg-[color-mix(in_srgb,var(--surface)_86%,var(--accent-soft))] shadow-[var(--shadow-border-ink)]",
+    "bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] shadow-[var(--shadow-border-ink)]",
   filled:
-    "bg-[color-mix(in_srgb,var(--surface)_78%,var(--accent-soft))] shadow-[var(--shadow-border-ink)]",
+    "bg-[color-mix(in_srgb,var(--surface)_60%,var(--accent-soft))] shadow-[var(--shadow-border-ink)]",
   ghost: "bg-transparent shadow-none focus-within:shadow-none",
 };
 

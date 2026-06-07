@@ -138,7 +138,7 @@ export function Sidebar() {
   return (
     <aside
       className={cx(
-        "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_86%,var(--accent-soft))] py-3 transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+        "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] py-3 transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
         collapsed
           ? "w-[60px] px-3"
           : "w-[260px] px-3",

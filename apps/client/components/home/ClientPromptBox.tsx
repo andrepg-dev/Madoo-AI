@@ -118,7 +118,7 @@ export function ClientPromptBox() {
 
   return (
     <div className="relative z-[60] flex flex-col gap-2">
-      <div className="madoo-paper-border min-w-[650px] max-w-[calc(100vw-32px)] overflow-visible rounded-3xl bg-[color-mix(in_srgb,var(--surface)_84%,var(--accent-soft))]">
+      <div className="madoo-paper-border min-w-[650px] max-w-[calc(100vw-32px)] overflow-visible rounded-3xl bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)_/_0.1)]">
         <textarea
           data-madoo-control
           ref={promptTextareaRef}
@@ -126,7 +126,7 @@ export function ClientPromptBox() {
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={onPromptKeyDown}
           placeholder={hasPrompt ? "" : placeholder}
-          className="madoo-prompt-textarea mr-3 max-h-80 min-h-18 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-[#4b5563]"
+          className="madoo-prompt-textarea mr-3 max-h-80 min-h-18 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-[#4b5563]!"
         />
 
         <div className="flex items-center justify-between px-3.5 pb-3">
