@@ -33,7 +33,7 @@ import {
 } from "@madoo/design-system";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type NavItem = {
   href: string;
@@ -205,6 +205,24 @@ export function Sidebar() {
     if (href === "/") return pathname === "/";
     return pathname?.startsWith(href);
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key.toLowerCase() !== "b" ||
+        (!event.metaKey && !event.ctrlKey)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      setCollapsed((value) => !value);
+      setWorkspaceOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <aside
