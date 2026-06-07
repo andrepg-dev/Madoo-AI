@@ -196,7 +196,7 @@ export function DropdownContent({
       aria-hidden={!open}
       data-state={open ? "open" : "closed"}
       className={cx(
-        "absolute z-[var(--z-popover)] flex min-w-[180px] flex-col gap-0.5 rounded-[var(--radius-lg)] bg-[var(--surface)] shadow-[var(--shadow-border)] will-change-[opacity,transform] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
+        "absolute z-[var(--z-popover)] flex min-w-[180px] flex-col gap-0.5 rounded-[var(--radius-lg)] bg-[var(--surface)] shadow-[var(--shadow-border-rule-hover)] will-change-[opacity,transform] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
         positionClass,
         className,
       )}
@@ -239,5 +239,17 @@ export function DropdownItem({
     >
       {children}
     </button>
+  );
+}
+
+export type DropdownDividerProps = HTMLAttributes<HTMLDivElement>;
+
+export function DropdownDivider({ className, ...rest }: DropdownDividerProps) {
+  return (
+    <div
+      role="separator"
+      className={cx("-mx-2 h-px shadow-[var(--shadow-border-top)]", className)}
+      {...rest}
+    />
   );
 }

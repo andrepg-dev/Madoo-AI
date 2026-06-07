@@ -19,6 +19,7 @@ import {
   Card,
   Dropdown,
   DropdownContent,
+  DropdownDivider,
   DropdownItem,
   DropdownTrigger,
   IconButton,
@@ -358,16 +359,22 @@ export function Sidebar() {
               leftIcon={<Avatar name="Andre Ponce" size="xs" circle />}
               size="sm"
               variant="ghost"
-              className="w-max"
+              className="w-max shadow-none! hover:shadow-none! data-[state=open]:shadow-none!"
             />
           </DropdownTrigger>
           <DropdownContent side="top" className="w-56 !p-2">
             <div className="flex items-center gap-2.5 p-1.5">
               <Avatar name="Andre Ponce" size="sm" circle />
-              <span className="min-w-0 truncate text-[length:var(--font-size-base)]">
-                Andre Ponce
+              <span className="grid min-w-0 gap-0.5">
+                <span className="truncate text-[length:var(--font-size-base)] leading-none">
+                  Andre Ponce
+                </span>
+                <span className="truncate text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
+                  andre@madoo.ai
+                </span>
               </span>
             </div>
+            <DropdownDivider />
             <DropdownItem className="!justify-start">Profile</DropdownItem>
             <DropdownItem className="!justify-start">Settings</DropdownItem>
             <DropdownItem className="!justify-start text-madoo-danger">
