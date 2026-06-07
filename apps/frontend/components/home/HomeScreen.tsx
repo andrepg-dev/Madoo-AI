@@ -527,7 +527,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
       ) : null}
 
       <section
-        className="madoo-home-templates"
+        className="madoo-home-templates rounded-[28px] border border-[color-mix(in_srgb,var(--border-soft)_72%,var(--accent-soft))] bg-[color-mix(in_srgb,var(--surface)_86%,var(--accent-soft))]"
         style={{ maxWidth: 1280, margin: "0 auto" }}
       >
         <div

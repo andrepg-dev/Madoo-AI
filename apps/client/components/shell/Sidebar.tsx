@@ -138,7 +138,7 @@ export function Sidebar() {
   return (
     <aside
       className={cx(
-        "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-madoo-surface py-3 shadow-[inset_-1px_0_0_var(--border-soft)] transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+        "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_86%,var(--accent-soft))] py-3 transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
         collapsed
           ? "w-[60px] px-3"
           : "w-[260px] px-3",
@@ -302,8 +302,8 @@ export function Sidebar() {
               className={cx(
                 "h-[32px]! min-h-[32px]! overflow-hidden py-0! text-[length:var(--font-size-base)]! transition-[width,padding,background,color] duration-[var(--duration-base)] ease-[var(--ease-out)]",
                 active
-                  ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)]! font-normal! text-madoo-accent! shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)]! hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)]! hover:text-madoo-accent!"
-                  : "bg-transparent! font-normal! hover:bg-[rgb(var(--rule-rgb)_/_0.08)]! hover:text-madoo-accent!",
+                  ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)]! font-normal! text-madoo-accent-deep! shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)]! hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)]! hover:text-madoo-accent-deep!"
+                  : "bg-transparent! font-normal! hover:bg-[rgb(var(--rule-rgb)_/_0.08)]!",
                 "justify-start! gap-2.5! px-2.5!",
               )}
             >

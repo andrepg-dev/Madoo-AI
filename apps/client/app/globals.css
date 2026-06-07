@@ -20,7 +20,7 @@ body {
 }
 
 .madoo-paper-border {
-  box-shadow: inset 0 0 0 0.5px rgb(12 52 106 / 0.18);
+  box-shadow: inset 0 0 0 0.5px rgb(47 111 234 / 0.12);
 }
 
 .madoo-prompt-textarea::-webkit-scrollbar {
