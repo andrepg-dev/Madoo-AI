@@ -90,7 +90,9 @@ function useTypingPlaceholder(texts: readonly string[]) {
 
 export function ClientPromptBox() {
   const [prompt, setPrompt] = useState("");
-  const [promptOptionValues, setPromptOptionValues] = useState<Record<string, string>>({});
+  const [promptOptionValues, setPromptOptionValues] = useState<
+    Record<string, string>
+  >({});
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const hasPrompt = prompt.trim().length > 0;
   const placeholderBody = useTypingPlaceholder(placeholders);
@@ -116,7 +118,7 @@ export function ClientPromptBox() {
 
   return (
     <div className="relative z-[60] flex flex-col gap-2">
-      <div className="madoo-paper-border min-w-[670px] overflow-visible rounded-3xl bg-white">
+      <div className="madoo-paper-border min-w-[670px] max-w-[calc(100vw-32px)] overflow-visible rounded-3xl bg-white">
         <textarea
           data-madoo-control
           ref={promptTextareaRef}
@@ -134,7 +136,12 @@ export function ClientPromptBox() {
               className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
               aria-label="Add attachment"
             >
-              <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={1} aria-hidden="true" />
+              <HugeiconsIcon
+                icon={Add01Icon}
+                size={18}
+                strokeWidth={1}
+                aria-hidden="true"
+              />
             </button>
 
             <div className="flex items-center gap-1.5">
@@ -165,7 +172,12 @@ export function ClientPromptBox() {
               className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
               aria-label="Use microphone"
             >
-              <HugeiconsIcon icon={Mic02Icon} size={16} strokeWidth={1.8} aria-hidden="true" />
+              <HugeiconsIcon
+                icon={Mic02Icon}
+                size={16}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
             </button>
 
             <button

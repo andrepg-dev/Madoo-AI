@@ -71,3 +71,9 @@ Use one repeatable section rhythm for landing-page blocks:
 ## Implementation Rule
 
 Before changing a page, preserve existing user work and page structure. Scope edits to the requested component or section unless the user explicitly asks for a full-page redesign.
+
+## CSS Rule
+
+- Prefer design-system components and Tailwind utilities in JSX for ordinary UI.
+- Do not add new global CSS classes for one-off components.
+- Global CSS is only for specific cross-cutting cases that cannot be expressed cleanly in component utilities, such as browser scrollbar styling, root/body defaults, keyframes, or shared token-backed helpers.
