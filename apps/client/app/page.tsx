@@ -28,10 +28,10 @@ export default function Page() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center gap-6 overflow-hidden px-4">
       <img
-        src="/background-photo-3.webp"
+        src="/background-photo-4.webp"
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 h-[115vh] w-full object-cover"
+        className="absolute inset-0 h-[155vh] w-full object-cover"
       />
 
       <div className="relative z-50 flex flex-col gap-4 h-[75vh] justify-center pt-36">

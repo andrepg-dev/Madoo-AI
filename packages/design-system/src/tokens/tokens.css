@@ -14,7 +14,7 @@
   --bg-2: #eef1f5;
   --surface: #ffffff;
   --surface-2: #f8fafc;
-  --surface-blue: #f3faff;
+  --surface-blue: #eef4ff;
   --ink: #101114;
   --ink-soft: #252a31;
   --ink-muted: #667085;
@@ -23,24 +23,24 @@
   --border-soft: #edf2f7;
 
   /* ── Brand / accent ──────────────────────────────────────────── */
-  --accent: #071b38;
-  --accent-deep: #031024;
-  --accent-soft: #f3faff;
+  --accent: #2f6fea;
+  --accent-deep: #1f57c8;
+  --accent-soft: #eef4ff;
   --accent-fg: #ffffff;
-  --link: #5b63ff;
-  --link-hover: #454ce6;
-  --rule: #0c346a;
-  --rule-rgb: 12 52 106;
+  --link: #2f6fea;
+  --link-hover: #2558c6;
+  --rule: #2f6fea;
+  --rule-rgb: 47 111 234;
   --ink-shadow-rgb: 16 17 20;
 
   /* ── Landing compatibility aliases ───────────────────────────── */
   --madoo-ink: var(--ink);
-  --madoo-ink-hover: #26282d;
+  --madoo-ink-hover: #1f2430;
   --madoo-text: #171717;
   --madoo-copy: var(--ink-soft);
   --madoo-muted: var(--ink-muted);
-  --madoo-nav: #23272f;
-  --madoo-logo: #2b3037;
+  --madoo-nav: #1f2430;
+  --madoo-logo: #273041;
   --madoo-paper: var(--surface);
   --madoo-page: var(--bg);
   --madoo-paper-tint: var(--surface-2);
@@ -114,7 +114,7 @@
   --font-weight-semibold: 600;
 
   /* ── Shadows ─────────────────────────────────────────────────── */
-  --shadow-border: inset 0 0 0 0.5px var(--border);
+  --shadow-border: inset 0 0 0 0.5px color-mix(in srgb, var(--border) 60%, transparent);
   --shadow-border-soft: inset 0 0 0 0.5px var(--border-soft);
   --shadow-border-strong: inset 0 0 0 0.5px var(--ink-faint);
   --shadow-border-ink: inset 0 0 0 0.75px var(--ink);

@@ -302,8 +302,8 @@ export function Sidebar() {
               className={cx(
                 "h-[32px]! min-h-[32px]! overflow-hidden py-0! text-[length:var(--font-size-base)]! transition-[width,padding,background,color] duration-[var(--duration-base)] ease-[var(--ease-out)]",
                 active
-                  ? "bg-madoo-accent! font-normal! text-madoo-accent-fg! hover:bg-madoo-accent-deep! hover:text-madoo-accent-fg!"
-                  : "bg-transparent! font-normal! text-madoo-ink-soft! hover:bg-[rgb(var(--rule-rgb)_/_0.12)]! hover:text-madoo-accent!",
+                  ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)]! font-normal! text-madoo-accent! shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)]! hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)]! hover:text-madoo-accent!"
+                  : "bg-transparent! font-normal! hover:bg-[rgb(var(--rule-rgb)_/_0.08)]! hover:text-madoo-accent!",
                 "justify-start! gap-2.5! px-2.5!",
               )}
             >

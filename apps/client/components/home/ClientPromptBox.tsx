@@ -126,7 +126,7 @@ export function ClientPromptBox() {
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={onPromptKeyDown}
           placeholder={hasPrompt ? "" : placeholder}
-          className="madoo-prompt-textarea mr-3 max-h-80 min-h-20 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
+          className="madoo-prompt-textarea mr-3 max-h-80 min-h-20 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-800"
         />
 
         <div className="flex items-center justify-between px-3.5 pb-3">
