@@ -122,7 +122,7 @@ function NavIcon({
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
   const creditsPct = Math.min(
@@ -166,7 +166,7 @@ export function Sidebar() {
             height={26}
             src="/madoo-transparent.png"
             width={26}
-            className="rounded-[7px] object-contain"
+            className="rounded-[7px] object-contain ml-1.5"
             priority
           />
         </IconButton>
