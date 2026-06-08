@@ -75,6 +75,35 @@ body {
   background-clip: padding-box;
 }
 
+.madoo-command-scrollbar {
+  scrollbar-color: rgb(var(--ink-shadow-rgb) / 0.45) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.madoo-command-scrollbar::-webkit-scrollbar {
+  width: 18px;
+}
+
+.madoo-command-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 16px;
+}
+
+.madoo-command-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--ink-shadow-rgb) / 0.45);
+  border: 7px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  min-height: 72px;
+}
+
+.madoo-command-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--ink-shadow-rgb) / 0.62);
+  border: 7px solid transparent;
+  background-clip: padding-box;
+}
+
 .ai-conversation-markdown {
   color: inherit;
   font-size: 14px;
