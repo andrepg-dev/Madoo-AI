@@ -3,6 +3,7 @@
 import { Add01Icon, Mic02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Select } from "@madoo/design-system";
+import { useRouter } from "next/navigation";
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -89,6 +90,7 @@ function useTypingPlaceholder(texts: readonly string[]) {
 }
 
 export function ClientPromptBox() {
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
@@ -98,10 +100,32 @@ export function ClientPromptBox() {
   const placeholderBody = useTypingPlaceholder(placeholders);
   const placeholder = `Hi Madoo ${placeholderBody}`;
 
-  const onPromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
+  const submitPrompt = () => {
+    const trimmedPrompt = prompt.trim();
+
+    if (!trimmedPrompt) return;
+
+    const params = new URLSearchParams({ prompt: trimmedPrompt });
+
+    for (const [key, value] of Object.entries(promptOptionValues)) {
+      if (value) params.set(key.toLowerCase(), value);
     }
+
+    router.push(`/email-template-project?${params.toString()}`);
+  };
+
+  const onPromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    if (event.metaKey || event.ctrlKey) {
+      event.preventDefault();
+      return;
+    }
+
+    event.preventDefault();
+    submitPrompt();
   };
 
   useEffect(() => {
@@ -182,8 +206,13 @@ export function ClientPromptBox() {
 
             <button
               type="button"
-              className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt ? "bg-black" : "bg-[#7d7d7a] hover:bg-[#666663]"
-                }`}
+              onClick={submitPrompt}
+              disabled={!hasPrompt}
+              className={`inline-flex h-8 items-center justify-center rounded-full px-4 text-xs text-white transition ${
+                hasPrompt
+                  ? "cursor-pointer bg-black"
+                  : "cursor-not-allowed bg-[#7d7d7a] opacity-80"
+              }`}
               aria-label="Generate email"
             >
               Generate email

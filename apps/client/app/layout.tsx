@@ -1,7 +1,7 @@
+import { AppProviders } from "@/components/providers/AppProviders";
+
 import "@madoo/design-system/base.css";
 import "@madoo/design-system/tokens.css";
-import { AppProviders } from "@/components/providers/AppProviders";
-import { ClientShell } from "@/components/shell/ClientShell";
 import type { Metadata, Viewport } from "next";
 import { Figtree, IBM_Plex_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html
       lang="en"
@@ -60,11 +60,9 @@ export default function RootLayout({
       data-density="cozy"
       className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable} ${jetbrains.variable}`}
     >
-      <body>
-        <AppProviders>
-          <ClientShell>{children}</ClientShell>
-        </AppProviders>
-      </body>
+      <AppProviders>
+        <body>{children}</body>
+      </AppProviders>
     </html>
-  );
+  )
 }
