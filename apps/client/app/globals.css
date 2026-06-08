@@ -46,6 +46,35 @@ body {
   background-clip: padding-box;
 }
 
+.madoo-chat-scrollbar {
+  scrollbar-color: #555555 transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.madoo-chat-scrollbar::-webkit-scrollbar {
+  width: 18px;
+}
+
+.madoo-chat-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 16px;
+}
+
+.madoo-chat-scrollbar::-webkit-scrollbar-thumb {
+  background: #555555;
+  border: 7px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  min-height: 72px;
+}
+
+.madoo-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3f3f3f;
+  border: 7px solid transparent;
+  background-clip: padding-box;
+}
+
 .ai-conversation-markdown {
   color: inherit;
   font-size: 14px;

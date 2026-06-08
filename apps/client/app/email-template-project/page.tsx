@@ -10,7 +10,7 @@ import {
   ThumbsUpIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Button, Tooltip } from "@madoo/design-system";
+import { Button } from "@madoo/design-system";
 import Image from "next/image";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
@@ -25,23 +25,21 @@ function ActionButton({
   onClick?: () => void;
 }) {
   return (
-    <Tooltip content={label} side="bottom" tone="ink">
-      <Button
-        aria-label={label}
-        className="h-6 w-6 rounded-md"
-        onClick={onClick}
-        variant="icon"
-        size="sm"
-      >
-        <HugeiconsIcon
-          aria-hidden="true"
-          icon={icon}
-          primaryColor="currentColor"
-          size={13}
-          strokeWidth={1.5}
-        />
-      </Button>
-    </Tooltip>
+    <Button
+      aria-label={label}
+      className="h-6 w-6 rounded-md"
+      onClick={onClick}
+      variant="icon"
+      size="sm"
+    >
+      <HugeiconsIcon
+        aria-hidden="true"
+        icon={icon}
+        primaryColor="currentColor"
+        size={13}
+        strokeWidth={1.5}
+      />
+    </Button>
   );
 }
 
@@ -119,7 +117,7 @@ function AiMessage({ children }: { children: string }) {
 
 export default function EmailTemplateProject() {
   return (
-    <main className="flex min-h-screen flex-col bg-white">
+    <main className="flex h-screen flex-col overflow-hidden bg-white">
       <header className="px-4 py-2">
         <Button className="px-4 py-0!" variant="ghost">
           <Image
@@ -141,28 +139,34 @@ export default function EmailTemplateProject() {
       </header>
 
       {/* CHAT SECTION, (User messages, AI agent messages, date at the top, and so on...) */}
-      <section className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-4">
-        {/* time */}
-        <span className="text-xs text-madoo-ink-muted w-full flex justify-center">Jun 8 at 9:42 AM</span>
-
+      <section className="flex min-h-0 w-full flex-1 flex-col pb-4">
         {/* messages */}
-        <div className="mt-8 flex flex-1 flex-col gap-8 text-sm font-figtree">
-          {/* user message */}
-          <HumanMessage>{userGreeting}</HumanMessage>
-          {/* ai message */}
-          <AiMessage>{aiGreeting}</AiMessage>
-          <HumanMessage>{userCampaignRequest}</HumanMessage>
-          <AiMessage>{aiCampaignResponse}</AiMessage>
+        <div className="madoo-chat-scrollbar min-h-0 flex-1 overflow-y-auto pr-4 text-sm font-figtree">
+          <div className="mx-auto w-full max-w-3xl px-4">
+            {/* time */}
+            <span className="text-xs text-madoo-ink-muted flex w-full justify-center">Jun 8 at 9:42 AM</span>
+
+            <div className="mt-8 flex flex-col gap-8">
+              {/* user message */}
+              <HumanMessage>{userGreeting}</HumanMessage>
+              {/* ai message */}
+              <AiMessage>{aiGreeting}</AiMessage>
+              <HumanMessage>{userCampaignRequest}</HumanMessage>
+              <AiMessage>{aiCampaignResponse}</AiMessage>
+            </div>
+          </div>
         </div>
 
-        <ClientPromptBox
-          classNames={{
-            root: "mt-8 w-full",
-            panel: "bg-madoo-bg shadow-madoo-border",
-            textarea: "min-h-19 rounded-t-2xl px-4.5 pt-[17px]",
-          }}
-          variant="chat"
-        />
+        <div className="mx-auto w-full max-w-3xl shrink-0 px-4 bg-red-500">
+          <ClientPromptBox
+            classNames={{
+              root: "w-full",
+              panel: "bg-madoo-bg shadow-madoo-border",
+              textarea: "min-h-19 rounded-t-2xl px-4.5 pt-[17px]",
+            }}
+            variant="chat"
+          />
+        </div>
       </section>
     </main>
   )
