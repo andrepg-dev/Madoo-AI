@@ -1,7 +1,12 @@
 "use client";
 
-import { Add01Icon, Mic02Icon } from "@hugeicons/core-free-icons";
+import {
+  Add01Icon,
+  ArrowUp01Icon,
+  Mic02Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { cn } from "@/lib/utils";
 import { Select } from "@madoo/design-system";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent } from "react";
@@ -89,7 +94,21 @@ function useTypingPlaceholder(texts: readonly string[]) {
   return placeholder;
 }
 
-export function ClientPromptBox() {
+type ClientPromptBoxProps = {
+  className?: string;
+  classNames?: {
+    root?: string;
+    panel?: string;
+    textarea?: string;
+  };
+  variant?: "home" | "chat";
+};
+
+export function ClientPromptBox({
+  className,
+  classNames,
+  variant = "home",
+}: ClientPromptBoxProps) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
@@ -97,8 +116,13 @@ export function ClientPromptBox() {
   >({});
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const hasPrompt = prompt.trim().length > 0;
-  const placeholderBody = useTypingPlaceholder(placeholders);
-  const placeholder = `Hi Madoo ${placeholderBody}`;
+  const isChatVariant = variant === "chat";
+  const placeholderBody = useTypingPlaceholder(
+    isChatVariant ? [] : placeholders,
+  );
+  const placeholder = isChatVariant
+    ? "Message Madoo..."
+    : `Hi Madoo ${placeholderBody}`;
 
   const submitPrompt = () => {
     const trimmedPrompt = prompt.trim();
@@ -141,8 +165,24 @@ export function ClientPromptBox() {
   }, [prompt]);
 
   return (
-    <div className="relative z-[60] flex flex-col gap-2">
-      <div className="madoo-paper-border min-w-[650px] max-w-[calc(100vw-32px)] overflow-visible rounded-3xl bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] !shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)_/_0.12)]">
+    <div
+      className={cn(
+        "relative z-[60] flex flex-col gap-2",
+        className,
+        classNames?.root,
+      )}
+    >
+      <div
+        className={cn(
+          "overflow-visible",
+          !classNames?.panel &&
+            "madoo-paper-border bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] !shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)_/_0.12)]",
+          isChatVariant
+            ? "w-full min-w-0 max-w-full rounded-2xl"
+            : "min-w-[650px] max-w-[calc(100vw-32px)] rounded-3xl",
+          classNames?.panel,
+        )}
+      >
         <textarea
           data-madoo-control
           ref={promptTextareaRef}
@@ -150,19 +190,33 @@ export function ClientPromptBox() {
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={onPromptKeyDown}
           placeholder={hasPrompt ? "" : placeholder}
-          className="madoo-prompt-textarea mr-3 max-h-80 min-h-18 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-[#4b5563]!"
+          className={cn(
+            "madoo-prompt-textarea mr-3 max-h-80 w-[calc(100%-0.75rem)] resize-none bg-transparent text-sm text-[#101114] outline-none placeholder:text-[#4b5563]!",
+            isChatVariant
+              ? "min-h-14 rounded-t-2xl px-4 pr-8 pt-4"
+              : "min-h-18 rounded-t-3xl px-5 pr-10 pt-5",
+            classNames?.textarea,
+          )}
         />
 
-        <div className="flex items-center justify-between px-3.5 pb-3">
-          <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            "flex items-center justify-between px-3.5 pb-3",
+            isChatVariant && "gap-2",
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+              className={cn(
+                "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]",
+                isChatVariant ? "h-7 w-7" : "h-8 w-8",
+              )}
               aria-label="Add attachment"
             >
               <HugeiconsIcon
                 icon={Add01Icon}
-                size={18}
+                size={isChatVariant ? 16 : 18}
                 strokeWidth={1}
                 aria-hidden="true"
               />
@@ -193,12 +247,15 @@ export function ClientPromptBox() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+              className={cn(
+                "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]",
+                isChatVariant ? "h-7 w-7" : "h-8 w-8",
+              )}
               aria-label="Use microphone"
             >
               <HugeiconsIcon
                 icon={Mic02Icon}
-                size={16}
+                size={isChatVariant ? 14 : 16}
                 strokeWidth={1.8}
                 aria-hidden="true"
               />
@@ -208,14 +265,25 @@ export function ClientPromptBox() {
               type="button"
               onClick={submitPrompt}
               disabled={!hasPrompt}
-              className={`inline-flex h-8 items-center justify-center rounded-full px-4 text-xs text-white transition ${
+              className={cn(
+                "inline-flex items-center justify-center rounded-full text-xs text-white transition",
                 hasPrompt
                   ? "cursor-pointer bg-black"
-                  : "cursor-not-allowed bg-[#7d7d7a] opacity-80"
-              }`}
+                  : "cursor-not-allowed bg-[#7d7d7a] opacity-80",
+                isChatVariant ? "h-7 w-7" : "h-8 px-4",
+              )}
               aria-label="Generate email"
             >
-              Generate email
+              {isChatVariant ? (
+                <HugeiconsIcon
+                  icon={ArrowUp01Icon}
+                  size={14}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              ) : (
+                "Generate email"
+              )}
             </button>
           </div>
         </div>

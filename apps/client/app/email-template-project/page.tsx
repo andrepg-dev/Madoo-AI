@@ -1,5 +1,6 @@
 "use client"
 
+import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import {
   ArrowDown01Icon,
   Copy01Icon,
@@ -9,7 +10,7 @@ import {
   SparklesIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Button } from "@madoo/design-system";
+import { Button, Tooltip } from "@madoo/design-system";
 import Image from "next/image";
 
 function ActionButton({
@@ -20,27 +21,28 @@ function ActionButton({
   label: string;
 }) {
   return (
-    <Button
-      aria-label={label}
-      className="h-6 w-6 rounded-md"
-      title={label}
-      variant="icon"
-      size="sm"
-    >
-      <HugeiconsIcon
-        aria-hidden="true"
-        icon={icon}
-        primaryColor="currentColor"
-        size={13}
-        strokeWidth={1.5}
-      />
-    </Button>
+    <Tooltip content={label} side="top" tone="light">
+      <Button
+        aria-label={label}
+        className="h-6 w-6 rounded-md"
+        variant="icon"
+        size="sm"
+      >
+        <HugeiconsIcon
+          aria-hidden="true"
+          icon={icon}
+          primaryColor="currentColor"
+          size={13}
+          strokeWidth={1.5}
+        />
+      </Button>
+    </Tooltip>
   );
 }
 
 export default function EmailTemplateProject() {
   return (
-    <main>
+    <main className="flex min-h-screen flex-col bg-white">
       <header className="px-4 py-2">
         <Button className="px-4 py-0!" variant="ghost">
           <Image
@@ -62,15 +64,15 @@ export default function EmailTemplateProject() {
       </header>
 
       {/* CHAT SECTION, (User messages, AI agent messages, date at the top, and so on...) */}
-      <section className="max-w-3xl h-full mx-auto">
+      <section className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-4">
         {/* time */}
         <span className="text-xs text-madoo-ink-muted w-full flex justify-center">Jun 8 at 9:42 AM</span>
 
         {/* messages */}
-        <div className="flex flex-col text-sm font-figtree mt-8">
+        <div className="mt-8 flex flex-1 flex-col text-sm font-figtree">
           {/* user message */}
           <div className="ml-auto">
-            <span className="bg-madoo-bg-2 px-4 py-2 rounded-xl text-right">Hi madoo, how are you?</span>
+            <span className="bg-madoo-bg shadow-madoo-border px-4 py-2 rounded-lg text-right">Hi madoo, how are you?</span>
 
             <div className="flex gap-1 my-1.5 mt-3 max-w-min ml-auto">
               <ActionButton icon={Edit02Icon} label="Editar mensaje" />
@@ -100,6 +102,15 @@ Cuéntame tu idea y empezamos. 🚀`}
             </div>
           </div>
         </div>
+
+        <ClientPromptBox
+          classNames={{
+            root: "mt-8 w-full",
+            panel: "bg-madoo-bg shadow-madoo-border",
+            textarea: "min-h-19 rounded-t-2xl px-4.5 pt-[17px]",
+          }}
+          variant="chat"
+        />
       </section>
     </main>
   )
