@@ -25,6 +25,8 @@ type SearchCommandModalProps = {
   onClose: () => void;
 };
 
+const MODAL_EXIT_MS = 170;
+
 type SearchItem = {
   id: string;
   label: string;
@@ -117,10 +119,27 @@ function groupItems(items: SearchItem[]) {
   );
 }
 
+function useCommandModalPresence(open: boolean) {
+  const [present, setPresent] = useState(open);
+
+  useEffect(() => {
+    if (open) {
+      setPresent(true);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setPresent(false), MODAL_EXIT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+
+  return present;
+}
+
 export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
+  const present = useCommandModalPresence(open);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -163,7 +182,7 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
     setActiveIndex(0);
   }, [query]);
 
-  if (!open) return null;
+  if (!present) return null;
 
   const openItem = (item: SearchItem | undefined) => {
     if (!item) return;
@@ -204,18 +223,20 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
   return (
     <div
       aria-hidden={!open}
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgb(var(--ink-shadow-rgb)_/_0.14)] px-4 py-4 backdrop-blur-[1px]"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgb(var(--ink-shadow-rgb)_/_0.14)] px-4 py-4 backdrop-blur-[1px] will-change-[opacity,backdrop-filter] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-modal-overlay-out data-[state=open]:animate-madoo-modal-overlay-in motion-reduce:animate-none"
+      data-state={open ? "open" : "closed"}
       onClick={handleOverlayClick}
       role="presentation"
     >
       <div
         aria-label="Search"
         aria-modal="true"
-        className="flex h-[min(500px,calc(100dvh-110px))] w-[min(720px,calc(100vw-32px))] flex-col overflow-hidden rounded-[20px] bg-madoo-surface text-sm text-madoo-ink shadow-[var(--shadow-border-rule-hover),0_18px_52px_rgb(var(--ink-shadow-rgb)_/_0.16)] max-sm:h-[min(520px,calc(100dvh-24px))] max-sm:w-full max-sm:rounded-[18px]"
+        className="flex h-[min(500px,calc(100dvh-110px))] w-[min(720px,calc(100vw-32px))] origin-center flex-col overflow-hidden rounded-[20px] bg-madoo-surface text-sm text-madoo-ink shadow-[var(--shadow-border-rule-hover),0_18px_52px_rgb(var(--ink-shadow-rgb)_/_0.16)] will-change-[opacity,transform] data-[state=closed]:animate-madoo-modal-out data-[state=open]:animate-madoo-modal-in max-sm:h-[min(520px,calc(100dvh-24px))] max-sm:w-full max-sm:rounded-[18px] motion-reduce:animate-none"
+        data-state={open ? "open" : "closed"}
         onClick={stopPropagation}
         role="dialog"
       >
-        <div className="flex h-[42px] shrink-0 items-center gap-2 px-4 max-sm:h-[42px] max-sm:px-3">
+        <div className="flex h-[42px] shrink-0 animate-madoo-modal-content-in items-center gap-2 px-4 max-sm:h-[42px] max-sm:px-3 motion-reduce:animate-none">
           <span className="text-madoo-ink-soft">
             <CommandIcon icon={Search01Icon} size={14} />
           </span>
@@ -245,7 +266,7 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
           role="listbox"
         >
           {filteredItems.length ? (
-            <div className="grid gap-4">
+            <div className="grid animate-madoo-modal-content-in gap-4 [animation-delay:24ms] motion-reduce:animate-none">
               {(["Recent projects", "Navigate to"] as const).map((group) => {
                 const items = groupedItems[group];
                 if (!items.length) return null;
@@ -299,7 +320,7 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
           )}
         </div>
 
-        <div className="flex h-[48px] shrink-0 items-center justify-between px-4 max-sm:px-4">
+        <div className="flex h-[48px] shrink-0 animate-madoo-modal-content-in items-center justify-between px-4 [animation-delay:36ms] max-sm:px-4 motion-reduce:animate-none">
           <span aria-hidden="true" className="text-madoo-ink-faint">
             <CommandIcon icon={Folder01Icon} size={14} />
           </span>
