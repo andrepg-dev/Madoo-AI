@@ -4,6 +4,7 @@
 @source "./foundations/**/*.{ts,tsx,mdx}";
 
 @theme {
+  --font-figtree: var(--font-display);
   --font-madoo-sans: var(--font-sans);
   --font-madoo-display: var(--font-display);
   --font-madoo-mono: var(--font-mono);

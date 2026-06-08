@@ -6,6 +6,7 @@ export type ButtonVariant =
   | "accent"
   | "secondary"
   | "ghost"
+  | "icon"
   | "dashed"
   | "danger";
 
@@ -33,6 +34,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)] enabled:hover:bg-madoo-surface-2",
   ghost:
     "bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
+  icon:
+    "h-8 w-8 p-0! bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
   dashed:
     "bg-transparent text-madoo-ink-faint shadow-[var(--shadow-border)] enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink-soft",
   danger:
