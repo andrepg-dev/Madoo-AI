@@ -82,7 +82,9 @@ function copyText(text: string) {
 function HumanMessage({ children }: { children: string }) {
   return (
     <div className="ml-auto">
-      <span className="bg-madoo-bg shadow-madoo-border px-4 py-2 rounded-lg text-right">{children}</span>
+      <pre className="max-w-xl whitespace-pre-wrap break-words rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
+        {children}
+      </pre>
 
       <div className="flex gap-1 my-1.5 mt-3 max-w-min ml-auto">
         <ActionButton icon={Edit02Icon} label="Edit message" />
@@ -215,9 +217,10 @@ export default function EmailTemplateProject() {
           <ClientPromptBox
             classNames={{
               root: "w-full",
-              panel: "bg-madoo-bg shadow-madoo-border",
-              textarea: "min-h-19 rounded-t-2xl px-4.5 pt-[17px]",
+              panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)_/_0.18)]",
+              textarea: "min-h-17 rounded-t-2xl px-4.5 pt-[17px]",
             }}
+            showOptions={false}
             variant="chat"
           />
         </div>

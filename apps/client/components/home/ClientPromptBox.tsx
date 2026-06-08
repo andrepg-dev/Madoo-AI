@@ -101,12 +101,14 @@ type ClientPromptBoxProps = {
     panel?: string;
     textarea?: string;
   };
+  showOptions?: boolean;
   variant?: "home" | "chat";
 };
 
 export function ClientPromptBox({
   className,
   classNames,
+  showOptions = true,
   variant = "home",
 }: ClientPromptBoxProps) {
   const router = useRouter();
@@ -121,7 +123,7 @@ export function ClientPromptBox({
     isChatVariant ? [] : placeholders,
   );
   const placeholder = isChatVariant
-    ? "Message Madoo..."
+    ? "Write a message..."
     : `Hi Madoo ${placeholderBody}`;
 
   const submitPrompt = () => {
@@ -222,26 +224,28 @@ export function ClientPromptBox({
               />
             </button>
 
-            <div className="flex items-center gap-1.5">
-              {promptOptions.map((option) => (
-                <Select
-                  key={option.label}
-                  value={promptOptionValues[option.label] ?? ""}
-                  options={option.options}
-                  placeholder={option.label}
-                  menuTitle={option.label}
-                  menuWidth={option.menuWidth}
-                  size="sm"
-                  variant="ghost"
-                  onChange={(value) =>
-                    setPromptOptionValues((current) => ({
-                      ...current,
-                      [option.label]: value,
-                    }))
-                  }
-                />
-              ))}
-            </div>
+            {showOptions ? (
+              <div className="flex items-center gap-1.5">
+                {promptOptions.map((option) => (
+                  <Select
+                    key={option.label}
+                    value={promptOptionValues[option.label] ?? ""}
+                    options={option.options}
+                    placeholder={option.label}
+                    menuTitle={option.label}
+                    menuWidth={option.menuWidth}
+                    size="sm"
+                    variant="ghost"
+                    onChange={(value) =>
+                      setPromptOptionValues((current) => ({
+                        ...current,
+                        [option.label]: value,
+                      }))
+                    }
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2">
