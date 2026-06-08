@@ -2,8 +2,10 @@ import {
   cloneElement,
   forwardRef,
   isValidElement,
+  useState,
   useId,
   type HTMLAttributes,
+  type MouseEvent,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -83,16 +85,27 @@ export const Tooltip = forwardRef<HTMLSpanElement, TooltipProps>(
       tone = "ink",
       disabled,
       className,
+      onBlur,
+      onMouseLeave,
       ...rest
     },
     ref,
   ) {
     const generatedId = useId();
+    const [dismissed, setDismissed] = useState(false);
     const tooltipId = `${generatedId}-tooltip`;
-    const shouldRenderTooltip = !disabled && Boolean(content);
+    const shouldRenderTooltip = !disabled && Boolean(content) && !dismissed;
 
     const trigger = isValidElement(children)
       ? cloneElement(children, {
+          onClick: (event: MouseEvent<HTMLElement>) => {
+            setDismissed(true);
+            (
+              children.props as {
+                onClick?: (event: MouseEvent<HTMLElement>) => void;
+              }
+            ).onClick?.(event);
+          },
           "aria-describedby": shouldRenderTooltip
             ? [
                 (children.props as { "aria-describedby"?: string })[
@@ -117,6 +130,11 @@ export const Tooltip = forwardRef<HTMLSpanElement, TooltipProps>(
         data-align={align}
         data-tone={tone}
         data-disabled={disabled ? "true" : undefined}
+        onBlur={(event) => {
+          setDismissed(false);
+          onBlur?.(event);
+        }}
+        onMouseLeave={onMouseLeave}
         {...rest}
       >
         {trigger}

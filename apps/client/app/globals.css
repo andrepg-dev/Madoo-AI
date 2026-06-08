@@ -45,3 +45,16 @@ body {
   border: 7px solid transparent;
   background-clip: padding-box;
 }
+
+.ai-conversation-markdown {
+  color: inherit;
+  font-size: 14px;
+}
+
+.ai-conversation-markdown p {
+  margin: 0;
+}
+
+.ai-conversation-markdown p + p {
+  margin-top: 8px;
+}
