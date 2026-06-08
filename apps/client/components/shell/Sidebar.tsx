@@ -31,6 +31,7 @@ import {
   ProgressBar,
   cx,
 } from "@madoo/design-system";
+import { useClientStore } from "@/stores/client-store";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -195,6 +196,9 @@ export function Sidebar() {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(true);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const setSearchCommandOpen = useClientStore(
+    (state) => state.setSearchCommandOpen,
+  );
 
   const creditsPct = Math.min(
     100,
@@ -377,7 +381,15 @@ export function Sidebar() {
               collapsed={collapsed}
               item={item}
               key={item.href}
-              onSelect={router.push}
+              onSelect={(href) => {
+                if (href === "/search") {
+                  setSearchCommandOpen(true);
+                  setWorkspaceOpen(false);
+                  return;
+                }
+
+                router.push(href);
+              }}
             />
           );
         })}
