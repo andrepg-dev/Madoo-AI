@@ -51,7 +51,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html
@@ -60,9 +60,9 @@ export default function RootLayout({
       data-density="cozy"
       className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable} ${jetbrains.variable}`}
     >
-      <AppProviders>
-        <body>{children}</body>
-      </AppProviders>
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
-  )
+  );
 }
