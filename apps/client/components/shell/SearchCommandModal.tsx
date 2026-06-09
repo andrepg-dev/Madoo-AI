@@ -28,10 +28,12 @@ type SearchCommandModalProps = {
 const MODAL_EXIT_MS = 170;
 
 type SearchItem = {
+  description?: string;
   id: string;
+  imageSrc?: string;
   label: string;
   href: string;
-  group: "Recent projects" | "Navigate to";
+  group: "Recent projects" | "Navigate to" | "Providers";
   icon: IconSvgElement;
 };
 
@@ -90,6 +92,54 @@ const navigationItems: SearchItem[] = [
   },
 ];
 
+const providerItems: SearchItem[] = [
+  {
+    id: "provider-mailchimp",
+    label: "Mailchimp",
+    description: "Sync campaigns and email templates with Mailchimp.",
+    href: "/providers",
+    group: "Providers",
+    icon: DiamondIcon,
+    imageSrc: "https://www.google.com/s2/favicons?domain=mailchimp.com&sz=64",
+  },
+  {
+    id: "provider-klaviyo",
+    label: "Klaviyo",
+    description: "Connect lifecycle email templates for ecommerce flows.",
+    href: "/providers",
+    group: "Providers",
+    icon: DiamondIcon,
+    imageSrc: "https://www.google.com/s2/favicons?domain=klaviyo.com&sz=64",
+  },
+  {
+    id: "provider-hubspot",
+    label: "HubSpot",
+    description: "Prepare email assets for your CRM marketing workspace.",
+    href: "/providers",
+    group: "Providers",
+    icon: DiamondIcon,
+    imageSrc: "https://www.google.com/s2/favicons?domain=hubspot.com&sz=64",
+  },
+  {
+    id: "provider-brevo",
+    label: "Brevo",
+    description: "Export templates for email campaigns and automation.",
+    href: "/providers",
+    group: "Providers",
+    icon: DiamondIcon,
+    imageSrc: "https://www.google.com/s2/favicons?domain=brevo.com&sz=64",
+  },
+  {
+    id: "provider-mailerlite",
+    label: "MailerLite",
+    description: "Use generated templates in MailerLite newsletters.",
+    href: "/providers",
+    group: "Providers",
+    imageSrc: "https://www.google.com/s2/favicons?domain=mailerlite.com&sz=64",
+    icon: DiamondIcon,
+  },
+];
+
 function CommandIcon({
   icon,
   size = 14,
@@ -115,7 +165,7 @@ function groupItems(items: SearchItem[]) {
       groups[item.group].push(item);
       return groups;
     },
-    { "Recent projects": [], "Navigate to": [] },
+    { "Recent projects": [], "Navigate to": [], Providers: [] },
   );
 }
 
@@ -145,12 +195,14 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const allItems = [...recentProjects, ...navigationItems];
+    const allItems = [...recentProjects, ...navigationItems, ...providerItems];
 
     if (!normalizedQuery) return allItems;
 
     return allItems.filter((item) =>
-      item.label.toLowerCase().includes(normalizedQuery),
+      `${item.label} ${item.description ?? ""}`
+        .toLowerCase()
+        .includes(normalizedQuery),
     );
   }, [query]);
 
@@ -267,51 +319,82 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
         >
           {filteredItems.length ? (
             <div className="grid animate-madoo-modal-content-in gap-4 [animation-delay:24ms] motion-reduce:animate-none">
-              {(["Recent projects", "Navigate to"] as const).map((group) => {
-                const items = groupedItems[group];
-                if (!items.length) return null;
+              {(["Recent projects", "Navigate to", "Providers"] as const).map(
+                (group) => {
+                  const items = groupedItems[group];
+                  if (!items.length) return null;
 
-                return (
-                  <section key={group} aria-label={group} className="grid gap-2">
-                    <h2 className="px-3 text-xs font-medium leading-none text-madoo-ink-muted max-sm:px-2">
-                      {group}
-                    </h2>
-                    <div className="grid gap-1">
-                      {items.map((item) => {
-                        const itemIndex = filteredItems.findIndex(
-                          (currentItem) => currentItem.id === item.id,
-                        );
-                        const active = itemIndex === activeIndex;
+                  return (
+                    <section
+                      key={group}
+                      aria-label={group}
+                      className="grid gap-2"
+                    >
+                      <h2 className="px-3 text-xs font-medium leading-none text-madoo-ink-muted max-sm:px-2">
+                        {group}
+                      </h2>
+                      <div className="grid gap-1">
+                        {items.map((item) => {
+                          const itemIndex = filteredItems.findIndex(
+                            (currentItem) => currentItem.id === item.id,
+                          );
+                          const active = itemIndex === activeIndex;
 
-                        return (
-                          <button
-                            aria-selected={active}
-                            className={cx(
-                              "grid h-10 max-h-10 w-full cursor-pointer grid-cols-[18px_minmax(0,1fr)] items-center gap-2.5 rounded-[10px] px-3 text-left text-sm font-normal leading-none outline-none max-sm:h-[48px] max-sm:px-2",
-                              active
-                                ? "bg-madoo-accent text-madoo-accent-fg"
-                                : "bg-transparent text-madoo-ink hover:bg-madoo-surface-2",
-                            )}
-                            id={`${listboxId}-${item.id}`}
-                            key={item.id}
-                            onClick={() => openItem(item)}
-                            onMouseEnter={() => setActiveIndex(itemIndex)}
-                            role="option"
-                            type="button"
-                          >
-                            <span className="flex size-5 items-center justify-center max-sm:size-5">
-                              <CommandIcon icon={item.icon} size={14} />
-                            </span>
-                            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                              {item.label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })}
+                          return (
+                            <button
+                              aria-selected={active}
+                              className={cx(
+                                item.imageSrc
+                                  ? "grid min-h-[58px] w-full cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-normal leading-none outline-none max-sm:px-2"
+                                  : "grid h-10 max-h-10 w-full cursor-pointer grid-cols-[18px_minmax(0,1fr)] items-center gap-2.5 rounded-[10px] px-3 text-left text-sm font-normal leading-none outline-none max-sm:h-[48px] max-sm:px-2",
+                                active
+                                  ? "bg-madoo-accent text-madoo-accent-fg"
+                                  : "bg-transparent text-madoo-ink hover:bg-madoo-surface-2",
+                              )}
+                              id={`${listboxId}-${item.id}`}
+                              key={item.id}
+                              onClick={() => openItem(item)}
+                              onMouseEnter={() => setActiveIndex(itemIndex)}
+                              role="option"
+                              type="button"
+                            >
+                              <span className="flex size-5 items-center justify-center max-sm:size-5">
+                                {item.imageSrc ? (
+                                  <img
+                                    alt=""
+                                    className="size-6 rounded-md bg-madoo-surface-2 object-contain p-0.5"
+                                    loading="lazy"
+                                    src={item.imageSrc}
+                                  />
+                                ) : (
+                                  <CommandIcon icon={item.icon} size={14} />
+                                )}
+                              </span>
+                              <span className="grid min-w-0 gap-1">
+                                <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                                  {item.label}
+                                </span>
+                                {item.description ? (
+                                  <span
+                                    className={cx(
+                                      "min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
+                                      active
+                                        ? "text-madoo-accent-fg opacity-80"
+                                        : "text-madoo-ink-muted",
+                                    )}
+                                  >
+                                    {item.description}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                },
+              )}
             </div>
           ) : (
             <div className="px-4 py-10 text-sm text-madoo-ink-muted">

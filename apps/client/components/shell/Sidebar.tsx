@@ -1,14 +1,15 @@
 "use client";
 
+import { useClientStore } from "@/stores/client-store";
 import {
   Add01Icon,
   ArrowDown01Icon,
+  Crown02Icon,
   GiftIcon,
   Grid2X2Icon,
   InboxIcon,
   PanelLeftIcon,
   PanelRightIcon,
-  Plug01Icon,
   Search01Icon,
   StarIcon,
   Tick02Icon,
@@ -31,7 +32,6 @@ import {
   ProgressBar,
   cx,
 } from "@madoo/design-system";
-import { useClientStore } from "@/stores/client-store";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -46,15 +46,18 @@ type NavItem = {
 const primaryItems: NavItem[] = [
   { href: "/", label: "Home", icon: "home" },
   { href: "/search", label: "Search", icon: Search01Icon, shortcut: "K" },
-  { href: "/providers", label: "Providers", icon: Plug01Icon },
 ];
 
 const templateProjectItems: NavItem[] = [
-  { href: "/projects", label: "All projects", icon: Grid2X2Icon },
-  { href: "/projects/starred", label: "Starred", icon: StarIcon },
-  { href: "/projects/created-by-me", label: "Created by me", icon: UserIcon },
+  { href: "/dashboard/projects", label: "All projects", icon: Grid2X2Icon },
+  { href: "/dashboard/projects/starred", label: "Starred", icon: StarIcon },
   {
-    href: "/projects/shared-with-me",
+    href: "/dashboard/projects/created-by-me",
+    label: "Created by me",
+    icon: UserIcon,
+  },
+  {
+    href: "/dashboard/projects/shared-with-me",
     label: "Shared with me",
     icon: UserMultipleIcon,
   },
@@ -407,7 +410,7 @@ export function Sidebar() {
       <nav aria-label="Template projects" className="grid w-full gap-1 pt-0.5">
         {templateProjectItems.map((item) => {
           const active =
-            item.href === "/projects"
+            item.href === "/dashboard/projects"
               ? pathname === item.href
               : isActive(item.href);
           return (
@@ -425,18 +428,37 @@ export function Sidebar() {
       <div className="flex-1" />
 
       {!collapsed ? (
-        <div className="madoo-paper-border flex min-h-[68px] items-center justify-between gap-3 rounded-[var(--radius-xl)] bg-madoo-bg-2/50 px-3.5 py-3">
-          <span className="grid min-w-0 flex-1 gap-1">
-            <span className="truncate font-madoo-sans text-[length:var(--font-size-base)] leading-none text-madoo-ink">
-              Share Madoo
+        <div className="grid gap-2">
+          <div>
+            <Button
+              aria-label="Upgrade to Pro"
+              block
+              leftIcon={
+                <span className="grid size-5 place-items-center rounded-[var(--radius-sm)] bg-white/18">
+                  <AppIcon icon={Crown02Icon} size={15} />
+                </span>
+              }
+              size="sm"
+              variant="accent"
+              className="h-10! min-h-10! justify-center! rounded-[var(--radius-lg)]! bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))]! text-[length:var(--font-size-sm)]! font-medium! shadow-[inset_0_0_0_0.5px_rgb(255_255_255_/_0.28),var(--shadow-border-accent)]! hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent-deep)_88%,white),var(--accent-deep))]!"
+            >
+              <span className="truncate">Upgrade to Pro</span>
+            </Button>
+          </div>
+
+          <div className="madoo-paper-border flex min-h-[68px] items-center justify-between gap-3 rounded-[var(--radius-xl)] bg-madoo-bg-2/50 px-3.5 py-3">
+            <span className="grid min-w-0 flex-1 gap-1">
+              <span className="truncate font-madoo-sans text-[length:var(--font-size-base)] leading-none text-madoo-ink">
+                Share Madoo
+              </span>
+              <span className="truncate text-[length:var(--font-size-xs)] leading-none">
+                100 credits per paid referral
+              </span>
             </span>
-            <span className="truncate text-[length:var(--font-size-xs)] leading-none">
-              100 credits per paid referral
+            <span className="madoo-paper-border grid h-10 w-10 shrink-0 place-items-center rounded-full bg-madoo-bg">
+              <AppIcon icon={GiftIcon} size={18} />
             </span>
-          </span>
-          <span className="madoo-paper-border grid h-10 w-10 shrink-0 place-items-center rounded-full bg-madoo-bg">
-            <AppIcon icon={GiftIcon} size={18} />
-          </span>
+          </div>
         </div>
       ) : null}
 
