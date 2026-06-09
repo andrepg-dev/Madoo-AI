@@ -35,6 +35,7 @@ import {
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { PricingDrawer } from "./PricingDrawer";
 
 type NavItem = {
   href: string;
@@ -198,6 +199,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(true);
+  const [pricingOpen, setPricingOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const setSearchCommandOpen = useClientStore(
     (state) => state.setSearchCommandOpen,
@@ -440,6 +442,7 @@ export function Sidebar() {
               }
               size="sm"
               variant="accent"
+              onClick={() => setPricingOpen(true)}
               className="h-10! min-h-10! justify-center! rounded-[var(--radius-lg)]! bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))]! text-[length:var(--font-size-sm)]! font-medium! shadow-[inset_0_0_0_0.5px_rgb(255_255_255_/_0.28),var(--shadow-border-accent)]! hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent-deep)_88%,white),var(--accent-deep))]!"
             >
               <span className="truncate">Upgrade to Pro</span>
@@ -513,6 +516,7 @@ export function Sidebar() {
           className="w-max"
         />
       </div>
+      <PricingDrawer open={pricingOpen} onClose={() => setPricingOpen(false)} />
     </aside>
   );
 }
