@@ -180,7 +180,7 @@ export default function EmailTemplateProject() {
           className="madoo-chat-scrollbar min-h-0 flex-1 overflow-y-auto pr-4 text-sm font-figtree pb-48"
           onScroll={updateScrollState}
         >
-          <div className="mx-auto w-full max-w-3xl px-4">
+          <div className="mx-auto w-full max-w-2xl px-4">
             {/* time */}
             <span className="text-xs text-madoo-ink-muted flex w-full justify-center">Jun 8 at 9:42 AM</span>
 

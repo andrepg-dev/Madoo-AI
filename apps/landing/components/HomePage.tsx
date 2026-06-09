@@ -185,6 +185,30 @@ const localeCopy = {
         { label: "Export", text: "Send production-ready HTML to your email tool." },
       ],
     },
+    value: {
+      eyebrow: "Built for modern email operations",
+      title: "Create AI-assisted email templates, then ship them with confidence.",
+      description:
+        "Start with a prompt, turn it into a branded email template, review every production detail, and export it to the tool your team already uses.",
+      status: "AI-assisted template creation",
+      aiTitle: "AI-assisted templates",
+      aiDescription: "Create campaign-ready email templates from plain-language prompts, then refine copy, sections, tone, and layout.",
+      compatibilityTitle: "Client compatibility",
+      compatibilityDescription: "Preview email behavior across Gmail, Outlook, Apple Mail, and more before launch.",
+      brandTitle: "Brand systems",
+      brandDescription: "Reusable templates, layout rules, colors, type, blocks, and saved campaign patterns.",
+      workflowTitle: "Team workflow",
+      workflowDescription: "Approvals, reviews, ownership, and campaign handoff stay visible before export.",
+      integrationsTitle: "ESP integrations",
+      integrationsDescription: "Move finished campaigns into Mailchimp, HubSpot, Klaviyo, Salesforce, and other ESPs.",
+      qaTitle: "Testing and compliance",
+      qaDescription: "Previews, QA states, compliance checks, and export-ready assets live beside the design.",
+      clients: ["Gmail", "Outlook", "Apple Mail", "Yahoo", "Mobile"],
+      flow: ["Draft", "Review", "Approved", "Export"],
+      controls: ["Copy", "Layout", "Brand", "Audience", "Compliance", "Export"],
+      previewLabel: "preview",
+      readyLabel: "Ready",
+    },
     templates: {
       title: "Explore templates",
       description:
@@ -207,7 +231,7 @@ const localeCopy = {
     },
     cta: {
       eyebrow: "Madoo | AI Email Design Company",
-      title: "Ready to build?",
+      title: "Ready to craft?",
       placeholderPrefix: "Hi Madoo, ",
       placeholders: [
         "create a product launch email for my audience.",
@@ -265,6 +289,30 @@ const localeCopy = {
         { label: "Diseño", text: "Madoo lo convierte en un layout de email pulido." },
         { label: "Exporta", text: "Envía HTML listo para producción a tu herramienta de email." },
       ],
+    },
+    value: {
+      eyebrow: "Creado para operaciones modernas de email",
+      title: "Crea plantillas de email con asistencia de IA y publícalas con confianza.",
+      description:
+        "Empieza con un prompt, conviértelo en una plantilla de email con marca, revisa cada detalle de producción y expórtala a la herramienta que tu equipo ya usa.",
+      status: "Creación asistida por IA",
+      aiTitle: "Plantillas con IA",
+      aiDescription: "Crea plantillas de email listas para campaña desde prompts simples y ajusta copy, secciones, tono y layout.",
+      compatibilityTitle: "Compatibilidad",
+      compatibilityDescription: "Previsualiza el comportamiento en Gmail, Outlook, Apple Mail y más antes de lanzar.",
+      brandTitle: "Sistemas de marca",
+      brandDescription: "Plantillas reutilizables, reglas de layout, colores, tipografías, bloques y patrones guardados.",
+      workflowTitle: "Flujo de equipo",
+      workflowDescription: "Aprobaciones, revisiones, dueños y handoff de campaña se mantienen visibles antes de exportar.",
+      integrationsTitle: "Integraciones ESP",
+      integrationsDescription: "Mueve campañas terminadas a Mailchimp, HubSpot, Klaviyo, Salesforce y otros ESPs.",
+      qaTitle: "Testing y compliance",
+      qaDescription: "Previews, estados de QA, checks de cumplimiento y assets listos para exportar viven junto al diseño.",
+      clients: ["Gmail", "Outlook", "Apple Mail", "Yahoo", "Mobile"],
+      flow: ["Borrador", "Review", "Aprobado", "Exportar"],
+      controls: ["Copy", "Layout", "Marca", "Audiencia", "Compliance", "Export"],
+      previewLabel: "preview",
+      readyLabel: "Listo",
     },
     templates: {
       title: "Explora plantillas",
@@ -391,6 +439,32 @@ function Arrow11(props: SVGAttributes<SVGSVGElement>) {
 
 export default function HomePage({ locale = "en" }: HomePageProps) {
   const copy = localeCopy[locale];
+  const valueFeatures = [
+    {
+      title: copy.value.aiTitle,
+      description: copy.value.aiDescription,
+    },
+    {
+      title: copy.value.compatibilityTitle,
+      description: copy.value.compatibilityDescription,
+    },
+    {
+      title: copy.value.brandTitle,
+      description: copy.value.brandDescription,
+    },
+    {
+      title: copy.value.workflowTitle,
+      description: copy.value.workflowDescription,
+    },
+    {
+      title: copy.value.integrationsTitle,
+      description: copy.value.integrationsDescription,
+    },
+    {
+      title: copy.value.qaTitle,
+      description: copy.value.qaDescription,
+    },
+  ];
   const localizedTemplateCards = templateCards.map((template, index) => ({
     ...template,
     ...copy.templates.cards[index],
@@ -582,18 +656,135 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                 </div>
               </div>
             </div>
-
-            <div className="bottom-0 mx-auto absolute z-50 h-[600px] w-full max-w-5xl translate-y-[35%] rounded-4xl border border-white/70 bg-madoo-paper p-6 outline outline-1 outline-white/70 backdrop-blur-md">
-
-            </div>
           </div>
         </div>
-        {/* 
-        <section className="madoo-paper-section relative z-10 w-full pt-64">
 
-        </section> */}
+        <section className="madoo-paper-section relative z-10 w-full px-4 pb-18 sm:px-8 sm:pb-24 sm:pt-87.5 xl:px-0">
+          <div className="mx-auto w-full max-w-7xl font-ibm-plex-sans">
+            <div className="flex w-full flex-col justify-between gap-5 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5b63ff]">{copy.value.eyebrow}</p>
+                <h2 className="mt-3 max-w-3xl text-4xl font-semibold leading-[0.98] tracking-normal text-[#171717] sm:text-5xl">
+                  {copy.value.title}
+                </h2>
+                <p className="mt-4 max-w-2xl text-base leading-7 text-[#6f6961]">
+                  {copy.value.description}
+                </p>
+              </div>
 
-        <section className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 py-20 sm:px-8 sm:pt-87.5 xl:px-0">
+              <div className="w-fit rounded-full border border-[#0c346a]/15 bg-white px-4 py-2 text-sm font-medium text-[#071b38] shadow-[0_18px_45px_rgb(var(--madoo-ink-shadow-rgb)/0.06)]">
+                {copy.value.status}
+              </div>
+            </div>
+
+            <div className="mt-10 grid gap-4 lg:grid-cols-12">
+              <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
+                {valueFeatures.map((feature, index) => {
+                  const Icon = workflowSteps[index % workflowSteps.length]?.icon ?? AiIdeaIcon;
+
+                  return (
+                    <article
+                      key={feature.title}
+                      className="madoo-paper-border madoo-paper-border-hover group min-h-[190px] rounded-lg bg-white p-5 transition"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f3faff] text-[#071b38] transition group-hover:bg-[#e7f0ff]">
+                        <HugeiconsIcon icon={Icon} size={20} strokeWidth={1.6} aria-hidden="true" />
+                      </div>
+                      <h3 className="mt-6 text-[15px] font-semibold leading-tight text-[#171717]">{feature.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-[#6f6961]">{feature.description}</p>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <div className="madoo-paper-border relative overflow-hidden rounded-lg bg-[#101114] p-5 text-white lg:col-span-5">
+                <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(90deg,rgba(91,99,255,0.45),rgba(79,209,197,0.28),rgba(255,255,255,0))]" aria-hidden="true" />
+
+                <div className="relative">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold leading-tight">{copy.value.compatibilityTitle}</h3>
+                      <p className="mt-2 max-w-sm text-sm leading-6 text-white/65">{copy.value.compatibilityDescription}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-white/50">QA</p>
+                      <p className="mt-1 text-sm font-semibold">{copy.value.readyLabel}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-5">
+                    {copy.value.clients.map((client) => (
+                      <div key={client} className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-3">
+                        <div className="mb-3 h-1.5 w-8 rounded-full bg-[#7dd3fc]" />
+                        <p className="text-xs font-medium text-white">{client}</p>
+                        <p className="mt-1 text-[11px] text-white/45">{copy.value.previewLabel}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.06] p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {copy.value.flow.map((step, index) => (
+                        <div key={step} className="flex items-center gap-2">
+                          <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#101114]">
+                            {step}
+                          </span>
+                          {index < copy.value.flow.length - 1 ? (
+                            <span className="hidden h-px w-5 bg-white/25 sm:block" aria-hidden="true" />
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_1.1fr]">
+                    <div className="rounded-lg border border-white/10 bg-white/[0.06] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">{copy.value.brandTitle}</p>
+                      <div className="mt-4 flex gap-2">
+                        {["#071b38", "#5b63ff", "#4fd1c5", "#ffffff"].map((color) => (
+                          <span
+                            key={color}
+                            className="h-8 w-8 rounded-full border border-white/20"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        {copy.value.controls.slice(0, 3).map((control) => (
+                          <div key={control} className="h-2 rounded-full bg-white/15" />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-white/10 bg-white/[0.06] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">{copy.value.integrationsTitle}</p>
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        {exportProviders.slice(0, 6).map((provider, index) => (
+                          <div key={provider.name} className="flex items-center gap-2 rounded-lg bg-white px-2 py-2">
+                            <span
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                              style={{ backgroundColor: providerLogoSwatches[index % providerLogoSwatches.length] }}
+                            >
+                              <img
+                                src={provider.iconSrc}
+                                alt={`${provider.name} logo`}
+                                className="h-4 w-4 object-contain"
+                                loading="lazy"
+                              />
+                            </span>
+                            <span className="truncate text-[11px] font-semibold text-[#101114]">{provider.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 py-20 sm:px-8 xl:px-0">
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex w-full flex-col justify-between gap-6 sm:flex-row sm:items-end">
               <div>
@@ -650,13 +841,21 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
           </div>
         </section>
 
-        <section className="relative z-10 overflow-hidden px-4 py-20 sm:px-8 sm:py-24 mb-16">
+        <section className="relative z-10 flex h-[80vh] items-center overflow-hidden px-4 mx-4 rounded-3xl my-44">
+          <Image
+            src="/background-photo-2.webp"
+            alt=""
+            fill
+            sizes="100vw"
+            className="pointer-events-none absolute inset-0 -z-10 object-cover"
+            aria-hidden="true"
+          />
           <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center font-ibm-plex-sans">
-            <div className="inline-flex items-center gap-2 rounded-full px-3 text-sm text-zinc-600">
+            <div className="inline-flex items-center gap-2 rounded-full px-3 text-sm text-zinc-800">
               {copy.cta.eyebrow}
             </div>
 
-            <h2 className="text-5xl font-semibold font leading-none tracking-normal text-[#171717]">
+            <h2 className="text-5xl leading-none tracking-normal text-black font-extralight text-shadow-lg">
               {copy.cta.title}
             </h2>
 

@@ -41,7 +41,7 @@ export function GroupButtons({
       aria-label={ariaLabel}
       className={cx("inline-flex items-center isolate font-madoo-sans", className)}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const selected = item.value === value;
 
         return (
@@ -59,7 +59,7 @@ export function GroupButtons({
             onClick={() => onChange(item.value)}
           >
             {item.icon ? (
-              <span className="inline-flex items-center justify-center" aria-hidden="true">
+              <span key={index} className="inline-flex items-center justify-center" aria-hidden="true">
                 {item.icon}
               </span>
             ) : null}
