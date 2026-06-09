@@ -659,7 +659,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
           </div>
         </div>
 
-        <section className="madoo-paper-section relative z-10 w-full px-4 pb-18 sm:px-8 sm:pb-24 sm:pt-87.5 xl:px-0">
+        <section className="madoo-paper-section relative z-10 w-full px-4 pb-18 sm:px-8 sm:pb-24 pt-64 xl:px-0">
           <div className="mx-auto w-full max-w-7xl font-ibm-plex-sans">
             <div className="flex w-full flex-col justify-between gap-5 sm:flex-row sm:items-end">
               <div>
@@ -784,19 +784,18 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
           </div>
         </section>
 
-        <section className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 py-20 sm:px-8 xl:px-0">
+        <section id="templates" className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 my-56 mb-80 sm:px-8 xl:px-0">
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex w-full flex-col justify-between gap-6 sm:flex-row sm:items-end">
               <div>
-                <h2 className="text-5xl font-ibm-plex-sans font-semibold">{copy.templates.title}</h2>
-                <h4 className="mt-3 max-w-xl text-zinc-600 font-ibm-plex-sans">
+                <h2 className="font-ibm-plex-sans text-5xl font-semibold text-[#171717]">{copy.templates.title}</h2>
+                <h4 className="mt-3 max-w-xl font-ibm-plex-sans text-zinc-600">
                   {copy.templates.description}
                 </h4>
               </div>
-
             </div>
 
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {localizedTemplateCards.map((template) => (
                 <article
                   key={template.name}
@@ -804,36 +803,34 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                   tabIndex={0}
                   onClick={openAuthDialog}
                   onKeyDown={onTemplateCardKeyDown}
-                  className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-xl bg-white transition ${template.isCreateCard
-                    ? "border border-dashed border-[rgba(17,24,39,0.28)] hover:border-[rgba(17,24,39,0.55)]"
-                    : "madoo-paper-border madoo-paper-border-hover"
-                    }`}
+                  className="group min-w-0 cursor-pointer outline-none"
                 >
                   {template.isCreateCard ? (
-                    <div className="relative flex h-[170px] items-center justify-center bg-[#f8f7f2]">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-[rgba(17,24,39,0.32)] bg-white text-[#1b1a18]">
-                        <HugeiconsIcon icon={Add01Icon} size={22} />
+                    <div className="relative flex min-h-64 max-h-6min-h-64 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f3faff] text-[#071b38] shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.18)]">
+                        <HugeiconsIcon icon={Add01Icon} size={22} strokeWidth={1.5} />
                       </div>
                     </div>
                   ) : (
-                    <div className="relative h-[170px] overflow-hidden bg-[#f8f7f2]">
+                    <div className="relative flex min-h-64 max-h-64 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40">
                       <img
                         src={template.imageSrc}
                         alt={`${template.name} ${copy.templates.previewAlt}`}
-                        className="h-full w-full object-cover object-top brightness-[1.06] contrast-[1.03] saturate-[1.04]"
+                        className="w-full object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
                         loading="lazy"
                       />
                     </div>
                   )}
 
-                  <div className="border-t border-[rgba(17,24,39,0.14)] px-3.5 py-3">
-                    <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-[#1b1a18]">{template.name}</h3>
-                    <p className="mt-1 line-clamp-1 text-[12px] leading-4 text-[#6f6961]">{template.description}</p>
-                  </div>
-
-                  <div className="pointer-events-none absolute right-3 top-3 flex translate-y-1 items-center gap-1.5 rounded-full border border-black/10 bg-white/90 px-2.5 py-1.5 text-[#111111] opacity-0 backdrop-blur-sm transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-                    <span className="whitespace-nowrap text-[11px] font-semibold leading-none">{copy.templates.hover}</span>
-                    <TemplateHoverArrow className="h-5 w-5 rotate-[16deg]" aria-hidden="true" />
+                  <div className="mt-2.5 font-ibm-plex-sans">
+                    <div className="min-w-0">
+                      <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium leading-[1.2] text-[#101114]">
+                        {template.name}
+                      </h3>
+                      <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-4 text-[#6f6961]">
+                        {template.description}
+                      </p>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -850,7 +847,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
             className="pointer-events-none absolute inset-0 -z-10 object-cover"
             aria-hidden="true"
           />
-          <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center font-ibm-plex-sans">
+          <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center font-ibm-plex-sans mb-4">
             <div className="inline-flex items-center gap-2 rounded-full px-3 text-sm text-zinc-800">
               {copy.cta.eyebrow}
             </div>
