@@ -1,6 +1,8 @@
 "use client";
 
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
+import { cn } from "@/lib/utils";
+import { useClientStore } from "@/stores/client-store";
 import {
   ArrowDown01Icon,
   ArrowDown02Icon,
@@ -18,8 +20,6 @@ import {
   ThumbsUpIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { cn } from "@/lib/utils";
-import { useClientStore } from "@/stores/client-store";
 import { Button } from "@madoo/design-system";
 import Image from "next/image";
 import {
@@ -281,7 +281,10 @@ function EmailPreviewSidebar({
     <aside
       aria-label="Email template preview"
       className={cn(
-        "relative min-h-0 shrink-0 overflow-hidden border-l border-madoo-border bg-madoo-bg transition-[width,opacity,transform] duration-300 ease-out",
+        "relative min-h-0 shrink-0 overflow-hidden bg-madoo-bg ease-out",
+        isResizing
+          ? "transition-[opacity,transform]"
+          : "transition-[width,opacity,transform] duration-300",
         open ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0",
       )}
       style={{
@@ -293,32 +296,55 @@ function EmailPreviewSidebar({
       {open ? (
         <button
           aria-label="Resize email preview"
-          className="absolute inset-y-0 left-0 z-30 flex w-3 cursor-col-resize touch-none items-center justify-center bg-transparent outline-none transition hover:bg-madoo-accent/20 focus-visible:bg-madoo-accent/25"
+          className={cn(
+            "group absolute inset-y-0 left-0 z-30 flex w-1 cursor-col-resize touch-none items-center justify-start bg-transparent outline-none transition",
+            isResizing
+              ? "bg-madoo-accent/5"
+              : "hover:bg-madoo-accent/5 focus-visible:bg-madoo-accent/10",
+          )}
           onPointerDown={handleResizePointerDown}
           type="button"
         >
-          <span className="h-12 w-1 rounded-full bg-madoo-border" />
+          <span
+            className={cn(
+              "h-full w-px rounded-full bg-madoo-border transition",
+              isResizing
+                ? "bg-madoo-accent"
+                : "group-hover:bg-madoo-accent/60",
+            )}
+          />
+          <span
+            aria-hidden="true"
+            className={cn(
+              "absolute left-0 top-1/2 h-14 w-1 -translate-y-1/2 rounded-full transition",
+              isResizing
+                ? "bg-madoo-accent"
+                : "bg-madoo-border group-hover:bg-madoo-accent/70",
+            )}
+          />
         </button>
       ) : null}
 
-      <div className="flex h-full min-w-[420px] flex-col pl-3">
-        <div className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-madoo-border px-4">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-madoo-ink">
-              Email preview
-            </h2>
-            <p className="truncate text-xs text-madoo-ink-muted">
-              Live generated template
-            </p>
-          </div>
+      <div className="flex h-full min-w-[420px] flex-col">
+        <div className="shrink-0 border-b border-madoo-border bg-white">
+          <div className="flex min-h-13 items-center justify-between gap-3 px-4 bg-white">
+            <div className="min-w-0">
+              <h2 className="truncate text-sm font-semibold text-madoo-ink">
+                Email preview
+              </h2>
+              <p className="truncate text-xs text-madoo-ink-muted">
+                Live generated template
+              </p>
+            </div>
 
-          <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
               <HeaderActionButton icon={Download01Icon} label="Export" />
               <HeaderActionButton icon={SourceCodeIcon} label="Show code" />
               <HeaderActionButton icon={TestTubeIcon} label="Test" />
             </div>
+          </div>
 
+          <div className="flex min-h-11 items-center justify-end gap-2 px-4">
             <div className="inline-flex rounded-lg bg-madoo-surface p-1">
               <PreviewSegmentButton
                 active={mode === "desktop"}
@@ -336,10 +362,10 @@ function EmailPreviewSidebar({
 
             <Button
               aria-label={`Use ${theme === "light" ? "dark" : "light"} email theme`}
-              className="h-8 w-8 rounded-lg bg-white text-madoo-ink shadow-madoo-border hover:bg-madoo-surface"
+              className="h-8 gap-2 rounded-lg bg-white px-3 text-xs font-medium text-madoo-ink shadow-madoo-border hover:bg-madoo-surface"
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
               size="sm"
-              variant="icon"
+              variant="ghost"
             >
               <HugeiconsIcon
                 aria-hidden="true"
@@ -348,14 +374,15 @@ function EmailPreviewSidebar({
                 size={15}
                 strokeWidth={1.55}
               />
+              <span>{theme === "light" ? "Dark" : "Light"}</span>
             </Button>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto p-4">
+        <div className="min-h-0 flex-1 overflow-auto">
           <div
             className={cn(
-              "mx-auto h-full min-h-[640px] overflow-hidden rounded-xl bg-white shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
+              "mx-auto h-full min-h-[640px] overflow-hidden bg-white shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
               mode === "desktop" ? "w-full" : "w-[390px]",
             )}
           >
@@ -516,8 +543,8 @@ export default function EmailTemplateProject() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-2xl shrink-0">
-            <div className="pointer-events-none absolute inset-x-0 -top-4 h-4 bg-gradient-to-b from-white/0 via-white/80 to-white" />
+          <div className="relative mx-auto w-full max-w-[calc(42rem+2rem)] shrink-0 px-4">
+            <div className="pointer-events-none absolute inset-x-4 -top-4 h-4 bg-gradient-to-b from-white/0 via-white/80 to-white" />
             {canScrollDown ? (
               <Button
                 aria-label="Scroll to latest message"
