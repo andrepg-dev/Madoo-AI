@@ -187,7 +187,7 @@ function getEmailTemplateSrcDoc(theme: TemplateTheme) {
       body { margin: 0; background: ${pageBg}; font-family: Arial, sans-serif; color: ${text}; }
       .wrap { width: 100%; padding: 32px 12px; box-sizing: border-box; }
       .email { max-width: 640px; margin: 0 auto; overflow: hidden; border-radius: 18px; background: ${cardBg}; box-shadow: 0 24px 70px rgba(16,17,20,0.12); }
-      .hero { padding: 38px 36px 30px; background: linear-gradient(135deg, ${accent}, ${dark ? "#202637" : "#eef5ff"}); color: ${dark ? "#07111f" : "#ffffff"}; }
+      .hero { border-radius: 18px 18px 0 0; padding: 38px 36px 30px; background: linear-gradient(135deg, ${accent}, ${dark ? "#202637" : "#eef5ff"}); color: ${dark ? "#07111f" : "#ffffff"}; }
       .eyebrow { margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
       h1 { margin: 0; font-size: 34px; line-height: 1.04; letter-spacing: 0; }
       .body { padding: 34px 36px 38px; }
@@ -198,7 +198,6 @@ function getEmailTemplateSrcDoc(theme: TemplateTheme) {
       .cta { display: inline-block; margin-top: 4px; border-radius: 999px; background: ${accent}; color: ${dark ? "#07111f" : "#ffffff"}; padding: 13px 20px; font-size: 14px; font-weight: 700; text-decoration: none; }
       @media (max-width: 520px) {
         .wrap { padding: 0; }
-        .email { border-radius: 0; }
         .hero, .body { padding-left: 22px; padding-right: 22px; }
         h1 { font-size: 28px; }
       }
@@ -281,7 +280,7 @@ function EmailPreviewSidebar({
     <aside
       aria-label="Email template preview"
       className={cn(
-        "relative min-h-0 shrink-0 overflow-hidden bg-madoo-bg ease-out",
+        "relative min-h-0 shrink-0 overflow-hidden  ease-out",
         isResizing
           ? "transition-[opacity,transform]"
           : "transition-[width,opacity,transform] duration-300",
@@ -296,38 +295,15 @@ function EmailPreviewSidebar({
       {open ? (
         <button
           aria-label="Resize email preview"
-          className={cn(
-            "group absolute inset-y-0 left-0 z-30 flex w-1 cursor-col-resize touch-none items-center justify-start bg-transparent outline-none transition",
-            isResizing
-              ? "bg-madoo-accent/5"
-              : "hover:bg-madoo-accent/5 focus-visible:bg-madoo-accent/10",
-          )}
+          className="absolute inset-y-0 left-0 z-30 w-3 cursor-col-resize touch-none bg-transparent outline-none"
           onPointerDown={handleResizePointerDown}
           type="button"
-        >
-          <span
-            className={cn(
-              "h-full w-px rounded-full bg-madoo-border transition",
-              isResizing
-                ? "bg-madoo-accent"
-                : "group-hover:bg-madoo-accent/60",
-            )}
-          />
-          <span
-            aria-hidden="true"
-            className={cn(
-              "absolute left-0 top-1/2 h-14 w-1 -translate-y-1/2 rounded-full transition",
-              isResizing
-                ? "bg-madoo-accent"
-                : "bg-madoo-border group-hover:bg-madoo-accent/70",
-            )}
-          />
-        </button>
+        />
       ) : null}
 
       <div className="flex h-full min-w-[420px] flex-col">
-        <div className="shrink-0 border-b border-madoo-border bg-white">
-          <div className="flex min-h-13 items-center justify-between gap-3 px-4 bg-white">
+        <div className="shrink-0 bg-white">
+          <div className="flex min-h-13 items-center justify-between gap-3 bg-white px-4">
             <div className="min-w-0">
               <h2 className="truncate text-sm font-semibold text-madoo-ink">
                 Email preview
@@ -379,10 +355,10 @@ function EmailPreviewSidebar({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-hidden shadow-madoo-border rounded-3xl">
           <div
             className={cn(
-              "mx-auto h-full min-h-[640px] overflow-hidden bg-white shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
+              "mx-auto h-full min-h-[640px] rounded-3xl overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
               mode === "desktop" ? "w-full" : "w-[390px]",
             )}
           >
