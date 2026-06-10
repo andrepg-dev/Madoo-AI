@@ -104,6 +104,37 @@ body {
   background-clip: padding-box;
 }
 
+.madoo-preview-scrollbar {
+  scrollbar-color: #555555 transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.madoo-preview-scrollbar::-webkit-scrollbar {
+  width: 20px;
+}
+
+.madoo-preview-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 24px;
+}
+
+.madoo-preview-scrollbar::-webkit-scrollbar-thumb {
+  background: #555555;
+  border: 7px solid transparent;
+  border-right-width: 9px;
+  border-radius: 999px;
+  background-clip: padding-box;
+  min-height: 72px;
+}
+
+.madoo-preview-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3f3f3f;
+  border: 7px solid transparent;
+  border-right-width: 9px;
+  background-clip: padding-box;
+}
+
 .ai-conversation-markdown {
   color: inherit;
   font-size: 14px;

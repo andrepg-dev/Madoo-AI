@@ -375,26 +375,28 @@ function EmailPreviewSidebar({
           </div>
         </div>
 
-        <div className="madoo-command-scrollbar min-h-0 flex-1 overflow-y-auto rounded-3xl shadow-madoo-border">
-          <div
-            className={cn(
-              "mx-auto overflow-hidden rounded-3xl shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
-              mode === "desktop" ? "w-full" : "w-[390px]",
-            )}
-          >
-            <iframe
+        <div className="min-h-0 flex-1 overflow-hidden rounded-3xl shadow-madoo-border">
+          <div className="madoo-preview-scrollbar mr-1 h-full overflow-y-auto">
+            <div
               className={cn(
-                "block w-full border-0 bg-white",
-                isResizing && "pointer-events-none",
+                "mx-auto overflow-hidden rounded-3xl shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
+                mode === "desktop" ? "w-full" : "w-[390px]",
               )}
-              onLoad={syncIframeHeight}
-              ref={iframeRef}
-              scrolling="no"
-              sandbox=""
-              srcDoc={getEmailTemplateSrcDoc(theme)}
-              style={{ height: iframeHeight }}
-              title="Generated email template preview"
-            />
+            >
+              <iframe
+                className={cn(
+                  "block w-full border-0 bg-white",
+                  isResizing && "pointer-events-none",
+                )}
+                onLoad={syncIframeHeight}
+                ref={iframeRef}
+                scrolling="no"
+                sandbox=""
+                srcDoc={getEmailTemplateSrcDoc(theme)}
+                style={{ height: iframeHeight }}
+                title="Generated email template preview"
+              />
+            </div>
           </div>
         </div>
       </div>
