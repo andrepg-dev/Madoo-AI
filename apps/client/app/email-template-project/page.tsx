@@ -243,11 +243,16 @@ function EmailPreviewSidebar({
   theme: TemplateTheme;
   width: number;
 }) {
+  const [isResizing, setIsResizing] = useState(false);
+
   const handleResizePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsResizing(true);
 
     const updateWidth = (clientX: number) => {
-      const nextWidth = ((window.innerWidth - clientX) / window.innerWidth) * 100;
+      const nextWidth =
+        ((window.innerWidth - clientX) / window.innerWidth) * 100;
       setWidth(clampPreviewWidth(nextWidth));
     };
 
@@ -256,10 +261,12 @@ function EmailPreviewSidebar({
     };
 
     const onPointerUp = () => {
+      setIsResizing(false);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
     };
 
     document.body.style.cursor = "col-resize";
@@ -267,6 +274,7 @@ function EmailPreviewSidebar({
     updateWidth(event.clientX);
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp, { once: true });
+    window.addEventListener("pointercancel", onPointerUp, { once: true });
   };
 
   return (
@@ -285,15 +293,15 @@ function EmailPreviewSidebar({
       {open ? (
         <button
           aria-label="Resize email preview"
-          className="absolute left-0 top-0 z-20 h-full w-2 -translate-x-1 cursor-col-resize bg-transparent outline-none transition hover:bg-madoo-accent/20 focus-visible:bg-madoo-accent/25"
+          className="absolute inset-y-0 left-0 z-30 flex w-3 cursor-col-resize touch-none items-center justify-center bg-transparent outline-none transition hover:bg-madoo-accent/20 focus-visible:bg-madoo-accent/25"
           onPointerDown={handleResizePointerDown}
           type="button"
         >
-          <span className="absolute left-1/2 top-1/2 h-12 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-madoo-border" />
+          <span className="h-12 w-1 rounded-full bg-madoo-border" />
         </button>
       ) : null}
 
-      <div className="flex h-full min-w-[420px] flex-col">
+      <div className="flex h-full min-w-[420px] flex-col pl-3">
         <div className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-madoo-border px-4">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-madoo-ink">
@@ -305,6 +313,12 @@ function EmailPreviewSidebar({
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <HeaderActionButton icon={Download01Icon} label="Export" />
+              <HeaderActionButton icon={SourceCodeIcon} label="Show code" />
+              <HeaderActionButton icon={TestTubeIcon} label="Test" />
+            </div>
+
             <div className="inline-flex rounded-lg bg-madoo-surface p-1">
               <PreviewSegmentButton
                 active={mode === "desktop"}
@@ -346,7 +360,10 @@ function EmailPreviewSidebar({
             )}
           >
             <iframe
-              className="h-full w-full border-0 bg-white"
+              className={cn(
+                "h-full w-full border-0 bg-white",
+                isResizing && "pointer-events-none",
+              )}
               sandbox=""
               srcDoc={getEmailTemplateSrcDoc(theme)}
               title="Generated email template preview"
@@ -450,9 +467,9 @@ export default function EmailTemplateProject() {
   };
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-white">
-      <header className="flex items-center justify-between gap-3 px-4 py-2">
-        <Button className="px-4 py-0!" variant="ghost">
+    <main className="relative h-screen overflow-hidden bg-white">
+      <header className="fixed left-3 top-0 z-30 flex h-11 w-fit items-center bg-white">
+        <Button className="h-8 px-3 py-0!" variant="ghost">
           <Image
             src={"/madoo-transparent.png"}
             alt="Madoo AI Logo"
@@ -469,29 +486,11 @@ export default function EmailTemplateProject() {
             />
           </div>
         </Button>
-
-        <div className="flex items-center gap-1.5">
-          <HeaderActionButton
-            icon={Download01Icon}
-            label="Export"
-            onClick={() => setSidebarOpen(true)}
-          />
-          <HeaderActionButton
-            icon={SourceCodeIcon}
-            label="Show code"
-            onClick={() => setSidebarOpen(true)}
-          />
-          <HeaderActionButton
-            icon={TestTubeIcon}
-            label="Test"
-            onClick={() => setSidebarOpen(true)}
-          />
-        </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="flex h-full min-h-0 overflow-hidden">
         {/* CHAT SECTION, (User messages, AI agent messages, date at the top, and so on...) */}
-        <section className="flex min-w-0 flex-1 flex-col pb-4">
+        <section className="flex min-w-0 flex-1 flex-col pb-4 pt-11">
           {/* messages */}
           <div
             ref={messagesRef}
