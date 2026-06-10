@@ -10,6 +10,8 @@ import {
   Download01Icon,
   Edit02Icon,
   Moon02Icon,
+  PanelLeftIcon,
+  PanelRightIcon,
   RefreshIcon,
   SparklesIcon,
   SourceCodeIcon,
@@ -529,8 +531,10 @@ function ExportProviderModal({
 }
 
 function EmailPreviewSidebar({
+  expanded,
   mode,
   onOpenExport,
+  onToggleExpanded,
   open,
   setMode,
   setTheme,
@@ -538,8 +542,10 @@ function EmailPreviewSidebar({
   theme,
   width,
 }: {
+  expanded: boolean;
   mode: PreviewMode;
   onOpenExport: () => void;
+  onToggleExpanded: () => void;
   open: boolean;
   setMode: (mode: PreviewMode) => void;
   setTheme: (theme: TemplateTheme) => void;
@@ -604,16 +610,29 @@ function EmailPreviewSidebar({
     <aside
       aria-label="Email template preview"
       className={cn(
-        "relative min-h-0 shrink-0 overflow-hidden  ease-out",
+        "min-h-0 shrink-0 overflow-hidden bg-white ease-out",
+        expanded ? "absolute inset-y-0 right-0 z-20" : "relative",
         isResizing
           ? "transition-[opacity,transform]"
           : "transition-[width,opacity,transform] duration-300",
         open ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0",
       )}
       style={{
-        maxWidth: open ? "calc(100vw - 320px)" : 0,
-        minWidth: open ? "min(560px, 58vw)" : 0,
-        width: open ? `${width}vw` : 0,
+        maxWidth: open
+          ? expanded
+            ? "100vw"
+            : "calc(100vw - 320px)"
+          : 0,
+        minWidth: open
+          ? expanded
+            ? "100vw"
+            : "min(560px, 58vw)"
+          : 0,
+        width: open
+          ? expanded
+            ? "100vw"
+            : `${width}vw`
+          : 0,
       }}
     >
       {open ? (
@@ -637,6 +656,25 @@ function EmailPreviewSidebar({
       <div className="flex h-full min-w-[420px] flex-col">
         <div className="shrink-0 bg-[#F2F2F2] rounded-t-3xl">
           <div className="flex min-h-13 items-center gap-3 bg-white px-4">
+            <Button
+              aria-label={
+                expanded ? "Collapse email preview" : "Expand email preview"
+              }
+              className="size-9 shrink-0 rounded-lg bg-white text-[#101114] shadow-madoo-border hover:bg-[#f3f4f6]"
+              onClick={onToggleExpanded}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <HugeiconsIcon
+                aria-hidden="true"
+                icon={expanded ? PanelRightIcon : PanelLeftIcon}
+                primaryColor="currentColor"
+                size={21}
+                strokeWidth={1.55}
+              />
+            </Button>
+
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-sm font-semibold text-madoo-ink">
                 {suggestedEmailSubject}
@@ -695,7 +733,7 @@ function EmailPreviewSidebar({
 
             <Button
               aria-label={`Use ${theme === "light" ? "dark" : "light"} email theme`}
-              className="h-8 gap-2 rounded-lg bg-white px-3 text-xs font-medium text-madoo-ink shadow-madoo-border hover:bg-madoo-surface"
+              className="h-8 gap-2 rounded-lg bg-white px-3 text-xs font-medium text-madoo-ink shadow-madoo-border hover:bg-[#f3f4f6]"
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
               size="sm"
               variant="ghost"
@@ -800,6 +838,10 @@ export default function EmailTemplateProject() {
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [templateTheme, setTemplateTheme] = useState<TemplateTheme>("light");
   const [previewWidth, setPreviewWidth] = useState(defaultPreviewWidthVw);
+  const [previewWidthBeforeExpand, setPreviewWidthBeforeExpand] = useState(
+    defaultPreviewWidthVw,
+  );
+  const [previewExpanded, setPreviewExpanded] = useState(false);
 
   const updateScrollState = useCallback(() => {
     const messages = messagesRef.current;
@@ -833,9 +875,30 @@ export default function EmailTemplateProject() {
     });
   };
 
+  const updatePreviewWidth = (width: number) => {
+    setPreviewExpanded(false);
+    setPreviewWidth(width);
+  };
+
+  const togglePreviewExpanded = () => {
+    if (previewExpanded) {
+      setPreviewWidth(previewWidthBeforeExpand);
+      setPreviewExpanded(false);
+      return;
+    }
+
+    setPreviewWidthBeforeExpand(previewWidth);
+    setPreviewExpanded(true);
+  };
+
   return (
     <main className="relative h-screen overflow-hidden bg-white">
-      <header className="fixed left-3 top-0 z-30 flex h-11 w-fit items-center bg-white">
+      <header
+        className={cn(
+          "fixed left-3 top-0 z-30 flex h-11 w-fit items-center bg-white transition-[opacity,transform]",
+          previewExpanded && "pointer-events-none -translate-y-3 opacity-0",
+        )}
+      >
         <Button className="h-8 px-3 py-0!" variant="ghost">
           <Image
             src={"/madoo-transparent.png"}
@@ -857,7 +920,12 @@ export default function EmailTemplateProject() {
 
       <div className="flex h-full min-h-0 overflow-hidden">
         {/* CHAT SECTION, (User messages, AI agent messages, date at the top, and so on...) */}
-        <section className="flex min-w-0 flex-1 flex-col pb-4 pt-11">
+        <section
+          className={cn(
+            "flex min-w-0 flex-1 flex-col pb-4 pt-11 transition-opacity",
+            previewExpanded && "pointer-events-none opacity-0",
+          )}
+        >
           {/* messages */}
           <div
             ref={messagesRef}
@@ -915,12 +983,14 @@ export default function EmailTemplateProject() {
         </section>
 
         <EmailPreviewSidebar
+          expanded={previewExpanded}
           mode={previewMode}
           onOpenExport={() => setExportModalOpen(true)}
+          onToggleExpanded={togglePreviewExpanded}
           open={sidebarOpen}
           setMode={setPreviewMode}
           setTheme={setTemplateTheme}
-          setWidth={setPreviewWidth}
+          setWidth={updatePreviewWidth}
           theme={templateTheme}
           width={previewWidth}
         />
