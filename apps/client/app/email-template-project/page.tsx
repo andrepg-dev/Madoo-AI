@@ -9,10 +9,8 @@ import {
   Copy01Icon,
   Download01Icon,
   Edit02Icon,
-  LaptopIcon,
   Moon02Icon,
   RefreshIcon,
-  SendToMobileIcon,
   SourceCodeIcon,
   Sun01Icon,
   TestTubeIcon,
@@ -20,7 +18,7 @@ import {
   ThumbsUpIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Button } from "@madoo/design-system";
+import { Button, Modal, SegmentedControl } from "@madoo/design-system";
 import Image from "next/image";
 import {
   type PointerEvent,
@@ -92,10 +90,24 @@ Meet Madoo, your AI workspace for turning campaign ideas into polished email tem
 
 type PreviewMode = "desktop" | "responsive";
 type TemplateTheme = "light" | "dark";
+type ExportProvider = {
+  name: string;
+  iconSrc: string;
+  badge?: string;
+};
+type ExportFileFormat = {
+  name: string;
+  description: string;
+  icon: IconSvgElement;
+};
 
 const minPreviewWidthVw = 52;
 const defaultPreviewWidthVw = 64;
 const maxPreviewWidthVw = 78;
+const previewModeItems = [
+  { value: "desktop", label: "Desktop" },
+  { value: "responsive", label: "Responsive" },
+];
 
 function clampPreviewWidth(width: number) {
   return Math.min(maxPreviewWidthVw, Math.max(minPreviewWidthVw, width));
@@ -109,18 +121,23 @@ function HeaderActionButton({
   icon,
   label,
   onClick,
+  variant = "dashed",
 }: {
   icon: IconSvgElement;
   label: string;
   onClick?: () => void;
+  variant?: "primary" | "dashed";
 }) {
   return (
     <Button
       aria-label={label}
-      className="h-8 gap-2 rounded-lg px-3 text-xs font-medium text-madoo-ink hover:bg-madoo-bg"
+      className={cn(
+        "h-8 gap-2 rounded-lg px-3 text-xs font-medium",
+        variant === "primary" ? "shadow-none" : "text-madoo-ink",
+      )}
       onClick={onClick}
       size="sm"
-      variant="ghost"
+      variant={variant}
     >
       <HugeiconsIcon
         aria-hidden="true"
@@ -131,41 +148,6 @@ function HeaderActionButton({
       />
       <span className="max-sm:hidden">{label}</span>
     </Button>
-  );
-}
-
-function PreviewSegmentButton({
-  active,
-  icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: IconSvgElement;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-pressed={active}
-      className={cn(
-        "inline-flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-xs font-medium transition",
-        active
-          ? "bg-white text-madoo-ink shadow-madoo-border"
-          : "text-madoo-ink-muted hover:bg-white/70 hover:text-madoo-ink",
-      )}
-      onClick={onClick}
-      type="button"
-    >
-      <HugeiconsIcon
-        aria-hidden="true"
-        icon={icon}
-        primaryColor="currentColor"
-        size={14}
-        strokeWidth={1.55}
-      />
-      <span>{label}</span>
-    </button>
   );
 }
 
@@ -226,8 +208,320 @@ function getEmailTemplateSrcDoc(theme: TemplateTheme) {
 </html>`;
 }
 
+type ExportTab = "email" | "application" | "file";
+
+const emailExportProviders: readonly ExportProvider[] = [
+  {
+    name: "Mailchimp",
+    iconSrc: "https://www.google.com/s2/favicons?domain=mailchimp.com&sz=64",
+  },
+  {
+    name: "Klaviyo",
+    iconSrc: "https://www.google.com/s2/favicons?domain=klaviyo.com&sz=64",
+  },
+  {
+    name: "HubSpot",
+    iconSrc: "https://www.google.com/s2/favicons?domain=hubspot.com&sz=64",
+  },
+  {
+    name: "Brevo",
+    iconSrc: "https://www.google.com/s2/favicons?domain=brevo.com&sz=64",
+  },
+  {
+    name: "MailerLite",
+    iconSrc: "https://www.google.com/s2/favicons?domain=mailerlite.com&sz=64",
+  },
+  {
+    name: "ConvertKit",
+    iconSrc: "https://www.google.com/s2/favicons?domain=convertkit.com&sz=64",
+  },
+  {
+    name: "ActiveCampaign",
+    iconSrc: "https://www.google.com/s2/favicons?domain=activecampaign.com&sz=64",
+  },
+  {
+    name: "Customer.io",
+    iconSrc: "https://www.google.com/s2/favicons?domain=customer.io&sz=64",
+  },
+  {
+    name: "Braze",
+    iconSrc: "https://www.google.com/s2/favicons?domain=braze.com&sz=64",
+  },
+  {
+    name: "Marketo",
+    iconSrc: "https://www.google.com/s2/favicons?domain=marketo.com&sz=64",
+  },
+  {
+    name: "Salesforce",
+    iconSrc: "https://www.google.com/s2/favicons?domain=salesforce.com&sz=64",
+  },
+] as const;
+
+const applicationExportProviders: readonly ExportProvider[] = [
+  {
+    name: "Gmail",
+    iconSrc: "https://www.google.com/s2/favicons?domain=gmail.com&sz=128",
+  },
+  {
+    name: "Google Cloud",
+    iconSrc: "https://www.google.com/s2/favicons?domain=cloud.google.com&sz=128",
+    badge: "fast",
+  },
+  {
+    name: "Make",
+    iconSrc: "https://www.google.com/s2/favicons?domain=make.com&sz=128",
+  },
+  {
+    name: "n8n.io",
+    iconSrc: "https://www.google.com/s2/favicons?domain=n8n.io&sz=128",
+  },
+  {
+    name: "Outlook App",
+    iconSrc: "https://www.google.com/s2/favicons?domain=outlook.com&sz=128",
+  },
+  {
+    name: "Outlook Web",
+    iconSrc: "https://www.google.com/s2/favicons?domain=office.com&sz=128",
+  },
+  {
+    name: "Webhook",
+    iconSrc: "https://www.google.com/s2/favicons?domain=webhook.site&sz=128",
+  },
+  {
+    name: "Zapier",
+    iconSrc: "https://www.google.com/s2/favicons?domain=zapier.com&sz=128",
+  },
+] as const;
+
+const fileExportFormats: readonly ExportFileFormat[] = [
+  {
+    name: "AMPHTML",
+    description: "AMP-compatible markup",
+    icon: SourceCodeIcon,
+  },
+  {
+    name: "HTML",
+    description: "Production email HTML",
+    icon: SourceCodeIcon,
+  },
+  {
+    name: "Image",
+    description: "Static preview image",
+    icon: Download01Icon,
+  },
+  {
+    name: "PDF",
+    description: "Shareable document",
+    icon: Download01Icon,
+  },
+] as const;
+
+function ExportTabButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-pressed={active}
+      className={cn(
+        "h-8 cursor-pointer rounded-lg px-3 text-xs font-medium transition",
+        active
+          ? "bg-white text-madoo-ink shadow-madoo-border"
+          : "text-madoo-ink-muted hover:text-madoo-ink",
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ExportProviderCard({
+  badge,
+  iconSrc,
+  name,
+}: {
+  badge?: string;
+  iconSrc: string;
+  name: string;
+}) {
+  return (
+    <button
+      className="relative flex min-h-18 cursor-pointer items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-left shadow-madoo-border transition hover:bg-madoo-surface"
+      type="button"
+    >
+      {badge ? (
+        <span className="absolute right-2.5 top-2.5 text-madoo-accent">
+          <HugeiconsIcon
+            aria-hidden="true"
+            icon={Download01Icon}
+            primaryColor="currentColor"
+            size={15}
+            strokeWidth={1.7}
+          />
+        </span>
+      ) : null}
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-madoo-surface">
+        <img
+          alt=""
+          className="size-6 object-contain"
+          loading="lazy"
+          src={iconSrc}
+        />
+      </span>
+      <span className="min-w-0 truncate text-sm font-medium text-madoo-ink">
+        {name}
+      </span>
+    </button>
+  );
+}
+
+function ExportFileCard({
+  description,
+  icon,
+  name,
+}: {
+  description: string;
+  icon: IconSvgElement;
+  name: string;
+}) {
+  return (
+    <button
+      className="flex min-h-18 cursor-pointer items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-left shadow-madoo-border transition hover:bg-madoo-surface"
+      type="button"
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-madoo-ink text-white">
+        <HugeiconsIcon
+          aria-hidden="true"
+          icon={icon}
+          primaryColor="currentColor"
+          size={18}
+          strokeWidth={1.7}
+        />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium text-madoo-ink">
+          {name}
+        </span>
+        <span className="mt-0.5 block truncate text-xs text-madoo-ink-muted">
+          {description}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function ExportProviderModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<ExportTab>("email");
+
+  return (
+    <Modal
+      className="bg-madoo-bg"
+      description="Choose where this generated email should go next."
+      eyebrow="Export"
+      onClose={onClose}
+      open={open}
+      size="lg"
+      title="Export email"
+    >
+      <div className="space-y-4">
+        <div className="flex w-fit items-center rounded-xl bg-madoo-surface-2 p-1">
+          <ExportTabButton active={tab === "email"} onClick={() => setTab("email")}>
+            Providers
+          </ExportTabButton>
+          <ExportTabButton
+            active={tab === "application"}
+            onClick={() => setTab("application")}
+          >
+            Application
+          </ExportTabButton>
+          <ExportTabButton active={tab === "file"} onClick={() => setTab("file")}>
+            File
+          </ExportTabButton>
+        </div>
+
+        <div className="rounded-xl bg-white p-3 shadow-madoo-border">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-4">
+              <span className="text-madoo-ink-muted">
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={Download01Icon}
+                  primaryColor="currentColor"
+                  size={24}
+                  strokeWidth={1.6}
+                />
+              </span>
+              <span className="text-sm font-medium text-madoo-ink">
+                Exports
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-madoo-ink-muted">
+              <span className="hidden sm:inline">Renews Jun 20, 2026</span>
+              <span className="rounded-lg bg-madoo-bg px-2.5 py-1.5 shadow-madoo-border">
+                4 / 4 left
+              </span>
+              <Button size="sm" variant="dashed">
+                Upgrade
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+          {tab === "email"
+            ? emailExportProviders.map((provider) => (
+                <ExportProviderCard
+                  iconSrc={provider.iconSrc}
+                  key={provider.name}
+                  name={provider.name}
+                />
+              ))
+            : null}
+
+          {tab === "application"
+            ? applicationExportProviders.map((provider) => (
+                <ExportProviderCard
+                  badge={provider.badge}
+                  iconSrc={provider.iconSrc}
+                  key={provider.name}
+                  name={provider.name}
+                />
+              ))
+            : null}
+
+          {tab === "file"
+            ? fileExportFormats.map((format) => (
+                <ExportFileCard
+                  description={format.description}
+                  icon={format.icon}
+                  key={format.name}
+                  name={format.name}
+                />
+              ))
+            : null}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function EmailPreviewSidebar({
   mode,
+  onOpenExport,
   open,
   setMode,
   setTheme,
@@ -236,6 +530,7 @@ function EmailPreviewSidebar({
   width,
 }: {
   mode: PreviewMode;
+  onOpenExport: () => void;
   open: boolean;
   setMode: (mode: PreviewMode) => void;
   setTheme: (theme: TemplateTheme) => void;
@@ -315,14 +610,23 @@ function EmailPreviewSidebar({
       {open ? (
         <button
           aria-label="Resize email preview"
-          className="absolute inset-y-0 left-0 z-30 w-3 cursor-col-resize touch-none bg-transparent outline-none"
+          className="group absolute inset-y-0 left-0 z-30 w-3 cursor-col-resize touch-none bg-transparent outline-none"
+          onDoubleClick={() => setWidth(defaultPreviewWidthVw)}
           onPointerDown={handleResizePointerDown}
           type="button"
-        />
+        >
+          <span
+            className={cn(
+              "absolute inset-y-0 left-0 w-[3px] bg-madoo-accent opacity-0 transition-opacity",
+              "group-hover:opacity-100 group-focus-visible:opacity-100",
+              isResizing && "opacity-100",
+            )}
+          />
+        </button>
       ) : null}
 
       <div className="flex h-full min-w-[420px] flex-col">
-        <div className="shrink-0 bg-white">
+        <div className="shrink-0 bg-[#F2F2F2] rounded-t-3xl">
           <div className="flex min-h-13 items-center justify-between gap-3 bg-white px-4">
             <div className="min-w-0">
               <h2 className="truncate text-sm font-semibold text-madoo-ink">
@@ -334,27 +638,25 @@ function EmailPreviewSidebar({
             </div>
 
             <div className="flex items-center gap-1.5">
-              <HeaderActionButton icon={Download01Icon} label="Export" />
+              <HeaderActionButton
+                icon={Download01Icon}
+                label="Export"
+                onClick={onOpenExport}
+                variant="primary"
+              />
               <HeaderActionButton icon={SourceCodeIcon} label="Show code" />
               <HeaderActionButton icon={TestTubeIcon} label="Test" />
             </div>
           </div>
 
           <div className="flex min-h-11 items-center justify-end gap-2 px-4">
-            <div className="inline-flex rounded-lg bg-madoo-surface p-1">
-              <PreviewSegmentButton
-                active={mode === "desktop"}
-                icon={LaptopIcon}
-                label="Desktop"
-                onClick={() => setMode("desktop")}
-              />
-              <PreviewSegmentButton
-                active={mode === "responsive"}
-                icon={SendToMobileIcon}
-                label="Responsive"
-                onClick={() => setMode("responsive")}
-              />
-            </div>
+            <SegmentedControl
+              aria-label="Preview mode"
+              className="rounded-lg bg-madoo-surface p-1 shadow-none"
+              items={previewModeItems}
+              onChange={(value) => setMode(value as PreviewMode)}
+              value={mode}
+            />
 
             <Button
               aria-label={`Use ${theme === "light" ? "dark" : "light"} email theme`}
@@ -375,11 +677,11 @@ function EmailPreviewSidebar({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden rounded-3xl shadow-madoo-border">
+        <div className="min-h-0 flex-1 overflow-hidden shadow-madoo-border">
           <div className="madoo-preview-scrollbar mr-1 h-full overflow-y-auto">
             <div
               className={cn(
-                "mx-auto overflow-hidden rounded-3xl shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
+                "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
                 mode === "desktop" ? "w-full" : "w-[390px]",
               )}
             >
@@ -459,6 +761,7 @@ export default function EmailTemplateProject() {
   const sidebarOpen = useClientStore((state) => state.sidebarOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [templateTheme, setTemplateTheme] = useState<TemplateTheme>("light");
   const [previewWidth, setPreviewWidth] = useState(defaultPreviewWidthVw);
@@ -578,6 +881,7 @@ export default function EmailTemplateProject() {
 
         <EmailPreviewSidebar
           mode={previewMode}
+          onOpenExport={() => setExportModalOpen(true)}
           open={sidebarOpen}
           setMode={setPreviewMode}
           setTheme={setTemplateTheme}
@@ -586,6 +890,11 @@ export default function EmailTemplateProject() {
           width={previewWidth}
         />
       </div>
+
+      <ExportProviderModal
+        onClose={() => setExportModalOpen(false)}
+        open={exportModalOpen}
+      />
     </main>
   );
 }
