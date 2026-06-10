@@ -11,9 +11,9 @@ import {
   Edit02Icon,
   Moon02Icon,
   RefreshIcon,
+  SparklesIcon,
   SourceCodeIcon,
   Sun01Icon,
-  TestTubeIcon,
   ThumbsDownIcon,
   ThumbsUpIcon,
 } from "@hugeicons/core-free-icons";
@@ -21,6 +21,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Button, Modal, SegmentedControl } from "@madoo/design-system";
 import Image from "next/image";
 import {
+  type CSSProperties,
   type PointerEvent,
   useCallback,
   useEffect,
@@ -73,6 +74,7 @@ Cuéntame tu idea y empezamos. 🚀`;
 
 const userCampaignRequest =
   "Create a polished launch email for our new AI campaign builder. Keep it concise and make the CTA feel clear.";
+const suggestedEmailSubject = "Build campaigns faster with Madoo";
 
 const aiCampaignResponse = `Here’s a sharper direction:
 
@@ -117,36 +119,43 @@ function copyText(text: string) {
   void navigator.clipboard?.writeText(text);
 }
 
-function HeaderActionButton({
-  icon,
+function HeaderPillButton({
+  children,
+  className,
+  leftIcon,
   label,
   onClick,
-  variant = "dashed",
+  style,
 }: {
-  icon: IconSvgElement;
+  children: string;
+  className?: string;
+  leftIcon?: IconSvgElement;
   label: string;
   onClick?: () => void;
-  variant?: "primary" | "dashed";
+  style?: CSSProperties;
 }) {
   return (
     <Button
       aria-label={label}
       className={cn(
-        "h-8 gap-2 rounded-lg px-3 text-xs font-medium",
-        variant === "primary" ? "shadow-none" : "text-madoo-ink",
+        "h-7 rounded-full px-3 text-xs font-medium shadow-madoo-border",
+        className,
       )}
       onClick={onClick}
       size="sm"
-      variant={variant}
+      style={style}
+      variant="secondary"
     >
-      <HugeiconsIcon
-        aria-hidden="true"
-        icon={icon}
-        primaryColor="currentColor"
-        size={15}
-        strokeWidth={1.55}
-      />
-      <span className="max-sm:hidden">{label}</span>
+      {leftIcon ? (
+        <HugeiconsIcon
+          aria-hidden="true"
+          icon={leftIcon}
+          primaryColor="currentColor"
+          size={15}
+          strokeWidth={1.55}
+        />
+      ) : null}
+      <span>{children}</span>
     </Button>
   );
 }
@@ -627,25 +636,51 @@ function EmailPreviewSidebar({
 
       <div className="flex h-full min-w-[420px] flex-col">
         <div className="shrink-0 bg-[#F2F2F2] rounded-t-3xl">
-          <div className="flex min-h-13 items-center justify-between gap-3 bg-white px-4">
-            <div className="min-w-0">
+          <div className="flex min-h-13 items-center gap-3 bg-white px-4">
+            <div className="min-w-0 flex-1">
               <h2 className="truncate text-sm font-semibold text-madoo-ink">
-                Email preview
+                {suggestedEmailSubject}
               </h2>
-              <p className="truncate text-xs text-madoo-ink-muted">
-                Live generated template
+              <p className="flex min-w-0 items-center gap-1.5 truncate text-xs text-madoo-ink-muted">
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={SparklesIcon}
+                  primaryColor="currentColor"
+                  size={13}
+                  strokeWidth={1.55}
+                />
+                <span className="truncate">AI suggested subject</span>
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <HeaderActionButton
-                icon={Download01Icon}
-                label="Export"
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              <HeaderPillButton
+                className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
+                label="Share email"
+              >
+                Share
+              </HeaderPillButton>
+              <HeaderPillButton
+                className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
+                label="Preview email"
+              >
+                Preview
+              </HeaderPillButton>
+              <HeaderPillButton
+                className="text-white shadow-none"
+                label="Upgrade exports"
+                style={{ backgroundColor: "#101114", color: "#ffffff" }}
+              >
+                Upgrade
+              </HeaderPillButton>
+              <HeaderPillButton
+                className="text-white shadow-none"
+                label="Export email"
                 onClick={onOpenExport}
-                variant="primary"
-              />
-              <HeaderActionButton icon={SourceCodeIcon} label="Show code" />
-              <HeaderActionButton icon={TestTubeIcon} label="Test" />
+                style={{ backgroundColor: "#356bff", color: "#ffffff" }}
+              >
+                Export
+              </HeaderPillButton>
             </div>
           </div>
 
