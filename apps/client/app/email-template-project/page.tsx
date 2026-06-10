@@ -184,7 +184,8 @@ function getEmailTemplateSrcDoc(theme: TemplateTheme) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      body { margin: 0; background: ${pageBg}; font-family: Arial, sans-serif; color: ${text}; }
+      html { margin: 0; overflow: hidden; }
+      body { margin: 0; overflow: hidden; background: ${pageBg}; font-family: Arial, sans-serif; color: ${text}; }
       .wrap { width: 100%; padding: 32px 12px; box-sizing: border-box; }
       .email { max-width: 640px; margin: 0 auto; overflow: hidden; border-radius: 18px; background: ${cardBg}; box-shadow: 0 24px 70px rgba(16,17,20,0.12); }
       .hero { border-radius: 18px 18px 0 0; padding: 38px 36px 30px; background: linear-gradient(135deg, ${accent}, ${dark ? "#202637" : "#eef5ff"}); color: ${dark ? "#07111f" : "#ffffff"}; }
@@ -243,6 +244,25 @@ function EmailPreviewSidebar({
   width: number;
 }) {
   const [isResizing, setIsResizing] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeHeight, setIframeHeight] = useState(900);
+
+  const syncIframeHeight = useCallback(() => {
+    const iframe = iframeRef.current;
+    const documentElement = iframe?.contentDocument?.documentElement;
+    const body = iframe?.contentDocument?.body;
+
+    if (!documentElement || !body) return;
+
+    setIframeHeight(
+      Math.max(documentElement.scrollHeight, body.scrollHeight, 640),
+    );
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(syncIframeHeight);
+    return () => window.cancelAnimationFrame(frame);
+  }, [mode, syncIframeHeight, theme, width]);
 
   const handleResizePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -355,20 +375,24 @@ function EmailPreviewSidebar({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden shadow-madoo-border rounded-3xl">
+        <div className="madoo-command-scrollbar min-h-0 flex-1 overflow-y-auto rounded-3xl shadow-madoo-border">
           <div
             className={cn(
-              "mx-auto h-full min-h-[640px] rounded-3xl overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
+              "mx-auto overflow-hidden rounded-3xl shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
               mode === "desktop" ? "w-full" : "w-[390px]",
             )}
           >
             <iframe
               className={cn(
-                "h-full w-full border-0 bg-white",
+                "block w-full border-0 bg-white",
                 isResizing && "pointer-events-none",
               )}
+              onLoad={syncIframeHeight}
+              ref={iframeRef}
+              scrolling="no"
               sandbox=""
               srcDoc={getEmailTemplateSrcDoc(theme)}
+              style={{ height: iframeHeight }}
               title="Generated email template preview"
             />
           </div>
