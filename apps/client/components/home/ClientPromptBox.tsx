@@ -7,6 +7,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
+import { useClientStore } from "@/stores/client-store";
 import { Select } from "@madoo/design-system";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent } from "react";
@@ -36,6 +37,13 @@ const placeholderTypingDelay = 46;
 const placeholderDeletingDelay = 24;
 const placeholderHoldDelay = 3600;
 const placeholderRestartDelay = 520;
+const ignoredPromptFocusSelector =
+  "input, textarea, select, button, a, [contenteditable='true'], [data-madoo-control], [role='button'], [role='dialog'], [role='menu'], [role='listbox']";
+
+function shouldSkipPromptFocus(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest(ignoredPromptFocusSelector));
+}
 
 function useTypingPlaceholder(texts: readonly string[]) {
   const [placeholder, setPlaceholder] = useState("");
@@ -112,6 +120,8 @@ export function ClientPromptBox({
   variant = "home",
 }: ClientPromptBoxProps) {
   const router = useRouter();
+  const searchCommandOpen = useClientStore((state) => state.searchCommandOpen);
+  const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
@@ -137,6 +147,7 @@ export function ClientPromptBox({
       if (value) params.set(key.toLowerCase(), value);
     }
 
+    setSidebarOpen(true);
     router.push(`/email-template-project?${params.toString()}`);
   };
 
@@ -165,6 +176,61 @@ export function ClientPromptBox({
     textarea.style.overflowY =
       textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [prompt]);
+
+  useEffect(() => {
+    const focusPrompt = () => {
+      const textarea = promptTextareaRef.current;
+      if (!textarea) return;
+
+      textarea.focus({ preventScroll: true });
+      const end = textarea.value.length;
+      textarea.setSelectionRange(end, end);
+    };
+
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (
+        searchCommandOpen ||
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.key.length !== 1 ||
+        event.key === "Dead" ||
+        shouldSkipPromptFocus(event.target)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      focusPrompt();
+      setPrompt((current) => `${current}${event.key}`);
+    };
+
+    const onPaste = (event: ClipboardEvent) => {
+      if (
+        searchCommandOpen ||
+        event.defaultPrevented ||
+        shouldSkipPromptFocus(event.target)
+      ) {
+        return;
+      }
+
+      const pastedText = event.clipboardData?.getData("text");
+      if (!pastedText) return;
+
+      event.preventDefault();
+      focusPrompt();
+      setPrompt((current) => `${current}${pastedText}`);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("paste", onPaste);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("paste", onPaste);
+    };
+  }, [searchCommandOpen]);
 
   return (
     <div
