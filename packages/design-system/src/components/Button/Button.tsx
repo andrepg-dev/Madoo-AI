@@ -31,13 +31,13 @@ const variantClasses: Record<ButtonVariant, string> = {
   accent:
     "bg-madoo-accent text-madoo-accent-fg enabled:hover:bg-madoo-accent-deep disabled:bg-madoo-surface-2 disabled:text-madoo-ink-faint disabled:opacity-100",
   secondary:
-    "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)] enabled:hover:bg-madoo-surface-2",
+    "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)] enabled:hover:bg-madoo-bg",
   ghost:
-    "bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
+    "bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-bg enabled:hover:text-madoo-ink",
   icon:
-    "h-8 w-8 p-0! bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
+    "h-8 w-8 p-0! bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-bg enabled:hover:text-madoo-ink",
   dashed:
-    "bg-transparent text-madoo-ink-faint shadow-[var(--shadow-border)] enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink-soft",
+    "bg-transparent text-madoo-ink-faint shadow-[var(--shadow-border)] enabled:hover:bg-madoo-bg enabled:hover:text-madoo-ink-soft",
   danger:
     "bg-madoo-danger text-white enabled:hover:bg-[#87311f]",
 };

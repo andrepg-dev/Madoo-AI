@@ -74,7 +74,7 @@ export function SegmentedControl({
     >
       <span
         className={cx(
-          "pointer-events-none absolute bottom-1 left-0 top-1 z-0 w-[var(--madoo-segmented-indicator-width)] rounded-full opacity-0 shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)_/_0.34)] transition-[transform,width,opacity] duration-[var(--duration-base)] ease-[var(--ease-out)] [transform:translateX(var(--madoo-segmented-indicator-x,0))]",
+          "pointer-events-none absolute bottom-1 left-0 top-1 z-0 w-[var(--madoo-segmented-indicator-width)] rounded-full bg-madoo-surface opacity-0 shadow-[var(--shadow-border)] transition-[transform,width,opacity] duration-[var(--duration-base)] ease-[var(--ease-out)] [transform:translateX(var(--madoo-segmented-indicator-x,0))]",
           indicator.ready && "opacity-100",
           variant === "minimal" && "hidden",
         )}

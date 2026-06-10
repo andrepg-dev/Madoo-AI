@@ -114,7 +114,7 @@
   --font-weight-semibold: 600;
 
   /* ── Shadows ─────────────────────────────────────────────────── */
-  --shadow-border: inset 0 0 0 0.5px color-mix(in srgb, var(--border) 60%, transparent);
+  --shadow-border: inset 0 0 0 0.75px var(--border);
   --shadow-border-soft: inset 0 0 0 0.5px var(--border-soft);
   --shadow-border-strong: inset 0 0 0 0.5px var(--ink-faint);
   --shadow-border-ink: inset 0 0 0 0.75px var(--ink);
