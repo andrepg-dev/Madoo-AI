@@ -13,6 +13,7 @@ When adapting a reference design, copy the useful layout idea, not the whole pag
 - Do not use CSS `border` for component edges by default. Use shadow-border tokens or border-shadow treatment instead, unless native control behavior requires a real border.
 - Use Madoo button styling: compact rounded-lg buttons, dark primary action, white secondary action with paper shadow.
 - Official Madoo AI page background is `#f3f4f6` via `bg-madoo-page`; use it for the body/page shell unless a specific section needs its own surface.
+- App screens inside the authenticated shell, including Projects, Shared with me, Settings, Workspace, and account configuration, should share the same `bg-[var(--madoo-page)]` page background for visual consistency. Avoid introducing separate tinted page backgrounds for settings sidebars or content areas unless the existing project-page surface changes too.
 - Keep cards compact and aligned with existing landing-page scale.
 - Do not add unrelated reference-page sections unless requested.
 - Use Hugeicons for most UI icons when an icon is needed. Prefer existing `@hugeicons/core-free-icons` imports and `HugeiconsIcon` rendering before text glyphs or custom SVGs.

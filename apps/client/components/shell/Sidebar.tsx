@@ -33,8 +33,10 @@ import {
   cx,
 } from "@madoo/design-system";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { PricingDrawer } from "./PricingDrawer";
 
 type NavItem = {
@@ -144,32 +146,18 @@ type SidebarNavButtonProps = {
   item: NavItem;
   active: boolean;
   collapsed: boolean;
-  onSelect: (href: string) => void;
+  onSearchSelect?: () => void;
 };
 
 function SidebarNavButton({
   item,
   active,
   collapsed,
-  onSelect,
+  onSearchSelect,
 }: SidebarNavButtonProps) {
-  return (
-    <Button
-      aria-label={item.label}
-      aria-current={active ? "page" : undefined}
-      block
-      leftIcon={<NavIcon icon={item.icon} size={15} />}
-      size="sm"
-      variant="ghost"
-      onClick={() => onSelect(item.href)}
-      className={cx(
-        "h-[32px]! min-h-[32px]! overflow-hidden py-0! text-[length:var(--font-size-base)]! transition-[width,padding,background,color] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-        active
-          ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)]! font-normal! text-madoo-accent-deep! shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)]! hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)]! hover:text-madoo-accent-deep!"
-          : "bg-transparent! font-normal! hover:bg-[rgb(var(--rule-rgb)_/_0.08)]!",
-        "justify-start! gap-2.5! px-2.5!",
-      )}
-    >
+  const content = (
+    <>
+      <NavIcon icon={item.icon} size={15} />
       <span
         className={cx(
           "min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
@@ -191,14 +179,69 @@ function SidebarNavButton({
           </Kbd>
         </span>
       ) : null}
-    </Button>
+    </>
+  );
+  const className = cx(
+    "inline-flex h-[32px] min-h-[32px] w-full cursor-pointer select-none items-center overflow-hidden rounded-[var(--radius-lg)] border-0 py-0 font-madoo-sans text-[length:var(--font-size-base)] leading-none no-underline transition-[width,padding,background,color,box-shadow,opacity] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+    active
+      ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)] font-normal text-madoo-accent-deep shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)] hover:text-madoo-accent-deep"
+      : "bg-transparent font-normal text-madoo-ink-soft hover:bg-[rgb(var(--rule-rgb)_/_0.08)] hover:text-madoo-ink",
+    "justify-start gap-2.5 px-2.5",
+  );
+
+  if (item.href === "/search") {
+    return (
+      <button
+        type="button"
+        aria-label={item.label}
+        aria-current={active ? "page" : undefined}
+        className={className}
+        onClick={onSearchSelect}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={item.href}
+      aria-label={item.label}
+      aria-current={active ? "page" : undefined}
+      className={className}
+    >
+      {content}
+    </Link>
+  );
+}
+
+function DropdownLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      role="menuitem"
+      className={cx(
+        "flex w-full cursor-pointer items-center justify-start gap-3 rounded-[var(--radius-md)] border-0 bg-transparent px-2.5 py-[9px] text-left font-madoo-sans text-[14px] leading-[1.2] text-[color:var(--ink)] no-underline transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none",
+        className,
+      )}
+    >
+      {children}
+    </Link>
   );
 }
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [collapsed, setCollapsed] = useState(true);
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const setSearchCommandOpen = useClientStore(
@@ -246,13 +289,11 @@ export function Sidebar() {
           "w-full justify-between px-0.5",
         )}
       >
-        <IconButton
+        <Link
           aria-label="Madoo home"
-          size="sm"
-          variant="ghost"
-          onClick={() => router.push("/")}
+          href="/"
           className={cx(
-            "transition-opacity duration-[var(--duration-fast)]",
+            "inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-lg)] text-madoo-ink-soft transition-[background,color,opacity] duration-[var(--duration-fast)] hover:bg-madoo-surface-2 hover:text-madoo-ink",
             collapsed &&
               "group-hover/sidebar:pointer-events-none group-hover/sidebar:opacity-0",
           )}
@@ -265,7 +306,7 @@ export function Sidebar() {
             className="rounded-[7px] object-contain ml-1.5"
             priority
           />
-        </IconButton>
+        </Link>
         <IconButton
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-pressed={collapsed}
@@ -370,9 +411,15 @@ export function Sidebar() {
             </DropdownItem>
           </div>
 
-          <DropdownItem className="!justify-start !text-[length:var(--font-size-base)] !font-normal shadow-madoo-border">
+          <DropdownItem
+            className="!justify-start !text-[length:var(--font-size-base)] !font-normal shadow-madoo-border"
+            onClick={() => {
+              setWorkspaceOpen(false);
+              setCreateWorkspaceOpen(true);
+            }}
+          >
             <AppIcon icon={Add01Icon} size={14} />
-            New project
+            Create workspace
           </DropdownItem>
         </DropdownContent>
       </Dropdown>
@@ -386,14 +433,9 @@ export function Sidebar() {
               collapsed={collapsed}
               item={item}
               key={item.href}
-              onSelect={(href) => {
-                if (href === "/search") {
-                  setSearchCommandOpen(true);
-                  setWorkspaceOpen(false);
-                  return;
-                }
-
-                router.push(href);
+              onSearchSelect={() => {
+                setSearchCommandOpen(true);
+                setWorkspaceOpen(false);
               }}
             />
           );
@@ -421,7 +463,6 @@ export function Sidebar() {
               collapsed={collapsed}
               item={item}
               key={item.href}
-              onSelect={router.push}
             />
           );
         })}
@@ -495,8 +536,8 @@ export function Sidebar() {
               </span>
             </div>
             <DropdownDivider />
-            <DropdownItem className="!justify-start">Profile</DropdownItem>
-            <DropdownItem className="!justify-start">Settings</DropdownItem>
+            <DropdownLink href="/settings">Profile</DropdownLink>
+            <DropdownLink href="/settings">Settings</DropdownLink>
             <DropdownItem className="!justify-start text-madoo-danger">
               Sign out
             </DropdownItem>
@@ -516,6 +557,10 @@ export function Sidebar() {
           className="w-max"
         />
       </div>
+      <CreateWorkspaceModal
+        open={createWorkspaceOpen}
+        onClose={() => setCreateWorkspaceOpen(false)}
+      />
       <PricingDrawer open={pricingOpen} onClose={() => setPricingOpen(false)} />
     </aside>
   );

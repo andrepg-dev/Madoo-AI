@@ -84,6 +84,27 @@ const plans: PricingPlan[] = [
   },
 ];
 
+const pricingFaqs = [
+  {
+    question: "Can I change my plan?",
+    answer: "Yes. You can change your plan at any time.",
+  },
+  {
+    question: "Is there any free trial?",
+    answer: "Yes. New users get a 7-day free trial, and no credit card is needed.",
+  },
+  {
+    question: "How do credits work?",
+    answer:
+      "1 AI message costs 1 credit. Creating a template from scratch costs 1 credit, and each message you send to edit that template also costs 1 credit.",
+  },
+  {
+    question: "What if I do not find my export provider?",
+    answer:
+      "Report it inside the platform with the add provider button. If we add it, we give you 150 AI credits.",
+  },
+];
+
 function AppIcon({ icon, size = 16 }: { icon: IconSvgElement; size?: number }) {
   return (
     <HugeiconsIcon
@@ -345,6 +366,41 @@ export function PricingDrawer({
               />
             ))}
           </div>
+
+          <section className="mt-5 rounded-[20px] bg-madoo-surface p-4 shadow-[var(--shadow-border)]">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold leading-none text-madoo-ink">
+                  Frequently asked questions
+                </h3>
+                <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+                  Short answers before you change workspace billing.
+                </p>
+              </div>
+              <Badge tone="neutral">Billing</Badge>
+            </div>
+
+            <div className="mt-4 grid gap-2 lg:grid-cols-2">
+              {pricingFaqs.map((faq) => (
+                <details
+                  key={faq.question}
+                  className="group rounded-[var(--radius-lg)] bg-madoo-bg-2 px-3.5 py-3 shadow-[var(--shadow-border)]"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-left text-[length:var(--font-size-sm)] font-medium text-madoo-ink [&::-webkit-details-marker]:hidden">
+                    {faq.question}
+                    <Icon
+                      name="chevronDown"
+                      size={14}
+                      className="shrink-0 text-madoo-ink-muted transition-transform group-open:rotate-180"
+                    />
+                  </summary>
+                  <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+                    {faq.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </section>
         </div>
       </section>
     </div>

@@ -195,7 +195,7 @@ export default function EmailTemplateProject() {
           </div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-3xl shrink-0 px-4">
+        <div className="relative mx-auto w-full max-w-2xl shrink-0">
           <div className="pointer-events-none absolute inset-x-0 -top-4 h-4 bg-gradient-to-b from-white/0 via-white/80 to-white" />
           {canScrollDown ? (
             <Button
