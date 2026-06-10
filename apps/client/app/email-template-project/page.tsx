@@ -6,11 +6,9 @@ import { useClientStore } from "@/stores/client-store";
 import {
   ArrowDown01Icon,
   ArrowDown02Icon,
-  ArrowUp01Icon,
   Copy01Icon,
   Download01Icon,
   Edit02Icon,
-  Folder01Icon,
   Moon02Icon,
   RefreshIcon,
   SourceCodeIcon,
@@ -24,7 +22,6 @@ import { Button, Modal, SegmentedControl } from "@madoo/design-system";
 import Image from "next/image";
 import {
   type PointerEvent,
-  type ReactNode,
   useCallback,
   useEffect,
   useRef,
@@ -91,7 +88,7 @@ Meet Madoo, your AI workspace for turning campaign ideas into polished email tem
 
 **CTA:** Start your next campaign`;
 
-type PreviewMode = "desktop" | "mobile";
+type PreviewMode = "desktop" | "responsive";
 type TemplateTheme = "light" | "dark";
 type ExportProvider = {
   name: string;
@@ -109,7 +106,7 @@ const defaultPreviewWidthVw = 64;
 const maxPreviewWidthVw = 78;
 const previewModeItems = [
   { value: "desktop", label: "Desktop" },
-  { value: "mobile", label: "Mobile" },
+  { value: "responsive", label: "Responsive" },
 ];
 
 function clampPreviewWidth(width: number) {
@@ -522,69 +519,6 @@ function ExportProviderModal({
   );
 }
 
-function MobileMailButton({
-  icon,
-  label,
-}: {
-  icon: IconSvgElement;
-  label: string;
-}) {
-  return (
-    <button
-      aria-label={label}
-      className="grid size-8 place-items-center rounded-lg text-madoo-ink-muted transition hover:bg-madoo-surface hover:text-madoo-ink"
-      type="button"
-    >
-      <HugeiconsIcon
-        aria-hidden="true"
-        icon={icon}
-        primaryColor="currentColor"
-        size={20}
-        strokeWidth={1.6}
-      />
-    </button>
-  );
-}
-
-function MobileEmailFrame({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return (
-    <div className="mx-auto grid min-h-full place-items-center py-5">
-      <div className="w-[390px] max-w-full rounded-[42px] bg-white p-3 shadow-madoo-border">
-        <div className="overflow-hidden rounded-[12px] bg-white shadow-madoo-border">
-          <div className="flex h-14 items-center justify-between bg-white px-3 shadow-[var(--shadow-border-bottom)]">
-            <button
-              className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-madoo-accent transition hover:bg-madoo-surface"
-              type="button"
-            >
-              <span className="h-4 w-4 rotate-45 border-b-2 border-l-2 border-current" />
-              Inbox
-            </button>
-            <div className="flex items-center gap-2 text-madoo-ink-muted">
-              <MobileMailButton icon={ArrowUp01Icon} label="Previous email" />
-              <MobileMailButton icon={ArrowDown01Icon} label="Next email" />
-            </div>
-          </div>
-
-          <div className="h-[min(640px,calc(100vh-230px))] min-h-[460px] overflow-hidden bg-white">
-            {children}
-          </div>
-
-          <div className="flex h-12 items-center justify-around bg-white shadow-[var(--shadow-border-top)]">
-            <MobileMailButton icon={Download01Icon} label="Archive email" />
-            <MobileMailButton icon={Folder01Icon} label="Move email" />
-            <MobileMailButton icon={RefreshIcon} label="Reply email" />
-            <MobileMailButton icon={Edit02Icon} label="Compose email" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function EmailPreviewSidebar({
   mode,
   onOpenExport,
@@ -745,39 +679,26 @@ function EmailPreviewSidebar({
 
         <div className="min-h-0 flex-1 overflow-hidden shadow-madoo-border">
           <div className="madoo-preview-scrollbar mr-1 h-full overflow-y-auto">
-            {mode === "desktop" ? (
-              <div className="mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300">
-                <iframe
-                  className={cn(
-                    "block w-full border-0 bg-white",
-                    isResizing && "pointer-events-none",
-                  )}
-                  onLoad={syncIframeHeight}
-                  ref={iframeRef}
-                  scrolling="no"
-                  sandbox=""
-                  srcDoc={getEmailTemplateSrcDoc(theme)}
-                  style={{ height: iframeHeight }}
-                  title="Generated email template preview"
-                />
-              </div>
-            ) : (
-              <MobileEmailFrame>
-                <iframe
-                  className={cn(
-                    "block w-full border-0 bg-white",
-                    isResizing && "pointer-events-none",
-                  )}
-                  onLoad={syncIframeHeight}
-                  ref={iframeRef}
-                  scrolling="no"
-                  sandbox=""
-                  srcDoc={getEmailTemplateSrcDoc(theme)}
-                  style={{ height: iframeHeight }}
-                  title="Generated email template mobile preview"
-                />
-              </MobileEmailFrame>
-            )}
+            <div
+              className={cn(
+                "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
+                mode === "desktop" ? "w-full" : "w-[390px]",
+              )}
+            >
+              <iframe
+                className={cn(
+                  "block w-full border-0 bg-white",
+                  isResizing && "pointer-events-none",
+                )}
+                onLoad={syncIframeHeight}
+                ref={iframeRef}
+                scrolling="no"
+                sandbox=""
+                srcDoc={getEmailTemplateSrcDoc(theme)}
+                style={{ height: iframeHeight }}
+                title="Generated email template preview"
+              />
+            </div>
           </div>
         </div>
       </div>
