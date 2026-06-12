@@ -7,6 +7,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
+import { buildLandingAuthUrl } from "@/lib/auth-redirect";
+import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
 import { Select } from "@madoo/design-system";
 import { useRouter } from "next/navigation";
@@ -109,17 +111,29 @@ type ClientPromptBoxProps = {
     panel?: string;
     textarea?: string;
   };
+  disabled?: boolean;
+  onSubmit?: (input: PromptSubmitInput) => void | Promise<void>;
   showOptions?: boolean;
   variant?: "home" | "chat";
+};
+
+export type PromptSubmitInput = {
+  prompt: string;
+  tone?: string;
+  length?: string;
+  audience?: string;
 };
 
 export function ClientPromptBox({
   className,
   classNames,
+  disabled = false,
+  onSubmit,
   showOptions = true,
   variant = "home",
 }: ClientPromptBoxProps) {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
   const searchCommandOpen = useClientStore((state) => state.searchCommandOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
   const [prompt, setPrompt] = useState("");
@@ -141,10 +155,27 @@ export function ClientPromptBox({
 
     if (!trimmedPrompt) return;
 
+    const input: PromptSubmitInput = { prompt: trimmedPrompt };
     const params = new URLSearchParams({ prompt: trimmedPrompt });
 
     for (const [key, value] of Object.entries(promptOptionValues)) {
-      if (value) params.set(key.toLowerCase(), value);
+      const normalizedKey = key.toLowerCase() as "tone" | "length";
+      if (value) {
+        params.set(normalizedKey, value);
+        input[normalizedKey] = value;
+      }
+    }
+
+    if (!user) {
+      window.location.assign(
+        buildLandingAuthUrl(`/email-template-project?${params.toString()}`),
+      );
+      return;
+    }
+
+    if (onSubmit) {
+      void Promise.resolve(onSubmit(input)).then(() => setPrompt(""));
+      return;
     }
 
     setSidebarOpen(true);
@@ -334,10 +365,10 @@ export function ClientPromptBox({
             <button
               type="button"
               onClick={submitPrompt}
-              disabled={!hasPrompt}
+              disabled={!hasPrompt || disabled}
               className={cn(
                 "inline-flex items-center justify-center rounded-full text-xs text-white transition",
-                hasPrompt
+                hasPrompt && !disabled
                   ? "cursor-pointer bg-black"
                   : "cursor-not-allowed bg-[#7d7d7a] opacity-80",
                 isChatVariant ? "h-7 w-7" : "h-8 px-4",

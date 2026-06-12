@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchEmails } from "@/actions/emails";
+import { useAuthStore } from "@/stores/auth-store";
 import {
   Add01Icon,
   DiamondIcon,
@@ -9,6 +11,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Button, cx } from "@madoo/design-system";
+import type { EmailDto } from "@madoo/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -36,44 +40,6 @@ type SearchItem = {
   group: "Recent projects" | "Navigate to" | "Providers";
   icon: IconSvgElement;
 };
-
-const recentProjects: SearchItem[] = [
-  {
-    id: "hello-friends",
-    label: "Hello Friends",
-    href: "/email-template-project",
-    group: "Recent projects",
-    icon: DiamondIcon,
-  },
-  {
-    id: "daily-spark",
-    label: "Your Daily Spark",
-    href: "/email-template-project",
-    group: "Recent projects",
-    icon: DiamondIcon,
-  },
-  {
-    id: "hopta",
-    label: "Hopta.hn Landing Page",
-    href: "/email-template-project",
-    group: "Recent projects",
-    icon: DiamondIcon,
-  },
-  {
-    id: "anta-airways",
-    label: "Anta Airways: Elevated Travel Experiences",
-    href: "/email-template-project",
-    group: "Recent projects",
-    icon: DiamondIcon,
-  },
-  {
-    id: "puppy",
-    label: "Puppy Landing Page (43)",
-    href: "/email-template-project",
-    group: "Recent projects",
-    icon: DiamondIcon,
-  },
-];
 
 const navigationItems: SearchItem[] = [
   {
@@ -169,6 +135,36 @@ function groupItems(items: SearchItem[]) {
   );
 }
 
+function getEmailTitle(email: EmailDto): string {
+  const latestVariant = email.variants[email.variants.length - 1];
+  return (
+    latestVariant?.subject || email.title || email.prompt || "Untitled email"
+  );
+}
+
+function emailToSearchItem(email: EmailDto): SearchItem {
+  return {
+    id: `email-${email.id}`,
+    label: getEmailTitle(email),
+    description: email.prompt,
+    href: `/email-template-project?id=${encodeURIComponent(email.id)}`,
+    group: "Recent projects",
+    icon: DiamondIcon,
+    imageSrc:
+      email.variants[email.variants.length - 1]?.previewUrl ?? undefined,
+  };
+}
+
+function fuzzyIncludes(value: string, query: string): boolean {
+  if (!query) return true;
+  let queryIndex = 0;
+  for (const character of value) {
+    if (character === query[queryIndex]) queryIndex += 1;
+    if (queryIndex === query.length) return true;
+  }
+  return false;
+}
+
 function useCommandModalPresence(open: boolean) {
   const [present, setPresent] = useState(open);
 
@@ -187,24 +183,52 @@ function useCommandModalPresence(open: boolean) {
 
 export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
   const present = useCommandModalPresence(open);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const { data: emails = [] } = useQuery({
+    queryKey: ["emails"],
+    queryFn: fetchEmails,
+    enabled: open && Boolean(user),
+    initialData: () => queryClient.getQueryData<EmailDto[]>(["emails"]),
+  });
+
+  const recentProjectItems = useMemo(
+    () =>
+      [...emails]
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        )
+        .slice(0, 5)
+        .map(emailToSearchItem),
+    [emails],
+  );
+
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const allItems = [...recentProjects, ...navigationItems, ...providerItems];
+    const allItems = [
+      ...recentProjectItems,
+      ...navigationItems,
+      ...providerItems,
+    ];
 
     if (!normalizedQuery) return allItems;
 
-    return allItems.filter((item) =>
-      `${item.label} ${item.description ?? ""}`
-        .toLowerCase()
-        .includes(normalizedQuery),
-    );
-  }, [query]);
+    return allItems.filter((item) => {
+      const searchable =
+        `${item.label} ${item.description ?? ""}`.toLowerCase();
+      return (
+        searchable.includes(normalizedQuery) ||
+        fuzzyIncludes(searchable, normalizedQuery)
+      );
+    });
+  }, [query, recentProjectItems]);
 
   const groupedItems = useMemo(() => groupItems(filteredItems), [filteredItems]);
   const activeItem = filteredItems[activeIndex];
