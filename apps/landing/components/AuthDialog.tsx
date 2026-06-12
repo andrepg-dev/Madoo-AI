@@ -1,12 +1,39 @@
 "use client";
 
+import { appleSignIn } from "@/lib/apple-auth";
+import {
+  APPLE_CLIENT_ID,
+  CLIENT_APP_URL,
+  GITHUB_CLIENT_ID,
+  GOOGLE_CLIENT_ID,
+} from "@/lib/env";
+import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 type AuthDialogProps = {
   open: boolean;
   onClose: () => void;
   locale?: "en" | "es";
+  prompt?: string;
+  tone?: string;
+  length?: string;
+  audience?: string;
+  nextUrl?: string | null;
+};
+
+type AuthResult = {
+  pendingPromptId?: string | null;
+};
+
+type EmailAuthMode = "login" | "register";
+type EmailStep = "email" | "password";
+
+type PendingPayload = {
+  pendingPrompt?: string;
+  pendingTone?: string;
+  pendingLength?: string;
+  pendingAudience?: string;
 };
 
 const authProviders = [
@@ -67,12 +94,21 @@ const authCopy = {
     title: "Log in to your account",
     continueWith: "Continue with",
     or: "OR",
+    name: "Name",
     email: "Email",
+    password: "Password",
     continue: "Continue",
+    createAccount: "Create account",
+    signInInstead: "Sign in instead",
+    useDifferentEmail: "Use a different email",
     termsPrefix: "By continuing, you agree to the",
     terms: "Terms of Service",
     and: "and",
     privacy: "Privacy Policy",
+    authFailed: "Login failed. Try again.",
+    emailInvalid: "Enter a valid email.",
+    passwordRequired: "Enter your password.",
+    passwordLength: "Password must be at least 8 characters.",
   },
   es: {
     closeLogin: "Cerrar diálogo de inicio de sesión",
@@ -81,17 +117,91 @@ const authCopy = {
     title: "Inicia sesión en tu cuenta",
     continueWith: "Continuar con",
     or: "O",
+    name: "Nombre",
     email: "Email",
+    password: "Contraseña",
     continue: "Continuar",
+    createAccount: "Crear cuenta",
+    signInInstead: "Iniciar sesión",
+    useDifferentEmail: "Usar otro email",
     termsPrefix: "Al continuar, aceptas los",
     terms: "Términos de Servicio",
     and: "y la",
     privacy: "Política de Privacidad",
+    authFailed: "No se pudo iniciar sesión. Intenta de nuevo.",
+    emailInvalid: "Ingresa un email válido.",
+    passwordRequired: "Ingresa tu contraseña.",
+    passwordLength: "La contraseña debe tener al menos 8 caracteres.",
   },
 } as const;
 
-export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogProps) {
+function clientUrl(path: string) {
+  return new URL(path, CLIENT_APP_URL).toString();
+}
+
+function safeClientRedirect(nextUrl: string | null | undefined) {
+  const fallback = clientUrl("/dashboard/projects");
+  if (!nextUrl) return fallback;
+
+  try {
+    const clientOrigin = new URL(CLIENT_APP_URL).origin;
+    const url = new URL(nextUrl, CLIENT_APP_URL);
+    return url.origin === clientOrigin ? url.toString() : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function redirectAfterAuth(result: AuthResult, nextUrl?: string | null) {
+  if (result.pendingPromptId) {
+    const url = new URL("/email-template-project", CLIENT_APP_URL);
+    url.searchParams.set("pendingPromptId", result.pendingPromptId);
+    window.location.assign(url.toString());
+    return;
+  }
+
+  window.location.assign(safeClientRedirect(nextUrl));
+}
+
+function base64UrlEncode(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return window
+    .btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+export default function AuthDialog({
+  open,
+  onClose,
+  locale = "en",
+  prompt,
+  tone,
+  length,
+  audience,
+  nextUrl,
+}: AuthDialogProps) {
   const copy = authCopy[locale];
+  const [emailStep, setEmailStep] = useState<EmailStep>("email");
+  const [emailMode, setEmailMode] = useState<EmailAuthMode>("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const pendingPayload: PendingPayload = {
+    pendingPrompt: prompt?.trim() || undefined,
+    pendingTone: tone || undefined,
+    pendingLength: length || undefined,
+    pendingAudience: audience || undefined,
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -105,6 +215,176 @@ export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogP
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open, onClose]);
+
+  async function authenticate(
+    provider: string,
+    payload: Record<string, unknown>,
+  ) {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/auth/${provider}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, ...pendingPayload }),
+      });
+
+      const raw = (await response.json().catch(() => null)) as
+        | AuthResult
+        | { message?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(
+          raw && "message" in raw && raw.message
+            ? raw.message
+            : copy.authFailed,
+        );
+      }
+
+      redirectAfterAuth((raw ?? {}) as AuthResult, nextUrl);
+    } catch (err) {
+      setIsSubmitting(false);
+      setError(err instanceof Error ? err.message : copy.authFailed);
+    }
+  }
+
+  async function handleGoogleLogin() {
+    if (!GOOGLE_CLIENT_ID) {
+      setError(copy.authFailed);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await loadGsiScript();
+
+      if (!window.google?.accounts?.id) {
+        throw new Error(copy.authFailed);
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response: GsiCredentialResponse) => {
+          if (!response.credential) {
+            setIsSubmitting(false);
+            setError(copy.authFailed);
+            return;
+          }
+
+          void authenticate("google", { idToken: response.credential });
+        },
+        cancel_on_tap_outside: true,
+        ux_mode: "popup",
+      });
+
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          setIsSubmitting(false);
+          setError(copy.authFailed);
+        }
+      });
+    } catch (err) {
+      setIsSubmitting(false);
+      setError(err instanceof Error ? err.message : copy.authFailed);
+    }
+  }
+
+  function handleGithubLogin() {
+    if (!GITHUB_CLIENT_ID) {
+      setError(copy.authFailed);
+      return;
+    }
+
+    const state = base64UrlEncode(
+      JSON.stringify({
+        next: safeClientRedirect(nextUrl),
+        ...pendingPayload,
+      }),
+    );
+    const url = new URL("https://github.com/login/oauth/authorize");
+    url.searchParams.set("client_id", GITHUB_CLIENT_ID);
+    url.searchParams.set(
+      "redirect_uri",
+      `${window.location.origin}/api/auth/github/callback`,
+    );
+    url.searchParams.set("scope", "read:user user:email");
+    url.searchParams.set("state", state);
+    window.location.assign(url.toString());
+  }
+
+  async function handleAppleLogin() {
+    if (!APPLE_CLIENT_ID) {
+      setError(copy.authFailed);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await appleSignIn(APPLE_CLIENT_ID);
+      await authenticate("apple", {
+        idToken: result.idToken,
+        name: result.name,
+      });
+    } catch (err) {
+      setIsSubmitting(false);
+      setError(err instanceof Error ? err.message : copy.authFailed);
+    }
+  }
+
+  function handleProvider(provider: string) {
+    if (provider === "Google") {
+      void handleGoogleLogin();
+      return;
+    }
+
+    if (provider === "GitHub") {
+      handleGithubLogin();
+      return;
+    }
+
+    if (provider === "Apple") {
+      void handleAppleLogin();
+    }
+  }
+
+  async function handleEmailContinue() {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    const trimmedName = name.trim();
+
+    if (emailStep === "email") {
+      if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+        setError(copy.emailInvalid);
+        return;
+      }
+
+      setError(null);
+      setEmailStep("password");
+      return;
+    }
+
+    if (!trimmedPassword) {
+      setError(copy.passwordRequired);
+      return;
+    }
+
+    if (emailMode === "register" && trimmedPassword.length < 8) {
+      setError(copy.passwordLength);
+      return;
+    }
+
+    await authenticate(emailMode, {
+      email: trimmedEmail,
+      password: trimmedPassword,
+      name: emailMode === "register" && trimmedName ? trimmedName : undefined,
+    });
+  }
 
   if (!open) return null;
 
@@ -157,7 +437,9 @@ export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogP
             <button
               key={provider.name}
               type="button"
-              className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-madoo-paper text-sm text-madoo-ink shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-neutral-50 hover:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.28)]"
+              disabled={isSubmitting}
+              onClick={() => handleProvider(provider.name)}
+              className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-madoo-paper text-sm text-madoo-ink shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-neutral-50 hover:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.28)] disabled:cursor-wait disabled:opacity-70"
             >
               <span className="text-madoo-ink">{provider.icon}</span>
               {copy.continueWith} {provider.name}
@@ -172,26 +454,116 @@ export default function AuthDialog({ open, onClose, locale = "en" }: AuthDialogP
         </div>
 
         <div className="grid gap-2.5">
+          {emailStep === "password" && emailMode === "register" ? (
+            <input
+              type="text"
+              autoComplete="name"
+              placeholder={copy.name}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                setError(null);
+              }}
+              className="h-8 rounded-lg bg-madoo-paper px-3.5 text-sm text-madoo-ink outline-none shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] placeholder:text-madoo-muted focus:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.34)]"
+            />
+          ) : null}
+
           <input
             type="email"
             placeholder={copy.email}
+            value={email}
+            disabled={emailStep === "password"}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setError(null);
+            }}
             className="h-8 rounded-lg bg-madoo-paper px-3.5 text-sm text-madoo-ink outline-none shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] placeholder:text-madoo-muted focus:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.34)]"
           />
+
+          {emailStep === "password" ? (
+            <input
+              type="password"
+              autoComplete={
+                emailMode === "register" ? "new-password" : "current-password"
+              }
+              placeholder={copy.password}
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setError(null);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleEmailContinue();
+                }
+              }}
+              className="h-8 rounded-lg bg-madoo-paper px-3.5 text-sm text-madoo-ink outline-none shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] placeholder:text-madoo-muted focus:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.34)]"
+            />
+          ) : null}
+
           <button
             type="button"
+            disabled={isSubmitting}
+            onClick={() => void handleEmailContinue()}
             className="h-8 cursor-pointer rounded-lg bg-madoo-ink text-sm text-white shadow-[0_8px_20px_rgb(var(--madoo-ink-shadow-rgb)/0.16),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-ink-hover"
           >
             {copy.continue}
           </button>
+
+          {emailStep === "password" ? (
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <button
+                type="button"
+                className="cursor-pointer text-zinc-500 underline underline-offset-2"
+                onClick={() => {
+                  setEmailStep("email");
+                  setPassword("");
+                  setName("");
+                  setError(null);
+                }}
+              >
+                {copy.useDifferentEmail}
+              </button>
+              <button
+                type="button"
+                className="cursor-pointer font-medium text-zinc-700 underline underline-offset-2"
+                onClick={() => {
+                  setEmailMode((current) =>
+                    current === "login" ? "register" : "login",
+                  );
+                  setPassword("");
+                  setName("");
+                  setError(null);
+                }}
+              >
+                {emailMode === "login"
+                  ? copy.createAccount
+                  : copy.signInInstead}
+              </button>
+            </div>
+          ) : null}
         </div>
+
+        {error ? (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
 
         <p className="mt-5 text-xs leading-5 text-zinc-500">
           {copy.termsPrefix}{" "}
-          <Link className="font-medium text-zinc-700 underline underline-offset-2" href="/terms">
+          <Link
+            className="font-medium text-zinc-700 underline underline-offset-2"
+            href="/terms"
+          >
             {copy.terms}
           </Link>{" "}
           {copy.and}{" "}
-          <Link className="font-medium text-zinc-700 underline underline-offset-2" href="/privacy">
+          <Link
+            className="font-medium text-zinc-700 underline underline-offset-2"
+            href="/privacy"
+          >
             {copy.privacy}
           </Link>
           .
