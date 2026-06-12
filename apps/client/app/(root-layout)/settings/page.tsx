@@ -1,23 +1,58 @@
 "use client";
 
+import { getMe, updateMe, uploadAvatar } from "@/actions/auth";
+import { createSupportTicket } from "@/actions/support";
+import {
+  createWorkspaceInvite,
+  deleteCurrentWorkspace,
+  deleteWorkspaceInvite,
+  fetchWorkspaceInvites,
+  fetchWorkspaceMembers,
+  fetchWorkspaces,
+  leaveCurrentWorkspace,
+  removeWorkspaceMember,
+  setActiveWorkspace,
+  updateCurrentWorkspace,
+  updateWorkspaceMemberRole,
+  uploadWorkspaceAvatar,
+} from "@/actions/workspaces";
+import {
+  playCompletionSound,
+  readSoundPref,
+  saveSoundPref,
+  type SoundPref,
+} from "@/lib/storage";
+import { useAuthStore } from "@/stores/auth-store";
+import { useClientStore } from "@/stores/client-store";
 import {
   Avatar,
+  Badge,
   Button,
   Card,
   Checkbox,
+  NativeSelect,
   cx,
   Icon,
   Input,
   SegmentedControl,
   Textarea,
-  useToast
+  useToast,
 } from "@madoo/design-system";
+import type {
+  MyWorkspace,
+  Role,
+  SupportCategory,
+  WorkspaceInvite,
+  WorkspaceInviteRole,
+  WorkspaceMember,
+} from "@madoo/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 type SettingsArea = "account" | "workspace" | "support";
-type AccountSection = "profile" | "security" | "providers" | "sound";
+type AccountSection = "profile" | "sound";
 type WorkspaceSection = "overview" | "avatar" | "members" | "danger";
 
 type PrimaryNavItem = {
@@ -30,14 +65,14 @@ type PrimaryNavItem = {
 type SecondaryNavItem = {
   value: AccountSection | WorkspaceSection;
   label: string;
-  icon: "user" | "lock" | "plus" | "bell" | "settings" | "image" | "copy";
+  icon: "user" | "lock" | "bell" | "settings" | "image" | "copy";
 };
 
 const primaryNav: PrimaryNavItem[] = [
   {
     area: "account",
     label: "User settings",
-    description: "Profile, access, providers, alerts",
+    description: "Profile and product preferences",
     icon: "user",
   },
   {
@@ -56,8 +91,6 @@ const primaryNav: PrimaryNavItem[] = [
 
 const accountNav: SecondaryNavItem[] = [
   { value: "profile", label: "Profile", icon: "user" },
-  { value: "security", label: "Password", icon: "lock" },
-  { value: "providers", label: "Providers", icon: "plus" },
   { value: "sound", label: "Complete sound", icon: "bell" },
 ];
 
@@ -68,11 +101,24 @@ const workspaceNav: SecondaryNavItem[] = [
   { value: "danger", label: "Danger zone", icon: "lock" },
 ];
 
-const providerRows = [
-  { name: "Google", status: "Connected", tone: "accent" as const },
-  { name: "GitHub", status: "Connect", tone: "neutral" as const },
-  { name: "Apple", status: "Connect", tone: "neutral" as const },
-  { name: "Email", status: "Primary", tone: "solid" as const },
+const supportCategoryOptions = [
+  { value: "WORKSPACE", label: "Workspace" },
+  { value: "BILLING", label: "Billing" },
+  { value: "GENERATION", label: "Generation" },
+  { value: "EXPORT", label: "Export" },
+  { value: "ACCOUNT", label: "Account" },
+  { value: "OTHER", label: "Other" },
+];
+
+const inviteRoleOptions = [
+  { value: "MEMBER", label: "Member" },
+  { value: "ADMIN", label: "Admin" },
+];
+
+const memberRoleOptions = [
+  { value: "MEMBER", label: "Member" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "OWNER", label: "Owner" },
 ];
 
 function getSettingsHref(
@@ -89,12 +135,7 @@ function isSettingsArea(value: string | null): value is SettingsArea {
 }
 
 function isAccountSection(value: string | null): value is AccountSection {
-  return (
-    value === "profile" ||
-    value === "security" ||
-    value === "providers" ||
-    value === "sound"
-  );
+  return value === "profile" || value === "sound";
 }
 
 function isWorkspaceSection(value: string | null): value is WorkspaceSection {
@@ -104,6 +145,26 @@ function isWorkspaceSection(value: string | null): value is WorkspaceSection {
     value === "members" ||
     value === "danger"
   );
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function formatDate(value: string) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function canAdmin(role: Role | undefined) {
+  return role === "OWNER" || role === "ADMIN";
 }
 
 function SettingsNavLink({
@@ -226,85 +287,63 @@ function SettingsCard({
 }
 
 function AccountPanel({ section }: { section: AccountSection }) {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [sound, setSound] = useState("soft");
+  const setAuthUser = useAuthStore((state) => state.setUser);
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["me"],
+    queryFn: getMe,
+    staleTime: 60_000,
+  });
+  const [name, setName] = useState("");
+  const [sound, setSound] = useState<SoundPref>("soft");
 
-  if (section === "security") {
-    return (
-      <SettingsCard
-        title="Password change"
-        description="Update sign-in password for email-based access."
-      >
-        <div className="grid max-w-xl gap-3">
-          <Input label="Current password" type="password" placeholder="Current password" />
-          <Input label="New password" type="password" placeholder="New password" />
-          <Input label="Confirm password" type="password" placeholder="Confirm password" />
-          <div className="pt-1">
-            <Button
-              size="md"
-              onClick={() =>
-                toast({
-                  tone: "warn",
-                  title: "Password update pending",
-                  body: "Backend action is not connected yet.",
-                })
-              }
-            >
-              Update password
-            </Button>
-          </div>
-        </div>
-      </SettingsCard>
-    );
-  }
+  useEffect(() => {
+    if (user) setName(user.name ?? "");
+  }, [user]);
 
-  if (section === "providers") {
-    return (
-      <SettingsCard
-        title="Linked providers"
-        description="Connect external login methods for this user."
-      >
-        <div className="grid gap-2">
-          {providerRows.map((provider) => (
-            <div
-              key={provider.name}
-              className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] bg-madoo-bg-2 px-3.5 py-3 shadow-[var(--shadow-border)]"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-madoo-surface font-madoo-display font-semibold shadow-[var(--shadow-border)]">
-                  {provider.name[0]}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
-                    {provider.name}
-                  </span>
-                  <span className="mt-1 block truncate text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
-                    {provider.name === "Email"
-                      ? "andre@madoo.ai"
-                      : "OAuth sign-in provider"}
-                  </span>
-                </span>
-              </div>
-              <Button
-                size="sm"
-                variant={provider.status === "Connect" ? "secondary" : "ghost"}
-                onClick={() =>
-                  toast({
-                    title: `${provider.name} provider`,
-                    body: "Provider linking is not connected yet.",
-                  })
-                }
-              >
-                {provider.status}
-              </Button>
-            </div>
-          ))}
-        </div>
-      </SettingsCard>
-    );
-  }
+  useEffect(() => {
+    setSound(readSoundPref());
+  }, []);
+
+  const profileMutation = useMutation({
+    mutationFn: updateMe,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["me"], updated);
+      setAuthUser(updated);
+      toast({ tone: "success", title: "Profile saved" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Profile save failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const avatarMutation = useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["me"], updated);
+      setAuthUser(updated);
+      toast({ tone: "success", title: "Avatar updated" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Avatar upload failed",
+        body: getErrorMessage(error, "Use a PNG or JPEG under 4 MB."),
+      });
+    },
+  });
 
   if (section === "sound") {
+    const saveSound = (next: SoundPref) => {
+      setSound(next);
+      saveSoundPref(next);
+    };
+
     return (
       <SettingsCard
         title="Completion sound"
@@ -314,7 +353,7 @@ function AccountPanel({ section }: { section: AccountSection }) {
           <SegmentedControl
             aria-label="Completion sound"
             value={sound}
-            onChange={setSound}
+            onChange={(value) => saveSound(value as SoundPref)}
             items={[
               { value: "soft", label: "Soft" },
               { value: "bright", label: "Bright" },
@@ -322,23 +361,21 @@ function AccountPanel({ section }: { section: AccountSection }) {
             ]}
           />
           <Checkbox
-            defaultChecked
+            checked={sound !== "silent"}
             label="Play sound after email generation"
-            description="Applies to background tasks and editor generation."
+            description="Stored locally on this device."
+            onChange={(event) =>
+              saveSound(event.currentTarget.checked ? "soft" : "silent")
+            }
           />
           <Button
             size="md"
             variant="secondary"
             className="w-max"
-            onClick={() =>
-              toast({
-                tone: "success",
-                title: "Sound preference saved",
-                body: `Selected sound: ${sound}.`,
-              })
-            }
+            disabled={sound === "silent"}
+            onClick={playCompletionSound}
           >
-            Save sound
+            Test sound
           </Button>
         </div>
       </SettingsCard>
@@ -348,132 +385,519 @@ function AccountPanel({ section }: { section: AccountSection }) {
   return (
     <SettingsCard
       title="User profile"
-      description="Change username and account display details."
+      description="Change display name and account avatar."
     >
       <div className="grid max-w-xl gap-4">
         <div className="flex items-center gap-3">
-          <Avatar name="Andre Ponce" size="xl" circle tone="ink" />
+          <Avatar
+            name={user?.name ?? user?.email ?? "User"}
+            src={user?.avatarUrl ?? undefined}
+            size="xl"
+            circle
+            tone="ink"
+          />
           <div className="min-w-0">
             <p className="text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
-              Andre Ponce
+              {isLoading ? "Loading..." : user?.name || "Unnamed user"}
             </p>
             <p className="mt-1 text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
-              andre@madoo.ai
+              {user?.email ?? ""}
             </p>
           </div>
         </div>
-        <Input label="Username" defaultValue="Andre Ponce" />
-        <Input label="Email" defaultValue="andre@madoo.ai" disabled />
-        <Button
-          size="md"
-          className="w-max"
-          onClick={() =>
-            toast({
-              tone: "success",
-              title: "Profile saved",
-              body: "Username change is ready for backend wiring.",
-            })
-          }
-        >
-          Save profile
-        </Button>
+        <Input
+          label="Username"
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
+        />
+        <Input label="Email" value={user?.email ?? ""} disabled readOnly />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="md"
+            disabled={!name.trim() || profileMutation.isPending}
+            onClick={() => profileMutation.mutate({ name: name.trim() })}
+          >
+            Save profile
+          </Button>
+          <label className="inline-flex">
+            <input
+              className="sr-only"
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.set("file", file);
+                avatarMutation.mutate(formData);
+                event.currentTarget.value = "";
+              }}
+            />
+            <span className="inline-flex cursor-pointer items-center rounded-[var(--radius-lg)] bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink shadow-[var(--shadow-border)] transition-colors hover:bg-madoo-bg">
+              {avatarMutation.isPending ? "Uploading..." : "Upload avatar"}
+            </span>
+          </label>
+        </div>
       </div>
     </SettingsCard>
   );
 }
 
-function WorkspacePanel({ section }: { section: WorkspaceSection }) {
+function WorkspacePanel({
+  section,
+  workspaces,
+  activeWorkspace,
+}: {
+  section: WorkspaceSection;
+  workspaces: MyWorkspace[];
+  activeWorkspace: MyWorkspace | null;
+}) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
+  const user = useAuthStore((state) => state.user);
+  const setWorkspaceId = useClientStore((state) => state.setWorkspaceId);
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [workspaceSlug, setWorkspaceSlug] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<WorkspaceInviteRole>("MEMBER");
+  const [latestInviteUrl, setLatestInviteUrl] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+
+  const activeRole = activeWorkspace?.role;
+  const admin = canAdmin(activeRole);
+
+  useEffect(() => {
+    setWorkspaceName(activeWorkspace?.name ?? "");
+    setWorkspaceSlug(activeWorkspace?.slug ?? "");
+    setDeleteConfirm("");
+  }, [activeWorkspace?.id, activeWorkspace?.name, activeWorkspace?.slug]);
+
+  const membersQuery = useQuery({
+    queryKey: ["workspace-members", activeWorkspace?.id],
+    queryFn: fetchWorkspaceMembers,
+    enabled: Boolean(activeWorkspace),
+  });
+
+  const invitesQuery = useQuery({
+    queryKey: ["workspace-invites", activeWorkspace?.id],
+    queryFn: fetchWorkspaceInvites,
+    enabled: Boolean(activeWorkspace && admin),
+  });
+
+  const invalidateWorkspace = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-members", activeWorkspace?.id],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-invites", activeWorkspace?.id],
+      }),
+    ]);
+  };
+
+  const updateWorkspaceMutation = useMutation({
+    mutationFn: updateCurrentWorkspace,
+    onSuccess: async () => {
+      await invalidateWorkspace();
+      toast({ tone: "success", title: "Workspace saved" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Workspace save failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const workspaceAvatarMutation = useMutation({
+    mutationFn: uploadWorkspaceAvatar,
+    onSuccess: async () => {
+      await invalidateWorkspace();
+      toast({ tone: "success", title: "Workspace avatar updated" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Workspace avatar failed",
+        body: getErrorMessage(error, "Use a PNG or JPEG under 4 MB."),
+      });
+    },
+  });
+
+  const memberRoleMutation = useMutation({
+    mutationFn: (input: { userId: string; role: Role }) =>
+      updateWorkspaceMemberRole(input.userId, { role: input.role }),
+    onSuccess: async () => {
+      await invalidateWorkspace();
+      toast({ tone: "success", title: "Member role updated" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Role update failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: removeWorkspaceMember,
+    onSuccess: async () => {
+      await invalidateWorkspace();
+      toast({ tone: "success", title: "Member removed" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Remove member failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const createInviteMutation = useMutation({
+    mutationFn: createWorkspaceInvite,
+    onSuccess: async (invite) => {
+      setLatestInviteUrl(invite.inviteUrl);
+      setInviteEmail("");
+      await queryClient.invalidateQueries({
+        queryKey: ["workspace-invites", activeWorkspace?.id],
+      });
+      toast({ tone: "success", title: "Invite created" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Invite failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const deleteInviteMutation = useMutation({
+    mutationFn: deleteWorkspaceInvite,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["workspace-invites", activeWorkspace?.id],
+      });
+      toast({ tone: "success", title: "Invite deleted" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Delete invite failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const afterWorkspaceExit = async (removedId: string) => {
+    const nextWorkspace = workspaces.find((item) => item.id !== removedId);
+    if (nextWorkspace) {
+      await setActiveWorkspace(nextWorkspace.id);
+      setWorkspaceId(nextWorkspace.id);
+    } else {
+      setWorkspaceId(null);
+    }
+    await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+    await queryClient.invalidateQueries({ queryKey: ["billing-overview"] });
+    router.push("/dashboard/projects");
+  };
+
+  const deleteWorkspaceMutation = useMutation({
+    mutationFn: deleteCurrentWorkspace,
+    onSuccess: async () => {
+      if (activeWorkspace) await afterWorkspaceExit(activeWorkspace.id);
+      toast({ tone: "success", title: "Workspace deleted" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Delete workspace failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const leaveWorkspaceMutation = useMutation({
+    mutationFn: leaveCurrentWorkspace,
+    onSuccess: async () => {
+      if (activeWorkspace) await afterWorkspaceExit(activeWorkspace.id);
+      toast({ tone: "success", title: "Workspace left" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Leave workspace failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const copyInvite = async (invite: WorkspaceInvite) => {
+    await navigator.clipboard.writeText(invite.inviteUrl);
+    toast({ tone: "success", title: "Invite link copied" });
+  };
+
+  if (!activeWorkspace) {
+    return (
+      <SettingsCard title="Workspace" description="No active workspace found.">
+        <p className="text-[length:var(--font-size-base)] text-madoo-ink-muted">
+          Create or switch workspace from sidebar.
+        </p>
+      </SettingsCard>
+    );
+  }
 
   if (section === "avatar") {
     return (
       <SettingsCard
         title="Workspace avatar"
-        description="Set the workspace identity shown in navigation."
+        description="Set identity shown in navigation."
       >
         <div className="flex flex-wrap items-center gap-4">
-          <Avatar name="Andre's Madoo" size="xl" tone="accent" />
-          <div className="grid gap-2">
-            <Button
-              size="md"
-              variant="secondary"
-              onClick={() =>
-                toast({
-                  title: "Avatar upload pending",
-                  body: "File upload action is not connected yet.",
-                })
-              }
+          <Avatar
+            name={activeWorkspace.name}
+            src={activeWorkspace.avatarUrl ?? undefined}
+            size="xl"
+            tone="accent"
+          />
+          <label className="inline-flex">
+            <input
+              className="sr-only"
+              type="file"
+              accept="image/png,image/jpeg"
+              disabled={!admin || workspaceAvatarMutation.isPending}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.set("file", file);
+                workspaceAvatarMutation.mutate(formData);
+                event.currentTarget.value = "";
+              }}
+            />
+            <span
+              className={cx(
+                "inline-flex cursor-pointer items-center rounded-[var(--radius-lg)] bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink shadow-[var(--shadow-border)] transition-colors hover:bg-madoo-bg",
+                (!admin || workspaceAvatarMutation.isPending) &&
+                  "cursor-not-allowed opacity-60",
+              )}
             >
-              Upload avatar
-            </Button>
-            <Button size="sm" variant="ghost">
-              Remove avatar
-            </Button>
-          </div>
+              {workspaceAvatarMutation.isPending
+                ? "Uploading..."
+                : "Upload avatar"}
+            </span>
+          </label>
         </div>
       </SettingsCard>
     );
   }
 
   if (section === "members") {
+    const members = membersQuery.data ?? [];
+    const invites = invitesQuery.data ?? [];
+
     return (
-      <SettingsCard
-        title="Membership"
-        description="Leave workspace if you joined by invitation."
-      >
-        <div className="rounded-[var(--radius-lg)] bg-madoo-bg-2 p-4 shadow-[var(--shadow-border)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
-                Andre's Madoo
+      <div className="grid gap-4">
+        <SettingsCard
+          title="Members"
+          description="Manage workspace access and roles."
+        >
+          <div className="grid gap-2">
+            {membersQuery.isLoading ? (
+              <p className="text-[length:var(--font-size-base)] text-madoo-ink-muted">
+                Loading members...
               </p>
-              <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
-                Current role: owner. Invited members can leave from here.
-              </p>
-            </div>
-            <Button
-              size="md"
-              variant="secondary"
-              disabled
-              title="Owners cannot leave their own workspace"
-            >
-              Leave workspace
-            </Button>
+            ) : (
+              members.map((member) => (
+                <MemberRow
+                  key={member.userId}
+                  member={member}
+                  currentUserId={user?.id}
+                  canEditRoles={activeRole === "OWNER"}
+                  canRemove={admin}
+                  onRoleChange={(role) =>
+                    memberRoleMutation.mutate({ userId: member.userId, role })
+                  }
+                  onRemove={() => removeMemberMutation.mutate(member.userId)}
+                  disabled={
+                    memberRoleMutation.isPending ||
+                    removeMemberMutation.isPending
+                  }
+                />
+              ))
+            )}
           </div>
-        </div>
-      </SettingsCard>
+        </SettingsCard>
+
+        <SettingsCard
+          title="Invites"
+          description="Create a link invite and optionally email it."
+        >
+          <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px_auto]">
+              <Input
+                label="Email"
+                placeholder="teammate@example.com"
+                value={inviteEmail}
+                disabled={!admin}
+                onChange={(event) => setInviteEmail(event.currentTarget.value)}
+              />
+              <NativeSelect
+                label="Role"
+                value={inviteRole}
+                options={inviteRoleOptions}
+                disabled={!admin}
+                onChange={(event) =>
+                  setInviteRole(event.currentTarget.value as WorkspaceInviteRole)
+                }
+              />
+              <div className="flex items-end">
+                <Button
+                  size="md"
+                  disabled={!admin || createInviteMutation.isPending}
+                  onClick={() =>
+                    createInviteMutation.mutate({
+                      email: inviteEmail.trim() || undefined,
+                      role: inviteRole,
+                    })
+                  }
+                >
+                  Create invite
+                </Button>
+              </div>
+            </div>
+
+            {latestInviteUrl ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] bg-madoo-bg-2 p-3 shadow-[var(--shadow-border)]">
+                <code className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-madoo-ink-muted">
+                  {latestInviteUrl}
+                </code>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(latestInviteUrl);
+                    toast({ tone: "success", title: "Invite link copied" });
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+            ) : null}
+
+            <div className="grid gap-2">
+              {invites.length === 0 ? (
+                <p className="text-[length:var(--font-size-base)] text-madoo-ink-muted">
+                  No pending invites.
+                </p>
+              ) : (
+                invites.map((invite) => (
+                  <div
+                    key={invite.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] bg-madoo-bg-2 p-3 shadow-[var(--shadow-border)]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+                        {invite.email ?? "Link invite"}
+                      </p>
+                      <p className="mt-1 text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
+                        {invite.role} · expires {formatDate(invite.expiresAt)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void copyInvite(invite)}
+                      >
+                        Copy
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={
+                          deleteInviteMutation.isPending ||
+                          Boolean(invite.acceptedAt)
+                        }
+                        onClick={() => deleteInviteMutation.mutate(invite.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </SettingsCard>
+      </div>
     );
   }
 
   if (section === "danger") {
     return (
       <SettingsCard
-        title="Delete workspace"
-        description="Permanent destructive action for this workspace."
+        title="Danger zone"
+        description="Permanent workspace actions with backend ownership checks."
       >
-        <div className="rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--danger)_7%,var(--surface))] p-4 shadow-[var(--shadow-border-danger)]">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
-                Delete Andre's Madoo
-              </p>
-              <p className="mt-2 max-w-xl text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
-                This removes projects, templates, members, and workspace settings.
-              </p>
+        <div className="grid gap-4">
+          <div className="rounded-[var(--radius-lg)] bg-madoo-bg-2 p-4 shadow-[var(--shadow-border)]">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+                  Leave {activeWorkspace.name}
+                </p>
+                <p className="mt-2 max-w-xl text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+                  Owners can leave only when another owner remains.
+                </p>
+              </div>
+              <Button
+                size="md"
+                variant="secondary"
+                disabled={leaveWorkspaceMutation.isPending}
+                onClick={() => leaveWorkspaceMutation.mutate()}
+              >
+                Leave workspace
+              </Button>
             </div>
-            <Button
-              size="md"
-              variant="danger"
-              onClick={() =>
-                toast({
-                  tone: "danger",
-                  title: "Delete workspace pending",
-                  body: "Confirmation flow is not connected yet.",
-                })
-              }
-            >
-              Delete workspace
-            </Button>
+          </div>
+
+          <div className="rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--danger)_7%,var(--surface))] p-4 shadow-[var(--shadow-border-danger)]">
+            <div className="grid gap-4">
+              <div>
+                <p className="text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+                  Delete {activeWorkspace.name}
+                </p>
+                <p className="mt-2 max-w-xl text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+                  Type workspace slug to confirm: {activeWorkspace.slug}
+                </p>
+              </div>
+              <div className="grid max-w-md gap-3">
+                <Input
+                  label="Workspace slug"
+                  value={deleteConfirm}
+                  onChange={(event) => setDeleteConfirm(event.currentTarget.value)}
+                />
+                <Button
+                  size="md"
+                  variant="danger"
+                  className="w-max"
+                  disabled={
+                    activeRole !== "OWNER" ||
+                    deleteConfirm !== activeWorkspace.slug ||
+                    deleteWorkspaceMutation.isPending
+                  }
+                  onClick={() => deleteWorkspaceMutation.mutate()}
+                >
+                  Delete workspace
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </SettingsCard>
@@ -483,21 +907,37 @@ function WorkspacePanel({ section }: { section: WorkspaceSection }) {
   return (
     <SettingsCard
       title="Workspace name"
-      description="Rename the active workspace."
+      description="Rename active workspace and edit its URL slug."
     >
       <div className="grid max-w-xl gap-4">
-        <Input label="Workspace name" defaultValue="Andre's Madoo" />
-        <Input label="Workspace URL slug" defaultValue="andres-madoo" />
+        <Input
+          label="Workspace name"
+          value={workspaceName}
+          disabled={!admin}
+          onChange={(event) => setWorkspaceName(event.currentTarget.value)}
+        />
+        <Input
+          label="Workspace URL slug"
+          value={workspaceSlug}
+          disabled={!admin}
+          onChange={(event) => setWorkspaceSlug(event.currentTarget.value)}
+        />
         <Button
           size="md"
           className="w-max"
-          onClick={() =>
-            toast({
-              tone: "success",
-              title: "Workspace saved",
-              body: "Rename action is ready for backend wiring.",
-            })
+          disabled={
+            !admin ||
+            updateWorkspaceMutation.isPending ||
+            (!workspaceName.trim() && !workspaceSlug.trim())
           }
+          onClick={() => {
+            const nextName = workspaceName.trim();
+            const nextSlug = workspaceSlug.trim();
+            updateWorkspaceMutation.mutate({
+              ...(nextName ? { name: nextName } : {}),
+              ...(nextSlug ? { slug: nextSlug } : {}),
+            });
+          }}
         >
           Save workspace
         </Button>
@@ -506,84 +946,174 @@ function WorkspacePanel({ section }: { section: WorkspaceSection }) {
   );
 }
 
-function SupportPanel() {
-  const { toast } = useToast();
-
+function MemberRow({
+  member,
+  currentUserId,
+  canEditRoles,
+  canRemove,
+  disabled,
+  onRoleChange,
+  onRemove,
+}: {
+  member: WorkspaceMember;
+  currentUserId?: string;
+  canEditRoles: boolean;
+  canRemove: boolean;
+  disabled: boolean;
+  onRoleChange: (role: Role) => void;
+  onRemove: () => void;
+}) {
+  const isSelf = member.userId === currentUserId;
   return (
-    <div className="grid gap-4">
-      <SettingsCard
-        title="Contact support"
-        description="Send context to the Madoo team so they can help with account, workspace, billing, or generation issues."
-      >
-        <div className="grid max-w-2xl gap-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Contact email" defaultValue="andre@madoo.ai" />
-            <Input label="Category" defaultValue="Workspace support" />
-          </div>
-          <Input
-            label="Subject"
-            placeholder="Example: I cannot export a template"
-          />
-          <Textarea
-            label="What do you need help with?"
-            placeholder="Share what happened, what you expected, and any project/template involved."
-            rows={6}
-            noResize
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="md"
-              onClick={() =>
-                toast({
-                  tone: "success",
-                  title: "Support request prepared",
-                  body: "Support submission is ready for backend wiring.",
-                })
-              }
-            >
-              Send request
-            </Button>
-            <Button size="md" variant="secondary">
-              Open help center
-            </Button>
-          </div>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] bg-madoo-bg-2 p-3 shadow-[var(--shadow-border)]">
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar
+          name={member.name ?? member.email}
+          src={member.avatarUrl ?? undefined}
+          size="md"
+          circle
+        />
+        <div className="min-w-0">
+          <p className="truncate text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+            {member.name ?? member.email}
+          </p>
+          <p className="mt-1 truncate text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
+            {member.email}
+          </p>
         </div>
-      </SettingsCard>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        {[
-          {
-            title: "Billing",
-            body: "Plan changes, credits, invoices, and workspace payment questions.",
-          },
-          {
-            title: "Generation",
-            body: "Prompt quality, export errors, previews, and provider output issues.",
-          },
-          {
-            title: "Account",
-            body: "Login providers, passwords, user access, and workspace membership.",
-          },
-        ].map((item) => (
-          <Card key={item.title} className="!rounded-[18px] !bg-madoo-surface !p-4">
-            <div className="mb-3 grid size-9 place-items-center rounded-[var(--radius-lg)] bg-madoo-bg-2 shadow-[var(--shadow-border)]">
-              <Icon name="bell" size={15} />
-            </div>
-            <h2 className="text-[length:var(--font-size-base)] font-semibold leading-none text-madoo-ink">
-              {item.title}
-            </h2>
-            <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
-              {item.body}
-            </p>
-          </Card>
-        ))}
+        {isSelf ? <Badge tone="neutral">You</Badge> : null}
+      </div>
+      <div className="flex items-center gap-2">
+        <NativeSelect
+          aria-label="Member role"
+          value={member.role}
+          options={memberRoleOptions}
+          selectSize="sm"
+          disabled={!canEditRoles || disabled}
+          onChange={(event) => onRoleChange(event.currentTarget.value as Role)}
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!canRemove || member.role === "OWNER" || disabled}
+          onClick={onRemove}
+        >
+          Remove
+        </Button>
       </div>
     </div>
   );
 }
 
+function SupportPanel({
+  activeWorkspace,
+}: {
+  activeWorkspace: MyWorkspace | null;
+}) {
+  const { toast } = useToast();
+  const { data: user } = useQuery({
+    queryKey: ["me"],
+    queryFn: getMe,
+    staleTime: 60_000,
+  });
+  const [contactEmail, setContactEmail] = useState("");
+  const [category, setCategory] = useState<SupportCategory>("WORKSPACE");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [ticketId, setTicketId] = useState("");
+
+  useEffect(() => {
+    if (user?.email) setContactEmail(user.email);
+  }, [user?.email]);
+
+  const supportMutation = useMutation({
+    mutationFn: createSupportTicket,
+    onSuccess: (ticket) => {
+      setTicketId(ticket.id);
+      setSubject("");
+      setMessage("");
+      toast({ tone: "success", title: "Support request sent" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Support request failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  return (
+    <SettingsCard
+      title="Contact support"
+      description="Send account, workspace, billing, generation, or export context to support."
+    >
+      <div className="grid max-w-2xl gap-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input
+            label="Contact email"
+            value={contactEmail}
+            onChange={(event) => setContactEmail(event.currentTarget.value)}
+          />
+          <NativeSelect
+            label="Category"
+            value={category}
+            options={supportCategoryOptions}
+            onChange={(event) =>
+              setCategory(event.currentTarget.value as SupportCategory)
+            }
+          />
+        </div>
+        <Input
+          label="Subject"
+          placeholder="Example: I cannot export a template"
+          value={subject}
+          onChange={(event) => setSubject(event.currentTarget.value)}
+        />
+        <Textarea
+          label="What do you need help with?"
+          placeholder="Share what happened, what you expected, and any project/template involved."
+          rows={6}
+          noResize
+          value={message}
+          onChange={(event) => setMessage(event.currentTarget.value)}
+        />
+        {ticketId ? (
+          <p className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+            Ticket submitted: {ticketId}
+          </p>
+        ) : null}
+        <Button
+          size="md"
+          className="w-max"
+          disabled={
+            supportMutation.isPending ||
+            !contactEmail.trim() ||
+            subject.trim().length < 3 ||
+            message.trim().length < 10
+          }
+          onClick={() =>
+            supportMutation.mutate({
+              contactEmail: contactEmail.trim(),
+              category,
+              subject: subject.trim(),
+              message: message.trim(),
+              workspaceId: activeWorkspace?.id,
+            })
+          }
+        >
+          Send request
+        </Button>
+      </div>
+    </SettingsCard>
+  );
+}
+
 export default function SettingsPage() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const workspaceId = useClientStore((state) => state.workspaceId);
+  const setWorkspaceId = useClientStore((state) => state.setWorkspaceId);
   const areaParam = searchParams.get("area");
   const sectionParam = searchParams.get("section");
   const area: SettingsArea = isSettingsArea(areaParam) ? areaParam : "account";
@@ -595,7 +1125,8 @@ export default function SettingsPage() {
     area === "workspace" && isWorkspaceSection(sectionParam)
       ? sectionParam
       : "overview";
-  const activePrimary = primaryNav.find((item) => item.area === area) ?? primaryNav[0];
+  const activePrimary =
+    primaryNav.find((item) => item.area === area) ?? primaryNav[0];
   const secondaryNav =
     area === "account" ? accountNav : area === "workspace" ? workspaceNav : [];
   const activeSecondary =
@@ -604,6 +1135,27 @@ export default function SettingsPage() {
       : area === "workspace"
         ? workspaceSection
         : "";
+
+  const { data: workspaces = [] } = useQuery({
+    queryKey: ["workspaces"],
+    queryFn: fetchWorkspaces,
+  });
+
+  const activeWorkspace = useMemo(() => {
+    return (
+      workspaces.find((item) => item.id === workspaceId) ??
+      workspaces[0] ??
+      null
+    );
+  }, [workspaceId, workspaces]);
+
+  useEffect(() => {
+    if (!activeWorkspace || workspaceId === activeWorkspace.id) return;
+    void setActiveWorkspace(activeWorkspace.id).then(() => {
+      setWorkspaceId(activeWorkspace.id);
+      void queryClient.invalidateQueries({ queryKey: ["billing-overview"] });
+    });
+  }, [activeWorkspace, queryClient, setWorkspaceId, workspaceId]);
 
   return (
     <div className="grid min-h-full grid-cols-[280px_260px_minmax(0,1fr)] bg-[var(--madoo-page)] font-madoo-sans text-madoo-ink max-xl:grid-cols-[250px_minmax(0,1fr)] max-lg:grid-cols-1">
@@ -686,7 +1238,9 @@ export default function SettingsPage() {
                 <Link
                   key={item.value}
                   href={getSettingsHref(area, item.value)}
-                  aria-current={activeSecondary === item.value ? "page" : undefined}
+                  aria-current={
+                    activeSecondary === item.value ? "page" : undefined
+                  }
                   className={cx(
                     "whitespace-nowrap rounded-full px-3 py-1.5 font-madoo-sans text-[12.5px] font-medium no-underline transition-colors",
                     activeSecondary === item.value
@@ -701,11 +1255,15 @@ export default function SettingsPage() {
           ) : null}
 
           {area === "support" ? (
-            <SupportPanel />
+            <SupportPanel activeWorkspace={activeWorkspace} />
           ) : area === "account" ? (
             <AccountPanel section={accountSection} />
           ) : (
-            <WorkspacePanel section={workspaceSection} />
+            <WorkspacePanel
+              section={workspaceSection}
+              workspaces={workspaces}
+              activeWorkspace={activeWorkspace}
+            />
           )}
         </div>
       </main>
