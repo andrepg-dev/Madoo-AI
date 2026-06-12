@@ -6,6 +6,7 @@ export const UserSchema = z.object({
   name: z.string().nullable(),
   avatarUrl: z.string().url().nullable(),
   emailVerified: z.boolean(),
+  hasPassword: z.boolean().default(false),
   createdAt: z.string().datetime(),
 });
 

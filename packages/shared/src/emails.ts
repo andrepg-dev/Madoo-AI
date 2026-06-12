@@ -128,6 +128,37 @@ export const TemplateSlugSchema = z.enum([
 ]);
 export type TemplateSlug = z.infer<typeof TemplateSlugSchema>;
 
+export const TemplateDtoSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  category: z.string().nullable(),
+  description: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type TemplateDto = z.infer<typeof TemplateDtoSchema>;
+
+export const TemplateListDtoSchema = z.array(TemplateDtoSchema);
+
+export const SaveTemplateFromVariantSchema = z.object({
+  variantId: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export type SaveTemplateFromVariantInput = z.infer<
+  typeof SaveTemplateFromVariantSchema
+>;
+
+export const SavedTemplateDtoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+});
+
+export type SavedTemplateDto = z.infer<typeof SavedTemplateDtoSchema>;
+
 export const CreateEmailSchema = z.object({
   prompt: z.string().min(1),
   tone: z.string().optional(),
@@ -170,6 +201,16 @@ export const EmailDtoSchema = z.object({
 });
 
 export type EmailDto = z.infer<typeof EmailDtoSchema>;
+
+export const EmailChatMessageDtoSchema = z.object({
+  id: z.string(),
+  role: z.enum(["USER", "ASSISTANT", "SYSTEM"]),
+  kind: z.enum(["TEXT", "THINKING", "STATUS"]),
+  content: z.string(),
+  createdAt: z.string().datetime(),
+});
+
+export type EmailChatMessageDto = z.infer<typeof EmailChatMessageDtoSchema>;
 
 export const EditEmailSchema = z.object({
   instruction: z.string().min(1),

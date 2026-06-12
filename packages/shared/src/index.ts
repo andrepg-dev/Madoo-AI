@@ -8,3 +8,7 @@ export * from "./emails";
 export * from "./audit-log";
 export * from "./billing";
 export * from "./assistant";
+export * from "./support";
+export * from "./invites";
+export * from "./exports";
+export * from "./connections";
