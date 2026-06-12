@@ -5,10 +5,14 @@ import { AssistantModule } from "./assistant/assistant.module";
 import { AuditLogsModule } from "./audit-logs/audit-logs.module";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
+import { ConnectionsModule } from "./connections/connections.module";
 import { EmailsModule } from "./emails/emails.module";
+import { ExportsModule } from "./exports/exports.module";
 import { HealthController } from "./health.controller";
+import { InvitesModule } from "./invites/invites.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { PromptsModule } from "./prompts/prompts.module";
+import { SupportModule } from "./support/support.module";
 import { TemplatesModule } from "./templates/templates.module";
 import { UsersModule } from "./users/users.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
@@ -61,6 +65,10 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     AuditLogsModule,
     AssistantModule,
     BillingModule,
+    SupportModule,
+    InvitesModule,
+    ConnectionsModule,
+    ExportsModule,
   ],
   controllers: [HealthController],
 })
