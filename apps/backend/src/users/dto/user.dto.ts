@@ -10,6 +10,7 @@ export function toUserDto(user: User): UserDto {
     name: user.name,
     avatarUrl: user.avatarUrl,
     emailVerified: user.emailVerified,
+    hasPassword: !!user.passwordHash,
     createdAt: user.createdAt.toISOString(),
   });
 }

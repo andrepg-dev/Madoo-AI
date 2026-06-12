@@ -1,4 +1,11 @@
-import { GoogleLoginInputSchema } from "@madoo/shared";
+import {
+  AppleLoginInputSchema,
+  GithubLoginInputSchema,
+  GoogleLoginInputSchema,
+  PasswordLoginInputSchema,
+  RegisterInputSchema,
+  type AuthSessionResponse,
+} from "@madoo/shared";
 import {
   Body,
   Controller,
@@ -6,13 +13,15 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  UseGuards
+  Res,
+  UseGuards,
 } from "@nestjs/common";
+import type { Response } from "express";
 import { toUserDto } from "../users/dto/user.dto";
 import { UsersService } from "../users/users.service";
+import { AUTH_TOKEN_COOKIE, authCookieOptions } from "./auth-cookie";
 import { AuthService } from "./auth.service";
 import { CurrentUser } from "./current-user.decorator";
-import { GoogleLoginDto } from "./dto/google-login.dto";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 
 @Controller({ path: "auth", version: "1" })
@@ -24,9 +33,61 @@ export class AuthController {
 
   @Post("google")
   @HttpCode(HttpStatus.OK)
-  async google(@Body() dto: GoogleLoginDto) {
-    const input = GoogleLoginInputSchema.parse(dto);
-    return this.auth.loginWithGoogle(input);
+  async google(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const input = GoogleLoginInputSchema.parse(body);
+    return this.withSessionCookie(res, await this.auth.loginWithGoogle(input));
+  }
+
+  @Post("register")
+  @HttpCode(HttpStatus.CREATED)
+  async register(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const input = RegisterInputSchema.parse(body);
+    return this.withSessionCookie(res, await this.auth.register(input));
+  }
+
+  @Post("login")
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const input = PasswordLoginInputSchema.parse(body);
+    return this.withSessionCookie(
+      res,
+      await this.auth.loginWithPassword(input),
+    );
+  }
+
+  @Post("github")
+  @HttpCode(HttpStatus.OK)
+  async github(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const input = GithubLoginInputSchema.parse(body);
+    return this.withSessionCookie(res, await this.auth.loginWithGithub(input));
+  }
+
+  @Post("apple")
+  @HttpCode(HttpStatus.OK)
+  async apple(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const input = AppleLoginInputSchema.parse(body);
+    return this.withSessionCookie(res, await this.auth.loginWithApple(input));
+  }
+
+  @Post("logout")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie(AUTH_TOKEN_COOKIE, authCookieOptions());
   }
 
   @Get("me")
@@ -34,5 +95,17 @@ export class AuthController {
   async me(@CurrentUser() current: { sub: string }) {
     const user = await this.users.findByIdOrThrow(current.sub);
     return toUserDto(user);
+  }
+
+  private withSessionCookie(
+    res: Response,
+    session: AuthSessionResponse,
+  ): AuthSessionResponse {
+    res.cookie(
+      AUTH_TOKEN_COOKIE,
+      session.token,
+      authCookieOptions(this.auth.tokenMaxAgeMs()),
+    );
+    return session;
   }
 }

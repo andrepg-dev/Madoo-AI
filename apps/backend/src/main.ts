@@ -1,6 +1,7 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import cookieParser from "cookie-parser";
 import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module";
 import { initSentry } from "./observability/sentry";
@@ -16,6 +17,7 @@ async function bootstrap() {
   app.useLogger(app.get(Logger));
   const config = app.get(ConfigService);
 
+  app.use(cookieParser());
   app.setGlobalPrefix("api");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
 
