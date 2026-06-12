@@ -1,5 +1,10 @@
 "use client";
 
+import { fetchBillingOverview } from "@/actions/billing";
+import { getMeOrNull, logoutAction } from "@/actions/auth";
+import { fetchWorkspaces, setActiveWorkspace } from "@/actions/workspaces";
+import { redirectToLandingAuth } from "@/lib/auth-redirect";
+import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
 import {
   Add01Icon,
@@ -31,10 +36,13 @@ import {
   Kbd,
   ProgressBar,
   cx,
+  useToast,
 } from "@madoo/design-system";
+import { PLAN_DISPLAY_NAMES } from "@madoo/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { PricingDrawer } from "./PricingDrawer";
@@ -65,12 +73,6 @@ const templateProjectItems: NavItem[] = [
     icon: UserMultipleIcon,
   },
 ];
-
-const workspace = {
-  name: "Andre's Madoo",
-  creditsLeft: 5,
-  creditsTotal: 20,
-};
 
 function AppIcon({ icon, size = 20 }: { icon: IconSvgElement; size?: number }) {
   return (
@@ -238,25 +240,145 @@ function DropdownLink({
   );
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function formatResetDate(value: string | undefined) {
+  if (!value) return "next month";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return "next month";
+  }
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(true);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const authUser = useAuthStore((state) => state.user);
+  const setAuthUser = useAuthStore((state) => state.setUser);
+  const workspaceId = useClientStore((state) => state.workspaceId);
+  const setWorkspaceId = useClientStore((state) => state.setWorkspaceId);
   const setSearchCommandOpen = useClientStore(
     (state) => state.setSearchCommandOpen,
   );
 
-  const creditsPct = Math.min(
-    100,
-    Math.round((workspace.creditsLeft / workspace.creditsTotal) * 100),
+  const { data: queriedUser } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => getMeOrNull(),
+    staleTime: 60_000,
+  });
+  const user = queriedUser ?? authUser;
+
+  const { data: workspaces = [] } = useQuery({
+    queryKey: ["workspaces"],
+    queryFn: fetchWorkspaces,
+    enabled: Boolean(user),
+  });
+
+  const activeWorkspace =
+    workspaces.find((item) => item.id === workspaceId) ?? null;
+  const displayWorkspace = activeWorkspace ?? workspaces[0] ?? null;
+  const activeWorkspaceName = displayWorkspace?.name ?? "Madoo workspace";
+  const workspaceIdIsValid = Boolean(
+    workspaceId && workspaces.some((item) => item.id === workspaceId),
   );
+
+  const { data: billingOverview, isLoading: billingLoading } = useQuery({
+    queryKey: ["billing-overview", workspaceId],
+    queryFn: fetchBillingOverview,
+    enabled: Boolean(user && workspaceIdIsValid),
+  });
+
+  const usage = billingOverview?.usage.aiGenerations;
+  const usageLimit = usage?.limit ?? 0;
+  const creditsLeft =
+    usageLimit === -1 ? null : Math.max(usageLimit - (usage?.used ?? 0), 0);
+  const creditsPct =
+    usageLimit === -1
+      ? 100
+      : usageLimit > 0 && creditsLeft !== null
+        ? Math.min(100, Math.round((creditsLeft / usageLimit) * 100))
+        : 0;
+  const creditsText = billingLoading
+    ? "Loading"
+    : usageLimit === -1
+      ? "Unlimited"
+      : `${creditsLeft ?? 0} left`;
+  const currentPlanName = billingOverview
+    ? PLAN_DISPLAY_NAMES[billingOverview.subscription.plan]
+    : "Free";
+
+  const switchWorkspaceMutation = useMutation({
+    mutationFn: setActiveWorkspace,
+    onSuccess: async (_result, nextWorkspaceId) => {
+      setWorkspaceId(nextWorkspaceId);
+      setWorkspaceOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["billing-overview"] });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Workspace switch failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const signOutMutation = useMutation({
+    mutationFn: logoutAction,
+    onSuccess: () => {
+      setAuthUser(null);
+      setWorkspaceId(null);
+      queryClient.setQueryData(["me"], null);
+      queryClient.removeQueries({ queryKey: ["workspaces"] });
+      queryClient.removeQueries({ queryKey: ["billing-overview"] });
+      queryClient.removeQueries({ queryKey: ["emails"] });
+      queryClient.removeQueries({ queryKey: ["templates"] });
+      queryClient.removeQueries({ queryKey: ["template-preview"] });
+      router.push("/");
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Sign out failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname?.startsWith(href);
   };
+
+  const handleSignIn = () => {
+    redirectToLandingAuth(pathname ?? "/dashboard/projects");
+  };
+
+  useEffect(() => {
+    if (!user || workspaces.length === 0 || workspaceIdIsValid) return;
+    const nextWorkspaceId = workspaces[0]?.id;
+    if (!nextWorkspaceId) return;
+    void setActiveWorkspace(nextWorkspaceId)
+      .then(() => {
+        setWorkspaceId(nextWorkspaceId);
+        return queryClient.invalidateQueries({
+          queryKey: ["billing-overview"],
+        });
+      })
+      .catch(() => undefined);
+  }, [queryClient, setWorkspaceId, user, workspaceIdIsValid, workspaces]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -339,7 +461,8 @@ export function Sidebar() {
             block
             leftIcon={
               <Avatar
-                name={workspace.name}
+                name={activeWorkspaceName}
+                src={displayWorkspace?.avatarUrl ?? undefined}
                 size="sm"
                 className="bg-madoo-rule rounded-[7.5px]"
               />
@@ -367,18 +490,27 @@ export function Sidebar() {
                 collapsed ? "max-w-0 opacity-0" : "max-w-44 opacity-100",
               )}
             >
-              {workspace.name}
+              {activeWorkspaceName}
             </span>
           </Button>
         </DropdownTrigger>
 
         <DropdownContent className="!grid w-80 gap-2 !p-2">
           <div className="flex items-center gap-2.5 p-1">
-            <Avatar name={workspace.name} size="sm" />
+            <Avatar
+              name={activeWorkspaceName}
+              src={displayWorkspace?.avatarUrl ?? undefined}
+              size="sm"
+            />
             <div className="min-w-0">
               <span className="text-[length:var(--font-size-base)] font-normal">
-                {workspace.name}
+                {activeWorkspaceName}
               </span>
+              {user ? (
+                <span className="block truncate text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+                  {currentPlanName} plan
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -388,12 +520,12 @@ export function Sidebar() {
                 Credits
               </span>
               <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
-                {workspace.creditsLeft} left
+                {creditsText}
               </span>
             </div>
             <ProgressBar value={creditsPct} tone="ink" label="Credits left" />
             <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
-              Daily credits reset at midnight UTC
+              Credits reset {formatResetDate(usage?.resetsAt)}
             </span>
           </Card>
 
@@ -401,26 +533,59 @@ export function Sidebar() {
             <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
               All workspaces
             </span>
-            <DropdownItem className="!px-0">
-              <Avatar name={workspace.name} size="xs" />
-              <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                {workspace.name}
+            {workspaces.length > 0 ? (
+              workspaces.map((item) => {
+                const selected = item.id === workspaceId;
+                return (
+                  <DropdownItem
+                    key={item.id}
+                    className="!px-0"
+                    disabled={switchWorkspaceMutation.isPending}
+                    onSelect={() => switchWorkspaceMutation.mutate(item.id)}
+                  >
+                    <Avatar
+                      name={item.name}
+                      src={item.avatarUrl ?? undefined}
+                      size="xs"
+                    />
+                    <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {item.name}
+                    </span>
+                    <Badge tone="neutral">{item.role}</Badge>
+                    {selected ? <AppIcon icon={Tick02Icon} size={13} /> : null}
+                  </DropdownItem>
+                );
+              })
+            ) : (
+              <span className="px-1 py-2 text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+                {user ? "No workspaces found" : "Sign in to sync workspaces"}
               </span>
-              <Badge tone="neutral">FREE</Badge>
-              <AppIcon icon={Tick02Icon} size={13} />
-            </DropdownItem>
+            )}
           </div>
 
-          <DropdownItem
-            className="!justify-start !text-[length:var(--font-size-base)] !font-normal shadow-madoo-border"
-            onClick={() => {
-              setWorkspaceOpen(false);
-              setCreateWorkspaceOpen(true);
-            }}
-          >
-            <AppIcon icon={Add01Icon} size={14} />
-            Create workspace
-          </DropdownItem>
+          {user ? (
+            <DropdownItem
+              className="!justify-start !text-[length:var(--font-size-base)] !font-normal shadow-madoo-border"
+              onSelect={() => {
+                setWorkspaceOpen(false);
+                setCreateWorkspaceOpen(true);
+              }}
+            >
+              <AppIcon icon={Add01Icon} size={14} />
+              Create workspace
+            </DropdownItem>
+          ) : (
+            <DropdownItem
+              className="!justify-start !text-[length:var(--font-size-base)] !font-normal shadow-madoo-border"
+              onSelect={() => {
+                setWorkspaceOpen(false);
+                handleSignIn();
+              }}
+            >
+              <AppIcon icon={UserIcon} size={14} />
+              Sign in
+            </DropdownItem>
+          )}
         </DropdownContent>
       </Dropdown>
 
@@ -517,7 +682,14 @@ export function Sidebar() {
             <Button
               aria-label="Open user profile"
               block
-              leftIcon={<Avatar name="Andre Ponce" size="xs" circle />}
+              leftIcon={
+                <Avatar
+                  name={user?.name ?? user?.email ?? "User"}
+                  src={user?.avatarUrl ?? undefined}
+                  size="xs"
+                  circle
+                />
+              }
               size="sm"
               variant="ghost"
               className="w-max shadow-none! hover:shadow-none! data-[state=open]:shadow-none!"
@@ -525,22 +697,39 @@ export function Sidebar() {
           </DropdownTrigger>
           <DropdownContent side="top" className="w-56 !p-2">
             <div className="flex items-center gap-2.5 p-1.5">
-              <Avatar name="Andre Ponce" size="sm" circle />
+              <Avatar
+                name={user?.name ?? user?.email ?? "User"}
+                src={user?.avatarUrl ?? undefined}
+                size="sm"
+                circle
+              />
               <span className="grid min-w-0 gap-0.5">
                 <span className="truncate text-[length:var(--font-size-base)] leading-none">
-                  Andre Ponce
+                  {user?.name ?? "Guest"}
                 </span>
                 <span className="truncate text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
-                  andre@madoo.ai
+                  {user?.email ?? "Not signed in"}
                 </span>
               </span>
             </div>
             <DropdownDivider />
-            <DropdownLink href="/settings">Profile</DropdownLink>
-            <DropdownLink href="/settings">Settings</DropdownLink>
-            <DropdownItem className="!justify-start text-madoo-danger">
-              Sign out
-            </DropdownItem>
+            {user ? (
+              <>
+                <DropdownLink href="/settings">Profile</DropdownLink>
+                <DropdownLink href="/settings">Settings</DropdownLink>
+                <DropdownItem
+                  className="!justify-start text-madoo-danger"
+                  disabled={signOutMutation.isPending}
+                  onSelect={() => signOutMutation.mutate()}
+                >
+                  Sign out
+                </DropdownItem>
+              </>
+            ) : (
+              <DropdownItem className="!justify-start" onSelect={handleSignIn}>
+                Sign in
+              </DropdownItem>
+            )}
           </DropdownContent>
         </Dropdown>
 
