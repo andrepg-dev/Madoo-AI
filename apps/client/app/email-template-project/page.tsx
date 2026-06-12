@@ -1,6 +1,29 @@
 "use client";
 
+import {
+  createEmail,
+  fetchEmail,
+  fetchEmailChat,
+} from "@/actions/emails";
+import {
+  createGmailDraft,
+  createOutlookDraft,
+  fetchConnections,
+  getConnectionAuthorizeUrl,
+} from "@/actions/connections";
+import { consumePendingPrompt } from "@/actions/prompts";
+import {
+  AUTOMATION_INSTRUCTIONS,
+  ESP_INSTRUCTIONS,
+  ESP_NAME_TO_PROVIDER,
+} from "@/lib/export-instructions";
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
+import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
+import {
+  consumeEmailSseStream,
+  type StreamEmailEvent,
+} from "@/lib/email-stream";
+import { playCompletionSound } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useClientStore } from "@/stores/client-store";
 import {
@@ -20,13 +43,21 @@ import {
   ThumbsUpIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Button, Modal, SegmentedControl } from "@madoo/design-system";
+import { Button, Modal, SegmentedControl, useToast } from "@madoo/design-system";
+import type {
+  ConnectionProvider,
+  EmailChatMessageDto,
+  EmailDto,
+} from "@madoo/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
   type PointerEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -92,6 +123,12 @@ Meet Madoo, your AI workspace for turning campaign ideas into polished email tem
 
 **CTA:** Start your next campaign`;
 
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant" | "status" | "error";
+  content: string;
+};
+
 type PreviewMode = "desktop" | "responsive";
 type TemplateTheme = "light" | "dark";
 type ExportProvider = {
@@ -119,6 +156,70 @@ function clampPreviewWidth(width: number) {
 
 function copyText(text: string) {
   void navigator.clipboard?.writeText(text);
+}
+
+function latestVariant(email: EmailDto | null | undefined) {
+  return email?.variants[email.variants.length - 1] ?? null;
+}
+
+function mapChatMessages(
+  chat: EmailChatMessageDto[] | undefined,
+  email: EmailDto | null | undefined,
+): ChatMessage[] {
+  if (!chat?.length) {
+    if (!email) {
+      return [
+        { id: "default-user", role: "user", content: userGreeting },
+        { id: "default-ai", role: "assistant", content: aiGreeting },
+        {
+          id: "default-request",
+          role: "user",
+          content: userCampaignRequest,
+        },
+        {
+          id: "default-response",
+          role: "assistant",
+          content: aiCampaignResponse,
+        },
+      ];
+    }
+    return [
+      {
+        id: `${email.id}-prompt`,
+        role: "user",
+        content: email.prompt,
+      },
+      {
+        id: `${email.id}-status`,
+        role: "status",
+        content:
+          email.status === "READY"
+            ? "Email is ready."
+            : "Generation is in progress.",
+      },
+    ];
+  }
+
+  return chat
+    .filter((message) => message.kind !== "THINKING")
+    .map((message) => ({
+      id: message.id,
+      role:
+        message.role === "USER"
+          ? "user"
+          : message.kind === "STATUS"
+            ? "status"
+            : "assistant",
+      content: message.content,
+    }));
+}
+
+function upsertMessage(list: ChatMessage[], next: ChatMessage) {
+  const index = list.findIndex((message) => message.id === next.id);
+  if (index === -1) return [...list, next];
+  const copy = [...list];
+  copy[index] = next;
+  return copy;
 }
 
 function HeaderPillButton({
@@ -355,16 +456,24 @@ function ExportTabButton({
 
 function ExportProviderCard({
   badge,
+  busy,
+  disabled,
   iconSrc,
   name,
+  onClick,
 }: {
   badge?: string;
+  busy?: boolean;
+  disabled?: boolean;
   iconSrc: string;
   name: string;
+  onClick?: () => void;
 }) {
   return (
     <button
-      className="relative flex min-h-18 cursor-pointer items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-left shadow-madoo-border transition hover:bg-madoo-surface"
+      className="relative flex min-h-18 cursor-pointer items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-left shadow-madoo-border transition hover:bg-madoo-surface disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={disabled || busy}
+      onClick={onClick}
       type="button"
     >
       {badge ? (
@@ -387,24 +496,32 @@ function ExportProviderCard({
         />
       </span>
       <span className="min-w-0 truncate text-sm font-medium text-madoo-ink">
-        {name}
+        {busy ? "Working…" : name}
       </span>
     </button>
   );
 }
 
 function ExportFileCard({
+  busy,
   description,
+  disabled,
   icon,
   name,
+  onClick,
 }: {
+  busy?: boolean;
   description: string;
+  disabled?: boolean;
   icon: IconSvgElement;
   name: string;
+  onClick?: () => void;
 }) {
   return (
     <button
-      className="flex min-h-18 cursor-pointer items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-left shadow-madoo-border transition hover:bg-madoo-surface"
+      className="flex min-h-18 cursor-pointer items-center gap-3 rounded-xl bg-white px-3 py-2.5 text-left shadow-madoo-border transition hover:bg-madoo-surface disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={disabled || busy}
+      onClick={onClick}
       type="button"
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-madoo-ink text-white">
@@ -421,21 +538,203 @@ function ExportFileCard({
           {name}
         </span>
         <span className="mt-0.5 block truncate text-xs text-madoo-ink-muted">
-          {description}
+          {busy ? "Working…" : description}
         </span>
       </span>
     </button>
   );
 }
 
+/** Trigger a browser download for an authenticated proxy URL. */
+function triggerDownload(url: string) {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+/** Open the provider OAuth consent popup and resolve when it reports back. */
+function openConnectPopup(
+  provider: ConnectionProvider,
+  url: string,
+): Promise<{ ok: boolean; message?: string | null }> {
+  return new Promise((resolve) => {
+    const popup = window.open(
+      url,
+      `madoo-connect-${provider}`,
+      "width=520,height=680",
+    );
+    if (!popup) {
+      resolve({ ok: false, message: "Popup blocked. Allow popups and retry." });
+      return;
+    }
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as
+        | { type?: string; provider?: string; ok?: boolean; message?: string | null }
+        | undefined;
+      if (data?.type !== "madoo:connection" || data.provider !== provider) return;
+      cleanup();
+      resolve({ ok: Boolean(data.ok), message: data.message });
+    };
+    const timer = window.setInterval(() => {
+      if (popup.closed) {
+        cleanup();
+        resolve({ ok: false, message: "Connection window closed." });
+      }
+    }, 500);
+    function cleanup() {
+      window.clearInterval(timer);
+      window.removeEventListener("message", onMessage);
+      try {
+        popup?.close();
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener("message", onMessage);
+  });
+}
+
 function ExportProviderModal({
+  emailId,
   open,
   onClose,
+  variantId,
 }: {
+  emailId: string | null;
   open: boolean;
   onClose: () => void;
+  variantId: string | null;
 }) {
   const [tab, setTab] = useState<ExportTab>("email");
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const connectionsQuery = useQuery({
+    queryKey: ["connections"],
+    queryFn: fetchConnections,
+    enabled: open,
+  });
+  const isConnected = (provider: ConnectionProvider) =>
+    connectionsQuery.data?.some((c) => c.provider === provider) ?? false;
+
+  const variantQuery = variantId
+    ? `&variantId=${encodeURIComponent(variantId)}`
+    : "";
+
+  const requireEmail = (): string | null => {
+    if (!emailId) {
+      toast({
+        tone: "danger",
+        title: "No email yet",
+        body: "Generate an email before exporting.",
+      });
+      return null;
+    }
+    return emailId;
+  };
+
+  const downloadFile = (kind: string, extraQuery = "") => {
+    const id = requireEmail();
+    if (!id) return;
+    triggerDownload(
+      `/api/export/emails/${id}/export/${kind}?${extraQuery}${variantQuery}`.replace(
+        "?&",
+        "?",
+      ),
+    );
+  };
+
+  const handleEsp = (displayName: string) => {
+    const provider = ESP_NAME_TO_PROVIDER[displayName];
+    if (!provider) return;
+    const id = requireEmail();
+    if (!id) return;
+    triggerDownload(
+      `/api/export/emails/${id}/export/esp?provider=${provider}${variantQuery}`,
+    );
+    toast({
+      tone: "success",
+      title: `${displayName} HTML downloaded`,
+      body: ESP_INSTRUCTIONS[provider].join(" "),
+    });
+  };
+
+  const handlePayload = (displayName: string) => {
+    const id = requireEmail();
+    if (!id) return;
+    triggerDownload(
+      `/api/export/emails/${id}/export/payload?${variantQuery}`.replace("?&", "?"),
+    );
+    const steps = AUTOMATION_INSTRUCTIONS[displayName];
+    toast({
+      tone: "success",
+      title: `${displayName} payload downloaded`,
+      body: steps ? steps.join(" ") : "JSON payload downloaded.",
+    });
+  };
+
+  const ensureConnected = async (
+    provider: ConnectionProvider,
+  ): Promise<boolean> => {
+    if (isConnected(provider)) return true;
+    const { url } = await getConnectionAuthorizeUrl(provider);
+    const result = await openConnectPopup(provider, url);
+    if (!result.ok) {
+      toast({
+        tone: "danger",
+        title: "Connection failed",
+        body: result.message ?? "Could not connect the account.",
+      });
+      return false;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["connections"] });
+    return true;
+  };
+
+  const handleDraft = async (
+    displayName: string,
+    provider: ConnectionProvider,
+  ) => {
+    const id = requireEmail();
+    if (!id) return;
+    setBusyKey(displayName);
+    try {
+      const ok = await ensureConnected(provider);
+      if (!ok) return;
+      const result =
+        provider === "gmail"
+          ? await createGmailDraft(id, variantId ?? undefined)
+          : await createOutlookDraft(id, variantId ?? undefined);
+      window.open(result.openUrl, "_blank", "noopener");
+      toast({
+        tone: "success",
+        title: `${displayName} draft created`,
+        body: "Opened your drafts in a new tab to review and send.",
+      });
+    } catch (error) {
+      toast({
+        tone: "danger",
+        title: `${displayName} export failed`,
+        body:
+          error instanceof Error ? error.message : "Could not create the draft.",
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const handleApplication = (displayName: string) => {
+    if (displayName === "Gmail") return handleDraft("Gmail", "gmail");
+    if (displayName === "Outlook App" || displayName === "Outlook Web") {
+      return handleDraft(displayName, "outlook");
+    }
+    return handlePayload(displayName);
+  };
 
   return (
     <Modal
@@ -463,35 +762,6 @@ function ExportProviderModal({
           </ExportTabButton>
         </div>
 
-        <div className="rounded-xl bg-white p-3 shadow-madoo-border">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-4">
-              <span className="text-madoo-ink-muted">
-                <HugeiconsIcon
-                  aria-hidden="true"
-                  icon={Download01Icon}
-                  primaryColor="currentColor"
-                  size={24}
-                  strokeWidth={1.6}
-                />
-              </span>
-              <span className="text-sm font-medium text-madoo-ink">
-                Exports
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-madoo-ink-muted">
-              <span className="hidden sm:inline">Renews Jun 20, 2026</span>
-              <span className="rounded-lg bg-madoo-bg px-2.5 py-1.5 shadow-madoo-border">
-                4 / 4 left
-              </span>
-              <Button size="sm" variant="dashed">
-                Upgrade
-              </Button>
-            </div>
-          </div>
-        </div>
-
         <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
           {tab === "email"
             ? emailExportProviders.map((provider) => (
@@ -499,6 +769,7 @@ function ExportProviderModal({
                   iconSrc={provider.iconSrc}
                   key={provider.name}
                   name={provider.name}
+                  onClick={() => handleEsp(provider.name)}
                 />
               ))
             : null}
@@ -507,22 +778,44 @@ function ExportProviderModal({
             ? applicationExportProviders.map((provider) => (
                 <ExportProviderCard
                   badge={provider.badge}
+                  busy={busyKey === provider.name}
                   iconSrc={provider.iconSrc}
                   key={provider.name}
                   name={provider.name}
+                  onClick={() => handleApplication(provider.name)}
                 />
               ))
             : null}
 
           {tab === "file"
-            ? fileExportFormats.map((format) => (
-                <ExportFileCard
-                  description={format.description}
-                  icon={format.icon}
-                  key={format.name}
-                  name={format.name}
-                />
-              ))
+            ? fileExportFormats.map((format) => {
+                if (format.name === "AMPHTML") {
+                  return (
+                    <ExportFileCard
+                      description="Coming soon"
+                      disabled
+                      icon={format.icon}
+                      key={format.name}
+                      name={format.name}
+                    />
+                  );
+                }
+                const onClick =
+                  format.name === "HTML"
+                    ? () => downloadFile("html")
+                    : format.name === "Image"
+                      ? () => downloadFile("image", "format=png")
+                      : () => downloadFile("pdf");
+                return (
+                  <ExportFileCard
+                    description={format.description}
+                    icon={format.icon}
+                    key={format.name}
+                    name={format.name}
+                    onClick={onClick}
+                  />
+                );
+              })
             : null}
         </div>
       </div>
@@ -537,8 +830,10 @@ function EmailPreviewSidebar({
   onToggleExpanded,
   open,
   setMode,
+  srcDoc,
   setTheme,
   setWidth,
+  subject,
   theme,
   width,
 }: {
@@ -548,8 +843,10 @@ function EmailPreviewSidebar({
   onToggleExpanded: () => void;
   open: boolean;
   setMode: (mode: PreviewMode) => void;
+  srcDoc: string;
   setTheme: (theme: TemplateTheme) => void;
   setWidth: (width: number) => void;
+  subject: string;
   theme: TemplateTheme;
   width: number;
 }) {
@@ -572,7 +869,7 @@ function EmailPreviewSidebar({
   useEffect(() => {
     const frame = window.requestAnimationFrame(syncIframeHeight);
     return () => window.cancelAnimationFrame(frame);
-  }, [mode, syncIframeHeight, theme, width]);
+  }, [mode, srcDoc, syncIframeHeight, theme, width]);
 
   const handleResizePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -677,7 +974,7 @@ function EmailPreviewSidebar({
 
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-sm font-semibold text-madoo-ink">
-                {suggestedEmailSubject}
+                {subject}
               </h2>
               <p className="flex min-w-0 items-center gap-1.5 truncate text-xs text-madoo-ink-muted">
                 <HugeiconsIcon
@@ -767,7 +1064,7 @@ function EmailPreviewSidebar({
                 ref={iframeRef}
                 scrolling="no"
                 sandbox=""
-                srcDoc={getEmailTemplateSrcDoc(theme)}
+                srcDoc={srcDoc}
                 style={{ height: iframeHeight }}
                 title="Generated email template preview"
               />
@@ -829,10 +1126,36 @@ function AiMessage({
   );
 }
 
+function StatusMessage({ children }: { children: string }) {
+  return (
+    <div className="mr-auto max-w-xl rounded-lg bg-madoo-surface-2 px-3 py-2 text-xs text-madoo-ink-muted shadow-madoo-border">
+      {children}
+    </div>
+  );
+}
+
+function ErrorMessage({ children }: { children: string }) {
+  return (
+    <div className="mr-auto max-w-xl rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 shadow-madoo-border">
+      {children}
+    </div>
+  );
+}
+
 export default function EmailTemplateProject() {
   const messagesRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const sidebarOpen = useClientStore((state) => state.sidebarOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
+  const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>(() =>
+    mapChatMessages(undefined, null),
+  );
+  const [streamedHtml, setStreamedHtml] = useState<string | null>(null);
+  const [streamedSubject, setStreamedSubject] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
@@ -842,6 +1165,164 @@ export default function EmailTemplateProject() {
     defaultPreviewWidthVw,
   );
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const processedStartupRef = useRef<string | null>(null);
+
+  const emailQuery = useQuery({
+    queryKey: ["email", currentEmailId],
+    queryFn: () => fetchEmail(currentEmailId!),
+    enabled: Boolean(currentEmailId),
+  });
+  const chatQuery = useQuery({
+    queryKey: ["email-chat", currentEmailId],
+    queryFn: () => fetchEmailChat(currentEmailId!),
+    enabled: Boolean(currentEmailId),
+  });
+
+  const email = emailQuery.data;
+  const variant = latestVariant(email);
+  const previewSrcDoc =
+    streamedHtml ?? variant?.compiledHtml ?? getEmailTemplateSrcDoc(templateTheme);
+  const previewSubject =
+    streamedSubject ?? variant?.subject ?? email?.title ?? suggestedEmailSubject;
+  const startupKey = useMemo(() => searchParams.toString(), [searchParams]);
+
+  const invalidateEmailState = useCallback(
+    async (emailId: string) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["email", emailId] }),
+        queryClient.invalidateQueries({ queryKey: ["email-chat", emailId] }),
+        queryClient.invalidateQueries({ queryKey: ["emails"] }),
+        queryClient.invalidateQueries({ queryKey: ["billing-overview"] }),
+      ]);
+    },
+    [queryClient],
+  );
+
+  const startStream = useCallback(
+    async (
+      emailId: string,
+      mode: "generate" | "edit",
+      instruction?: string,
+    ) => {
+      const statusId = `${mode}-${Date.now()}-status`;
+      const assistantId = `${mode}-${Date.now()}-assistant`;
+      let assistantText = "";
+
+      setIsStreaming(true);
+      setSidebarOpen(true);
+      setMessages((current) =>
+        upsertMessage(current, {
+          id: statusId,
+          role: "status",
+          content:
+            mode === "generate"
+              ? "Starting generation..."
+              : "Applying edits...",
+        }),
+      );
+
+      const handleEvent = (event: StreamEmailEvent) => {
+        if (event.type === "step") {
+          setMessages((current) =>
+            upsertMessage(current, {
+              id: statusId,
+              role: "status",
+              content: event.message,
+            }),
+          );
+          return;
+        }
+
+        if (event.type === "assistant-chunk") {
+          assistantText += event.value;
+          setMessages((current) =>
+            upsertMessage(current, {
+              id: assistantId,
+              role: "assistant",
+              content: assistantText,
+            }),
+          );
+          return;
+        }
+
+        if (event.type === "subject") {
+          setStreamedSubject(event.value);
+          return;
+        }
+
+        if (event.type === "done") {
+          playCompletionSound();
+          if (event.compiledHtml) setStreamedHtml(event.compiledHtml);
+          if (event.subject) setStreamedSubject(event.subject);
+          if (!assistantText.trim()) {
+            setMessages((current) =>
+              upsertMessage(current, {
+                id: assistantId,
+                role: "assistant",
+                content: event.chatOnly
+                  ? "I added guidance to the conversation."
+                  : `Generated email${event.subject ? `: ${event.subject}` : "."}`,
+              }),
+            );
+          }
+          setMessages((current) =>
+            current.filter((message) => message.id !== statusId),
+          );
+          return;
+        }
+
+        if (event.type === "error") {
+          setMessages((current) =>
+            upsertMessage(current, {
+              id: `${mode}-${Date.now()}-error`,
+              role: "error",
+              content: event.message,
+            }),
+          );
+        }
+      };
+
+      try {
+        await consumeEmailSseStream(
+          `/api/emails/${emailId}/${mode}`,
+          handleEvent,
+          undefined,
+          mode === "edit"
+            ? JSON.stringify({ instruction: instruction ?? "" })
+            : undefined,
+        );
+        await invalidateEmailState(emailId);
+      } catch (error) {
+        setMessages((current) =>
+          upsertMessage(current, {
+            id: `${mode}-${Date.now()}-error`,
+            role: "error",
+            content:
+              error instanceof Error ? error.message : "Email stream failed.",
+          }),
+        );
+      } finally {
+        setIsStreaming(false);
+      }
+    },
+    [invalidateEmailState, setSidebarOpen],
+  );
+
+  const submitChatPrompt = useCallback(
+    async (input: PromptSubmitInput) => {
+      if (!currentEmailId || isStreaming) return;
+      setMessages((current) => [
+        ...current,
+        {
+          id: `user-${Date.now()}`,
+          role: "user",
+          content: input.prompt,
+        },
+      ]);
+      await startStream(currentEmailId, "edit", input.prompt);
+    },
+    [currentEmailId, isStreaming, startStream],
+  );
 
   const updateScrollState = useCallback(() => {
     const messages = messagesRef.current;
@@ -864,9 +1345,122 @@ export default function EmailTemplateProject() {
   }, [updateScrollState]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("prompt")) setSidebarOpen(true);
-  }, [setSidebarOpen]);
+    if (!currentEmailId || email?.status !== "GENERATING" || isStreaming) {
+      return;
+    }
+    const interval = window.setInterval(() => {
+      void emailQuery.refetch();
+      void chatQuery.refetch();
+    }, 3000);
+    return () => window.clearInterval(interval);
+  }, [chatQuery, currentEmailId, email?.status, emailQuery, isStreaming]);
+
+  useEffect(() => {
+    setStreamedHtml(null);
+    setStreamedSubject(null);
+  }, [currentEmailId]);
+
+  useEffect(() => {
+    if (isStreaming) return;
+    setMessages(mapChatMessages(chatQuery.data, email));
+  }, [chatQuery.data, email, isStreaming]);
+
+  useEffect(() => {
+    if (!currentEmailId) return;
+    setSidebarOpen(true);
+  }, [currentEmailId, setSidebarOpen]);
+
+  useEffect(() => {
+    if (!startupKey || processedStartupRef.current === startupKey) return;
+    processedStartupRef.current = startupKey;
+
+    const id = searchParams.get("id");
+    if (id) {
+      setCurrentEmailId(id);
+      return;
+    }
+
+    const pendingPromptId = searchParams.get("pendingPromptId");
+    if (pendingPromptId) {
+      setMessages([
+        {
+          id: "pending-status",
+          role: "status",
+          content: "Loading your saved prompt...",
+        },
+      ]);
+      void consumePendingPrompt(pendingPromptId)
+        .then(async (pendingPrompt) => {
+          if (!pendingPrompt.emailId) {
+            throw new Error("Pending prompt did not create an email.");
+          }
+          setCurrentEmailId(pendingPrompt.emailId);
+          router.replace(`/email-template-project?id=${pendingPrompt.emailId}`);
+          setMessages([
+            {
+              id: `${pendingPrompt.emailId}-prompt`,
+              role: "user",
+              content: pendingPrompt.prompt,
+            },
+            {
+              id: `${pendingPrompt.emailId}-status`,
+              role: "status",
+              content: "Generation is running...",
+            },
+          ]);
+          await invalidateEmailState(pendingPrompt.emailId);
+        })
+        .catch((error) => {
+          setMessages([
+            {
+              id: "pending-error",
+              role: "error",
+              content:
+                error instanceof Error
+                  ? error.message
+                  : "Could not load pending prompt.",
+            },
+          ]);
+        });
+      return;
+    }
+
+    const prompt = searchParams.get("prompt")?.trim();
+    if (!prompt) return;
+
+    const tone = searchParams.get("tone") ?? undefined;
+    const length = searchParams.get("length") ?? undefined;
+    const audience = searchParams.get("audience") ?? undefined;
+
+    setMessages([{ id: "new-prompt", role: "user", content: prompt }]);
+    setSidebarOpen(true);
+    void createEmail({ prompt, tone, length, audience })
+      .then(async (created) => {
+        setCurrentEmailId(created.id);
+        router.replace(`/email-template-project?id=${created.id}`);
+        await startStream(created.id, "generate");
+      })
+      .catch((error) => {
+        setMessages((current) => [
+          ...current,
+          {
+            id: "create-error",
+            role: "error",
+            content:
+              error instanceof Error
+                ? error.message
+                : "Could not create email project.",
+          },
+        ]);
+      });
+  }, [
+    invalidateEmailState,
+    router,
+    searchParams,
+    setSidebarOpen,
+    startStream,
+    startupKey,
+  ]);
 
   const scrollToBottom = () => {
     messagesRef.current?.scrollTo({
@@ -939,14 +1533,37 @@ export default function EmailTemplateProject() {
               </span>
 
               <div className="mt-8 flex flex-col gap-8">
-                {/* user message */}
-                <HumanMessage>{userGreeting}</HumanMessage>
-                {/* ai message */}
-                <AiMessage>{aiGreeting}</AiMessage>
-                <HumanMessage>{userCampaignRequest}</HumanMessage>
-                <AiMessage onOpenPreview={() => setSidebarOpen(true)}>
-                  {aiCampaignResponse}
-                </AiMessage>
+                {messages.map((message) => {
+                  if (message.role === "user") {
+                    return (
+                      <HumanMessage key={message.id}>
+                        {message.content}
+                      </HumanMessage>
+                    );
+                  }
+                  if (message.role === "error") {
+                    return (
+                      <ErrorMessage key={message.id}>
+                        {message.content}
+                      </ErrorMessage>
+                    );
+                  }
+                  if (message.role === "status") {
+                    return (
+                      <StatusMessage key={message.id}>
+                        {message.content}
+                      </StatusMessage>
+                    );
+                  }
+                  return (
+                    <AiMessage
+                      key={message.id}
+                      onOpenPreview={() => setSidebarOpen(true)}
+                    >
+                      {message.content}
+                    </AiMessage>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -976,6 +1593,8 @@ export default function EmailTemplateProject() {
                 panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)_/_0.18)]",
                 textarea: "min-h-17 rounded-t-2xl px-4.5 pt-[17px]",
               }}
+              disabled={!currentEmailId || isStreaming}
+              onSubmit={submitChatPrompt}
               showOptions={false}
               variant="chat"
             />
@@ -989,16 +1608,20 @@ export default function EmailTemplateProject() {
           onToggleExpanded={togglePreviewExpanded}
           open={sidebarOpen}
           setMode={setPreviewMode}
+          srcDoc={previewSrcDoc}
           setTheme={setTemplateTheme}
           setWidth={updatePreviewWidth}
+          subject={previewSubject}
           theme={templateTheme}
           width={previewWidth}
         />
       </div>
 
       <ExportProviderModal
+        emailId={currentEmailId}
         onClose={() => setExportModalOpen(false)}
         open={exportModalOpen}
+        variantId={variant?.id ?? null}
       />
     </main>
   );
