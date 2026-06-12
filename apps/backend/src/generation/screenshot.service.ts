@@ -51,7 +51,11 @@ export class ScreenshotService {
     return "Red flag: screenshot pipeline failed for unknown launch/render reason. Inspect stack trace.";
   }
 
-  async screenshotHtml(html: string): Promise<Buffer> {
+  async screenshotHtml(
+    html: string,
+    options: { type?: "png" | "jpeg"; quality?: number } = {},
+  ): Promise<Buffer> {
+    const type = options.type ?? "png";
     let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
     try {
       if (!this.launchDiagnosticsLogged) {
@@ -93,7 +97,11 @@ export class ScreenshotService {
         throw new InternalServerErrorException("No renderable element found in email HTML.");
       }
 
-      const screenshot = await element.screenshot({ type: "png" });
+      const screenshot = await element.screenshot(
+        type === "jpeg"
+          ? { type: "jpeg", quality: options.quality ?? 90 }
+          : { type: "png" },
+      );
       return Buffer.from(screenshot);
     } catch (err) {
       const hint = this.diagnosticHint(err);
@@ -104,6 +112,46 @@ export class ScreenshotService {
         this.logger.error(String(err));
       }
       throw new InternalServerErrorException("Failed to generate email preview screenshot.");
+    } finally {
+      await browser?.close();
+    }
+  }
+
+  async pdfFromHtml(html: string): Promise<Buffer> {
+    let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+        ],
+      });
+
+      const page = await browser.newPage();
+      page.setDefaultTimeout(60_000);
+      page.setDefaultNavigationTimeout(60_000);
+
+      await page.setContent(html, { waitUntil: "domcontentloaded" });
+      await new Promise((r) => setTimeout(r, 250));
+
+      const pdf = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "12mm", right: "12mm", bottom: "12mm", left: "12mm" },
+      });
+      return Buffer.from(pdf);
+    } catch (err) {
+      const hint = this.diagnosticHint(err);
+      this.logger.error(`PDF export failed. ${hint}`);
+      if (err instanceof Error) {
+        this.logger.error(err.stack ?? err.message);
+      } else {
+        this.logger.error(String(err));
+      }
+      throw new InternalServerErrorException("Failed to generate email PDF.");
     } finally {
       await browser?.close();
     }
