@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { TemplateSeedPreviewDto, TemplateSlug } from "@madoo/shared";
+import {
+  TemplateDtoSchema,
+  type TemplateDto,
+  type TemplateSeedPreviewDto,
+  type TemplateSlug,
+} from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReactToHtmlService } from "../generation/react-to-html.service";
 import { SEED_TEMPLATE_SLUGS, SEED_TEMPLATES } from "./seed-templates";
@@ -87,9 +92,9 @@ export class TemplatesService {
     return template;
   }
 
-  async listForWorkspace(workspaceId: string) {
+  async listForWorkspace(workspaceId: string): Promise<TemplateDto[]> {
     await this.ensureSeedForWorkspace(workspaceId);
-    return this.prisma.template.findMany({
+    const rows = await this.prisma.template.findMany({
       where: { workspaceId },
       orderBy: { slug: "asc" },
       select: {
@@ -102,5 +107,12 @@ export class TemplatesService {
         updatedAt: true,
       },
     });
+    return rows.map((row) =>
+      TemplateDtoSchema.parse({
+        ...row,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      }),
+    );
   }
 }

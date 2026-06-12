@@ -69,6 +69,15 @@ export class EmailsController {
     return this.emails.getById(id, req.workspace.id, user.sub);
   }
 
+  @Get(":id/chat")
+  listChat(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+  ) {
+    return this.emails.listChatMessages(id, req.workspace.id, user.sub);
+  }
+
   @Delete(":id")
   async remove(
     @Req() req: WorkspaceScopedRequest,

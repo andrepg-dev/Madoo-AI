@@ -8,10 +8,12 @@ import {
 } from "@nestjs/common";
 import type { EmailStatus } from "@prisma/client";
 import {
+  EmailChatMessageDtoSchema,
   EmailDtoSchema,
   parseVariableSchemaJson,
   type CreateEmailFromTemplateInput,
   type CreateEmailInput,
+  type EmailChatMessageDto,
   type EmailDto,
   type EmailVariantDto,
   type UpdateEmailVariantVariableSchemaInput,
@@ -101,6 +103,28 @@ export class EmailsService {
     await this.workspaces.assertMembership(userId, workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     return this.toDto(emailId);
+  }
+
+  async listChatMessages(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<EmailChatMessageDto[]> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    const rows = await this.prisma.emailChatMessage.findMany({
+      where: { emailId, workspaceId },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((row) =>
+      EmailChatMessageDtoSchema.parse({
+        id: row.id,
+        role: row.role,
+        kind: row.kind,
+        content: row.content,
+        createdAt: row.createdAt.toISOString(),
+      }),
+    );
   }
 
   async remove(emailId: string, workspaceId: string, userId: string): Promise<void> {
