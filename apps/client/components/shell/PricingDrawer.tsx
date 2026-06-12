@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  createCheckoutSession,
+  createPortalSession,
+  fetchBillingOverview,
+} from "@/actions/billing";
+import { useClientStore } from "@/stores/client-store";
 import { Crown02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
@@ -11,10 +17,18 @@ import {
   cx,
   useToast,
 } from "@madoo/design-system";
+import {
+  PLAN_DISPLAY_NAMES,
+  PLAN_LIMITS,
+  PLAN_PRICES,
+  PLAN_PRICES_ANNUAL,
+  type BillingInterval,
+  type Plan,
+} from "@madoo/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 
-type BillingInterval = "monthly" | "yearly";
-type PlanTier = "basic" | "medium" | "pro";
+type PaidPlan = Exclude<Plan, "FREE">;
 
 type PricingFeature = {
   label: string;
@@ -23,63 +37,72 @@ type PricingFeature = {
 };
 
 type PricingPlan = {
-  tier: PlanTier;
-  name: string;
+  tier: Plan;
   description: string;
-  monthlyPrice: number;
-  cta: string;
   featured?: boolean;
   features: PricingFeature[];
 };
 
 const plans: PricingPlan[] = [
   {
-    tier: "basic",
-    name: "Basic",
-    description: "For solo creators building more templates and exports.",
-    monthlyPrice: 20,
-    cta: "Try Basic",
+    tier: "FREE",
+    description: "For trying Madoo with a single workspace.",
     features: [
-      { value: "100", label: "monthly credits", emphasized: true },
-      { value: "50", label: "stored templates", emphasized: true },
-      { value: "2", label: "members", emphasized: true },
-      { value: "50", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
-      { label: "Export to any provider of your choice" },
-      { label: "Sharing preview template links" },
+      {
+        value: String(PLAN_LIMITS.FREE.aiGenerations),
+        label: "monthly AI credits",
+        emphasized: true,
+      },
+      {
+        value: String(PLAN_LIMITS.FREE.workspaces),
+        label: "workspace",
+        emphasized: true,
+      },
+      { label: "Create email templates" },
+      { label: "Save generated projects" },
     ],
   },
   {
-    tier: "medium",
-    name: "Medium",
-    description: "Amazing for small teams and agencies.",
-    monthlyPrice: 45,
-    cta: "Try Medium",
+    tier: "STARTER",
+    description: "For solo creators building more templates.",
     featured: true,
     features: [
-      { value: "250", label: "monthly credits", emphasized: true },
-      { value: "150", label: "stored templates", emphasized: true },
-      { value: "3", label: "members", emphasized: true },
-      { value: "100", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
-      { label: "Export to any provider of your choice" },
-      { label: "Sharing preview template links" },
+      {
+        value: String(PLAN_LIMITS.STARTER.aiGenerations),
+        label: "monthly AI credits",
+        emphasized: true,
+      },
+      {
+        value: String(PLAN_LIMITS.STARTER.workspaces),
+        label: "workspaces",
+        emphasized: true,
+      },
+      { label: "Template generation and editing" },
+      { label: "Provider-ready exports" },
     ],
   },
   {
-    tier: "pro",
-    name: "Pro",
-    description: "For agencies that need more storage and volume.",
-    monthlyPrice: 95,
-    cta: "Try Pro",
+    tier: "GROWTH",
+    description: "For teams and agencies that need higher volume.",
     features: [
-      { value: "550", label: "monthly credits", emphasized: true },
-      { value: "300", label: "stored templates", emphasized: true },
-      { value: "5", label: "members", emphasized: true },
-      { value: "300", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
-      { label: "Export to any provider of your choice" },
-      { label: "Sharing preview template links" },
+      {
+        value:
+          PLAN_LIMITS.GROWTH.aiGenerations === -1
+            ? "Unlimited"
+            : String(PLAN_LIMITS.GROWTH.aiGenerations),
+        label: "AI credits",
+        emphasized: true,
+      },
+      {
+        value:
+          PLAN_LIMITS.GROWTH.workspaces === -1
+            ? "Unlimited"
+            : String(PLAN_LIMITS.GROWTH.workspaces),
+        label: "workspaces",
+        emphasized: true,
+      },
+      { label: "Team-friendly template workflow" },
+      { label: "Provider-ready exports" },
     ],
   },
 ];
@@ -91,12 +114,13 @@ const pricingFaqs = [
   },
   {
     question: "Is there any free trial?",
-    answer: "Yes. New users get a 7-day free trial, and no credit card is needed.",
+    answer:
+      "Yes. New users get a 7-day free trial, and no credit card is needed.",
   },
   {
     question: "How do credits work?",
     answer:
-      "1 AI message costs 1 credit. Creating a template from scratch costs 1 credit, and each message you send to edit that template also costs 1 credit.",
+      "Creating a template from scratch costs 1 credit. Each AI edit message costs 1 credit.",
   },
   {
     question: "What if I do not find my export provider?",
@@ -118,13 +142,22 @@ function AppIcon({ icon, size = 16 }: { icon: IconSvgElement; size?: number }) {
   );
 }
 
-function getDisplayPrice(monthlyPrice: number, billingInterval: BillingInterval) {
-  if (billingInterval === "monthly") return monthlyPrice;
-  return Math.round(monthlyPrice * 0.8);
+function getDisplayPrice(plan: Plan, billingInterval: BillingInterval) {
+  return billingInterval === "ANNUAL"
+    ? PLAN_PRICES_ANNUAL[plan]
+    : PLAN_PRICES[plan];
 }
 
-function getYearlySavings(monthlyPrice: number) {
-  return (monthlyPrice - getDisplayPrice(monthlyPrice, "yearly")) * 12;
+function getYearlySavings(plan: Plan) {
+  return (PLAN_PRICES[plan] - PLAN_PRICES_ANNUAL[plan]) * 12;
+}
+
+function getPlanCta(plan: PricingPlan, currentPlan: Plan) {
+  if (plan.tier === currentPlan) return "Current plan";
+  if (plan.tier === "FREE") return "Included";
+  return currentPlan === "FREE"
+    ? `Upgrade to ${PLAN_DISPLAY_NAMES[plan.tier]}`
+    : `Switch to ${PLAN_DISPLAY_NAMES[plan.tier]}`;
 }
 
 function BillingSwitch({
@@ -134,7 +167,7 @@ function BillingSwitch({
   billingInterval: BillingInterval;
   onChange: (value: BillingInterval) => void;
 }) {
-  const isYearly = billingInterval === "yearly";
+  const isYearly = billingInterval === "ANNUAL";
 
   return (
     <div className="flex items-center gap-3 text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted max-sm:w-full max-sm:justify-between">
@@ -144,7 +177,7 @@ function BillingSwitch({
           "cursor-pointer border-0 bg-transparent p-0 font-madoo-sans transition-colors",
           isYearly ? "text-madoo-ink-muted" : "text-madoo-ink",
         )}
-        onClick={() => onChange("monthly")}
+        onClick={() => onChange("MONTHLY")}
       >
         Pay monthly
       </button>
@@ -154,7 +187,7 @@ function BillingSwitch({
         aria-checked={isYearly}
         aria-label="Use yearly billing"
         className="relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-0 bg-madoo-surface shadow-[var(--shadow-border)] transition-[background,box-shadow] hover:bg-madoo-surface-2 hover:shadow-[var(--shadow-border-rule-hover)]"
-        onClick={() => onChange(isYearly ? "monthly" : "yearly")}
+        onClick={() => onChange(isYearly ? "MONTHLY" : "ANNUAL")}
       >
         <span
           className={cx(
@@ -169,7 +202,7 @@ function BillingSwitch({
           "cursor-pointer border-0 bg-transparent p-0 font-madoo-sans transition-colors",
           isYearly ? "text-madoo-ink" : "text-madoo-ink-muted",
         )}
-        onClick={() => onChange("yearly")}
+        onClick={() => onChange("ANNUAL")}
       >
         Pay yearly (Save 20%)
       </button>
@@ -207,13 +240,31 @@ function FeatureRow({ children }: { children: ReactNode }) {
 function PlanCard({
   plan,
   billingInterval,
+  currentPlan,
+  hasStripeCustomer,
+  checkoutPending,
+  portalPending,
   onSelect,
+  onManage,
 }: {
   plan: PricingPlan;
   billingInterval: BillingInterval;
+  currentPlan: Plan;
+  hasStripeCustomer: boolean;
+  checkoutPending: boolean;
+  portalPending: boolean;
   onSelect: (plan: PricingPlan) => void;
+  onManage: () => void;
 }) {
-  const displayPrice = getDisplayPrice(plan.monthlyPrice, billingInterval);
+  const displayPrice = getDisplayPrice(plan.tier, billingInterval);
+  const isCurrent = plan.tier === currentPlan;
+  const isFree = plan.tier === "FREE";
+  const buttonDisabled =
+    isFree ||
+    (isCurrent && !hasStripeCustomer) ||
+    checkoutPending ||
+    portalPending;
+  const cta = getPlanCta(plan, currentPlan);
 
   return (
     <Card
@@ -226,27 +277,33 @@ function PlanCard({
       <div className="flex min-h-[72px] items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-xl font-semibold leading-none text-madoo-ink">
-            {plan.name}
+            {PLAN_DISPLAY_NAMES[plan.tier]}
           </h3>
           <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
             {plan.description}
           </p>
         </div>
-        {plan.featured ? <Badge tone="accent">Popular</Badge> : null}
+        {isCurrent ? (
+          <Badge tone="neutral">Current</Badge>
+        ) : plan.featured ? (
+          <Badge tone="accent">Popular</Badge>
+        ) : null}
       </div>
 
       <div>
         <div className="flex items-end gap-2">
           <span className="text-4xl font-semibold leading-none text-madoo-ink">
-            ${displayPrice}
+            {displayPrice === 0 ? "Free" : `$${displayPrice}`}
           </span>
-          <span className="pb-1 text-[length:var(--font-size-sm)] text-madoo-ink-muted">
-            / month
-          </span>
+          {displayPrice > 0 ? (
+            <span className="pb-1 text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+              / month
+            </span>
+          ) : null}
         </div>
-        {billingInterval === "yearly" ? (
+        {billingInterval === "ANNUAL" && displayPrice > 0 ? (
           <p className="mt-2 text-[length:var(--font-size-sm)] font-medium leading-none text-madoo-accent-deep">
-            Save ${getYearlySavings(plan.monthlyPrice)} yearly
+            Save ${getYearlySavings(plan.tier)} yearly
           </p>
         ) : null}
       </div>
@@ -255,10 +312,17 @@ function PlanCard({
         block
         size="md"
         variant={plan.featured ? "primary" : "secondary"}
-        onClick={() => onSelect(plan)}
+        disabled={buttonDisabled}
+        onClick={() => {
+          if (isCurrent && hasStripeCustomer) {
+            onManage();
+            return;
+          }
+          onSelect(plan);
+        }}
         className="mt-auto h-10! rounded-[var(--radius-lg)]!"
       >
-        {plan.cta}
+        {isCurrent && hasStripeCustomer ? "Manage billing" : cta}
       </Button>
 
       <ul className="grid gap-2.5 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-soft">
@@ -282,8 +346,55 @@ export function PricingDrawer({
   onClose: () => void;
 }) {
   const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>("yearly");
+    useState<BillingInterval>("ANNUAL");
+  const workspaceId = useClientStore((state) => state.workspaceId);
+  const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const billingQuery = useQuery({
+    queryKey: ["billing-overview", workspaceId],
+    queryFn: fetchBillingOverview,
+    enabled: open && Boolean(workspaceId),
+  });
+
+  const currentPlan = billingQuery.data?.subscription.plan ?? "FREE";
+  const hasStripeCustomer =
+    billingQuery.data?.subscription.hasStripeCustomer ?? false;
+
+  const checkoutMutation = useMutation({
+    mutationFn: (input: { plan: PaidPlan; interval: BillingInterval }) =>
+      createCheckoutSession(input),
+    onSuccess: (session) => {
+      window.location.assign(session.url);
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Checkout failed",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Could not start checkout.",
+      });
+    },
+  });
+
+  const portalMutation = useMutation({
+    mutationFn: createPortalSession,
+    onSuccess: (session) => {
+      window.location.assign(session.url);
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Billing portal failed",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Could not open billing portal.",
+      });
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -299,10 +410,30 @@ export function PricingDrawer({
   if (!open) return null;
 
   const onSelectPlan = (plan: PricingPlan) => {
-    toast({
-      tone: "success",
-      title: `${plan.name} selected`,
-      body: "Checkout is not connected yet.",
+    if (!workspaceId) {
+      toast({
+        tone: "danger",
+        title: "Workspace required",
+        body: "Sign in and select a workspace before checkout.",
+      });
+      return;
+    }
+
+    if (plan.tier === "FREE") return;
+
+    checkoutMutation.mutate({
+      plan: plan.tier,
+      interval: billingInterval,
+    });
+  };
+
+  const onManageBilling = () => {
+    portalMutation.mutate(undefined, {
+      onSettled: () => {
+        void queryClient.invalidateQueries({
+          queryKey: ["billing-overview", workspaceId],
+        });
+      },
     });
   };
 
@@ -362,7 +493,12 @@ export function PricingDrawer({
                 key={plan.tier}
                 plan={plan}
                 billingInterval={billingInterval}
+                currentPlan={currentPlan}
+                hasStripeCustomer={hasStripeCustomer}
+                checkoutPending={checkoutMutation.isPending}
+                portalPending={portalMutation.isPending}
                 onSelect={onSelectPlan}
+                onManage={onManageBilling}
               />
             ))}
           </div>
