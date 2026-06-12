@@ -13,6 +13,7 @@ model User {
   name          String?
   avatarUrl     String?
   googleId      String?   @unique
+  passwordHash  String?
   emailVerified Boolean   @default(false)
   locale        String?
   lastLoginAt   DateTime?
@@ -21,8 +22,55 @@ model User {
 
   pendingPrompts PendingPrompt[]
   memberships    Membership[]
+  authAccounts   AuthAccount[]
+  providerConnections ProviderConnection[]
+  supportTickets SupportTicket[]
+  sentWorkspaceInvites WorkspaceInvite[] @relation("WorkspaceInviteInviter")
+  acceptedWorkspaceInvites WorkspaceInvite[] @relation("WorkspaceInviteAcceptedBy")
 
   @@index([email])
+}
+
+enum AuthProviderKind {
+  GOOGLE
+  GITHUB
+  APPLE
+}
+
+model AuthAccount {
+  id                String           @id @default(cuid())
+  userId            String
+  provider          AuthProviderKind
+  providerAccountId String
+  email             String?
+  createdAt         DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+enum ConnectionProvider {
+  GMAIL
+  OUTLOOK
+}
+
+model ProviderConnection {
+  id              String             @id @default(cuid())
+  userId          String
+  provider        ConnectionProvider
+  accessTokenEnc  String             @db.Text
+  refreshTokenEnc String?            @db.Text
+  expiresAt       DateTime?
+  accountEmail    String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
 }
 
 model PendingPrompt {
@@ -51,6 +99,7 @@ model Workspace {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
+  avatarUrl String?
   templateCreationReason String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -64,6 +113,8 @@ model Workspace {
   emailVfsSnapshots   EmailVfsSnapshot[]
   auditLogs           AuditLog[]
   billingSubscription BillingSubscription?
+  supportTickets      SupportTicket[]
+  invites             WorkspaceInvite[]
 
   @@index([slug])
 }
@@ -125,6 +176,7 @@ model Email {
   generationRuns        EmailGenerationRun[]
   chatMessages          EmailChatMessage[]
   vfsSnapshot           EmailVfsSnapshot?
+  supportTickets        SupportTicket[]
 
   @@index([workspaceId, createdAt])
 }
@@ -262,6 +314,64 @@ model Membership {
 
   @@unique([workspaceId, userId])
   @@index([userId])
+}
+
+enum SupportCategory {
+  ACCOUNT
+  WORKSPACE
+  BILLING
+  GENERATION
+  EXPORT
+  OTHER
+}
+
+enum SupportTicketStatus {
+  OPEN
+  CLOSED
+}
+
+model SupportTicket {
+  id           String              @id @default(cuid())
+  workspaceId  String?
+  emailId      String?
+  userId       String
+  contactEmail String
+  category     SupportCategory
+  subject      String
+  message      String              @db.Text
+  status       SupportTicketStatus @default(OPEN)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  email     Email?     @relation(fields: [emailId], references: [id], onDelete: SetNull)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([emailId, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model WorkspaceInvite {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  email            String?
+  role             Role
+  token            String   @unique
+  invitedByUserId  String
+  expiresAt        DateTime
+  acceptedByUserId String?
+  acceptedAt       DateTime?
+  createdAt        DateTime @default(now())
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy  User      @relation("WorkspaceInviteInviter", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  acceptedBy User?     @relation("WorkspaceInviteAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, email])
+  @@index([expiresAt])
 }
 
 enum Plan {
