@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import type { Membership, Workspace } from "@prisma/client";
+import type { Membership, Role, Workspace } from "@prisma/client";
 import { PLAN_DISPLAY_NAMES, PLAN_LIMITS, type Plan } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -147,6 +147,132 @@ export class WorkspacesService {
       data,
     });
     return { ...updated, membership };
+  }
+
+  assertRole(role: Role, min: "ADMIN" | "OWNER"): void {
+    const rank: Record<Role, number> = { MEMBER: 0, ADMIN: 1, OWNER: 2 };
+    const required = min === "OWNER" ? 2 : 1;
+    if (rank[role] < required) {
+      throw new ForbiddenException(`${min === "OWNER" ? "Owner" : "Admin"} role required.`);
+    }
+  }
+
+  async updateWorkspace(
+    workspaceId: string,
+    input: { name?: string; slug?: string },
+  ): Promise<Workspace> {
+    const data: { name?: string; slug?: string } = {};
+    if (input.name !== undefined) data.name = input.name.trim();
+    if (input.slug !== undefined) {
+      const clash = await this.prisma.workspace.findUnique({
+        where: { slug: input.slug },
+      });
+      if (clash && clash.id !== workspaceId) {
+        throw new BadRequestException("This slug is already taken.");
+      }
+      data.slug = input.slug;
+    }
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException("No workspace fields provided.");
+    }
+    return this.prisma.workspace.update({ where: { id: workspaceId }, data });
+  }
+
+  async setWorkspaceAvatar(
+    workspaceId: string,
+    avatarUrl: string,
+  ): Promise<Workspace> {
+    return this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { avatarUrl },
+    });
+  }
+
+  async deleteWorkspace(userId: string, workspaceId: string): Promise<void> {
+    const otherMemberships = await this.prisma.membership.count({
+      where: { userId, workspaceId: { not: workspaceId } },
+    });
+    if (otherMemberships === 0) {
+      throw new BadRequestException(
+        "You can't delete your only workspace. Create another one first.",
+      );
+    }
+    await this.prisma.workspace.delete({ where: { id: workspaceId } });
+  }
+
+  async leaveWorkspace(userId: string, workspaceId: string): Promise<void> {
+    const membership = await this.assertMembership(userId, workspaceId);
+    if (membership.role === "OWNER") {
+      const otherOwners = await this.prisma.membership.count({
+        where: { workspaceId, role: "OWNER", userId: { not: userId } },
+      });
+      if (otherOwners === 0) {
+        throw new BadRequestException(
+          "You're the only owner. Transfer ownership or delete the workspace instead.",
+        );
+      }
+    }
+    const otherMemberships = await this.prisma.membership.count({
+      where: { userId, workspaceId: { not: workspaceId } },
+    });
+    if (otherMemberships === 0) {
+      throw new BadRequestException(
+        "You can't leave your only workspace.",
+      );
+    }
+    await this.prisma.membership.delete({
+      where: { workspaceId_userId: { workspaceId, userId } },
+    });
+  }
+
+  async listMembers(workspaceId: string) {
+    return this.prisma.membership.findMany({
+      where: { workspaceId },
+      include: { user: true },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  async updateMemberRole(
+    workspaceId: string,
+    targetUserId: string,
+    role: Role,
+  ) {
+    const target = await this.prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+      include: { user: true },
+    });
+    if (!target) throw new NotFoundException("Member not found.");
+
+    if (target.role === "OWNER" && role !== "OWNER") {
+      const otherOwners = await this.prisma.membership.count({
+        where: { workspaceId, role: "OWNER", userId: { not: targetUserId } },
+      });
+      if (otherOwners === 0) {
+        throw new BadRequestException(
+          "Workspaces need at least one owner.",
+        );
+      }
+    }
+
+    return this.prisma.membership.update({
+      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+      data: { role },
+      include: { user: true },
+    });
+  }
+
+  async removeMember(workspaceId: string, targetUserId: string) {
+    const target = await this.prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+    });
+    if (!target) throw new NotFoundException("Member not found.");
+    if (target.role === "OWNER") {
+      throw new ForbiddenException("Owners can't be removed. They must leave or transfer ownership.");
+    }
+    await this.prisma.membership.delete({
+      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+    });
   }
 
   private async uniqueSlug(base: string): Promise<string> {
