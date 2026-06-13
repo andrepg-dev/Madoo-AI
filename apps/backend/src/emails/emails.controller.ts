@@ -24,6 +24,8 @@ import {
   CreateEmailFromTemplateSchema,
   CreateEmailSchema,
   EditEmailSchema,
+  RenameEmailSchema,
+  TransferEmailSchema,
   UpdateEmailVariantVariableSchemaSchema,
 } from "@madoo/shared";
 
@@ -86,6 +88,28 @@ export class EmailsController {
   ) {
     await this.emails.remove(id, req.workspace.id, user.sub);
     return { ok: true };
+  }
+
+  @Patch(":id")
+  updateEmail(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const dto = RenameEmailSchema.parse(body);
+    return this.emails.rename(id, req.workspace.id, user.sub, dto);
+  }
+
+  @Post(":id/transfer")
+  transferEmail(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const dto = TransferEmailSchema.parse(body);
+    return this.emails.transfer(id, req.workspace.id, user.sub, dto);
   }
 
   @Post(":id/save")

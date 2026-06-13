@@ -1,12 +1,24 @@
 "use client";
 
-import { deleteEmail, fetchEmails } from "@/actions/emails";
+import {
+  deleteEmail,
+  fetchEmails,
+  renameEmail,
+  transferEmail,
+} from "@/actions/emails";
+import { fetchWorkspaces } from "@/actions/workspaces";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   Button,
+  Dropdown,
+  DropdownContent,
+  DropdownDivider,
+  DropdownItem,
+  DropdownTrigger,
   GroupButtons,
   Icon,
   Input,
+  Modal,
   Select,
   cx,
   useToast,
@@ -19,6 +31,11 @@ import { useMemo, useState } from "react";
 type ViewMode = "grid" | "list";
 type SortMode = "updatedAt" | "createdAt" | "title";
 type StatusFilter = "ANY" | EmailDto["status"];
+type ProjectActionDialog =
+  | { type: "delete"; email: EmailDto }
+  | { type: "rename"; email: EmailDto }
+  | { type: "transfer"; email: EmailDto }
+  | null;
 
 type ProjectLibraryProps = {
   emptyTitle?: string;
@@ -52,6 +69,8 @@ const statusClasses: Record<EmailDto["status"], string> = {
   GENERATING: "bg-[#edf5ff] text-[#1c5d99]",
   READY: "bg-[#edf8f0] text-[#2f6f45]",
 };
+
+const compactMenuItemClass = "justify-start! px-2! py-1.5! text-[13px]!";
 
 function latestVariant(email: EmailDto): EmailVariantDto | null {
   return email.variants[email.variants.length - 1] ?? null;
@@ -134,7 +153,7 @@ function ProjectPreview({ email }: { email: EmailDto }) {
   const previewUrl = latestVariant(email)?.previewUrl;
 
   return (
-    <div className="relative flex aspect-4/3 min-h-47.5 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]">
+    <div className="relative flex aspect-4/3 w-full items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]">
       {previewUrl ? (
         <img
           alt=""
@@ -160,43 +179,53 @@ function ProjectPreview({ email }: { email: EmailDto }) {
 function ProjectGridCard({
   email,
   onDelete,
+  onRename,
   onOpen,
+  onTransfer,
 }: {
   email: EmailDto;
   onDelete: (email: EmailDto) => void;
+  onRename: (email: EmailDto) => void;
   onOpen: (email: EmailDto) => void;
+  onTransfer: (email: EmailDto) => void;
 }) {
+  const title = projectTitle(email);
+
   return (
-    <article className="grid min-w-0 gap-2 rounded-lg bg-white p-3 shadow-madoo-border [content-visibility:auto]">
+    <article className="grid min-w-0 gap-2 rounded-lg bg-white p-3 shadow-madoo-border">
       <button
-        aria-label={`Open ${projectTitle(email)}`}
+        aria-label={`Open ${title}`}
         className="group min-w-0 cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-none"
         onClick={() => onOpen(email)}
         type="button"
       >
         <ProjectPreview email={email} />
-        <div className="mt-3 min-w-0">
+      </button>
+      <div className="mt-1 flex min-w-0 items-center justify-between gap-3">
+        <button
+          aria-label={`Open ${title}`}
+          className="min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-none"
+          onClick={() => onOpen(email)}
+          type="button"
+        >
           <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-[1.25] text-madoo-ink">
-            {projectTitle(email)}
+            {title}
           </h3>
           <p className="m-0 mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-none text-madoo-ink-muted">
             {projectSubtitle(email)}
           </p>
-        </div>
-      </button>
-      <div className="flex items-center justify-between gap-2">
+        </button>
+        <ProjectActionsMenu
+          email={email}
+          onDelete={onDelete}
+          onRename={onRename}
+          onTransfer={onTransfer}
+        />
+      </div>
+      <div className="flex items-center gap-2">
         <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-madoo-ink-faint">
           {email.templateSavedAt ? "Template" : "Email"}
         </span>
-        <Button
-          aria-label={`Delete ${projectTitle(email)}`}
-          className="h-7 w-7 rounded-md"
-          onClick={() => onDelete(email)}
-          size="sm"
-          variant="icon"
-        >
-          <Icon name="x" size={13} />
-        </Button>
       </div>
     </article>
   );
@@ -205,12 +234,18 @@ function ProjectGridCard({
 function ProjectListRow({
   email,
   onDelete,
+  onRename,
   onOpen,
+  onTransfer,
 }: {
   email: EmailDto;
   onDelete: (email: EmailDto) => void;
+  onRename: (email: EmailDto) => void;
   onOpen: (email: EmailDto) => void;
+  onTransfer: (email: EmailDto) => void;
 }) {
+  const title = projectTitle(email);
+
   return (
     <div className="grid min-h-16 grid-cols-[minmax(0,1fr)_120px_140px_40px] items-center gap-4 border-b border-[rgb(var(--rule-rgb)/0.65)] px-4 py-2 last:border-b-0 max-[760px]:grid-cols-[minmax(0,1fr)_40px]">
       <button
@@ -219,7 +254,7 @@ function ProjectListRow({
         type="button"
       >
         <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-madoo-ink">
-          {projectTitle(email)}
+          {title}
         </span>
         <span className="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-madoo-ink-muted">
           {email.prompt}
@@ -236,16 +271,75 @@ function ProjectListRow({
       <span className="text-xs text-madoo-ink-muted max-[760px]:hidden">
         {formatDate(email.updatedAt)}
       </span>
-      <Button
-        aria-label={`Delete ${projectTitle(email)}`}
-        className="h-7 w-7 rounded-md"
-        onClick={() => onDelete(email)}
-        size="sm"
-        variant="icon"
-      >
-        <Icon name="x" size={13} />
-      </Button>
+      <ProjectActionsMenu
+        email={email}
+        onDelete={onDelete}
+        onRename={onRename}
+        onTransfer={onTransfer}
+      />
     </div>
+  );
+}
+
+function ProjectActionsMenu({
+  email,
+  onDelete,
+  onRename,
+  onTransfer,
+}: {
+  email: EmailDto;
+  onDelete: (email: EmailDto) => void;
+  onRename: (email: EmailDto) => void;
+  onTransfer: (email: EmailDto) => void;
+}) {
+  const title = projectTitle(email);
+
+  return (
+    <Dropdown className="z-20">
+      <DropdownTrigger asChild>
+        <Button
+          aria-label={`Open actions for ${title}`}
+          className="min-h-8 min-w-8 shrink-0 rounded-md px-0!"
+          size="sm"
+          variant="ghost"
+        >
+          <Icon name="moreHorizontal" size={14} />
+        </Button>
+      </DropdownTrigger>
+      <DropdownContent align="end" className="w-50 gap-0.5 p-1!">
+        <DropdownItem
+          className={compactMenuItemClass}
+          onSelect={() => onRename(email)}
+        >
+          <span className="flex items-center gap-2.5">
+            <Icon name="edit" size={14} />
+            Rename
+          </span>
+        </DropdownItem>
+        <DropdownItem
+          className={compactMenuItemClass}
+          onSelect={() => onTransfer(email)}
+        >
+          <span className="flex items-center gap-2.5">
+            <Icon name="folder" size={14} />
+            Transfer to workspace
+          </span>
+        </DropdownItem>
+        <DropdownDivider className="my-0.5" />
+        <DropdownItem
+          className={cx(
+            compactMenuItemClass,
+            "text-madoo-danger hover:text-madoo-danger focus-visible:text-madoo-danger",
+          )}
+          onSelect={() => onDelete(email)}
+        >
+          <span className="flex items-center gap-2.5">
+            <Icon name="delete" size={14} />
+            Delete
+          </span>
+        </DropdownItem>
+      </DropdownContent>
+    </Dropdown>
   );
 }
 
@@ -261,14 +355,31 @@ export function ProjectLibrary({
   const [sortMode, setSortMode] = useState<SortMode>("updatedAt");
   const [status, setStatus] = useState<StatusFilter>("ANY");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [actionDialog, setActionDialog] = useState<ProjectActionDialog>(null);
+  const [renameTitle, setRenameTitle] = useState("");
+  const [transferWorkspaceId, setTransferWorkspaceId] = useState("");
 
   const { data: emails = [], isLoading } = useQuery({
     queryKey: ["emails"],
     queryFn: fetchEmails,
     enabled: Boolean(user),
   });
+  const { data: workspaces = [] } = useQuery({
+    queryKey: ["workspaces"],
+    queryFn: fetchWorkspaces,
+    enabled: Boolean(user),
+  });
 
   const filteredEmails = useFilteredEmails(emails, query, status, sortMode);
+  const transferTargets =
+    actionDialog?.type === "transfer"
+      ? workspaces.filter(
+          (workspace) => workspace.id !== actionDialog.email.workspaceId,
+        )
+      : [];
+  const selectedTransferWorkspace =
+    transferTargets.find((workspace) => workspace.id === transferWorkspaceId) ??
+    null;
 
   const deleteMutation = useMutation({
     mutationFn: deleteEmail,
@@ -276,6 +387,7 @@ export function ProjectLibrary({
       queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
         current?.filter((email) => email.id !== emailId) ?? [],
       );
+      setActionDialog(null);
       toast({ tone: "success", title: "Project deleted" });
     },
     onError: (error) => {
@@ -286,19 +398,111 @@ export function ProjectLibrary({
       });
     },
   });
+  const renameMutation = useMutation({
+    mutationFn: ({ email, title }: { email: EmailDto; title: string }) =>
+      renameEmail(email.id, { title }),
+    onSuccess: (updatedEmail) => {
+      queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
+        current?.map((email) =>
+          email.id === updatedEmail.id ? updatedEmail : email,
+        ) ?? [],
+      );
+      setActionDialog(null);
+      toast({ tone: "success", title: "Project renamed" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Rename failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+  const transferMutation = useMutation({
+    mutationFn: ({
+      email,
+      targetWorkspaceId,
+    }: {
+      email: EmailDto;
+      targetWorkspaceId: string;
+    }) => transferEmail(email.id, { targetWorkspaceId }),
+    onSuccess: (updatedEmail) => {
+      queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
+        current?.filter((email) => email.id !== updatedEmail.id) ?? [],
+      );
+      setActionDialog(null);
+      toast({ tone: "success", title: "Project transferred" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Transfer failed",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const closeActionDialog = () => {
+    if (
+      deleteMutation.isPending ||
+      renameMutation.isPending ||
+      transferMutation.isPending
+    ) {
+      return;
+    }
+    setActionDialog(null);
+  };
 
   const openEmail = (email: EmailDto) => {
     router.push(`/email-template-project?id=${encodeURIComponent(email.id)}`);
   };
 
   const deleteProject = (email: EmailDto) => {
-    if (!window.confirm(`Delete "${projectTitle(email)}"?`)) return;
-    deleteMutation.mutate(email.id);
+    setActionDialog({ type: "delete", email });
+  };
+
+  const renameProject = (email: EmailDto) => {
+    setRenameTitle(projectTitle(email));
+    setActionDialog({ type: "rename", email });
+  };
+
+  const transferProject = (email: EmailDto) => {
+    const targets = workspaces.filter(
+      (workspace) => workspace.id !== email.workspaceId,
+    );
+    if (targets.length === 0) {
+      setTransferWorkspaceId("");
+    } else {
+      setTransferWorkspaceId(targets[0].id);
+    }
+    setActionDialog({ type: "transfer", email });
+  };
+
+  const submitRename = () => {
+    const title = renameTitle.trim();
+    if (!actionDialog || actionDialog.type !== "rename" || !title) return;
+    renameMutation.mutate({ email: actionDialog.email, title });
+  };
+
+  const submitTransfer = () => {
+    if (!actionDialog || actionDialog.type !== "transfer" || !transferWorkspaceId) {
+      return;
+    }
+    transferMutation.mutate({
+      email: actionDialog.email,
+      targetWorkspaceId: transferWorkspaceId,
+    });
+  };
+
+  const submitDelete = () => {
+    if (!actionDialog || actionDialog.type !== "delete") return;
+    deleteMutation.mutate(actionDialog.email.id);
   };
 
   return (
-    <div className="min-h-full bg-(--madoo-page) px-6 py-6 text-madoo-ink max-sm:px-4 max-sm:py-4">
-      <div className="mx-auto max-w-395">
+    <>
+      <div className="min-h-full bg-(--madoo-page) px-6 py-6 text-madoo-ink max-sm:px-4 max-sm:py-4">
+        <div className="mx-auto max-w-395">
         <header className="mb-5 flex items-center justify-between gap-4">
           <h1 className="m-0 text-[24px] font-semibold leading-none tracking-normal text-[#202124]">
             {title}
@@ -374,17 +578,21 @@ export function ProjectLibrary({
                     key={email.id}
                     onDelete={deleteProject}
                     onOpen={openEmail}
+                    onRename={renameProject}
+                    onTransfer={transferProject}
                   />
                 ))}
               </div>
             ) : (
-              <div className="overflow-hidden rounded-lg bg-white shadow-madoo-border">
+              <div className="rounded-lg bg-white shadow-madoo-border">
                 {filteredEmails.map((email) => (
                   <ProjectListRow
                     email={email}
                     key={email.id}
                     onDelete={deleteProject}
                     onOpen={openEmail}
+                    onRename={renameProject}
+                    onTransfer={transferProject}
                   />
                 ))}
               </div>
@@ -407,8 +615,116 @@ export function ProjectLibrary({
             </div>
           )}
         </section>
+        </div>
       </div>
-    </div>
+      <Modal
+        description="Update the name shown on this project card."
+        footer={
+          <>
+            <Button onClick={closeActionDialog} variant="ghost">
+              Cancel
+            </Button>
+            <Button
+              disabled={!renameTitle.trim() || renameMutation.isPending}
+              onClick={submitRename}
+              variant="primary"
+            >
+              {renameMutation.isPending ? "Saving" : "Save"}
+            </Button>
+          </>
+        }
+        onClose={closeActionDialog}
+        open={actionDialog?.type === "rename"}
+        size="sm"
+        title="Rename project"
+      >
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitRename();
+          }}
+        >
+          <Input
+            autoFocus
+            label="Project name"
+            onChange={(event) => setRenameTitle(event.target.value)}
+            value={renameTitle}
+          />
+        </form>
+      </Modal>
+      <Modal
+        description="Move this project and its generated email history to another workspace."
+        footer={
+          <>
+            <Button onClick={closeActionDialog} variant="ghost">
+              Cancel
+            </Button>
+            <Button
+              disabled={!selectedTransferWorkspace || transferMutation.isPending}
+              onClick={submitTransfer}
+              variant="primary"
+            >
+              {transferMutation.isPending ? "Transferring" : "Transfer"}
+            </Button>
+          </>
+        }
+        onClose={closeActionDialog}
+        open={actionDialog?.type === "transfer"}
+        size="sm"
+        title="Transfer to workspace"
+      >
+        {transferTargets.length ? (
+          <div className="grid gap-3">
+            <Select
+              label="Workspace"
+              onChange={setTransferWorkspaceId}
+              options={transferTargets.map((workspace) => ({
+                label: workspace.name,
+                value: workspace.id,
+              }))}
+              value={transferWorkspaceId}
+            />
+            {selectedTransferWorkspace ? (
+              <p className="m-0 text-[13px] leading-5 text-madoo-ink-muted">
+                This project will disappear from the current workspace after transfer.
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="m-0 text-[13px] leading-5 text-madoo-ink-muted">
+            No other workspace available.
+          </p>
+        )}
+      </Modal>
+      <Modal
+        description="This project and its generated emails will be permanently removed."
+        footer={
+          <>
+            <Button onClick={closeActionDialog} variant="ghost">
+              Cancel
+            </Button>
+            <Button
+              disabled={deleteMutation.isPending}
+              onClick={submitDelete}
+              variant="danger"
+            >
+              {deleteMutation.isPending ? "Deleting" : "Delete"}
+            </Button>
+          </>
+        }
+        onClose={closeActionDialog}
+        open={actionDialog?.type === "delete"}
+        size="sm"
+        title="Delete project"
+      >
+        <p className="m-0 text-[13px] leading-5 text-madoo-ink-muted">
+          {actionDialog?.type === "delete"
+            ? `Delete "${projectTitle(actionDialog.email)}"?`
+            : null}
+        </p>
+      </Modal>
+    </>
   );
 }
 

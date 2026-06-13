@@ -6,12 +6,16 @@ import {
   CreateEmailSchema,
   EmailChatMessageDtoSchema,
   EmailDtoSchema,
+  RenameEmailSchema,
+  TransferEmailSchema,
   UpdateEmailVariantVariableSchemaSchema,
   type CreateEmailFromTemplateInput,
   type CreateEmailInput,
   type EditEmailInput,
   type EmailChatMessageDto,
   type EmailDto,
+  type RenameEmailInput,
+  type TransferEmailInput,
   type UpdateEmailVariantVariableSchemaInput,
 } from "@madoo/shared";
 import { z } from "zod";
@@ -22,6 +26,8 @@ export type {
   EditEmailInput,
   EmailChatMessageDto,
   EmailDto,
+  RenameEmailInput,
+  TransferEmailInput,
   UpdateEmailVariantVariableSchemaInput,
 } from "@madoo/shared";
 
@@ -56,6 +62,30 @@ export async function fetchEmails(): Promise<EmailDto[]> {
 
 export async function deleteEmail(emailId: string): Promise<void> {
   await FetchWrapper<unknown>(`/emails/${emailId}`, { method: "DELETE" });
+}
+
+export async function renameEmail(
+  emailId: string,
+  input: RenameEmailInput,
+): Promise<EmailDto> {
+  const body = RenameEmailSchema.parse(input);
+  const raw = await FetchWrapper<unknown>(`/emails/${emailId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return EmailDtoSchema.parse(raw);
+}
+
+export async function transferEmail(
+  emailId: string,
+  input: TransferEmailInput,
+): Promise<EmailDto> {
+  const body = TransferEmailSchema.parse(input);
+  const raw = await FetchWrapper<unknown>(`/emails/${emailId}/transfer`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return EmailDtoSchema.parse(raw);
 }
 
 export async function saveEmailTemplate(emailId: string): Promise<void> {

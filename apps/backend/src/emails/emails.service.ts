@@ -16,6 +16,8 @@ import {
   type EmailChatMessageDto,
   type EmailDto,
   type EmailVariantDto,
+  type RenameEmailInput,
+  type TransferEmailInput,
   type UpdateEmailVariantVariableSchemaInput,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
@@ -131,6 +133,65 @@ export class EmailsService {
     await this.workspaces.assertMembership(userId, workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     await this.prisma.email.delete({ where: { id: emailId } });
+  }
+
+  async rename(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: RenameEmailInput,
+  ): Promise<EmailDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    await this.prisma.email.update({
+      where: { id: emailId },
+      data: { title: dto.title.trim() },
+    });
+    return this.toDto(emailId);
+  }
+
+  async transfer(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: TransferEmailInput,
+  ): Promise<EmailDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.workspaces.assertMembership(userId, dto.targetWorkspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+
+    if (workspaceId === dto.targetWorkspaceId) {
+      throw new BadRequestException("Email already belongs to this workspace.");
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.email.update({
+        where: { id: emailId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.emailVariant.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.emailGenerationRun.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.emailChatMessage.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.emailVfsSnapshot.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.supportTicket.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+    ]);
+
+    return this.toDto(emailId);
   }
 
   /**

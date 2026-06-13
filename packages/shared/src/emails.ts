@@ -202,6 +202,18 @@ export const EmailDtoSchema = z.object({
 
 export type EmailDto = z.infer<typeof EmailDtoSchema>;
 
+export const RenameEmailSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+});
+
+export type RenameEmailInput = z.infer<typeof RenameEmailSchema>;
+
+export const TransferEmailSchema = z.object({
+  targetWorkspaceId: z.string().min(1),
+});
+
+export type TransferEmailInput = z.infer<typeof TransferEmailSchema>;
+
 export const EmailChatMessageDtoSchema = z.object({
   id: z.string(),
   role: z.enum(["USER", "ASSISTANT", "SYSTEM"]),
