@@ -29,13 +29,13 @@ const hintClasses = "text-[11.5px] leading-[1.4] text-madoo-ink-faint";
 
 const wrapperSizeClasses: Record<InputSize, string> = {
   sm: "h-7",
-  md: "h-[34px]",
+  md: "h-8.5",
   lg: "h-10",
 };
 
 const wrapperVariantClasses: Record<InputVariant, string> = {
-  default: "bg-madoo-surface shadow-[var(--shadow-border)]",
-  filled: "bg-madoo-surface-2 shadow-[var(--shadow-border)]",
+  default: "bg-madoo-surface shadow-madoo-border",
+  filled: "bg-madoo-surface-2 shadow-madoo-border",
   ghost: "bg-transparent shadow-none focus-within:shadow-none",
 };
 
@@ -67,11 +67,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       ) : null}
       <div
         className={cx(
-          "relative flex items-center rounded-[var(--radius-lg)] transition-[box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-within:shadow-[var(--shadow-border-accent),0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)]",
+          "relative flex items-center rounded-lg transition-[box-shadow] duration-(--duration-fast) ease-out focus-within:shadow-[var(--shadow-border-accent),0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)]",
           wrapperVariantClasses[variant],
           wrapperSizeClasses[inputSize],
           error &&
-            "shadow-[var(--shadow-border-danger)] focus-within:shadow-[var(--shadow-border-danger),0_0_0_3px_color-mix(in_srgb,var(--danger)_18%,transparent)]",
+            "shadow-(--shadow-border-danger) focus-within:shadow-[var(--shadow-border-danger),0_0_0_3px_color-mix(in_srgb,var(--danger)_18%,transparent)]",
           className,
         )}
       >

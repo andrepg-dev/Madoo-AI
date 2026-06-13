@@ -31,13 +31,13 @@ const variantClasses: Record<ButtonVariant, string> = {
   accent:
     "bg-madoo-accent text-madoo-accent-fg enabled:hover:bg-madoo-accent-deep disabled:bg-madoo-surface-2 disabled:text-madoo-ink-faint disabled:opacity-100",
   secondary:
-    "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)] enabled:hover:bg-madoo-bg",
+    "bg-madoo-surface text-madoo-ink shadow-madoo-border enabled:hover:bg-madoo-bg",
   ghost:
     "bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-bg enabled:hover:text-madoo-ink",
   icon:
     "h-8 w-8 p-0! bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-bg enabled:hover:text-madoo-ink",
   dashed:
-    "bg-transparent text-madoo-ink-faint shadow-[var(--shadow-border)] enabled:hover:bg-madoo-bg enabled:hover:text-madoo-ink-soft",
+    "bg-transparent text-madoo-ink-faint shadow-madoo-border enabled:hover:bg-madoo-bg enabled:hover:text-madoo-ink-soft",
   danger:
     "bg-madoo-danger text-white enabled:hover:bg-[#87311f]",
 };
@@ -68,7 +68,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       className={cx(
-        "inline-flex cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-lg)] border-0 font-madoo-sans font-medium leading-none no-underline transition-[background,color,box-shadow,opacity] duration-[var(--duration-fast)] ease-[var(--ease-out)] disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60",
+        "inline-flex cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg border-0 font-madoo-sans font-medium leading-none no-underline transition-[background,color,box-shadow,opacity] duration-(--duration-fast) ease-out disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60",
         variantClasses[variant],
         sizeClasses[size],
         block && "w-full",
@@ -82,9 +82,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {shortcut ? (
         <kbd
           className={cx(
-            "ml-1 inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-white/10 font-madoo-mono text-[10.5px] font-medium leading-none text-inherit",
+            "ml-1 inline-flex h-5.5 w-5.5 shrink-0 items-center justify-center whitespace-nowrap rounded-sm bg-white/10 font-madoo-mono text-[10.5px] font-medium leading-none text-inherit",
             ["secondary", "ghost", "dashed"].includes(variant) &&
-              "bg-madoo-bg-2 text-madoo-ink-soft shadow-[var(--shadow-border)]",
+              "bg-madoo-bg-2 text-madoo-ink-soft shadow-madoo-border",
           )}
         >
           {shortcut}

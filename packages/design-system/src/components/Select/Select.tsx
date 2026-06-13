@@ -62,7 +62,7 @@ const hintClasses = "text-[11.5px] leading-[1.4] text-madoo-ink-faint";
 const selectSizeClasses: Record<SelectSize, string> = {
   sm: "text-[12.5px] [--select-gap:6px] [--select-height:30px] [--select-menu-title:12px] [--select-option-padding:7px_10px] [--select-padding:0_10px]",
   md: "text-[14px] [--select-gap:8px] [--select-height:38px] [--select-menu-title:13px] [--select-option-padding:10px_12px] [--select-padding:0_14px]",
-  lg: "rounded-[var(--radius-2xl)] text-[32px] [--select-gap:18px] [--select-height:76px] [--select-menu-title:28px] [--select-option-padding:18px_24px] [--select-padding:0_28px] [--select-radius:var(--radius-2xl)] [--select-menu-padding:16px]",
+  lg: "rounded-2xl text-[32px] [--select-gap:18px] [--select-height:76px] [--select-menu-title:28px] [--select-option-padding:18px_24px] [--select-padding:0_28px] [--select-radius:var(--radius-2xl)] [--select-menu-padding:16px]",
 };
 
 const selectVariantClasses: Record<SelectVariant, string> = {
@@ -72,8 +72,8 @@ const selectVariantClasses: Record<SelectVariant, string> = {
 };
 
 const nativeSizeClasses: Record<NativeSelectSize, string> = {
-  sm: "h-7 py-0 pl-2.5 pr-[30px] text-xs",
-  md: "h-[34px] py-0 pl-3 pr-9 text-[14px]",
+  sm: "h-7 py-0 pl-2.5 pr-7.5 text-xs",
+  md: "h-8.5 py-0 pl-3 pr-9 text-[14px]",
   lg: "h-10 py-0 pl-3.5 pr-10 text-[14px]",
 };
 
@@ -144,9 +144,9 @@ export function Select({
       <button
         type="button"
         className={cx(
-          "group inline-flex min-h-[var(--select-height)] cursor-pointer items-center justify-between gap-[var(--select-gap)] whitespace-nowrap rounded-[var(--select-radius)] border-0 bg-[var(--select-bg)] p-[var(--select-padding)] font-[inherit] font-normal leading-none text-[color:var(--ink)] shadow-[var(--select-shadow)] transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface)] hover:shadow-[var(--shadow-border-rule-hover)] data-[state=open]:bg-[var(--surface)] data-[state=open]:shadow-[var(--shadow-border-rule-hover)]",
+          "group inline-flex min-h-[var(--select-height)] cursor-pointer items-center justify-between gap-[var(--select-gap)] whitespace-nowrap rounded-[var(--select-radius)] border-0 bg-(--select-bg) p-[var(--select-padding)] font-[inherit] font-normal leading-none text-(--ink) shadow-[var(--select-shadow)] transition-[background,color,box-shadow] duration-(--duration-fast) ease-out hover:bg-(--surface) hover:shadow-(--shadow-border-rule-hover) data-[state=open]:bg-(--surface) data-[state=open]:shadow-(--shadow-border-rule-hover)",
           variant === "ghost" &&
-            "hover:bg-[rgb(var(--rule-rgb)_/_0.06)] hover:shadow-none data-[state=open]:bg-[rgb(var(--rule-rgb)_/_0.06)] data-[state=open]:shadow-none",
+            "hover:bg-[rgb(var(--rule-rgb)/0.06)] hover:shadow-none data-[state=open]:bg-[rgb(var(--rule-rgb)/0.06)] data-[state=open]:shadow-none",
         )}
         aria-label={label}
         aria-haspopup="listbox"
@@ -157,7 +157,7 @@ export function Select({
       >
         <span className="overflow-hidden text-ellipsis">{displayValue}</span>
         <span
-          className="inline-flex origin-center text-[color:var(--ink-faint)] transition-[color,transform] duration-[var(--duration-base)] ease-[var(--ease-out)] group-data-[state=open]:rotate-180 group-data-[state=open]:text-[color:var(--ink-muted)]"
+          className="inline-flex origin-center text-(--ink-faint) transition-[color,transform] duration-(--duration-base) ease-out group-data-[state=open]:rotate-180 group-data-[state=open]:text-(--ink-muted)"
           aria-hidden="true"
         >
           <Icon name="chevronDown" size={size === "lg" ? 22 : 12} />
@@ -171,14 +171,14 @@ export function Select({
           aria-hidden={!open}
           data-state={open ? "open" : "closed"}
           className={cx(
-            "absolute left-0 top-[calc(100%+10px)] z-[var(--z-popover)] flex min-w-[max(100%,180px)] origin-top-left flex-col gap-0.5 rounded-[var(--select-radius)] bg-[var(--surface)] p-[var(--select-menu-padding)] shadow-[var(--shadow-border)] will-change-[opacity,transform] [--madoo-select-enter-x:3px] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-select-out data-[state=open]:animate-madoo-select-in motion-reduce:animate-none",
+            "absolute left-0 top-[calc(100%+10px)] z-[var(--z-popover)] flex min-w-[max(100%,180px)] origin-top-left flex-col gap-0.5 rounded-[var(--select-radius)] bg-(--surface) p-[var(--select-menu-padding)] shadow-madoo-border will-change-[opacity,transform] [--madoo-select-enter-x:3px] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-select-out data-[state=open]:animate-madoo-select-in motion-reduce:animate-none",
             align === "end" &&
               "left-auto right-0 origin-top-right [--madoo-select-enter-x:-3px]",
           )}
           style={menuWidth ? { minWidth: menuWidth } : undefined}
         >
           {menuTitle ?? label ? (
-            <div className="p-[var(--select-option-padding)] text-[length:var(--select-menu-title)] font-medium leading-none text-[color:var(--ink-muted)]">
+            <div className="p-[var(--select-option-padding)] text-(length:--select-menu-title) font-medium leading-none text-(--ink-muted)">
               {menuTitle ?? label}
             </div>
           ) : null}
@@ -192,7 +192,7 @@ export function Select({
                 role="option"
                 aria-selected={selectedOption}
                 disabled={option.disabled}
-                className="flex w-full animate-madoo-select-option-in cursor-pointer items-center justify-between gap-4 rounded-[var(--radius-lg)] border-0 bg-transparent p-[var(--select-option-padding)] text-left font-[inherit] font-normal leading-[1.2] text-[color:var(--ink)] transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none aria-selected:bg-transparent disabled:cursor-not-allowed disabled:text-[color:var(--ink-faint)] motion-reduce:animate-none"
+                className="flex w-full animate-madoo-select-option-in cursor-pointer items-center justify-between gap-4 rounded-lg border-0 bg-transparent p-[var(--select-option-padding)] text-left font-[inherit] font-normal leading-[1.2] text-(--ink) transition-[background,color] duration-(--duration-fast) ease-out hover:bg-(--surface-2) focus-visible:bg-(--surface-2) focus-visible:outline-none aria-selected:bg-transparent disabled:cursor-not-allowed disabled:text-(--ink-faint) motion-reduce:animate-none"
                 style={{ animationDelay: `${Math.min(index, 4) * 16}ms` }}
                 onClick={() => {
                   if (option.disabled) return;
@@ -243,9 +243,9 @@ export const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
             data-madoo-control="true"
             aria-invalid={error ? true : undefined}
             className={cx(
-              "w-full cursor-pointer appearance-none rounded-[var(--radius-lg)] border-0 bg-[var(--surface)] font-madoo-sans text-[color:var(--ink)] shadow-[var(--shadow-border)] transition-[background,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] enabled:hover:bg-[var(--surface-2)] enabled:hover:shadow-[var(--shadow-border-rule-hover)] focus:outline-none focus:shadow-[var(--shadow-border-accent),0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)] focus-visible:outline-none",
+              "w-full cursor-pointer appearance-none rounded-lg border-0 bg-(--surface) font-madoo-sans text-(--ink) shadow-madoo-border transition-[background,box-shadow] duration-(--duration-fast) ease-out enabled:hover:bg-(--surface-2) enabled:hover:shadow-(--shadow-border-rule-hover) focus:outline-none focus:shadow-[var(--shadow-border-accent),0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)] focus-visible:outline-none",
               nativeSizeClasses[selectSize],
-              error && "shadow-[var(--shadow-border-danger)]",
+              error && "shadow-(--shadow-border-danger)",
               className,
             )}
             {...rest}
@@ -259,7 +259,7 @@ export const NativeSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
                 ))}
           </select>
           <span
-            className="pointer-events-none absolute right-3 inline-flex text-[color:var(--ink-faint)]"
+            className="pointer-events-none absolute right-3 inline-flex text-(--ink-faint)"
             aria-hidden="true"
           >
             <Icon name="chevronDown" size={12} />

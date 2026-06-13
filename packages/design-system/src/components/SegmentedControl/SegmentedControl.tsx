@@ -67,14 +67,14 @@ export function SegmentedControl({
       aria-label={ariaLabel}
       style={indicatorStyle}
       className={cx(
-        "relative inline-flex gap-1 overflow-x-auto rounded-full bg-madoo-surface-2/35 p-1 font-madoo-sans shadow-[var(--shadow-border)] backdrop-blur-[18px] backdrop-saturate-150",
+        "relative inline-flex gap-1 overflow-x-auto rounded-full bg-madoo-surface-2/35 p-1 font-madoo-sans shadow-madoo-border backdrop-blur-[18px] backdrop-saturate-150",
         variant === "minimal" && "gap-1.5 bg-transparent p-0 shadow-none backdrop-blur-none",
         className,
       )}
     >
       <span
         className={cx(
-          "pointer-events-none absolute bottom-1 left-0 top-1 z-0 w-[var(--madoo-segmented-indicator-width)] rounded-full bg-madoo-surface opacity-0 shadow-[var(--shadow-border)] transition-[transform,width,opacity] duration-[var(--duration-base)] ease-[var(--ease-out)] [transform:translateX(var(--madoo-segmented-indicator-x,0))]",
+          "pointer-events-none absolute bottom-1 left-0 top-1 z-0 w-[var(--madoo-segmented-indicator-width)] rounded-full bg-madoo-surface opacity-0 shadow-madoo-border transition-[transform,width,opacity] duration-(--duration-base) ease-out [transform:translateX(var(--madoo-segmented-indicator-x,0))]",
           indicator.ready && "opacity-100",
           variant === "minimal" && "hidden",
         )}
@@ -91,7 +91,7 @@ export function SegmentedControl({
           role="tab"
           aria-pressed={value === item.value}
           aria-selected={value === item.value}
-          className="relative z-10 cursor-pointer appearance-none whitespace-nowrap rounded-full border-0 bg-transparent px-3 py-1.5 font-[inherit] text-[12.5px] font-medium text-madoo-ink-muted transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:text-madoo-ink aria-pressed:text-madoo-ink"
+          className="relative z-10 cursor-pointer appearance-none whitespace-nowrap rounded-full border-0 bg-transparent px-3 py-1.5 font-[inherit] text-[12.5px] font-medium text-madoo-ink-muted transition-colors duration-(--duration-fast) ease-out hover:text-madoo-ink aria-pressed:text-madoo-ink"
           onClick={() => onChange(item.value)}
         >
           {item.label}

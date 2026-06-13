@@ -30,7 +30,7 @@ export function Tag({
   return (
     <span
       className={cx(
-        "inline-flex w-fit items-center gap-[5px] rounded-[var(--radius-lg)] px-[9px] py-[5px] font-madoo-mono text-xs font-medium",
+        "inline-flex w-fit items-center gap-1.25 rounded-lg px-2.25 py-1.25 font-madoo-mono text-xs font-medium",
         toneClasses[tone],
         size === "sm" && "px-1.5 py-0.5 text-[10.5px]",
         sans && "font-madoo-sans",

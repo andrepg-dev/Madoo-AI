@@ -17,7 +17,7 @@ const variantClasses: Record<IconButtonVariant, string> = {
   soft: "bg-madoo-surface-2 text-madoo-ink-soft enabled:hover:bg-madoo-surface enabled:hover:text-madoo-ink",
   solid: "bg-madoo-ink text-madoo-accent-fg enabled:hover:bg-madoo-ink-soft",
   outline:
-    "bg-madoo-surface text-madoo-ink-soft shadow-[var(--shadow-border)] enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
+    "bg-madoo-surface text-madoo-ink-soft shadow-madoo-border enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
   ghost: "bg-transparent text-madoo-ink-soft enabled:hover:bg-madoo-surface-2 enabled:hover:text-madoo-ink",
   accent:
     "bg-madoo-accent text-madoo-accent-fg enabled:hover:bg-madoo-accent-deep",
@@ -46,7 +46,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         ref={ref}
         type={type}
         className={cx(
-          "inline-flex cursor-pointer items-center justify-center rounded-[var(--radius-lg)] border-0 transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] disabled:cursor-not-allowed disabled:opacity-60",
+          "inline-flex cursor-pointer items-center justify-center rounded-lg border-0 transition-[background,color,box-shadow] duration-(--duration-fast) ease-out disabled:cursor-not-allowed disabled:opacity-60",
           variantClasses[variant],
           sizeClasses[size],
           className,

@@ -24,9 +24,9 @@ const hintClasses = "text-[11.5px] leading-[1.4] text-madoo-ink-faint";
 
 const wrapperVariantClasses: Record<TextareaVariant, string> = {
   default:
-    "bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] shadow-[var(--shadow-border-ink)]",
+    "bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] shadow-(--shadow-border-ink)",
   filled:
-    "bg-[color-mix(in_srgb,var(--surface)_60%,var(--accent-soft))] shadow-[var(--shadow-border-ink)]",
+    "bg-[color-mix(in_srgb,var(--surface)_60%,var(--accent-soft))] shadow-(--shadow-border-ink)",
   ghost: "bg-transparent shadow-none focus-within:shadow-none",
 };
 
@@ -58,9 +58,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         ) : null}
         <div
           className={cx(
-            "relative flex rounded-[var(--radius-lg)] transition-[box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-within:shadow-[var(--shadow-border-accent)]",
+            "relative flex rounded-lg transition-[box-shadow] duration-(--duration-fast) ease-out focus-within:shadow-(--shadow-border-accent)",
             wrapperVariantClasses[variant],
-            error && "shadow-[var(--shadow-border-danger)]",
+            error && "shadow-(--shadow-border-danger)",
             className,
           )}
         >

@@ -22,8 +22,8 @@ function getInitials(name?: string) {
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
-  xs: "h-[22px] w-[22px] text-[11px]",
-  sm: "h-6.5 w-6.5 ml-[1px] text-[13px]",
+  xs: "h-5.5 w-5.5 text-[11px]",
+  sm: "h-6.5 w-6.5 ml-0.25 text-[13px]",
   md: "h-8 w-8 text-[15px]",
   lg: "h-11 w-11 text-[22px]",
   xl: "h-16 w-16 text-[28px]",

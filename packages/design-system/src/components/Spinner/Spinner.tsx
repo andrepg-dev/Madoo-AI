@@ -20,7 +20,7 @@ export function Spinner({
       className={cx(
         "inline-block animate-spin rounded-full border-current border-r-transparent",
         size === "sm" && "h-3 w-3 border-[1.5px]",
-        size === "md" && "h-[18px] w-[18px] border-2",
+        size === "md" && "h-4.5 w-4.5 border-2",
         size === "lg" && "h-7 w-7 border-[3px]",
         className,
       )}

@@ -29,10 +29,10 @@ export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"
 }
 
 const sizeClasses: Record<ModalSize, string> = {
-  sm: "max-w-[380px]",
-  md: "max-w-[480px]",
-  lg: "max-w-[640px]",
-  xl: "max-w-[820px]",
+  sm: "max-w-95",
+  md: "max-w-120",
+  lg: "max-w-160",
+  xl: "max-w-205",
 };
 
 function useModalPresence(open: boolean) {
@@ -98,14 +98,14 @@ export function Modal({
         onClick={stop}
         data-state={open ? "open" : "closed"}
         className={cx(
-          "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[var(--radius-panel)] bg-madoo-surface font-madoo-sans text-madoo-ink shadow-[var(--shadow-border)] origin-center will-change-[opacity,transform] data-[state=closed]:animate-madoo-modal-out data-[state=open]:animate-madoo-modal-in max-[640px]:max-h-[95vh] max-[640px]:max-w-full max-[640px]:origin-bottom max-[640px]:rounded-b-none motion-reduce:animate-none",
+          "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-(--radius-panel) bg-madoo-surface font-madoo-sans text-madoo-ink shadow-madoo-border origin-center will-change-[opacity,transform] data-[state=closed]:animate-madoo-modal-out data-[state=open]:animate-madoo-modal-in max-[640px]:max-h-[95vh] max-[640px]:max-w-full max-[640px]:origin-bottom max-[640px]:rounded-b-none motion-reduce:animate-none",
           sizeClasses[size],
           className,
         )}
         {...rest}
       >
         {(eyebrow || title || description || !hideCloseButton) && (
-          <header className="flex animate-madoo-modal-content-in items-start gap-3.5 px-6 py-[18px] shadow-[var(--shadow-border-bottom)] max-[640px]:px-4 max-[640px]:py-3.5 motion-reduce:animate-none">
+          <header className="flex animate-madoo-modal-content-in items-start gap-3.5 px-6 py-4.5 shadow-(--shadow-border-bottom) max-[640px]:px-4 max-[640px]:py-3.5 motion-reduce:animate-none">
             <div className="min-w-0 flex-1">
               {eyebrow ? (
                 <div className="text-[11px] font-medium uppercase tracking-[1px] text-madoo-ink-faint">
@@ -126,7 +126,7 @@ export function Modal({
                 type="button"
                 aria-label="Close"
                 onClick={onClose}
-                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-0 bg-madoo-surface-2 text-madoo-ink-soft transition-[background,color,transform] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:scale-[1.04] hover:bg-madoo-border hover:text-madoo-ink active:scale-[0.98]"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-0 bg-madoo-surface-2 text-madoo-ink-soft transition-[background,color,transform] duration-(--duration-fast) ease-out hover:scale-[1.04] hover:bg-madoo-border hover:text-madoo-ink active:scale-[0.98]"
               >
                 <Icon name="x" size={14} />
               </button>
@@ -137,7 +137,7 @@ export function Modal({
           {children}
         </div>
         {footer ? (
-          <footer className="flex animate-madoo-modal-content-in flex-wrap justify-between gap-2 px-5 py-3.5 shadow-[var(--shadow-border-top)] [animation-delay:36ms] max-[640px]:px-4 max-[640px]:py-3 motion-reduce:animate-none">
+          <footer className="flex animate-madoo-modal-content-in flex-wrap justify-between gap-2 px-5 py-3.5 shadow-(--shadow-border-top) [animation-delay:36ms] max-[640px]:px-4 max-[640px]:py-3 motion-reduce:animate-none">
             {footer}
           </footer>
         ) : null}
