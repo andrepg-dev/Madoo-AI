@@ -5,6 +5,7 @@ import {
   fetchEmail,
   fetchEmailChat,
 } from "@/actions/emails";
+import { fetchBillingOverview } from "@/actions/billing";
 import {
   createGmailDraft,
   createOutlookDraft,
@@ -19,12 +20,14 @@ import {
 } from "@/lib/export-instructions";
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
+import { TestingModal } from "@/components/project/testing/TestingModal";
 import {
   consumeEmailSseStream,
   type StreamEmailEvent,
 } from "@/lib/email-stream";
 import { playCompletionSound } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
 import {
   ArrowDown01Icon,
@@ -32,18 +35,35 @@ import {
   Copy01Icon,
   Download01Icon,
   Edit02Icon,
+  HelpCircleIcon,
   Moon02Icon,
   PanelLeftIcon,
   PanelRightIcon,
+  Plug01Icon,
   RefreshIcon,
+  Settings01Icon,
   SparklesIcon,
   SourceCodeIcon,
+  StarIcon,
   Sun01Icon,
   ThumbsDownIcon,
   ThumbsUpIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Button, Modal, SegmentedControl, useToast } from "@madoo/design-system";
+import {
+  Avatar,
+  Button,
+  Card,
+  Dropdown,
+  DropdownContent,
+  DropdownDivider,
+  DropdownItem,
+  DropdownTrigger,
+  Modal,
+  ProgressBar,
+  SegmentedControl,
+  useToast,
+} from "@madoo/design-system";
 import type {
   ConnectionProvider,
   EmailChatMessageDto,
@@ -92,36 +112,168 @@ function ActionButton({
   );
 }
 
-const userGreeting = "Hi madoo, how are you?";
+function HeaderMenuIcon({ icon }: { icon: IconSvgElement }) {
+  return (
+    <HugeiconsIcon
+      aria-hidden="true"
+      icon={icon}
+      primaryColor="currentColor"
+      size={16}
+      strokeWidth={1.55}
+    />
+  );
+}
 
-const aiGreeting = `¡Hola! Todo bien por aquí, ¿y tú? 😊
+function formatCreditReset(value: string | undefined): string {
+  if (!value) return "next month";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return "next month";
+  }
+}
 
-Estoy listo para ayudarte a crear o modificar tu aplicación web. ¿Qué te gustaría construir hoy? Por ejemplo:
+function ConversationTitleDropdown({ title }: { title: string }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const user = useAuthStore((state) => state.user);
+  const workspaceId = useClientStore((state) => state.workspaceId);
+  const [starred, setStarred] = useState(false);
 
-- Una página de inicio o landing page
-- Un blog o portafolio
-- Una app con base de datos y login de usuarios
-- Una tienda online
+  const { data: billingOverview, isLoading: billingLoading } = useQuery({
+    queryKey: ["billing-overview", workspaceId],
+    queryFn: fetchBillingOverview,
+    enabled: Boolean(user && workspaceId),
+  });
 
-Cuéntame tu idea y empezamos. 🚀`;
+  const usage = billingOverview?.usage.aiGenerations;
+  const usageLimit = usage?.limit ?? 0;
+  const creditsLeft =
+    usageLimit === -1 ? null : Math.max(usageLimit - (usage?.used ?? 0), 0);
+  const creditsPct =
+    usageLimit === -1
+      ? 100
+      : usageLimit > 0 && creditsLeft !== null
+        ? Math.min(100, Math.round((creditsLeft / usageLimit) * 100))
+        : 0;
+  const creditsText = billingLoading
+    ? "Loading"
+    : usageLimit === -1
+      ? "Unlimited"
+      : `${creditsLeft ?? 0} left`;
 
-const userCampaignRequest =
-  "Create a polished launch email for our new AI campaign builder. Keep it concise and make the CTA feel clear.";
-const suggestedEmailSubject = "Build campaigns faster with Madoo";
+  return (
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <Button
+          className="h-8 max-w-[min(440px,calc(100vw-32px))] px-3 py-0!"
+          variant="ghost"
+        >
+          <Image
+            src={"/madoo-transparent.png"}
+            alt="Madoo AI Logo"
+            width={26}
+            height={26}
+          />
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-medium">{title}</span>
+            <HugeiconsIcon
+              aria-hidden="true"
+              icon={ArrowDown01Icon}
+              primaryColor="currentColor"
+              className="size-4 shrink-0 text-madoo-ink-muted"
+            />
+          </div>
+        </Button>
+      </DropdownTrigger>
+      <DropdownContent align="start" className="w-64 gap-1 p-1!">
+        <DropdownItem
+          className="justify-start! gap-2 px-2! py-1!"
+          onSelect={() => router.push("/settings")}
+        >
+          <Avatar
+            name={user?.name ?? user?.email ?? "User"}
+            src={user?.avatarUrl ?? undefined}
+            size="sm"
+          />
+          <span className="grid min-w-0 flex-1 gap-0.5 text-left">
+            <span className="truncate font-medium">
+              {user?.name ?? "User profile"}
+            </span>
+            <span className="truncate text-xs text-madoo-ink-muted">
+              {user?.email ?? "Manage your profile"}
+            </span>
+          </span>
+        </DropdownItem>
 
-const aiCampaignResponse = `Here’s a sharper direction:
+        <Card surface="secondary" className="grid gap-1.5 p-2!">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-(length:--font-size-base) font-normal">
+              Credits
+            </span>
+            <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+              {creditsText}
+            </span>
+          </div>
+          <ProgressBar value={creditsPct} tone="ink" label="Credits left" />
+          <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+            Credits reset {formatCreditReset(usage?.resetsAt)}
+          </span>
+        </Card>
 
-**Subject:** Build campaigns faster with Madoo
+        <DropdownDivider />
 
-Hi there,
-
-Meet Madoo, your AI workspace for turning campaign ideas into polished email templates without starting from a blank page.
-
-- Draft launch emails in minutes
-- Adjust tone and length without rewriting
-- Keep brand structure consistent across campaigns
-
-**CTA:** Start your next campaign`;
+        <DropdownItem
+          className="justify-start! px-2! py-1! text-[13px]!"
+          onSelect={() => router.push("/settings")}
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={Settings01Icon} />
+            Settings
+          </span>
+        </DropdownItem>
+        <DropdownItem
+          className="justify-start! px-2! py-1! text-[13px]!"
+          onSelect={() =>
+            toast({ tone: "default", title: "Providers coming soon" })
+          }
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={Plug01Icon} />
+            Providers
+          </span>
+        </DropdownItem>
+        <DropdownItem
+          className="justify-start! px-2! py-1! text-[13px]!"
+          onSelect={() => {
+            setStarred((value) => !value);
+            toast({
+              tone: "success",
+              title: starred ? "Project unstarred" : "Project starred",
+            });
+          }}
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={StarIcon} />
+            {starred ? "Unstar project" : "Star project"}
+          </span>
+        </DropdownItem>
+        <DropdownItem
+          className="justify-start! px-2! py-1! text-[13px]!"
+          onSelect={() => router.push("/settings?area=support")}
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={HelpCircleIcon} />
+            Help
+          </span>
+        </DropdownItem>
+      </DropdownContent>
+    </Dropdown>
+  );
+}
 
 type ChatMessage = {
   id: string;
@@ -168,20 +320,7 @@ function mapChatMessages(
 ): ChatMessage[] {
   if (!chat?.length) {
     if (!email) {
-      return [
-        { id: "default-user", role: "user", content: userGreeting },
-        { id: "default-ai", role: "assistant", content: aiGreeting },
-        {
-          id: "default-request",
-          role: "user",
-          content: userCampaignRequest,
-        },
-        {
-          id: "default-response",
-          role: "assistant",
-          content: aiCampaignResponse,
-        },
-      ];
+      return [];
     }
     return [
       {
@@ -261,63 +400,6 @@ function HeaderPillButton({
       <span>{children}</span>
     </Button>
   );
-}
-
-function getEmailTemplateSrcDoc(theme: TemplateTheme) {
-  const dark = theme === "dark";
-  const pageBg = dark ? "#111827" : "#f5f7fb";
-  const cardBg = dark ? "#171923" : "#ffffff";
-  const text = dark ? "#f9fafb" : "#101114";
-  const muted = dark ? "#a8b0bd" : "#5f6673";
-  const accent = dark ? "#8fd6ff" : "#356bff";
-  const divider = dark ? "#2a3142" : "#e5e9f2";
-
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      html { margin: 0; overflow: hidden; }
-      body { margin: 0; overflow: hidden; background: ${pageBg}; font-family: Arial, sans-serif; color: ${text}; }
-      .wrap { width: 100%; padding: 32px 12px; box-sizing: border-box; }
-      .email { max-width: 640px; margin: 0 auto; overflow: hidden; border-radius: 18px; background: ${cardBg}; box-shadow: 0 24px 70px rgba(16,17,20,0.12); }
-      .hero { border-radius: 18px 18px 0 0; padding: 38px 36px 30px; background: linear-gradient(135deg, ${accent}, ${dark ? "#202637" : "#eef5ff"}); color: ${dark ? "#07111f" : "#ffffff"}; }
-      .eyebrow { margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-      h1 { margin: 0; font-size: 34px; line-height: 1.04; letter-spacing: 0; }
-      .body { padding: 34px 36px 38px; }
-      p { margin: 0; color: ${muted}; font-size: 16px; line-height: 1.6; }
-      .grid { display: grid; gap: 12px; margin: 28px 0; }
-      .item { border: 1px solid ${divider}; border-radius: 14px; padding: 16px; }
-      .item strong { display: block; margin-bottom: 6px; color: ${text}; font-size: 15px; }
-      .cta { display: inline-block; margin-top: 4px; border-radius: 999px; background: ${accent}; color: ${dark ? "#07111f" : "#ffffff"}; padding: 13px 20px; font-size: 14px; font-weight: 700; text-decoration: none; }
-      @media (max-width: 520px) {
-        .wrap { padding: 0; }
-        .hero, .body { padding-left: 22px; padding-right: 22px; }
-        h1 { font-size: 28px; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <article class="email">
-        <section class="hero">
-          <p class="eyebrow">Madoo AI</p>
-          <h1>Build campaign emails from one focused prompt.</h1>
-        </section>
-        <section class="body">
-          <p>Turn rough launch ideas into polished, responsive email templates your team can review, test, and export faster.</p>
-          <div class="grid">
-            <div class="item"><strong>Faster drafting</strong><p>Generate structure, copy, and CTA direction in seconds.</p></div>
-            <div class="item"><strong>Production-ready preview</strong><p>Check responsive layout before sending work downstream.</p></div>
-            <div class="item"><strong>Brand-aware output</strong><p>Keep spacing, tone, and visual hierarchy consistent.</p></div>
-          </div>
-          <a class="cta" href="#">Start next campaign</a>
-        </section>
-      </article>
-    </div>
-  </body>
-</html>`;
 }
 
 type ExportTab = "email" | "application" | "file";
@@ -827,6 +909,7 @@ function EmailPreviewSidebar({
   expanded,
   mode,
   onOpenExport,
+  onOpenTesting,
   onToggleExpanded,
   open,
   setMode,
@@ -840,6 +923,7 @@ function EmailPreviewSidebar({
   expanded: boolean;
   mode: PreviewMode;
   onOpenExport: () => void;
+  onOpenTesting: () => void;
   onToggleExpanded: () => void;
   open: boolean;
   setMode: (mode: PreviewMode) => void;
@@ -1010,6 +1094,14 @@ function EmailPreviewSidebar({
               </HeaderPillButton>
               <HeaderPillButton
                 className="text-white shadow-none"
+                label="Test email"
+                onClick={onOpenTesting}
+                style={{ backgroundColor: "#16a34a", color: "#ffffff" }}
+              >
+                Test
+              </HeaderPillButton>
+              <HeaderPillButton
+                className="text-white shadow-none"
                 label="Export email"
                 onClick={onOpenExport}
                 style={{ backgroundColor: "#356bff", color: "#ffffff" }}
@@ -1158,6 +1250,7 @@ export default function EmailTemplateProject() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [testingModalOpen, setTestingModalOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [templateTheme, setTemplateTheme] = useState<TemplateTheme>("light");
   const [previewWidth, setPreviewWidth] = useState(defaultPreviewWidthVw);
@@ -1180,10 +1273,11 @@ export default function EmailTemplateProject() {
 
   const email = emailQuery.data;
   const variant = latestVariant(email);
-  const previewSrcDoc =
-    streamedHtml ?? variant?.compiledHtml ?? getEmailTemplateSrcDoc(templateTheme);
+  const previewSrcDoc = streamedHtml ?? variant?.compiledHtml ?? null;
+  const hasPreview = Boolean(previewSrcDoc);
   const previewSubject =
-    streamedSubject ?? variant?.subject ?? email?.title ?? suggestedEmailSubject;
+    streamedSubject ?? variant?.subject ?? email?.title ?? "Untitled email";
+  const conversationTitle = currentEmailId ? previewSubject : "New conversation";
   const startupKey = useMemo(() => searchParams.toString(), [searchParams]);
 
   const invalidateEmailState = useCallback(
@@ -1203,13 +1297,13 @@ export default function EmailTemplateProject() {
       emailId: string,
       mode: "generate" | "edit",
       instruction?: string,
+      baseVariantId?: string,
     ) => {
       const statusId = `${mode}-${Date.now()}-status`;
       const assistantId = `${mode}-${Date.now()}-assistant`;
       let assistantText = "";
 
       setIsStreaming(true);
-      setSidebarOpen(true);
       setMessages((current) =>
         upsertMessage(current, {
           id: statusId,
@@ -1250,9 +1344,23 @@ export default function EmailTemplateProject() {
           return;
         }
 
+        if (event.type === "code-chunk") {
+          setMessages((current) =>
+            upsertMessage(current, {
+              id: statusId,
+              role: "status",
+              content: "Updating email template...",
+            }),
+          );
+          return;
+        }
+
         if (event.type === "done") {
           playCompletionSound();
-          if (event.compiledHtml) setStreamedHtml(event.compiledHtml);
+          if (event.compiledHtml) {
+            setStreamedHtml(event.compiledHtml);
+            setSidebarOpen(true);
+          }
           if (event.subject) setStreamedSubject(event.subject);
           if (!assistantText.trim()) {
             setMessages((current) =>
@@ -1273,11 +1381,14 @@ export default function EmailTemplateProject() {
 
         if (event.type === "error") {
           setMessages((current) =>
-            upsertMessage(current, {
-              id: `${mode}-${Date.now()}-error`,
-              role: "error",
-              content: event.message,
-            }),
+            upsertMessage(
+              current.filter((message) => message.id !== statusId),
+              {
+                id: `${mode}-${Date.now()}-error`,
+                role: "error",
+                content: event.message,
+              },
+            ),
           );
         }
       };
@@ -1288,18 +1399,24 @@ export default function EmailTemplateProject() {
           handleEvent,
           undefined,
           mode === "edit"
-            ? JSON.stringify({ instruction: instruction ?? "" })
+            ? JSON.stringify({
+                instruction: instruction ?? "",
+                ...(baseVariantId ? { baseVariantId } : {}),
+              })
             : undefined,
         );
         await invalidateEmailState(emailId);
       } catch (error) {
         setMessages((current) =>
-          upsertMessage(current, {
-            id: `${mode}-${Date.now()}-error`,
-            role: "error",
-            content:
-              error instanceof Error ? error.message : "Email stream failed.",
-          }),
+          upsertMessage(
+            current.filter((message) => message.id !== statusId),
+            {
+              id: `${mode}-${Date.now()}-error`,
+              role: "error",
+              content:
+                error instanceof Error ? error.message : "Email stream failed.",
+            },
+          ),
         );
       } finally {
         setIsStreaming(false);
@@ -1310,7 +1427,7 @@ export default function EmailTemplateProject() {
 
   const submitChatPrompt = useCallback(
     async (input: PromptSubmitInput) => {
-      if (!currentEmailId || isStreaming) return;
+      if (isStreaming) return;
       setMessages((current) => [
         ...current,
         {
@@ -1319,9 +1436,37 @@ export default function EmailTemplateProject() {
           content: input.prompt,
         },
       ]);
-      await startStream(currentEmailId, "edit", input.prompt);
+
+      if (currentEmailId) {
+        await startStream(currentEmailId, "edit", input.prompt, variant?.id);
+        return;
+      }
+
+      try {
+        const created = await createEmail({
+          prompt: input.prompt,
+          tone: input.tone,
+          length: input.length,
+          audience: input.audience,
+        });
+        setCurrentEmailId(created.id);
+        router.replace(`/email-template-project?id=${created.id}`);
+        await startStream(created.id, "generate");
+      } catch (error) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: `create-${Date.now()}-error`,
+            role: "error",
+            content:
+              error instanceof Error
+                ? error.message
+                : "Could not create email project.",
+          },
+        ]);
+      }
     },
-    [currentEmailId, isStreaming, startStream],
+    [currentEmailId, isStreaming, router, startStream, variant?.id],
   );
 
   const updateScrollState = useCallback(() => {
@@ -1366,9 +1511,13 @@ export default function EmailTemplateProject() {
   }, [chatQuery.data, email, isStreaming]);
 
   useEffect(() => {
-    if (!currentEmailId) return;
-    setSidebarOpen(true);
-  }, [currentEmailId, setSidebarOpen]);
+    if (hasPreview) {
+      setSidebarOpen(true);
+      return;
+    }
+    setSidebarOpen(false);
+    setPreviewExpanded(false);
+  }, [hasPreview, setSidebarOpen]);
 
   useEffect(() => {
     if (!startupKey || processedStartupRef.current === startupKey) return;
@@ -1433,7 +1582,6 @@ export default function EmailTemplateProject() {
     const audience = searchParams.get("audience") ?? undefined;
 
     setMessages([{ id: "new-prompt", role: "user", content: prompt }]);
-    setSidebarOpen(true);
     void createEmail({ prompt, tone, length, audience })
       .then(async (created) => {
         setCurrentEmailId(created.id);
@@ -1457,7 +1605,6 @@ export default function EmailTemplateProject() {
     invalidateEmailState,
     router,
     searchParams,
-    setSidebarOpen,
     startStream,
     startupKey,
   ]);
@@ -1490,26 +1637,12 @@ export default function EmailTemplateProject() {
       <header
         className={cn(
           "fixed left-3 top-0 z-30 flex h-11 w-fit items-center bg-white transition-[opacity,transform]",
-          previewExpanded && "pointer-events-none -translate-y-3 opacity-0",
+          hasPreview &&
+            previewExpanded &&
+            "pointer-events-none -translate-y-3 opacity-0",
         )}
       >
-        <Button className="h-8 px-3 py-0!" variant="ghost">
-          <Image
-            src={"/madoo-transparent.png"}
-            alt="Madoo AI Logo"
-            width={26}
-            height={26}
-          />
-          <div className="flex gap-2 items-center">
-            <span className="font-medium">Hello friends</span>
-            <HugeiconsIcon
-              aria-hidden="true"
-              icon={ArrowDown01Icon}
-              primaryColor="currentColor"
-              className="size-4 text-madoo-ink-muted"
-            />
-          </div>
-        </Button>
+        <ConversationTitleDropdown title={conversationTitle} />
       </header>
 
       <div className="flex h-full min-h-0 overflow-hidden">
@@ -1517,7 +1650,7 @@ export default function EmailTemplateProject() {
         <section
           className={cn(
             "flex min-w-0 flex-1 flex-col pb-4 pt-11 transition-opacity",
-            previewExpanded && "pointer-events-none opacity-0",
+            hasPreview && previewExpanded && "pointer-events-none opacity-0",
           )}
         >
           {/* messages */}
@@ -1527,11 +1660,6 @@ export default function EmailTemplateProject() {
             onScroll={updateScrollState}
           >
             <div className="mx-auto w-full max-w-2xl px-4">
-              {/* time */}
-              <span className="flex w-full justify-center text-xs text-madoo-ink-muted">
-                Jun 8 at 9:42 AM
-              </span>
-
               <div className="mt-8 flex flex-col gap-8">
                 {messages.map((message) => {
                   if (message.role === "user") {
@@ -1558,7 +1686,9 @@ export default function EmailTemplateProject() {
                   return (
                     <AiMessage
                       key={message.id}
-                      onOpenPreview={() => setSidebarOpen(true)}
+                      onOpenPreview={() => {
+                        if (hasPreview) setSidebarOpen(true);
+                      }}
                     >
                       {message.content}
                     </AiMessage>
@@ -1593,7 +1723,7 @@ export default function EmailTemplateProject() {
                 panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)/0.18)]",
                 textarea: "min-h-17 rounded-t-2xl px-4.5 pt-4.25",
               }}
-              disabled={!currentEmailId || isStreaming}
+              disabled={isStreaming}
               onSubmit={submitChatPrompt}
               showOptions={false}
               variant="chat"
@@ -1601,26 +1731,36 @@ export default function EmailTemplateProject() {
           </div>
         </section>
 
-        <EmailPreviewSidebar
-          expanded={previewExpanded}
-          mode={previewMode}
-          onOpenExport={() => setExportModalOpen(true)}
-          onToggleExpanded={togglePreviewExpanded}
-          open={sidebarOpen}
-          setMode={setPreviewMode}
-          srcDoc={previewSrcDoc}
-          setTheme={setTemplateTheme}
-          setWidth={updatePreviewWidth}
-          subject={previewSubject}
-          theme={templateTheme}
-          width={previewWidth}
-        />
+        {hasPreview && previewSrcDoc ? (
+          <EmailPreviewSidebar
+            expanded={previewExpanded}
+            mode={previewMode}
+            onOpenExport={() => setExportModalOpen(true)}
+            onOpenTesting={() => setTestingModalOpen(true)}
+            onToggleExpanded={togglePreviewExpanded}
+            open={sidebarOpen}
+            setMode={setPreviewMode}
+            srcDoc={previewSrcDoc}
+            setTheme={setTemplateTheme}
+            setWidth={updatePreviewWidth}
+            subject={previewSubject}
+            theme={templateTheme}
+            width={previewWidth}
+          />
+        ) : null}
       </div>
 
       <ExportProviderModal
         emailId={currentEmailId}
         onClose={() => setExportModalOpen(false)}
         open={exportModalOpen}
+        variantId={variant?.id ?? null}
+      />
+      <TestingModal
+        emailId={currentEmailId}
+        html={previewSrcDoc ?? ""}
+        onClose={() => setTestingModalOpen(false)}
+        open={testingModalOpen}
         variantId={variant?.id ?? null}
       />
     </main>

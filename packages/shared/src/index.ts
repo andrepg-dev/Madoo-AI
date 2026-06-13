@@ -12,3 +12,4 @@ export * from "./support";
 export * from "./invites";
 export * from "./exports";
 export * from "./connections";
+export * from "./testing";

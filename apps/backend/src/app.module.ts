@@ -14,6 +14,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { PromptsModule } from "./prompts/prompts.module";
 import { SupportModule } from "./support/support.module";
 import { TemplatesModule } from "./templates/templates.module";
+import { TestingModule } from "./testing/testing.module";
 import { UsersModule } from "./users/users.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
 
@@ -66,6 +67,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     AssistantModule,
     BillingModule,
     SupportModule,
+    TestingModule,
     InvitesModule,
     ConnectionsModule,
     ExportsModule,
