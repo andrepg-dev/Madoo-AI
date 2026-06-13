@@ -762,7 +762,7 @@ function ExportProviderModal({
           </ExportTabButton>
         </div>
 
-        <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+        <div className="grid max-h-90 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
           {tab === "email"
             ? emailExportProviders.map((provider) => (
                 <ExportProviderCard
@@ -942,7 +942,7 @@ function EmailPreviewSidebar({
         >
           <span
             className={cn(
-              "absolute inset-y-0 left-0 w-[3px] bg-madoo-accent opacity-0 transition-opacity",
+              "absolute inset-y-0 left-0 w-0.75 bg-madoo-accent opacity-0 transition-opacity",
               "group-hover:opacity-100 group-focus-visible:opacity-100",
               isResizing && "opacity-100",
             )}
@@ -950,7 +950,7 @@ function EmailPreviewSidebar({
         </button>
       ) : null}
 
-      <div className="flex h-full min-w-[420px] flex-col">
+      <div className="flex h-full min-w-105 flex-col">
         <div className="shrink-0 bg-[#F2F2F2] rounded-t-3xl">
           <div className="flex min-h-13 items-center gap-3 bg-white px-4">
             <Button
@@ -1051,8 +1051,8 @@ function EmailPreviewSidebar({
           <div className="madoo-preview-scrollbar mr-1 h-full overflow-y-auto">
             <div
               className={cn(
-                "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
-                mode === "desktop" ? "w-full" : "w-[390px]",
+                "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)/0.14)] transition-[width] duration-300",
+                mode === "desktop" ? "w-full" : "w-97.5",
               )}
             >
               <iframe
@@ -1079,7 +1079,7 @@ function EmailPreviewSidebar({
 function HumanMessage({ children }: { children: string }) {
   return (
     <div className="ml-auto">
-      <pre className="max-w-xl whitespace-pre-wrap break-words rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
+      <pre className="max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
         {children}
       </pre>
 
@@ -1568,8 +1568,8 @@ export default function EmailTemplateProject() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[calc(42rem+2rem)] shrink-0 px-4">
-            <div className="pointer-events-none absolute inset-x-4 -top-4 h-4 bg-gradient-to-b from-white/0 via-white/80 to-white" />
+          <div className="relative mx-auto w-full max-w-176 shrink-0 px-4">
+            <div className="pointer-events-none absolute inset-x-4 -top-4 h-4 bg-linear-to-b from-white/0 via-white/80 to-white" />
             {canScrollDown ? (
               <Button
                 aria-label="Scroll to latest message"
@@ -1590,8 +1590,8 @@ export default function EmailTemplateProject() {
             <ClientPromptBox
               classNames={{
                 root: "w-full",
-                panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)_/_0.18)]",
-                textarea: "min-h-17 rounded-t-2xl px-4.5 pt-[17px]",
+                panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)/0.18)]",
+                textarea: "min-h-17 rounded-t-2xl px-4.5 pt-4.25",
               }}
               disabled={!currentEmailId || isStreaming}
               onSubmit={submitChatPrompt}
