@@ -242,14 +242,14 @@ function PlanCard({
   billingInterval: BillingInterval;
 }) {
   return (
-    <article className="madoo-paper-border flex min-h-[420px] flex-col rounded-[28px] bg-madoo-paper p-6">
-      <div className="flex min-h-[80px] items-start justify-between gap-4">
+    <article className="madoo-paper-border flex min-h-105 flex-col rounded-[28px] bg-madoo-paper p-6">
+      <div className="flex min-h-20 items-start justify-between gap-4">
         <div className="w-full">
           <h2 className="text-2xl font-semibold leading-none text-madoo-text">
             {plan.name}
           </h2>
           {plan.description ? (
-            <p className="mt-2 min-h-[48px] w-full text-sm leading-6 text-madoo-muted">
+            <p className="mt-2 min-h-12 w-full text-sm leading-6 text-madoo-muted">
               {plan.description}
             </p>
           ) : (

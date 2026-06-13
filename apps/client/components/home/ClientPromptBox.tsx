@@ -275,10 +275,10 @@ export function ClientPromptBox({
         className={cn(
           "overflow-visible",
           !classNames?.panel &&
-            "madoo-paper-border bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] !shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)_/_0.12)]",
+            "madoo-paper-border bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)/0.12)]!",
           isChatVariant
             ? "w-full min-w-0 max-w-full rounded-2xl"
-            : "min-w-[650px] max-w-[calc(100vw-32px)] rounded-3xl",
+            : "min-w-162.5 max-w-[calc(100vw-32px)] rounded-3xl",
           classNames?.panel,
         )}
       >

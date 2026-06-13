@@ -134,7 +134,7 @@ function ProjectPreview({ email }: { email: EmailDto }) {
   const previewUrl = latestVariant(email)?.previewUrl;
 
   return (
-    <div className="relative flex aspect-[4/3] min-h-[190px] items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]">
+    <div className="relative flex aspect-4/3 min-h-47.5 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]">
       {previewUrl ? (
         <img
           alt=""
@@ -212,7 +212,7 @@ function ProjectListRow({
   onOpen: (email: EmailDto) => void;
 }) {
   return (
-    <div className="grid min-h-[64px] grid-cols-[minmax(0,1fr)_120px_140px_40px] items-center gap-4 border-b border-[rgb(var(--rule-rgb)_/_0.65)] px-4 py-2 last:border-b-0 max-[760px]:grid-cols-[minmax(0,1fr)_40px]">
+    <div className="grid min-h-16 grid-cols-[minmax(0,1fr)_120px_140px_40px] items-center gap-4 border-b border-[rgb(var(--rule-rgb)/0.65)] px-4 py-2 last:border-b-0 max-[760px]:grid-cols-[minmax(0,1fr)_40px]">
       <button
         className="grid min-w-0 cursor-pointer gap-1 border-0 bg-transparent p-0 text-left"
         onClick={() => onOpen(email)}
@@ -297,8 +297,8 @@ export function ProjectLibrary({
   };
 
   return (
-    <div className="min-h-full bg-[var(--madoo-page)] px-6 py-6 text-madoo-ink max-sm:px-4 max-sm:py-4">
-      <div className="mx-auto max-w-[1580px]">
+    <div className="min-h-full bg-(--madoo-page) px-6 py-6 text-madoo-ink max-sm:px-4 max-sm:py-4">
+      <div className="mx-auto max-w-395">
         <header className="mb-5 flex items-center justify-between gap-4">
           <h1 className="m-0 text-[24px] font-semibold leading-none tracking-normal text-[#202124]">
             {title}
@@ -362,7 +362,7 @@ export function ProjectLibrary({
 
         <section className="mt-5">
           {isLoading ? (
-            <div className="grid min-h-[260px] place-items-center rounded-lg bg-white p-6 text-sm text-madoo-ink-muted shadow-madoo-border">
+            <div className="grid min-h-65 place-items-center rounded-lg bg-white p-6 text-sm text-madoo-ink-muted shadow-madoo-border">
               Loading projects
             </div>
           ) : filteredEmails.length ? (
@@ -390,7 +390,7 @@ export function ProjectLibrary({
               </div>
             )
           ) : (
-            <div className="grid min-h-[260px] place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
+            <div className="grid min-h-65 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
               <div className="grid justify-items-center gap-2">
                 <span className="grid size-10 place-items-center rounded-lg bg-madoo-bg-2 text-madoo-ink-muted">
                   <Icon name="folder" size={20} />
@@ -421,8 +421,8 @@ export function ProjectsFutureState({
 }) {
   const router = useRouter();
   return (
-    <div className="min-h-full bg-[var(--madoo-page)] px-6 py-6 text-madoo-ink max-sm:px-4 max-sm:py-4">
-      <div className="mx-auto max-w-[1580px]">
+    <div className="min-h-full bg-(--madoo-page) px-6 py-6 text-madoo-ink max-sm:px-4 max-sm:py-4">
+      <div className="mx-auto max-w-395">
         <header className="mb-5 flex items-center justify-between gap-4">
           <h1 className="m-0 text-[24px] font-semibold leading-none tracking-normal text-[#202124]">
             {title}
@@ -436,7 +436,7 @@ export function ProjectsFutureState({
             Create
           </Button>
         </header>
-        <div className="grid min-h-[300px] place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
+        <div className="grid min-h-75 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
           <div className="grid justify-items-center gap-2">
             <span className="grid size-10 place-items-center rounded-lg bg-madoo-bg-2 text-madoo-ink-muted">
               <Icon name="folder" size={20} />

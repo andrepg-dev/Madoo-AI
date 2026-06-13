@@ -69,41 +69,41 @@ export default function InvitePage() {
   const user = meQuery.data;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[var(--madoo-page)] px-4 py-10 font-madoo-sans text-madoo-ink">
-      <Card className="grid w-full max-w-lg gap-5 !rounded-[20px] !bg-madoo-surface !p-6">
+    <main className="grid min-h-screen place-items-center bg-(--madoo-page) px-4 py-10 font-madoo-sans text-madoo-ink">
+      <Card className="grid w-full max-w-lg gap-5 rounded-[20px]! bg-madoo-surface! p-6!">
         <div className="flex items-center gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-madoo-bg-2 shadow-[var(--shadow-border)]">
+          <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-madoo-bg-2 shadow-madoo-border">
             <Icon name="copy" size={18} />
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-xl font-semibold leading-none">
               Workspace invite
             </h1>
-            <p className="mt-1 text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+            <p className="mt-1 text-(length:--font-size-sm) text-madoo-ink-muted">
               Join workspace in Madoo.
             </p>
           </div>
         </div>
 
         {previewQuery.isLoading ? (
-          <p className="text-[length:var(--font-size-base)] text-madoo-ink-muted">
+          <p className="text-(length:--font-size-base) text-madoo-ink-muted">
             Loading invite...
           </p>
         ) : previewQuery.isError || !preview ? (
           <div className="grid gap-3">
-            <p className="text-[length:var(--font-size-base)] text-madoo-ink-muted">
+            <p className="text-(length:--font-size-base) text-madoo-ink-muted">
               Invite is invalid, expired, or already accepted.
             </p>
             <Link
               href="/"
-              className="inline-flex w-max items-center rounded-[var(--radius-lg)] bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink no-underline shadow-[var(--shadow-border)]"
+              className="inline-flex w-max items-center rounded-lg bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink no-underline shadow-madoo-border"
             >
               Go home
             </Link>
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-madoo-bg-2 p-4 shadow-[var(--shadow-border)]">
+            <div className="flex items-center gap-3 rounded-lg bg-madoo-bg-2 p-4 shadow-madoo-border">
               <Avatar
                 name={preview.workspace.name}
                 src={preview.workspace.avatarUrl ?? undefined}
@@ -114,13 +114,13 @@ export default function InvitePage() {
                 <p className="truncate text-lg font-semibold leading-none">
                   {preview.workspace.name}
                 </p>
-                <p className="mt-1 text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+                <p className="mt-1 text-(length:--font-size-sm) text-madoo-ink-muted">
                   Invited by {preview.inviter.name ?? preview.inviter.email}
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-2 text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+            <div className="grid gap-2 text-(length:--font-size-sm) text-madoo-ink-muted">
               <p>Role: {preview.role}</p>
               <p>Expires: {formatDate(preview.expiresAt)}</p>
               {preview.email ? <p>For: {preview.email}</p> : null}
@@ -144,7 +144,7 @@ export default function InvitePage() {
               </Button>
               <Link
                 href="/"
-                className="inline-flex items-center rounded-[var(--radius-lg)] bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink no-underline shadow-[var(--shadow-border)]"
+                className="inline-flex items-center rounded-lg bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink no-underline shadow-madoo-border"
               >
                 Cancel
               </Link>

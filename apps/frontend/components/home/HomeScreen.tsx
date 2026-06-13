@@ -527,7 +527,7 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
       ) : null}
 
       <section
-        className="madoo-home-templates rounded-[28px] bg-[color-mix(in_srgb,var(--surface)_86%,var(--accent-soft))] !shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)_/_0.12)]"
+        className="madoo-home-templates rounded-[28px] bg-[color-mix(in_srgb,var(--surface)_86%,var(--accent-soft))] shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)/0.12)]!"
         style={{ maxWidth: 1280, margin: "0 auto" }}
       >
         <div

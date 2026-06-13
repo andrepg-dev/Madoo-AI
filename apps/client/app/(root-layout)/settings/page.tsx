@@ -185,21 +185,21 @@ function SettingsNavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cx(
-        "flex w-full cursor-pointer items-center gap-2.5 rounded-[var(--radius-lg)] border-0 bg-transparent px-3 py-2.5 text-left font-madoo-sans no-underline transition-[background,color,box-shadow]",
+        "flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left font-madoo-sans no-underline transition-[background,color,box-shadow]",
         active
-          ? "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)]"
+          ? "bg-madoo-surface text-madoo-ink shadow-madoo-border"
           : "text-madoo-ink-soft hover:bg-madoo-surface-2 hover:text-madoo-ink",
       )}
     >
-      <span className="grid size-8 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-madoo-bg-2 shadow-[var(--shadow-border)]">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-bg-2 shadow-madoo-border">
         <Icon name={icon} size={15} />
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-[length:var(--font-size-base)] font-medium leading-none">
+        <span className="block truncate text-(length:--font-size-base) font-medium leading-none">
           {label}
         </span>
         {description ? (
-          <span className="mt-1 block truncate text-[length:var(--font-size-xs)] leading-none text-madoo-ink-muted">
+          <span className="mt-1 block truncate text-(length:--font-size-xs) leading-none text-madoo-ink-muted">
             {description}
           </span>
         ) : null}
@@ -222,9 +222,9 @@ function SecondaryNavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cx(
-        "flex h-9 w-full cursor-pointer items-center gap-2 rounded-[var(--radius-lg)] border-0 px-2.5 font-madoo-sans text-[length:var(--font-size-base)] no-underline transition-[background,color,box-shadow]",
+        "flex h-9 w-full cursor-pointer items-center gap-2 rounded-lg border-0 px-2.5 font-madoo-sans text-(length:--font-size-base) no-underline transition-[background,color,box-shadow]",
         active
-          ? "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)]"
+          ? "bg-madoo-surface text-madoo-ink shadow-madoo-border"
           : "bg-transparent text-madoo-ink-muted hover:bg-madoo-surface-2 hover:text-madoo-ink",
       )}
     >
@@ -245,13 +245,13 @@ function SectionHeader({
 }) {
   return (
     <div>
-      <div className="text-[length:var(--font-size-xs)] font-medium uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
+      <div className="text-(length:--font-size-xs) font-medium uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
         {eyebrow}
       </div>
       <h1 className="mt-2 text-3xl font-semibold leading-none text-madoo-ink">
         {title}
       </h1>
-      <p className="mt-3 max-w-2xl text-[length:var(--font-size-base)] leading-6 text-madoo-ink-muted">
+      <p className="mt-3 max-w-2xl text-(length:--font-size-base) leading-6 text-madoo-ink-muted">
         {description}
       </p>
     </div>
@@ -268,14 +268,14 @@ function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="!rounded-[20px] !bg-madoo-surface !p-5">
+    <Card className="rounded-[20px]! bg-madoo-surface! p-5!">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold leading-none text-madoo-ink">
             {title}
           </h2>
           {description ? (
-            <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+            <p className="mt-2 text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
               {description}
             </p>
           ) : null}
@@ -397,10 +397,10 @@ function AccountPanel({ section }: { section: AccountSection }) {
             tone="ink"
           />
           <div className="min-w-0">
-            <p className="text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+            <p className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
               {isLoading ? "Loading..." : user?.name || "Unnamed user"}
             </p>
-            <p className="mt-1 text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
+            <p className="mt-1 text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
               {user?.email ?? ""}
             </p>
           </div>
@@ -433,7 +433,7 @@ function AccountPanel({ section }: { section: AccountSection }) {
                 event.currentTarget.value = "";
               }}
             />
-            <span className="inline-flex cursor-pointer items-center rounded-[var(--radius-lg)] bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink shadow-[var(--shadow-border)] transition-colors hover:bg-madoo-bg">
+            <span className="inline-flex cursor-pointer items-center rounded-lg bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink shadow-madoo-border transition-colors hover:bg-madoo-bg">
               {avatarMutation.isPending ? "Uploading..." : "Upload avatar"}
             </span>
           </label>
@@ -645,7 +645,7 @@ function WorkspacePanel({
   if (!activeWorkspace) {
     return (
       <SettingsCard title="Workspace" description="No active workspace found.">
-        <p className="text-[length:var(--font-size-base)] text-madoo-ink-muted">
+        <p className="text-(length:--font-size-base) text-madoo-ink-muted">
           Create or switch workspace from sidebar.
         </p>
       </SettingsCard>
@@ -682,7 +682,7 @@ function WorkspacePanel({
             />
             <span
               className={cx(
-                "inline-flex cursor-pointer items-center rounded-[var(--radius-lg)] bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink shadow-[var(--shadow-border)] transition-colors hover:bg-madoo-bg",
+                "inline-flex cursor-pointer items-center rounded-lg bg-madoo-surface px-3.5 py-2 font-madoo-sans text-[13.5px] font-medium leading-none text-madoo-ink shadow-madoo-border transition-colors hover:bg-madoo-bg",
                 (!admin || workspaceAvatarMutation.isPending) &&
                   "cursor-not-allowed opacity-60",
               )}
@@ -709,7 +709,7 @@ function WorkspacePanel({
         >
           <div className="grid gap-2">
             {membersQuery.isLoading ? (
-              <p className="text-[length:var(--font-size-base)] text-madoo-ink-muted">
+              <p className="text-(length:--font-size-base) text-madoo-ink-muted">
                 Loading members...
               </p>
             ) : (
@@ -773,7 +773,7 @@ function WorkspacePanel({
             </div>
 
             {latestInviteUrl ? (
-              <div className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] bg-madoo-bg-2 p-3 shadow-[var(--shadow-border)]">
+              <div className="flex flex-wrap items-center gap-2 rounded-lg bg-madoo-bg-2 p-3 shadow-madoo-border">
                 <code className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-madoo-ink-muted">
                   {latestInviteUrl}
                 </code>
@@ -792,20 +792,20 @@ function WorkspacePanel({
 
             <div className="grid gap-2">
               {invites.length === 0 ? (
-                <p className="text-[length:var(--font-size-base)] text-madoo-ink-muted">
+                <p className="text-(length:--font-size-base) text-madoo-ink-muted">
                   No pending invites.
                 </p>
               ) : (
                 invites.map((invite) => (
                   <div
                     key={invite.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] bg-madoo-bg-2 p-3 shadow-[var(--shadow-border)]"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-madoo-bg-2 p-3 shadow-madoo-border"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+                      <p className="truncate text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
                         {invite.email ?? "Link invite"}
                       </p>
-                      <p className="mt-1 text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
+                      <p className="mt-1 text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
                         {invite.role} · expires {formatDate(invite.expiresAt)}
                       </p>
                     </div>
@@ -846,13 +846,13 @@ function WorkspacePanel({
         description="Permanent workspace actions with backend ownership checks."
       >
         <div className="grid gap-4">
-          <div className="rounded-[var(--radius-lg)] bg-madoo-bg-2 p-4 shadow-[var(--shadow-border)]">
+          <div className="rounded-lg bg-madoo-bg-2 p-4 shadow-madoo-border">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+                <p className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
                   Leave {activeWorkspace.name}
                 </p>
-                <p className="mt-2 max-w-xl text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+                <p className="mt-2 max-w-xl text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
                   Owners can leave only when another owner remains.
                 </p>
               </div>
@@ -867,13 +867,13 @@ function WorkspacePanel({
             </div>
           </div>
 
-          <div className="rounded-[var(--radius-lg)] bg-[color-mix(in_srgb,var(--danger)_7%,var(--surface))] p-4 shadow-[var(--shadow-border-danger)]">
+          <div className="rounded-lg bg-[color-mix(in_srgb,var(--danger)_7%,var(--surface))] p-4 shadow-(--shadow-border-danger)">
             <div className="grid gap-4">
               <div>
-                <p className="text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+                <p className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
                   Delete {activeWorkspace.name}
                 </p>
-                <p className="mt-2 max-w-xl text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+                <p className="mt-2 max-w-xl text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
                   Type workspace slug to confirm: {activeWorkspace.slug}
                 </p>
               </div>
@@ -965,7 +965,7 @@ function MemberRow({
 }) {
   const isSelf = member.userId === currentUserId;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] bg-madoo-bg-2 p-3 shadow-[var(--shadow-border)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-madoo-bg-2 p-3 shadow-madoo-border">
       <div className="flex min-w-0 items-center gap-3">
         <Avatar
           name={member.name ?? member.email}
@@ -974,10 +974,10 @@ function MemberRow({
           circle
         />
         <div className="min-w-0">
-          <p className="truncate text-[length:var(--font-size-base)] font-medium leading-none text-madoo-ink">
+          <p className="truncate text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
             {member.name ?? member.email}
           </p>
-          <p className="mt-1 truncate text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
+          <p className="mt-1 truncate text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
             {member.email}
           </p>
         </div>
@@ -1079,7 +1079,7 @@ function SupportPanel({
           onChange={(event) => setMessage(event.currentTarget.value)}
         />
         {ticketId ? (
-          <p className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+          <p className="text-(length:--font-size-sm) text-madoo-ink-muted">
             Ticket submitted: {ticketId}
           </p>
         ) : null}
@@ -1158,11 +1158,11 @@ export default function SettingsPage() {
   }, [activeWorkspace, queryClient, setWorkspaceId, workspaceId]);
 
   return (
-    <div className="grid min-h-full grid-cols-[280px_260px_minmax(0,1fr)] bg-[var(--madoo-page)] font-madoo-sans text-madoo-ink max-xl:grid-cols-[250px_minmax(0,1fr)] max-lg:grid-cols-1">
-      <aside className="bg-[var(--madoo-page)] p-4 shadow-[inset_-0.5px_0_0_rgb(var(--rule-rgb)_/_0.18)] max-lg:shadow-[var(--shadow-border-bottom-soft)]">
+    <div className="grid min-h-full grid-cols-[280px_260px_minmax(0,1fr)] bg-(--madoo-page) font-madoo-sans text-madoo-ink max-xl:grid-cols-[250px_minmax(0,1fr)] max-lg:grid-cols-1">
+      <aside className="bg-(--madoo-page) p-4 shadow-[inset_-0.5px_0_0_rgb(var(--rule-rgb)/0.18)] max-lg:shadow-(--shadow-border-bottom-soft)">
         <div className="space-y-5">
           <div>
-            <div className="mb-2 px-3 text-[length:var(--font-size-xs)] font-medium uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
+            <div className="mb-2 px-3 text-(length:--font-size-xs) font-medium uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
               Settings
             </div>
             <div className="grid gap-1.5">
@@ -1188,7 +1188,7 @@ export default function SettingsPage() {
         </div>
       </aside>
 
-      <aside className="bg-[var(--madoo-page)] p-4 shadow-[inset_-0.5px_0_0_rgb(var(--rule-rgb)_/_0.18)] max-xl:hidden">
+      <aside className="bg-(--madoo-page) p-4 shadow-[inset_-0.5px_0_0_rgb(var(--rule-rgb)/0.18)] max-xl:hidden">
         <div className="mb-4 flex items-center gap-3">
           <Avatar
             name={activePrimary.label}
@@ -1196,10 +1196,10 @@ export default function SettingsPage() {
             tone={area === "account" ? "ink" : "accent"}
           />
           <div className="min-w-0">
-            <p className="truncate text-[length:var(--font-size-base)] font-medium leading-none">
+            <p className="truncate text-(length:--font-size-base) font-medium leading-none">
               {activePrimary.label}
             </p>
-            <p className="mt-1 truncate text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
+            <p className="mt-1 truncate text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
               {activePrimary.description}
             </p>
           </div>
@@ -1233,7 +1233,7 @@ export default function SettingsPage() {
           />
 
           {secondaryNav.length ? (
-            <div className="hidden max-xl:flex max-w-full gap-1 overflow-x-auto rounded-full bg-madoo-surface-2/35 p-1 shadow-[var(--shadow-border)]">
+            <div className="hidden max-xl:flex max-w-full gap-1 overflow-x-auto rounded-full bg-madoo-surface-2/35 p-1 shadow-madoo-border">
               {secondaryNav.map((item) => (
                 <Link
                   key={item.value}
@@ -1244,7 +1244,7 @@ export default function SettingsPage() {
                   className={cx(
                     "whitespace-nowrap rounded-full px-3 py-1.5 font-madoo-sans text-[12.5px] font-medium no-underline transition-colors",
                     activeSecondary === item.value
-                      ? "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)]"
+                      ? "bg-madoo-surface text-madoo-ink shadow-madoo-border"
                       : "text-madoo-ink-muted hover:text-madoo-ink",
                   )}
                 >

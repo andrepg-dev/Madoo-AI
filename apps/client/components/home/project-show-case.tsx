@@ -170,7 +170,7 @@ export function ProjectShowCase() {
         </div>
 
         {loading ? (
-          <div className="grid min-h-[240px] place-items-center rounded-lg bg-white text-sm text-madoo-ink-muted shadow-madoo-border">
+          <div className="grid min-h-60 place-items-center rounded-lg bg-white text-sm text-madoo-ink-muted shadow-madoo-border">
             Loading
           </div>
         ) : activeItems.length ? (
@@ -205,7 +205,7 @@ export function ProjectShowCase() {
                 ))}
           </div>
         ) : (
-          <div className="grid min-h-[240px] place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
+          <div className="grid min-h-60 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
             <div className="grid justify-items-center gap-2">
               <span className="grid size-10 place-items-center rounded-lg bg-madoo-bg-2 text-madoo-ink-muted">
                 <Icon
@@ -260,20 +260,20 @@ export function ProjectShowCase() {
         <div
           className={cx(
             "overflow-hidden rounded-lg bg-white shadow-madoo-border",
-            previewQuery.isLoading && "grid min-h-[420px] place-items-center",
+            previewQuery.isLoading && "grid min-h-105 place-items-center",
           )}
         >
           {previewQuery.isLoading ? (
             <span className="text-sm text-madoo-ink-muted">Loading preview</span>
           ) : previewQuery.data?.compiledHtml ? (
             <iframe
-              className="h-[520px] w-full border-0 bg-white"
+              className="h-130 w-full border-0 bg-white"
               sandbox=""
               srcDoc={previewQuery.data.compiledHtml}
               title={`${selectedTemplate?.name ?? "Template"} preview`}
             />
           ) : (
-            <div className="grid min-h-[320px] place-items-center text-sm text-madoo-ink-muted">
+            <div className="grid min-h-80 place-items-center text-sm text-madoo-ink-muted">
               Preview unavailable
             </div>
           )}
