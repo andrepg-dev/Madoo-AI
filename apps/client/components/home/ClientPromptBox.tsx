@@ -140,8 +140,10 @@ export function ClientPromptBox({
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
   >({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const hasPrompt = prompt.trim().length > 0;
+  const submitDisabled = disabled || isSubmitting;
   const isChatVariant = variant === "chat";
   const placeholderBody = useTypingPlaceholder(
     isChatVariant ? [] : placeholders,
@@ -150,10 +152,10 @@ export function ClientPromptBox({
     ? "Write a message..."
     : `Hi Madoo ${placeholderBody}`;
 
-  const submitPrompt = () => {
+  const submitPrompt = async () => {
     const trimmedPrompt = prompt.trim();
 
-    if (!trimmedPrompt) return;
+    if (!trimmedPrompt || submitDisabled) return;
 
     const input: PromptSubmitInput = { prompt: trimmedPrompt };
     const params = new URLSearchParams({ prompt: trimmedPrompt });
@@ -174,7 +176,13 @@ export function ClientPromptBox({
     }
 
     if (onSubmit) {
-      void Promise.resolve(onSubmit(input)).then(() => setPrompt(""));
+      setIsSubmitting(true);
+      try {
+        await onSubmit(input);
+        setPrompt("");
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -193,7 +201,7 @@ export function ClientPromptBox({
     }
 
     event.preventDefault();
-    submitPrompt();
+    void submitPrompt();
   };
 
   useEffect(() => {
@@ -364,11 +372,11 @@ export function ClientPromptBox({
 
             <button
               type="button"
-              onClick={submitPrompt}
-              disabled={!hasPrompt || disabled}
+              onClick={() => void submitPrompt()}
+              disabled={!hasPrompt || submitDisabled}
               className={cn(
                 "inline-flex items-center justify-center rounded-full text-xs text-white transition",
-                hasPrompt && !disabled
+                hasPrompt && !submitDisabled
                   ? "cursor-pointer bg-black"
                   : "cursor-not-allowed bg-[#7d7d7a] opacity-80",
                 isChatVariant ? "h-7 w-7" : "h-8 px-4",
