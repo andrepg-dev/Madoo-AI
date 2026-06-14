@@ -40,7 +40,7 @@ export function TestingModal({
       onClose={onClose}
       open={open}
       size="xl"
-      title="Testing Email Message"
+      title="Test Email Engine"
     >
       <div className="space-y-5">
         <SegmentedControl

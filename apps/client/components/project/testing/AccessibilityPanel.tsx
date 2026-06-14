@@ -2,6 +2,7 @@
 
 import {
   runAxe,
+  type AxeCheck,
   type AxeEmailResult,
   type AxeFinding,
   type AxeSeverity,
@@ -43,6 +44,8 @@ const severityMeta: Record<
 
 const severities: AxeSeverity[] = ["critical", "serious", "moderate", "minor"];
 
+type ResultTab = "failed" | "passed" | "ignored";
+
 type AccessibilityPanelProps = {
   html: string;
   disabled: boolean;
@@ -55,12 +58,14 @@ export function AccessibilityPanel({
   const [result, setResult] = useState<AxeEmailResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<ResultTab>("failed");
 
   const handleRun = async () => {
     if (disabled || loading) return;
     setLoading(true);
     setError(null);
     try {
+      setTab("failed");
       setResult(await runAxe(html));
     } catch (nextError) {
       setError(
@@ -107,7 +112,7 @@ export function AccessibilityPanel({
             size={17}
             strokeWidth={1.7}
           />
-          <span>{loading ? "Running..." : "Run a Test"}</span>
+          <span>{loading ? "Testing..." : "Test Engine"}</span>
         </Button>
       </section>
     );
@@ -144,20 +149,47 @@ export function AccessibilityPanel({
       </div>
 
       <div className="flex w-fit flex-wrap gap-1 rounded-xl bg-madoo-surface-2 p-1">
-        <SummaryPill label="Failed" value={result.failed} active />
-        <SummaryPill label="Passed" value={result.passed} />
-        <SummaryPill label="Ignored" value={result.ignored} />
+        <SummaryPill
+          active={tab === "failed"}
+          label="Failed"
+          onClick={() => setTab("failed")}
+          value={result.failed}
+        />
+        <SummaryPill
+          active={tab === "passed"}
+          label="Passed"
+          onClick={() => setTab("passed")}
+          value={result.passed}
+        />
+        <SummaryPill
+          active={tab === "ignored"}
+          label="Ignored"
+          onClick={() => setTab("ignored")}
+          value={result.ignored}
+        />
       </div>
 
-      <div className="space-y-3">
-        {severities.map((severity) => (
-          <SeverityGroup
-            findings={result.violationsBySeverity[severity]}
-            key={severity}
-            severity={severity}
-          />
-        ))}
-      </div>
+      {tab === "failed" ? (
+        <div className="space-y-3">
+          {severities.map((severity) => (
+            <SeverityGroup
+              findings={result.violationsBySeverity[severity]}
+              key={severity}
+              severity={severity}
+            />
+          ))}
+        </div>
+      ) : (
+        <CheckList
+          checks={tab === "passed" ? result.passes : result.incomplete}
+          emptyLabel={
+            tab === "passed"
+              ? "No passed checks."
+              : "No ignored checks. Axe could evaluate everything."
+          }
+          tone={tab === "passed" ? "success" : "neutral"}
+        />
+      )}
     </section>
   );
 }
@@ -165,21 +197,86 @@ export function AccessibilityPanel({
 function SummaryPill({
   active,
   label,
+  onClick,
   value,
 }: {
   active?: boolean;
   label: string;
+  onClick: () => void;
   value: number;
 }) {
   return (
-    <span
+    <button
       className={cn(
-        "rounded-lg px-3 py-1.5 text-xs font-medium",
-        active ? "bg-white text-madoo-ink shadow-madoo-border" : "text-madoo-ink-muted",
+        "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+        active
+          ? "bg-white text-madoo-ink shadow-madoo-border"
+          : "text-madoo-ink-muted hover:text-madoo-ink",
       )}
+      onClick={onClick}
+      type="button"
     >
       {label} {value}
-    </span>
+    </button>
+  );
+}
+
+function CheckList({
+  checks,
+  emptyLabel,
+  tone,
+}: {
+  checks: AxeCheck[];
+  emptyLabel: string;
+  tone: "success" | "neutral";
+}) {
+  if (checks.length === 0) {
+    return (
+      <p className="rounded-lg bg-white p-3 text-sm text-madoo-ink-muted shadow-madoo-border">
+        {emptyLabel}
+      </p>
+    );
+  }
+
+  return (
+    <ul className="space-y-2">
+      {checks.map((check) => (
+        <li
+          className="flex items-start justify-between gap-3 rounded-lg bg-white p-3 shadow-madoo-border"
+          key={check.id}
+        >
+          <div className="flex min-w-0 items-start gap-2">
+            <span
+              className={cn(
+                "mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold",
+                tone === "success"
+                  ? "bg-emerald-50 text-emerald-700 shadow-[inset_0_0_0_1px_rgb(5_150_105/0.18)]"
+                  : "bg-madoo-surface-2 text-madoo-ink-muted",
+              )}
+            >
+              {tone === "success" ? "✓" : "?"}
+            </span>
+            <div className="min-w-0">
+              <h5 className="text-sm font-medium text-madoo-ink">
+                {check.title}
+              </h5>
+              <p className="mt-0.5 text-xs leading-5 text-madoo-ink-muted">
+                Affected nodes: {check.nodes}
+              </p>
+            </div>
+          </div>
+          <a
+            aria-label={`Open Axe rule help for ${check.title}`}
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-madoo-surface text-xs font-semibold text-madoo-ink shadow-madoo-border"
+            href={check.helpUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            ?
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }
 

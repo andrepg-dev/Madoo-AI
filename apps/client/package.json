@@ -4,7 +4,10 @@
   "private": true,
   "description": "Madoo AI client platform",
   "scripts": {
+    "copy-axe": "node scripts/copy-axe.mjs",
+    "predev": "node scripts/copy-axe.mjs",
     "dev": "next dev --port 3003",
+    "prebuild": "node scripts/copy-axe.mjs",
     "build": "next build",
     "start": "next start --port 3003",
     "lint": "next lint",

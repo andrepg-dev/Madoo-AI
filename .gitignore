@@ -16,3 +16,6 @@ coverage
 .idea
 .vscode
 .claude/last30days.env
+
+# Vendored axe-core UMD copied by apps/client/scripts/copy-axe.mjs (predev/prebuild)
+apps/client/public/vendor/
