@@ -7,17 +7,23 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import type { EmailStatus } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import {
   EmailChatMessageDtoSchema,
   EmailDtoSchema,
+  EmailShareDtoSchema,
+  PublicEmailDtoSchema,
   parseVariableSchemaJson,
   type CreateEmailFromTemplateInput,
   type CreateEmailInput,
   type EmailChatMessageDto,
   type EmailDto,
+  type EmailShareDto,
   type EmailVariantDto,
+  type PublicEmailDto,
   type RenameEmailInput,
   type TransferEmailInput,
+  type UpdateEmailShareInput,
   type UpdateEmailVariantVariableSchemaInput,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
@@ -489,9 +495,79 @@ export class EmailsService {
       title: row.title,
       templateId: row.templateId,
       templateSavedAt: row.templateSavedAt?.toISOString() ?? null,
+      visibility: row.visibility,
+      publicId: row.publicId,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       variants,
+    });
+  }
+
+  /**
+   * Toggle an email's public/private share link. Making it PUBLIC mints a
+   * stable, unguessable `publicId` (kept across toggles so an existing link
+   * keeps working). PRIVATE keeps the id but the public route stops serving it.
+   */
+  async setShare(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: UpdateEmailShareInput,
+  ): Promise<EmailShareDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+
+    const current = await this.prisma.email.findUnique({
+      where: { id: emailId },
+      select: { publicId: true },
+    });
+    const publicId =
+      dto.visibility === "PUBLIC"
+        ? current?.publicId ?? randomUUID()
+        : current?.publicId ?? null;
+
+    const updated = await this.prisma.email.update({
+      where: { id: emailId },
+      data: { visibility: dto.visibility, publicId },
+      select: { id: true, visibility: true, publicId: true },
+    });
+
+    return EmailShareDtoSchema.parse({
+      id: updated.id,
+      visibility: updated.visibility,
+      publicId: updated.publicId,
+    });
+  }
+
+  /**
+   * Resolve a public share link. Only PUBLIC emails are served and only their
+   * latest rendered variant — no workspace, prompt, or chat data is exposed.
+   */
+  async getPublicByPublicId(publicId: string): Promise<PublicEmailDto> {
+    const email = await this.prisma.email.findFirst({
+      where: { publicId, visibility: "PUBLIC" },
+      select: {
+        publicId: true,
+        title: true,
+        createdAt: true,
+        variants: {
+          orderBy: { seq: "desc" },
+          take: 1,
+          select: { subject: true, compiledHtml: true },
+        },
+      },
+    });
+    const variant = email?.variants[0];
+    if (!email || !email.publicId || !variant) {
+      throw new NotFoundException("Shared email not found.");
+    }
+
+    return PublicEmailDtoSchema.parse({
+      publicId: email.publicId,
+      title: email.title,
+      subject: variant.subject,
+      compiledHtml: variant.compiledHtml,
+      createdAt: email.createdAt.toISOString(),
     });
   }
 
