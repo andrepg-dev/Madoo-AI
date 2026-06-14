@@ -2,7 +2,7 @@
 
 import { updateEmailVariantVariableSchema } from "@/actions/emails";
 import { cn } from "@/lib/utils";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge, Button, Input, useToast } from "@madoo/design-system";
 import type {
@@ -11,7 +11,7 @@ import type {
   VariableSpec,
 } from "@madoo/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type VariableScope = "dynamic" | "static";
 
@@ -55,6 +55,14 @@ export function VariablesPanel({
   const [scopes, setScopes] = useState<Record<string, VariableScope>>(() =>
     Object.fromEntries(variables.map((v) => [v.name, defaultScope(v)])),
   );
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  // Briefly surface a "Saved" indicator after each successful persist.
+  useEffect(() => {
+    if (savedAt === null) return;
+    const timer = window.setTimeout(() => setSavedAt(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [savedAt]);
 
   const valueOf = (variable: VariableSpec) =>
     values[variable.name] ?? variable.default;
@@ -79,6 +87,7 @@ export function VariablesPanel({
       }),
     onSuccess: (email: EmailDto) => {
       queryClient.setQueryData(["email", emailId], email);
+      setSavedAt(Date.now());
     },
     onError: (error) => {
       toast({
@@ -114,7 +123,10 @@ export function VariablesPanel({
     >
       <header className="flex items-start justify-between gap-2 px-4 pt-4">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-madoo-ink">Variables</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-madoo-ink">Variables</h3>
+            <SaveStatus pending={mutation.isPending} saved={savedAt !== null} />
+          </div>
           <p className="mt-1 text-xs leading-5 text-madoo-ink-muted">
             Edit values and switch each between dynamic and static.
           </p>
@@ -199,6 +211,31 @@ export function VariablesPanel({
       ) : null}
     </aside>
   );
+}
+
+function SaveStatus({ pending, saved }: { pending: boolean; saved: boolean }) {
+  if (pending) {
+    return (
+      <span className="text-[11px] font-medium text-madoo-ink-muted">
+        Saving…
+      </span>
+    );
+  }
+  if (saved) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+        <HugeiconsIcon
+          aria-hidden="true"
+          icon={Tick02Icon}
+          primaryColor="currentColor"
+          size={12}
+          strokeWidth={2.2}
+        />
+        Saved
+      </span>
+    );
+  }
+  return null;
 }
 
 function ScopeToggle({
