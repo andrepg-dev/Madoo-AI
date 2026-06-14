@@ -2,7 +2,8 @@
 
 import { SegmentedControl, Modal } from "@madoo/design-system";
 import { AccessibilityPanel } from "./AccessibilityPanel";
-import { SoonPanel } from "./SoonPanel";
+import { LinksPanel } from "./LinksPanel";
+import { SpamPanel } from "./SpamPanel";
 import { YourInboxPanel } from "./YourInboxPanel";
 import { useState } from "react";
 
@@ -62,8 +63,12 @@ export function TestingModal({
         {tab === "accessibility" ? (
           <AccessibilityPanel disabled={disabled} html={html} />
         ) : null}
-        {tab === "links" ? <SoonPanel kind="links" /> : null}
-        {tab === "spam" ? <SoonPanel kind="spam" /> : null}
+        {tab === "links" ? (
+          <LinksPanel disabled={disabled} emailId={emailId} />
+        ) : null}
+        {tab === "spam" ? (
+          <SpamPanel disabled={disabled} emailId={emailId} />
+        ) : null}
       </div>
     </Modal>
   );
