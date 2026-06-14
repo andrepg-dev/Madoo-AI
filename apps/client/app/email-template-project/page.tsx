@@ -1724,6 +1724,8 @@ export default function EmailTemplateProject() {
   const { toast } = useToast();
   const sidebarOpen = useClientStore((state) => state.sidebarOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
+  const pricingOpen = useClientStore((state) => state.pricingOpen);
+  const setPricingOpen = useClientStore((state) => state.setPricingOpen);
   const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     mapChatMessages(undefined, null),
@@ -1736,7 +1738,6 @@ export default function EmailTemplateProject() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [pricingOpen, setPricingOpen] = useState(false);
   const [testingModalOpen, setTestingModalOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [templateTheme, setTemplateTheme] = useState<TemplateTheme>("light");

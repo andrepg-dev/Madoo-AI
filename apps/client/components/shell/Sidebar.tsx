@@ -263,12 +263,13 @@ export function Sidebar() {
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(true);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
-  const [pricingOpen, setPricingOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const authUser = useAuthStore((state) => state.user);
   const setAuthUser = useAuthStore((state) => state.setUser);
   const workspaceId = useClientStore((state) => state.workspaceId);
   const setWorkspaceId = useClientStore((state) => state.setWorkspaceId);
+  const pricingOpen = useClientStore((state) => state.pricingOpen);
+  const setPricingOpen = useClientStore((state) => state.setPricingOpen);
   const setSearchCommandOpen = useClientStore(
     (state) => state.setSearchCommandOpen,
   );
