@@ -15,9 +15,11 @@ import type {
   VariableSpec,
 } from "@madoo/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type VariableScope = "dynamic" | "static";
+
+const VALUE_SAVE_DEBOUNCE_MS = 600;
 
 type VariablesPanelProps = {
   emailId: string;
@@ -102,9 +104,21 @@ export function VariablesPanel({
     },
   });
 
+  // Latest scopes for the debounced value save, so it never persists a stale
+  // scope if the user flips one mid-edit.
+  const scopesRef = useRef(scopes);
+  scopesRef.current = scopes;
+  const saveTimer = useRef<number | null>(null);
+  const cancelPendingSave = () => {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+  };
+  useEffect(() => cancelPendingSave, []);
+
   // Scope (dynamic/static) flips optimistically and persists in the background —
   // the UI never waits on the backend. Revert if the save fails.
   const handleScopeChange = (name: string, scope: VariableScope) => {
+    cancelPendingSave();
     const prevScopes = scopes;
     const nextScopes = { ...scopes, [name]: scope };
     setScopes(nextScopes);
@@ -113,12 +127,15 @@ export function VariablesPanel({
     });
   };
 
-  // Value edits are batched behind an explicit save (avoids a request per key).
-  const valuesDirty = useMemo(
-    () => variables.some((variable) => valueOf(variable) !== variable.default),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [variables, values],
-  );
+  // Value edits persist automatically, debounced — no save button.
+  const handleValueChange = (name: string, value: string) => {
+    const nextValues = { ...values, [name]: value };
+    setValues(nextValues);
+    cancelPendingSave();
+    saveTimer.current = window.setTimeout(() => {
+      mutation.mutate(buildSchema(nextValues, scopesRef.current));
+    }, VALUE_SAVE_DEBOUNCE_MS);
+  };
 
   return (
     <aside
@@ -179,10 +196,7 @@ export function VariablesPanel({
                   className="mt-2"
                   inputSize="sm"
                   onChange={(event) =>
-                    setValues((current) => ({
-                      ...current,
-                      [variable.name]: event.target.value,
-                    }))
+                    handleValueChange(variable.name, event.target.value)
                   }
                   placeholder="Value"
                   type={inputTypeForRole(variable.role)}
@@ -198,21 +212,6 @@ export function VariablesPanel({
           })
         )}
       </div>
-
-      {valuesDirty ? (
-        <div className="flex items-center gap-2 px-4 py-3 shadow-[inset_0_1px_0_rgb(var(--rule-rgb)/0.12)]">
-          <Button
-            block
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate(buildSchema(values, scopes))}
-            size="md"
-            type="button"
-            variant="primary"
-          >
-            {mutation.isPending ? "Saving…" : "Save & update preview"}
-          </Button>
-        </div>
-      ) : null}
     </aside>
   );
 }

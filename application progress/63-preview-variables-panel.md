@@ -57,6 +57,12 @@ already present. So this was UI-only.
   a spinning Hugeicons `Loading03Icon` + "Saving…" while persisting and "✓ Saved"
   for ~1.8s after success (covers both scope flips and value saves). Chosen over
   a toast to avoid noise on rapid toggles.
+- **Debounced auto-save, no save button.** Value edits now persist
+  automatically ~600ms after the last keystroke (`handleValueChange` + a
+  `saveTimer` ref); the explicit "Save & update preview" button was removed. A
+  `scopesRef` keeps the debounced save from persisting a stale scope, and
+  `handleScopeChange` cancels any pending value save before its immediate
+  persist.
 - **Toolbar toggle color fixed.** The "Variables" button used `variant="ghost"`
   with a `bg-madoo-ink` className override, but the DS `cx` doesn't tailwind-
   merge, so `bg-transparent` won and the white label was invisible. Switched to
