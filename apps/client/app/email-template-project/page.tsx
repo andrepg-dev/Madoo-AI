@@ -835,6 +835,7 @@ function ShareProjectDropdown({
                 Owner
               </span>
             </div>
+            <div className="h-px bg-[rgb(var(--rule-rgb)/0.14)]" />
             <div className="flex items-start gap-3">
               <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-ink text-xs font-semibold text-white">
                 {workspaceInitial}
