@@ -450,12 +450,19 @@ export class GenerationService {
       kind: "THINKING",
       content: result.thinkingText,
     });
+    // Always persist a conversational reply. With the emit_email tool the model
+    // often returns an empty text block; without this fallback the streamed
+    // reply would vanish on the next chat refetch, leaving a lone user message.
     await this.appendChatMessage({
       workspaceId,
       emailId,
       role: "ASSISTANT",
       kind: "TEXT",
-      content: result.assistantText,
+      content:
+        result.assistantText.trim() ||
+        (result.applied
+          ? "I drafted your email — open the preview on the right to review it, then tell me what you'd like to adjust."
+          : "I added some guidance above. Ask me for a concrete draft whenever you're ready."),
     });
   }
 
@@ -566,7 +573,11 @@ export class GenerationService {
       emailId,
       role: "ASSISTANT",
       kind: "TEXT",
-      content: result.assistantText,
+      content:
+        result.assistantText.trim() ||
+        (result.applied
+          ? "Done — I updated the email. Check the preview and tell me the next change."
+          : "I couldn't turn that into an edit. Try rephrasing what you'd like changed."),
     });
   }
 
