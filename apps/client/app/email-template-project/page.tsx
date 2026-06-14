@@ -4,6 +4,7 @@ import {
   createEmail,
   fetchEmail,
   fetchEmailChat,
+  updateEmailShare,
 } from "@/actions/emails";
 import { fetchBillingOverview } from "@/actions/billing";
 import { fetchWorkspaces } from "@/actions/workspaces";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/export-instructions";
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
+import { PreviewOverlay } from "@/components/project/preview/PreviewOverlay";
 import { TestingModal } from "@/components/project/testing/TestingModal";
 import { PricingDrawer } from "@/components/shell/PricingDrawer";
 import {
@@ -35,15 +37,15 @@ import {
   ArrowDown01Icon,
   ArrowDown02Icon,
   ArrowLeft01Icon,
-  CancelCircleIcon,
   Copy01Icon,
   CrownPlusIcon,
   Download01Icon,
   Edit02Icon,
   EyeIcon,
   FileExportIcon,
+  Globe02Icon,
   HelpCircleIcon,
-  Link01Icon,
+  LinkSquare02Icon,
   Moon02Icon,
   PanelLeftIcon,
   PanelRightIcon,
@@ -53,8 +55,10 @@ import {
   Share08Icon,
   SparklesIcon,
   SourceCodeIcon,
+  SquareLock02Icon,
   StarIcon,
   TestTube02Icon,
+  Tick02Icon,
   Sun01Icon,
   ThumbsDownIcon,
   ThumbsUpIcon,
@@ -80,7 +84,7 @@ import type {
   EmailChatMessageDto,
   EmailDto,
 } from "@madoo/shared";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -354,30 +358,28 @@ function mapChatMessages(
         content: message.content,
       })) ?? [];
 
-  if (email && !visibleChat.some((message) => message.role === "user")) {
-    return [
-      {
-        id: `${email.id}-prompt`,
-        role: "user",
-        content: email.prompt,
-      },
-      ...visibleChat,
-      ...(visibleChat.length === 0
-        ? [
-            {
-              id: `${email.id}-status`,
-              role: "status" as const,
-              content:
-                email.status === "READY"
-                  ? "Email is ready."
-                  : "Generation is in progress.",
-            },
-          ]
-        : []),
-    ];
+  // Always lead with the user's brief, even before the chat rows have loaded.
+  const messages: ChatMessage[] =
+    email && !visibleChat.some((message) => message.role === "user")
+      ? [{ id: `${email.id}-prompt`, role: "user", content: email.prompt }, ...visibleChat]
+      : visibleChat;
+
+  // While generating (e.g. after a reload, with no live SSE), keep a visible
+  // progress line until the assistant reply lands instead of a lone bubble.
+  if (
+    email?.status === "GENERATING" &&
+    !messages.some(
+      (message) => message.role === "assistant" || message.role === "status",
+    )
+  ) {
+    messages.push({
+      id: `${email.id}-generating`,
+      role: "status",
+      content: "Generating your email…",
+    });
   }
 
-  return visibleChat;
+  return messages;
 }
 
 function deriveConversationTitle(
@@ -440,20 +442,17 @@ function HeaderPillButton({
 }
 
 function ShareProjectDropdown({
-  conversationTitle,
-  onCopyInviteLink,
-  onSharePreview,
-  projectUrl,
+  email,
+  emailId,
 }: {
-  conversationTitle: string;
-  onCopyInviteLink: () => void;
-  onSharePreview: () => void;
-  projectUrl: string | null;
+  email: EmailDto | null | undefined;
+  emailId: string | null;
 }) {
   const user = useAuthStore((state) => state.user);
   const workspaceId = useClientStore((state) => state.workspaceId);
   const { toast } = useToast();
-  const [inviteEmail, setInviteEmail] = useState("");
+  const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
 
   const { data: workspaces = [] } = useQuery({
     queryKey: ["workspaces"],
@@ -466,22 +465,50 @@ function ShareProjectDropdown({
   const workspaceName = activeWorkspace?.name ?? "Madoo workspace";
   const workspaceInitial = workspaceName.trim().charAt(0).toUpperCase() || "M";
 
-  const inviteByEmail = () => {
-    const email = inviteEmail.trim();
-    if (!email || !projectUrl) {
+  const isPublic = email?.visibility === "PUBLIC";
+  const publicUrl = useMemo(() => {
+    if (!email?.publicId) return null;
+    const path = `/share/${email.publicId}`;
+    if (typeof window === "undefined") return path;
+    return new URL(path, window.location.origin).toString();
+  }, [email?.publicId]);
+
+  const shareMutation = useMutation({
+    mutationFn: (visibility: "PUBLIC" | "PRIVATE") => {
+      if (!emailId) throw new Error("Generate an email first.");
+      return updateEmailShare(emailId, { visibility });
+    },
+    onSuccess: async (_data, visibility) => {
+      await queryClient.invalidateQueries({ queryKey: ["email", emailId] });
+      toast({
+        tone: "success",
+        title:
+          visibility === "PUBLIC" ? "Public link enabled" : "Link set to private",
+        body:
+          visibility === "PUBLIC"
+            ? "Anyone with the link can now view this email."
+            : "The public link no longer opens this email.",
+      });
+    },
+    onError: (error) => {
       toast({
         tone: "danger",
-        title: "Invite needs an email",
-        body: "Add an email after the project is ready.",
+        title: "Could not update sharing",
+        body:
+          error instanceof Error ? error.message : "Try again in a moment.",
       });
-      return;
-    }
+    },
+  });
 
-    const subject = encodeURIComponent(`Madoo project: ${conversationTitle}`);
-    const body = encodeURIComponent(
-      `Open this Madoo project:\n\n${projectUrl}`,
-    );
-    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
+  const copyLink = async () => {
+    if (!publicUrl) return;
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast({ tone: "danger", title: "Copy failed" });
+    }
   };
 
   return (
@@ -497,78 +524,117 @@ function ShareProjectDropdown({
       </DropdownTrigger>
       <DropdownContent align="end" className="w-[min(88vw,420px)] gap-0 p-0!">
         <div className="grid gap-4 p-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="grid gap-1">
             <h3 className="text-lg font-semibold tracking-normal text-madoo-ink">
-              Share project
+              Share email
             </h3>
-            <button
-              className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-madoo-ink transition hover:bg-madoo-surface"
-              onClick={onCopyInviteLink}
-              type="button"
-            >
-              <HugeiconsIcon
-                aria-hidden="true"
-                icon={Link01Icon}
-                primaryColor="currentColor"
-                size={15}
-                strokeWidth={1.8}
-              />
-              Copy invite link
-            </button>
-          </div>
-
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <Input
-                className="h-9! bg-white!"
-                inputSize="lg"
-                onChange={(event) => setInviteEmail(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") inviteByEmail();
-                }}
-                placeholder="Invite by email"
-                type="email"
-                value={inviteEmail}
-                variant="default"
-              />
-            </div>
-            <Button
-              className="h-9 min-w-18 rounded-lg bg-madoo-ink text-white hover:bg-madoo-ink-soft"
-              disabled={!inviteEmail.trim() || !projectUrl}
-              onClick={inviteByEmail}
-              size="sm"
-              type="button"
-              variant="primary"
-            >
-              Invite
-            </Button>
-          </div>
-
-          <div className="grid gap-3">
-            <p className="text-xs font-semibold text-madoo-ink-muted">
-              Who has project access
+            <p className="text-xs text-madoo-ink-muted">
+              Create a public link so clients can preview this email — no Madoo
+              account needed.
             </p>
+          </div>
+
+          <div className="grid gap-3 rounded-xl bg-madoo-surface-2 p-3">
             <div className="flex items-center gap-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-surface-2 text-madoo-ink">
+              <span
+                className={cn(
+                  "grid size-9 shrink-0 place-items-center rounded-lg",
+                  isPublic
+                    ? "bg-madoo-ink text-white"
+                    : "bg-white text-madoo-ink shadow-madoo-border",
+                )}
+              >
                 <HugeiconsIcon
                   aria-hidden="true"
-                  icon={CancelCircleIcon}
+                  icon={isPublic ? Globe02Icon : SquareLock02Icon}
                   primaryColor="currentColor"
                   size={18}
-                  strokeWidth={1.8}
+                  strokeWidth={1.7}
                 />
               </span>
-              <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-madoo-ink">
-                Invite link disabled
-                <HugeiconsIcon
-                  aria-hidden="true"
-                  icon={ArrowDown01Icon}
-                  primaryColor="currentColor"
-                  size={16}
-                  strokeWidth={1.6}
-                />
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="truncate text-sm font-medium text-madoo-ink">
+                  {isPublic ? "Public link" : "Private"}
+                </span>
+                <span className="truncate text-xs text-madoo-ink-muted">
+                  {isPublic
+                    ? "Anyone with the link can view"
+                    : "Only your workspace can access"}
+                </span>
               </span>
+              <Button
+                className="h-8 rounded-lg"
+                disabled={!emailId || shareMutation.isPending}
+                onClick={() =>
+                  shareMutation.mutate(isPublic ? "PRIVATE" : "PUBLIC")
+                }
+                size="sm"
+                type="button"
+                variant={isPublic ? "secondary" : "primary"}
+              >
+                {shareMutation.isPending
+                  ? "Saving…"
+                  : isPublic
+                    ? "Make private"
+                    : "Create link"}
+              </Button>
             </div>
+
+            {isPublic && publicUrl ? (
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <Input
+                    aria-label="Public share link"
+                    className="h-9! bg-white!"
+                    inputSize="lg"
+                    onFocus={(event) => event.currentTarget.select()}
+                    readOnly
+                    value={publicUrl}
+                    variant="default"
+                  />
+                </div>
+                <Button
+                  aria-label="Copy public link"
+                  className="h-9 min-w-20 rounded-lg"
+                  leftIcon={
+                    <HugeiconsIcon
+                      aria-hidden="true"
+                      icon={copied ? Tick02Icon : Copy01Icon}
+                      primaryColor="currentColor"
+                      size={15}
+                      strokeWidth={1.8}
+                    />
+                  }
+                  onClick={copyLink}
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                >
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+                <a
+                  aria-label="Open public link"
+                  className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-madoo-ink shadow-madoo-border transition hover:bg-madoo-surface"
+                  href={publicUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    icon={LinkSquare02Icon}
+                    primaryColor="currentColor"
+                    size={16}
+                    strokeWidth={1.7}
+                  />
+                </a>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-2">
+            <p className="text-xs font-semibold text-madoo-ink-muted">
+              Who has access
+            </p>
             <div className="flex items-center gap-3">
               <Avatar
                 name={user?.name ?? user?.email ?? "User"}
@@ -587,63 +653,23 @@ function ShareProjectDropdown({
                 Owner
               </span>
             </div>
-          </div>
-
-          <div className="grid gap-3">
-            <p className="text-xs font-semibold text-madoo-ink-muted">
-              General project access
-            </p>
             <div className="flex items-center gap-3">
               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-ink text-xs font-semibold text-white">
                 {workspaceInitial}
               </span>
               <span className="grid min-w-0 flex-1 gap-0.5">
-                <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-madoo-ink">
-                  <span className="truncate">{workspaceName}</span>
-                  <HugeiconsIcon
-                    aria-hidden="true"
-                    icon={ArrowDown01Icon}
-                    primaryColor="currentColor"
-                    size={16}
-                    strokeWidth={1.6}
-                  />
+                <span className="truncate text-sm font-medium text-madoo-ink">
+                  {workspaceName}
                 </span>
                 <span className="truncate text-xs text-madoo-ink-muted">
                   People in this workspace
                 </span>
               </span>
-              <span className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-madoo-ink">
+              <span className="text-xs font-medium text-madoo-ink-muted">
                 Can edit
-                <HugeiconsIcon
-                  aria-hidden="true"
-                  icon={ArrowDown01Icon}
-                  primaryColor="currentColor"
-                  size={16}
-                  strokeWidth={1.6}
-                />
               </span>
             </div>
           </div>
-
-          <Button
-            className="h-10 rounded-lg bg-white text-sm font-medium text-madoo-ink shadow-madoo-border hover:bg-madoo-surface"
-            disabled={!projectUrl}
-            leftIcon={
-              <HugeiconsIcon
-                aria-hidden="true"
-                icon={Link01Icon}
-                primaryColor="currentColor"
-                size={17}
-                strokeWidth={1.8}
-              />
-            }
-            onClick={onSharePreview}
-            size="sm"
-            type="button"
-            variant="secondary"
-          >
-            Share preview
-          </Button>
         </div>
       </DropdownContent>
     </Dropdown>
@@ -1159,17 +1185,15 @@ function ExportProviderModal({
 
 function EmailPreviewSidebar({
   expanded,
-  conversationTitle,
+  email,
+  emailId,
   mode,
-  onCopyInviteLink,
   onOpenExport,
   onOpenPreview,
   onOpenPricing,
-  onSharePreview,
   onOpenTesting,
   onToggleExpanded,
   open,
-  projectUrl,
   setMode,
   srcDoc,
   setTheme,
@@ -1179,17 +1203,15 @@ function EmailPreviewSidebar({
   width,
 }: {
   expanded: boolean;
-  conversationTitle: string;
+  email: EmailDto | null | undefined;
+  emailId: string | null;
   mode: PreviewMode;
-  onCopyInviteLink: () => void;
   onOpenExport: () => void;
   onOpenPreview: () => void;
   onOpenPricing: () => void;
-  onSharePreview: () => void;
   onOpenTesting: () => void;
   onToggleExpanded: () => void;
   open: boolean;
-  projectUrl: string | null;
   setMode: (mode: PreviewMode) => void;
   srcDoc: string;
   setTheme: (theme: TemplateTheme) => void;
@@ -1305,7 +1327,7 @@ function EmailPreviewSidebar({
               aria-label={
                 expanded ? "Collapse email preview" : "Expand email preview"
               }
-              className="size-9 shrink-0 rounded-lg bg-white text-[#101114] shadow-madoo-border hover:bg-[#f3f4f6]"
+              className="size-9 shrink-0 rounded-lg"
               onClick={onToggleExpanded}
               size="sm"
               type="button"
@@ -1337,12 +1359,7 @@ function EmailPreviewSidebar({
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              <ShareProjectDropdown
-                conversationTitle={conversationTitle}
-                onCopyInviteLink={onCopyInviteLink}
-                onSharePreview={onSharePreview}
-                projectUrl={projectUrl}
-              />
+              <ShareProjectDropdown email={email} emailId={emailId} />
               <HeaderPillButton
                 className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
                 label="Preview email"
@@ -1533,6 +1550,7 @@ export default function EmailTemplateProject() {
     defaultPreviewWidthVw,
   );
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [previewOverlayOpen, setPreviewOverlayOpen] = useState(false);
   const processedStartupRef = useRef<string | null>(null);
 
   const emailQuery = useQuery({
@@ -1558,12 +1576,6 @@ export default function EmailTemplateProject() {
     streamedConversationTitle ??
     storedConversationTitle ??
     deriveConversationTitle(messages, "New conversation");
-  const projectUrl = useMemo(() => {
-    if (!currentEmailId) return null;
-    const path = `/email-template-project?id=${encodeURIComponent(currentEmailId)}`;
-    if (typeof window === "undefined") return path;
-    return new URL(path, window.location.origin).toString();
-  }, [currentEmailId]);
   const startupKey = useMemo(() => searchParams.toString(), [searchParams]);
 
   const invalidateEmailState = useCallback(
@@ -1955,68 +1967,6 @@ export default function EmailTemplateProject() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }, [previewSrcDoc, toast]);
 
-  const copyProjectLink = useCallback(async () => {
-    if (!projectUrl) {
-      toast({
-        tone: "danger",
-        title: "No project yet",
-        body: "Generate an email before copying a link.",
-      });
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(projectUrl);
-      toast({
-        tone: "success",
-        title: "Invite link copied",
-        body: "Project link is ready to paste.",
-      });
-    } catch {
-      toast({
-        tone: "danger",
-        title: "Copy failed",
-        body: "Could not copy the project link.",
-      });
-    }
-  }, [projectUrl, toast]);
-
-  const shareProject = useCallback(async () => {
-    if (!projectUrl) {
-      toast({
-        tone: "danger",
-        title: "No project yet",
-        body: "Generate an email before sharing.",
-      });
-      return;
-    }
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: conversationTitle,
-          url: projectUrl,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(projectUrl);
-      toast({
-        tone: "success",
-        title: "Preview link copied",
-        body: "Project link is ready to paste.",
-      });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-      toast({
-        tone: "danger",
-        title: "Share failed",
-        body: "Could not copy the project link.",
-      });
-    }
-  }, [conversationTitle, projectUrl, toast]);
-
   return (
     <main className="relative h-screen overflow-hidden bg-white">
       <header
@@ -2118,18 +2068,16 @@ export default function EmailTemplateProject() {
 
         {hasPreview && previewSrcDoc ? (
           <EmailPreviewSidebar
-            conversationTitle={conversationTitle}
+            email={email}
+            emailId={currentEmailId}
             expanded={previewExpanded}
             mode={previewMode}
-            onCopyInviteLink={copyProjectLink}
             onOpenExport={() => setExportModalOpen(true)}
-            onOpenPreview={openStandalonePreview}
+            onOpenPreview={() => setPreviewOverlayOpen(true)}
             onOpenPricing={() => setPricingOpen(true)}
-            onSharePreview={shareProject}
             onOpenTesting={() => setTestingModalOpen(true)}
             onToggleExpanded={togglePreviewExpanded}
             open={sidebarOpen}
-            projectUrl={projectUrl}
             setMode={setPreviewMode}
             srcDoc={previewSrcDoc}
             setTheme={setTemplateTheme}
@@ -2140,6 +2088,14 @@ export default function EmailTemplateProject() {
           />
         ) : null}
       </div>
+
+      <PreviewOverlay
+        onClose={() => setPreviewOverlayOpen(false)}
+        onOpenInNewTab={openStandalonePreview}
+        open={previewOverlayOpen && Boolean(previewSrcDoc)}
+        srcDoc={previewSrcDoc ?? ""}
+        subject={previewSubject}
+      />
 
       <ExportProviderModal
         emailId={currentEmailId}
