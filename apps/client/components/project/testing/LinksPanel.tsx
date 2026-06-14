@@ -178,11 +178,15 @@ function LinkRow({ link }: { link: LinkCheck }) {
         <span className="truncate text-xs text-madoo-ink-muted">{link.url}</span>
       </span>
       <span className="flex shrink-0 items-center gap-1.5">
-        {network && !link.hasUtm ? <Badge tone="warn">No UTM</Badge> : null}
+        {network && link.ok && !link.hasUtm ? (
+          <Badge tone="warn">No UTM</Badge>
+        ) : null}
         <Badge tone={link.ok ? "success" : "danger"}>
-          {network
-            ? (link.status ?? link.error ?? "Error")
-            : link.kind}
+          {!link.ok
+            ? (link.error ?? "Broken")
+            : network
+              ? (link.status ?? "OK")
+              : link.kind}
         </Badge>
       </span>
     </li>

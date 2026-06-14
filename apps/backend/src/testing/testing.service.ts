@@ -126,6 +126,10 @@ export class TestingService {
     const linkCount = (html.match(/<a\b/gi) ?? []).length;
     const hasUnsubscribe = /unsubscribe|opt[- ]?out/i.test(lowerHtml);
     const altMissing = countImagesMissingAlt(html);
+    const htmlBytes = Buffer.byteLength(html, "utf8");
+    const riskyTags = ["script", "form", "iframe"].filter((tag) =>
+      new RegExp(`<${tag}\\b`, "i").test(html),
+    );
 
     const issues: SpamIssue[] = [
       {
@@ -206,6 +210,25 @@ export class TestingService {
         severity: "low",
         passed: Boolean(subject.trim()) && subject.length <= 70,
       },
+      {
+        id: "html-size",
+        label: "Email size under clipping limit",
+        detail:
+          htmlBytes > 102_400
+            ? `${Math.round(htmlBytes / 1024)}KB — Gmail clips messages over ~102KB, hiding content and the unsubscribe link.`
+            : `${Math.round(htmlBytes / 1024)}KB, within Gmail's ~102KB limit.`,
+        severity: "medium",
+        passed: htmlBytes <= 102_400,
+      },
+      {
+        id: "risky-elements",
+        label: "No stripped or risky elements",
+        detail: riskyTags.length
+          ? `Found <${riskyTags.join(">, <")}> — most email clients strip these and they raise spam scores.`
+          : "No script, form, or iframe elements.",
+        severity: "high",
+        passed: riskyTags.length === 0,
+      },
     ];
 
     const penaltyBySeverity = { high: 22, medium: 12, low: 6 } as const;
@@ -267,6 +290,18 @@ async function probeLink(link: DiscoveredLink): Promise<LinkCheck> {
   const kind = classifyLink(link.url);
   const hasUtm = /[?&]utm_[a-z]+=/i.test(link.url);
   const base = { url: link.url, label: link.label, kind, hasUtm } as const;
+
+  // Bare "#" hrefs (and javascript: stubs) are placeholders that go nowhere —
+  // a common leftover in templates. Flag them as broken.
+  const trimmed = link.url.trim();
+  if (trimmed === "#" || /^javascript:/i.test(trimmed)) {
+    return LinkCheckSchema.parse({
+      ...base,
+      status: null,
+      ok: false,
+      error: "Placeholder link",
+    });
+  }
 
   if (kind !== "http") {
     return LinkCheckSchema.parse({ ...base, status: null, ok: true, error: null });
