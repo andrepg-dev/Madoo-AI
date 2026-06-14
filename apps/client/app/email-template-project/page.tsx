@@ -1389,7 +1389,7 @@ function VersionsDropdown({
         <Button
           className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium"
           size="sm"
-          variant="ghost"
+          variant="secondary"
         >
           <span>
             Version {active.seq}
