@@ -2,7 +2,11 @@
 
 import { updateEmailVariantVariableSchema } from "@/actions/emails";
 import { cn } from "@/lib/utils";
-import { Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import {
+  Cancel01Icon,
+  Loading03Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge, Button, Input, useToast } from "@madoo/design-system";
 import type {
@@ -216,7 +220,15 @@ export function VariablesPanel({
 function SaveStatus({ pending, saved }: { pending: boolean; saved: boolean }) {
   if (pending) {
     return (
-      <span className="text-[11px] font-medium text-madoo-ink-muted">
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-madoo-ink-muted">
+        <HugeiconsIcon
+          aria-hidden="true"
+          className="animate-spin"
+          icon={Loading03Icon}
+          primaryColor="currentColor"
+          size={12}
+          strokeWidth={2.2}
+        />
         Saving…
       </span>
     );

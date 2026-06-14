@@ -54,9 +54,9 @@ already present. So this was UI-only.
   initializers (no reset-`useEffect`), so background saves don't clobber the
   local draft.
 - **Save feedback.** A subtle inline `SaveStatus` in the panel header shows
-  "Saving…" while persisting and "✓ Saved" for ~1.8s after success (covers both
-  scope flips and value saves). Chosen over a toast to avoid noise on rapid
-  toggles.
+  a spinning Hugeicons `Loading03Icon` + "Saving…" while persisting and "✓ Saved"
+  for ~1.8s after success (covers both scope flips and value saves). Chosen over
+  a toast to avoid noise on rapid toggles.
 - **Toolbar toggle color fixed.** The "Variables" button used `variant="ghost"`
   with a `bg-madoo-ink` className override, but the DS `cx` doesn't tailwind-
   merge, so `bg-transparent` won and the white label was invisible. Switched to
