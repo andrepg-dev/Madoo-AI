@@ -29,9 +29,9 @@
   --accent-fg: #ffffff;
   --link: #2f6fea;
   --link-hover: #2558c6;
-  /* Border/rule shadows are neutral ink, never blue. */
-  --rule: #101114;
-  --rule-rgb: 16 17 20;
+  /* Border/rule shadows are a soft neutral gray, never blue. */
+  --rule: #7c7c80;
+  --rule-rgb: 124 124 128;
   --ink-shadow-rgb: 16 17 20;
 
   /* ── Landing compatibility aliases ───────────────────────────── */
@@ -115,7 +115,7 @@
   --font-weight-semibold: 600;
 
   /* ── Shadows ─────────────────────────────────────────────────── */
-  --shadow-border: inset 0 0 0 0.75px var(--border);
+  --shadow-border: inset 0 0 0 0.5px var(--border);
   --shadow-border-soft: inset 0 0 0 0.5px var(--border-soft);
   --shadow-border-strong: inset 0 0 0 0.5px var(--ink-faint);
   --shadow-border-ink: inset 0 0 0 0.75px var(--ink);
