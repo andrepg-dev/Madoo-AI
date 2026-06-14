@@ -37,6 +37,7 @@ const Email = ({
   feature3 = 'AI assistant built in',
   ctaLabel = 'Explore the release',
   ctaUrl = '#',
+  unsubscribeUrl = '#',
 } = {}) => (
   <Html lang="en">
     <Head />
@@ -77,7 +78,7 @@ const Email = ({
         <Section style={{ backgroundColor: '#F2EFE8', borderRadius: '0 0 14px 14px', padding: '22px 36px', textAlign: 'center' }}>
           <Text style={{ fontSize: 11, color: '#0E1F1A', opacity: 0.4, margin: 0, lineHeight: '1.65' }}>
             You received this because you signed up for {brandName} updates.{' '}
-            <a href="#" style={{ color: '#0E1F1A' }}>Unsubscribe</a>
+            <a href={unsubscribeUrl} style={{ color: '#0E1F1A' }}>Unsubscribe</a>
           </Text>
         </Section>
       </Container>
@@ -112,6 +113,7 @@ const Email = ({
   article3Excerpt = 'Six pieces worth an hour of your weekend.',
   signoff = 'Until next week,',
   authorName = 'The Editorial team',
+  unsubscribeUrl = '#',
 } = {}) => (
   <Html lang="en">
     <Head />
@@ -174,7 +176,7 @@ const Email = ({
           <Text style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A', margin: '0 0 28px', fontFamily: 'system-ui, sans-serif' }}>{authorName}</Text>
           <Text style={{ fontSize: 11, color: '#1A1A1A', opacity: 0.35, margin: 0, fontFamily: 'system-ui, sans-serif', lineHeight: '1.6' }}>
             You are subscribed to {issueLabel}.{' '}
-            <a href="#" style={{ color: '#1A1A1A' }}>Unsubscribe</a>{' '}&middot;{' '}
+            <a href={unsubscribeUrl} style={{ color: '#1A1A1A' }}>Unsubscribe</a>{' '}&middot;{' '}
             <a href="#" style={{ color: '#1A1A1A' }}>Manage preferences</a>
           </Text>
         </Section>
@@ -204,6 +206,7 @@ const Email = ({
   ctaLabel = 'Shop the drop',
   ctaUrl = '#',
   couponCode = '',
+  unsubscribeUrl = '#',
 } = {}) => (
   <Html lang="en">
     <Head />
@@ -245,7 +248,7 @@ const Email = ({
         <Section style={{ backgroundColor: '#FFF1EB', borderRadius: '0 0 14px 14px', padding: '18px 36px', textAlign: 'center' }}>
           <Text style={{ fontSize: 11, color: '#2B160F', opacity: 0.4, margin: 0, lineHeight: '1.6' }}>
             {deadline} &mdash; You received this because you opted in to {brandName} promotions.{' '}
-            <a href="#" style={{ color: '#2B160F' }}>Unsubscribe</a>
+            <a href={unsubscribeUrl} style={{ color: '#2B160F' }}>Unsubscribe</a>
           </Text>
         </Section>
       </Container>
@@ -276,6 +279,7 @@ const Email = ({
   ctaLabel = 'Get started now',
   ctaUrl = '#',
   senderName = 'The Acme team',
+  unsubscribeUrl = '#',
 } = {}) => (
   <Html lang="en">
     <Head />
@@ -321,7 +325,7 @@ const Email = ({
           <Text style={{ fontSize: 13, color: '#2C5F4F', margin: '0 0 4px', fontWeight: 500 }}>— {senderName}</Text>
           <Text style={{ fontSize: 11, color: '#2C5F4F', opacity: 0.4, margin: 0, lineHeight: '1.6' }}>
             You received this because you created an account on {brandName}.{' '}
-            <a href="#" style={{ color: '#2C5F4F' }}>Unsubscribe</a>
+            <a href={unsubscribeUrl} style={{ color: '#2C5F4F' }}>Unsubscribe</a>
           </Text>
         </Section>
       </Container>
