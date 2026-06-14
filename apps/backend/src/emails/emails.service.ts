@@ -150,6 +150,33 @@ export class EmailsService {
     );
   }
 
+  /** Upload an image (for an image-role variable) to S3 and return its URL. */
+  async uploadImage(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    file: { buffer: Buffer; mimetype: string } | undefined,
+  ): Promise<{ url: string }> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    if (!file) {
+      throw new BadRequestException("No image file provided.");
+    }
+    const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+    if (!allowed.includes(file.mimetype)) {
+      throw new BadRequestException("Image must be PNG, JPEG, WEBP, or GIF.");
+    }
+    if (file.buffer.byteLength > 8 * 1024 * 1024) {
+      throw new BadRequestException("Image must be smaller than 8 MB.");
+    }
+    const url = await this.s3.uploadBuffer(
+      file.buffer,
+      file.mimetype,
+      "email-images",
+    );
+    return { url };
+  }
+
   /** Delete chat messages from `from` (inclusive) onward — used to edit a turn. */
   async truncateChatMessages(
     emailId: string,

@@ -120,6 +120,7 @@ const STATIC_INSTRUCTION = [
   "Typographic hierarchy: eyebrow ~11px uppercase, letter-spaced, muted; headline ~30-40px bold with tight line-height; body 15-16px with line-height ~1.6-1.75; footer ~11-12px muted.",
   "Build any multi-column layout with <Row>/<Column> (table-based) so it survives Outlook/Gmail and collapses gracefully on mobile; keep the email single-column overall.",
   "Always give <Img> an explicit width and meaningful alt text; give the <Button> inline padding, border-radius, and display:inline-block.",
+  "For a brand logo or hero image, render an <Img> bound to an image variable (role=image, scope=static) with a sensible placeholder image URL default, so the user can upload their own image in Madoo. Don't fake a logo with text/emoji when a real image fits.",
   "Even for 'simple' briefs keep the full skeleton (header, hero, CTA, footer with unsubscribe). Simple means less copy and fewer sections — not missing structure.",
   "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl}; the footer unsubscribe link uses href={unsubscribeUrl} with scope=dynamic (role=url) so the sending platform can inject the real opt-out URL. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",

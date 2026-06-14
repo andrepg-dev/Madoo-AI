@@ -30,7 +30,13 @@ export class S3Service {
   }
 
   async uploadBuffer(buffer: Buffer, contentType: string, folder = "previews"): Promise<string> {
-    const key = `${folder}/${uuidv4()}.${contentType === "image/png" ? "png" : "jpg"}`;
+    const extByType: Record<string, string> = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/webp": "webp",
+      "image/gif": "gif",
+    };
+    const key = `${folder}/${uuidv4()}.${extByType[contentType] ?? "jpg"}`;
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
