@@ -1417,7 +1417,7 @@ function EmailPreviewSidebar({
       ) : null}
 
       <div className="flex h-full min-w-105 flex-col">
-        <div className="shrink-0 bg-madoo-bg rounded-t-3xl">
+        <div className="shrink-0 rounded-t-3xl bg-madoo-bg shadow-(--shadow-border-bottom)">
           <div className="flex min-h-13 items-center gap-3 bg-madoo-bg px-4">
             <Button
               aria-label={
