@@ -10,7 +10,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@madoo/design-system";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type AccessLevel = "admin" | "edit" | "view";
 
@@ -26,7 +26,7 @@ const options: Option[] = [
   {
     value: "admin",
     label: "Admin",
-    description: "Full access to project",
+    description: "Full access to the project",
     icon: UserLock01Icon,
     pro: true,
   },
@@ -40,7 +40,7 @@ const options: Option[] = [
   {
     value: "view",
     label: "Can view",
-    description: "Can view project but can’t modify",
+    description: "View the project but can’t modify it",
     icon: ViewIcon,
     pro: true,
   },
@@ -48,8 +48,8 @@ const options: Option[] = [
 
 /**
  * Project access-level picker. The two Pro tiers are gated: selecting one calls
- * `onUpgrade` (pricing) instead of applying. Inline expand avoids nesting a
- * second popover inside the share dropdown.
+ * `onUpgrade` (pricing) instead of applying. Rendered as a compact popover that
+ * floats over (rather than pushing) the share panel.
  */
 export function AccessLevelSelect({
   value,
@@ -61,40 +61,72 @@ export function AccessLevelSelect({
   onUpgrade: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const current = options.find((option) => option.value === value) ?? options[1];
 
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
   const select = (option: Option) => {
+    setOpen(false);
     if (option.pro) {
       onUpgrade();
-      setOpen(false);
       return;
     }
     onChange(option.value);
-    setOpen(false);
   };
 
   return (
-    <div className="grid gap-1.5">
+    <div className="relative" ref={rootRef}>
       <button
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="inline-flex items-center gap-1.5 rounded-lg bg-madoo-surface-2 px-2.5 py-1.5 text-xs font-medium text-madoo-ink transition hover:bg-madoo-surface"
-        onClick={() => setOpen((value) => !value)}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-madoo-surface px-2.5 py-1.5 text-xs font-medium text-madoo-ink shadow-madoo-border transition-[background,box-shadow] hover:bg-madoo-bg hover:shadow-(--shadow-border-rule-hover)"
+        onClick={() => setOpen((previous) => !previous)}
         type="button"
       >
+        <HugeiconsIcon
+          aria-hidden="true"
+          className="text-madoo-ink-soft"
+          icon={current.icon}
+          primaryColor="currentColor"
+          size={14}
+          strokeWidth={1.7}
+        />
         {current.label}
         <HugeiconsIcon
           aria-hidden="true"
-          className={cn("transition-transform", open && "rotate-180")}
+          className={cn(
+            "text-madoo-ink-muted transition-transform",
+            open && "rotate-180",
+          )}
           icon={ArrowDown01Icon}
           primaryColor="currentColor"
-          size={14}
+          size={13}
           strokeWidth={1.7}
         />
       </button>
 
       {open ? (
-        <ul className="grid gap-0.5 rounded-xl bg-white p-1.5 shadow-madoo-border" role="listbox">
+        <ul
+          className="absolute bottom-full right-0 z-[var(--z-popover)] mb-1.5 grid w-64 gap-0.5 rounded-lg bg-madoo-surface p-1.5 shadow-(--shadow-border-rule-hover)"
+          role="listbox"
+        >
           {options.map((option) => {
             const active = option.value === value;
             return (
@@ -102,39 +134,40 @@ export function AccessLevelSelect({
                 <button
                   aria-selected={active}
                   className={cn(
-                    "flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-left transition",
-                    active ? "bg-madoo-surface-2" : "hover:bg-madoo-surface",
+                    "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors",
+                    active ? "bg-madoo-surface-2" : "hover:bg-madoo-bg",
                   )}
                   onClick={() => select(option)}
                   role="option"
                   type="button"
                 >
-                  <HugeiconsIcon
-                    aria-hidden="true"
-                    className="mt-0.5 shrink-0 text-madoo-ink-soft"
-                    icon={option.icon}
-                    primaryColor="currentColor"
-                    size={17}
-                    strokeWidth={1.6}
-                  />
+                  <span className="grid size-7 shrink-0 place-items-center rounded-md bg-madoo-surface-2 text-madoo-ink-soft">
+                    <HugeiconsIcon
+                      aria-hidden="true"
+                      icon={option.icon}
+                      primaryColor="currentColor"
+                      size={15}
+                      strokeWidth={1.6}
+                    />
+                  </span>
                   <span className="grid min-w-0 flex-1 gap-0.5">
                     <span className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold text-madoo-ink">
+                      <span className="text-[13px] font-medium text-madoo-ink">
                         {option.label}
                       </span>
                       {option.pro ? <Badge tone="accent">Pro</Badge> : null}
                     </span>
-                    <span className="text-xs text-madoo-ink-muted">
+                    <span className="text-[11px] leading-4 text-madoo-ink-muted">
                       {option.description}
                     </span>
                   </span>
                   {active ? (
                     <HugeiconsIcon
                       aria-hidden="true"
-                      className="mt-0.5 shrink-0 text-madoo-ink"
+                      className="shrink-0 text-madoo-accent-deep"
                       icon={Tick02Icon}
                       primaryColor="currentColor"
-                      size={16}
+                      size={15}
                       strokeWidth={1.9}
                     />
                   ) : null}
