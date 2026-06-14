@@ -5,7 +5,11 @@ import { cn } from "@/lib/utils";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge, Button, Input, useToast } from "@madoo/design-system";
-import type { EmailDto, VariableSpec } from "@madoo/shared";
+import type {
+  EmailDto,
+  VariableSchemaRoot,
+  VariableSpec,
+} from "@madoo/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
@@ -57,35 +61,24 @@ export function VariablesPanel({
   const scopeOf = (variable: VariableSpec): VariableScope =>
     scopes[variable.name] ?? defaultScope(variable);
 
-  const dirty = useMemo(
-    () =>
-      variables.some(
-        (variable) =>
-          valueOf(variable) !== variable.default ||
-          scopeOf(variable) !== defaultScope(variable),
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [variables, values, scopes],
-  );
+  const buildSchema = (
+    nextValues: Record<string, string>,
+    nextScopes: Record<string, VariableScope>,
+  ): VariableSchemaRoot => ({
+    variables: variables.map((variable) => ({
+      ...variable,
+      default: nextValues[variable.name] ?? variable.default,
+      scope: nextScopes[variable.name] ?? defaultScope(variable),
+    })),
+  });
 
   const mutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (schema: VariableSchemaRoot) =>
       updateEmailVariantVariableSchema(emailId, variantId, {
-        variableSchema: {
-          variables: variables.map((variable) => ({
-            ...variable,
-            default: valueOf(variable),
-            scope: scopeOf(variable),
-          })),
-        },
+        variableSchema: schema,
       }),
     onSuccess: (email: EmailDto) => {
       queryClient.setQueryData(["email", emailId], email);
-      toast({
-        tone: "success",
-        title: "Variables saved",
-        body: "Preview updated with the new values.",
-      });
     },
     onError: (error) => {
       toast({
@@ -95,6 +88,20 @@ export function VariablesPanel({
       });
     },
   });
+
+  // Scope (dynamic/static) commits immediately — no confirm button.
+  const handleScopeChange = (name: string, scope: VariableScope) => {
+    const nextScopes = { ...scopes, [name]: scope };
+    setScopes(nextScopes);
+    mutation.mutate(buildSchema(values, nextScopes));
+  };
+
+  // Value edits are batched behind an explicit save (avoids a request per key).
+  const valuesDirty = useMemo(
+    () => variables.some((variable) => valueOf(variable) !== variable.default),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [variables, values],
+  );
 
   return (
     <aside
@@ -163,12 +170,8 @@ export function VariablesPanel({
                 />
 
                 <ScopeToggle
-                  onChange={(next) =>
-                    setScopes((current) => ({
-                      ...current,
-                      [variable.name]: next,
-                    }))
-                  }
+                  disabled={mutation.isPending}
+                  onChange={(next) => handleScopeChange(variable.name, next)}
                   value={scope}
                 />
               </div>
@@ -177,12 +180,12 @@ export function VariablesPanel({
         )}
       </div>
 
-      {dirty ? (
+      {valuesDirty ? (
         <div className="flex items-center gap-2 px-4 py-3 shadow-[inset_0_1px_0_rgb(var(--rule-rgb)/0.12)]">
           <Button
             block
             disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
+            onClick={() => mutation.mutate(buildSchema(values, scopes))}
             size="md"
             type="button"
             variant="primary"
@@ -196,9 +199,11 @@ export function VariablesPanel({
 }
 
 function ScopeToggle({
+  disabled,
   onChange,
   value,
 }: {
+  disabled?: boolean;
   onChange: (scope: VariableScope) => void;
   value: VariableScope;
 }) {
@@ -209,11 +214,13 @@ function ScopeToggle({
         <button
           aria-pressed={value === scope}
           className={cn(
-            "flex-1 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium capitalize transition-colors",
+            "flex-1 rounded-md px-2 py-1 text-[11px] font-medium capitalize transition-colors disabled:cursor-not-allowed",
             value === scope
               ? "bg-white text-madoo-ink shadow-madoo-border"
-              : "text-madoo-ink-muted hover:text-madoo-ink",
+              : "text-madoo-ink-muted enabled:hover:text-madoo-ink",
+            !disabled && "cursor-pointer",
           )}
+          disabled={disabled}
           key={scope}
           onClick={() => onChange(scope)}
           type="button"

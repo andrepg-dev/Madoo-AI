@@ -42,6 +42,19 @@ already present. So this was UI-only.
   does change the re-rendered HTML.
 - Toast tones used: `success` / `danger` (from the DS `ToastTone`).
 
+## Follow-up tweaks
+
+- **Scope auto-saves.** Switching a variable dynamic↔static commits immediately
+  (`handleScopeChange` → mutate) — no confirm. The explicit "Save & update
+  preview" bar now keys off `valuesDirty` only (value edits still batch behind
+  the button to avoid a request per keystroke). Scope buttons disable while a
+  save is in flight. Dropped the success toast (the live preview is the
+  confirmation); kept the error toast.
+- **Toolbar toggle color fixed.** The "Variables" button used `variant="ghost"`
+  with a `bg-madoo-ink` className override, but the DS `cx` doesn't tailwind-
+  merge, so `bg-transparent` won and the white label was invisible. Switched to
+  `variant={variablesOpen ? "primary" : "secondary"}` (no className bg).
+
 ## Verify
 
 `npx tsc --noEmit -p apps/client/tsconfig.json` → clean. In-app: open a generated

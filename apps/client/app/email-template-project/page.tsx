@@ -1503,15 +1503,10 @@ function EmailPreviewSidebar({
               <Button
                 aria-label="Toggle variables panel"
                 aria-pressed={variablesOpen}
-                className={cn(
-                  "h-8 gap-2 rounded-lg px-3 text-xs font-medium shadow-madoo-border hover:bg-[#f3f4f6]",
-                  variablesOpen
-                    ? "bg-madoo-ink text-white hover:bg-madoo-ink-soft"
-                    : "bg-white text-madoo-ink",
-                )}
+                className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
                 onClick={() => setVariablesOpen((open) => !open)}
                 size="sm"
-                variant="ghost"
+                variant={variablesOpen ? "primary" : "secondary"}
               >
                 <HugeiconsIcon
                   aria-hidden="true"
