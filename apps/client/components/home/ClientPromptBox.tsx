@@ -177,9 +177,10 @@ export function ClientPromptBox({
 
     if (onSubmit) {
       setIsSubmitting(true);
+      // Clear instantly so the message feels sent before the backend responds.
+      setPrompt("");
       try {
         await onSubmit(input);
-        setPrompt("");
       } finally {
         setIsSubmitting(false);
       }

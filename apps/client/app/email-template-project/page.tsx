@@ -23,6 +23,10 @@ import {
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
 import { PreviewOverlay } from "@/components/project/preview/PreviewOverlay";
+import {
+  AccessLevelSelect,
+  type AccessLevel,
+} from "@/components/project/share/AccessLevelSelect";
 import { TestingModal } from "@/components/project/testing/TestingModal";
 import { PricingDrawer } from "@/components/shell/PricingDrawer";
 import {
@@ -301,11 +305,78 @@ function ConversationTitleDropdown({ title }: { title: string }) {
   );
 }
 
+type TimelineStep = {
+  id: string;
+  label: string;
+  state: "active" | "done";
+};
+
 type ChatMessage = {
   id: string;
-  role: "user" | "assistant" | "status" | "error";
+  role: "user" | "assistant" | "status" | "error" | "timeline";
   content: string;
+  /** Chronological sort key so server rows and client-only rows interleave. */
+  seq?: number;
+  /** Owning email, used to drop client-only rows when switching projects. */
+  emailId?: string;
+  steps?: TimelineStep[];
+  startedAt?: number;
+  finishedAt?: number;
 };
+
+function createTimelineMessage(
+  emailId: string,
+  firstLabel: string,
+): ChatMessage {
+  const now = Date.now();
+  return {
+    id: `timeline-${now}-${Math.random().toString(36).slice(2, 7)}`,
+    role: "timeline",
+    content: "",
+    seq: now,
+    emailId,
+    startedAt: now,
+    steps: [{ id: `step-${now}`, label: firstLabel, state: "active" }],
+  };
+}
+
+/** Append a step to a timeline, marking earlier steps done. Skips repeats. */
+function appendTimelineStep(
+  list: ChatMessage[],
+  timelineId: string,
+  label: string,
+): ChatMessage[] {
+  return list.map((message) => {
+    if (message.id !== timelineId || message.role !== "timeline") return message;
+    const steps = message.steps ?? [];
+    if (steps.length && steps[steps.length - 1].label === label) return message;
+    return {
+      ...message,
+      steps: [
+        ...steps.map((step) => ({ ...step, state: "done" as const })),
+        { id: `step-${Date.now()}-${steps.length}`, label, state: "active" },
+      ],
+    };
+  });
+}
+
+/** Mark a timeline finished; its steps stay in the conversation as a record. */
+function finishTimeline(
+  list: ChatMessage[],
+  timelineId: string,
+): ChatMessage[] {
+  return list.map((message) => {
+    if (message.id !== timelineId || message.role !== "timeline") return message;
+    return {
+      ...message,
+      finishedAt: Date.now(),
+      steps: (message.steps ?? []).map((step) => ({
+        ...step,
+        state: "done" as const,
+      })),
+    };
+  });
+}
 
 type PreviewMode = "desktop" | "responsive";
 type TemplateTheme = "light" | "dark";
@@ -349,19 +420,29 @@ function mapChatMessages(
       ?.filter((message) => message.kind !== "THINKING")
       .map((message) => ({
         id: message.id,
-        role:
-          message.role === "USER"
-            ? "user"
-            : message.kind === "STATUS"
-              ? "status"
-              : "assistant",
+        role: (message.role === "USER"
+          ? "user"
+          : message.kind === "STATUS"
+            ? "status"
+            : "assistant") as ChatMessage["role"],
         content: message.content,
+        seq: Date.parse(message.createdAt) || 0,
+        emailId: email?.id,
       })) ?? [];
 
   // Always lead with the user's brief, even before the chat rows have loaded.
   const messages: ChatMessage[] =
     email && !visibleChat.some((message) => message.role === "user")
-      ? [{ id: `${email.id}-prompt`, role: "user", content: email.prompt }, ...visibleChat]
+      ? [
+          {
+            id: `${email.id}-prompt`,
+            role: "user",
+            content: email.prompt,
+            seq: Date.parse(email.createdAt) || 0,
+            emailId: email.id,
+          },
+          ...visibleChat,
+        ]
       : visibleChat;
 
   // While generating (e.g. after a reload, with no live SSE), keep a visible
@@ -369,13 +450,18 @@ function mapChatMessages(
   if (
     email?.status === "GENERATING" &&
     !messages.some(
-      (message) => message.role === "assistant" || message.role === "status",
+      (message) =>
+        message.role === "assistant" ||
+        message.role === "status" ||
+        message.role === "timeline",
     )
   ) {
     messages.push({
       id: `${email.id}-generating`,
       role: "status",
       content: "Generating your email…",
+      seq: Date.now(),
+      emailId: email.id,
     });
   }
 
@@ -444,15 +530,18 @@ function HeaderPillButton({
 function ShareProjectDropdown({
   email,
   emailId,
+  onUpgrade,
 }: {
   email: EmailDto | null | undefined;
   emailId: string | null;
+  onUpgrade: () => void;
 }) {
   const user = useAuthStore((state) => state.user);
   const workspaceId = useClientStore((state) => state.workspaceId);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("edit");
 
   const { data: workspaces = [] } = useQuery({
     queryKey: ["workspaces"],
@@ -653,8 +742,8 @@ function ShareProjectDropdown({
                 Owner
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-ink text-xs font-semibold text-white">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-ink text-xs font-semibold text-white">
                 {workspaceInitial}
               </span>
               <span className="grid min-w-0 flex-1 gap-0.5">
@@ -665,9 +754,11 @@ function ShareProjectDropdown({
                   People in this workspace
                 </span>
               </span>
-              <span className="text-xs font-medium text-madoo-ink-muted">
-                Can edit
-              </span>
+              <AccessLevelSelect
+                onChange={setAccessLevel}
+                onUpgrade={onUpgrade}
+                value={accessLevel}
+              />
             </div>
           </div>
         </div>
@@ -1359,7 +1450,11 @@ function EmailPreviewSidebar({
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              <ShareProjectDropdown email={email} emailId={emailId} />
+              <ShareProjectDropdown
+                email={email}
+                emailId={emailId}
+                onUpgrade={onOpenPricing}
+              />
               <HeaderPillButton
                 className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
                 label="Preview email"
@@ -1521,6 +1616,106 @@ function ErrorMessage({ children }: { children: string }) {
   );
 }
 
+/**
+ * Live, then permanent, record of the generation steps. Expanded while working,
+ * collapses to "Worked for Ns" when done but stays in the conversation.
+ */
+function TimelineMessage({ message }: { message: ChatMessage }) {
+  const steps = message.steps ?? [];
+  const finished = Boolean(message.finishedAt);
+  const [expanded, setExpanded] = useState(true);
+
+  useEffect(() => {
+    if (finished) setExpanded(false);
+  }, [finished]);
+
+  const elapsedSeconds =
+    message.finishedAt && message.startedAt
+      ? Math.max(1, Math.round((message.finishedAt - message.startedAt) / 1000))
+      : null;
+  const activeLabel =
+    steps.find((step) => step.state === "active")?.label ??
+    steps[steps.length - 1]?.label ??
+    "Working…";
+
+  return (
+    <div className="mr-auto w-full max-w-md">
+      <button
+        aria-expanded={expanded}
+        className="flex w-full items-center gap-2.5 rounded-xl bg-madoo-surface-2 px-3 py-2 text-left shadow-madoo-border transition hover:bg-madoo-surface"
+        onClick={() => setExpanded((value) => !value)}
+        type="button"
+      >
+        {finished ? (
+          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-madoo-ink text-white">
+            <HugeiconsIcon
+              aria-hidden="true"
+              icon={Tick02Icon}
+              primaryColor="currentColor"
+              size={12}
+              strokeWidth={2}
+            />
+          </span>
+        ) : (
+          <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-madoo-border border-t-madoo-ink" />
+        )}
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-madoo-ink">
+          {finished
+            ? `Worked for ${elapsedSeconds ?? 1}s`
+            : activeLabel}
+        </span>
+        <HugeiconsIcon
+          aria-hidden="true"
+          className={cn(
+            "shrink-0 text-madoo-ink-muted transition-transform",
+            expanded && "rotate-180",
+          )}
+          icon={ArrowDown01Icon}
+          primaryColor="currentColor"
+          size={15}
+          strokeWidth={1.7}
+        />
+      </button>
+
+      {expanded && steps.length ? (
+        <ol className="mt-2 grid pl-2">
+          {steps.map((step, index) => {
+            const isActive = step.state === "active" && !finished;
+            const isLast = index === steps.length - 1;
+            return (
+              <li className="flex gap-2.5" key={step.id}>
+                <span className="flex flex-col items-center">
+                  <span
+                    className={cn(
+                      "mt-1 size-2.5 shrink-0 rounded-full",
+                      isActive
+                        ? "bg-madoo-ink ring-4 ring-madoo-ink/10"
+                        : "bg-madoo-ink/60",
+                    )}
+                  />
+                  {!isLast ? (
+                    <span className="my-0.5 w-px flex-1 bg-madoo-border" />
+                  ) : null}
+                </span>
+                <span
+                  className={cn(
+                    "pb-2.5 text-xs",
+                    isActive
+                      ? "font-medium text-madoo-ink"
+                      : "text-madoo-ink-muted",
+                  )}
+                >
+                  {step.label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
+    </div>
+  );
+}
+
 export default function EmailTemplateProject() {
   const messagesRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -1597,30 +1792,22 @@ export default function EmailTemplateProject() {
       instruction?: string,
       baseVariantId?: string,
     ) => {
-      const statusId = `${mode}-${Date.now()}-status`;
       const assistantId = `${mode}-${Date.now()}-assistant`;
+      const timeline = createTimelineMessage(
+        emailId,
+        mode === "generate" ? "Starting generation…" : "Applying your edits…",
+      );
+      const timelineId = timeline.id;
       let assistantText = "";
 
       setIsStreaming(true);
-      setMessages((current) =>
-        upsertMessage(current, {
-          id: statusId,
-          role: "status",
-          content:
-            mode === "generate"
-              ? "Starting generation..."
-              : "Applying edits...",
-        }),
-      );
+      // Append the live timeline; the user's message is already on screen.
+      setMessages((current) => [...current, timeline]);
 
       const handleEvent = (event: StreamEmailEvent) => {
         if (event.type === "step") {
           setMessages((current) =>
-            upsertMessage(current, {
-              id: statusId,
-              role: "status",
-              content: event.message,
-            }),
+            appendTimelineStep(current, timelineId, event.message),
           );
           return;
         }
@@ -1632,6 +1819,8 @@ export default function EmailTemplateProject() {
               id: assistantId,
               role: "assistant",
               content: assistantText,
+              seq: Date.now(),
+              emailId,
             }),
           );
           return;
@@ -1649,11 +1838,14 @@ export default function EmailTemplateProject() {
 
         if (event.type === "code-chunk") {
           setMessages((current) =>
-            upsertMessage(current, {
-              id: statusId,
-              role: "status",
-              content: "Updating email template...",
-            }),
+            appendTimelineStep(current, timelineId, "Writing the email template…"),
+          );
+          return;
+        }
+
+        if (event.type === "preview_url") {
+          setMessages((current) =>
+            appendTimelineStep(current, timelineId, "Preview image ready"),
           );
           return;
         }
@@ -1668,33 +1860,32 @@ export default function EmailTemplateProject() {
           if (event.conversationTitle) {
             setStreamedConversationTitle(event.conversationTitle);
           }
-          if (!assistantText.trim()) {
-            setMessages((current) =>
-              upsertMessage(current, {
-                id: assistantId,
-                role: "assistant",
-                content: event.chatOnly
-                  ? "I added guidance to the conversation."
-                  : `Generated email${event.subject ? `: ${event.subject}` : "."}`,
-              }),
-            );
-          }
-          setMessages((current) =>
-            current.filter((message) => message.id !== statusId),
-          );
+          // Keep the timeline in the conversation as a record; finalize it.
+          setMessages((current) => {
+            const finished = finishTimeline(current, timelineId);
+            if (assistantText.trim()) return finished;
+            return upsertMessage(finished, {
+              id: assistantId,
+              role: "assistant",
+              content: event.chatOnly
+                ? "I added guidance to the conversation."
+                : `Generated email${event.subject ? `: ${event.subject}` : "."}`,
+              seq: Date.now(),
+              emailId,
+            });
+          });
           return;
         }
 
         if (event.type === "error") {
           setMessages((current) =>
-            upsertMessage(
-              current.filter((message) => message.id !== statusId),
-              {
-                id: `${mode}-${Date.now()}-error`,
-                role: "error",
-                content: event.message,
-              },
-            ),
+            upsertMessage(finishTimeline(current, timelineId), {
+              id: `${mode}-${Date.now()}-error`,
+              role: "error",
+              content: event.message,
+              seq: Date.now(),
+              emailId,
+            }),
           );
         }
       };
@@ -1714,15 +1905,14 @@ export default function EmailTemplateProject() {
         await invalidateEmailState(emailId);
       } catch (error) {
         setMessages((current) =>
-          upsertMessage(
-            current.filter((message) => message.id !== statusId),
-            {
-              id: `${mode}-${Date.now()}-error`,
-              role: "error",
-              content:
-                error instanceof Error ? error.message : "Email stream failed.",
-            },
-          ),
+          upsertMessage(finishTimeline(current, timelineId), {
+            id: `${mode}-${Date.now()}-error`,
+            role: "error",
+            content:
+              error instanceof Error ? error.message : "Email stream failed.",
+            seq: Date.now(),
+            emailId,
+          }),
         );
       } finally {
         setIsStreaming(false);
@@ -1734,12 +1924,15 @@ export default function EmailTemplateProject() {
   const submitChatPrompt = useCallback(
     async (input: PromptSubmitInput) => {
       if (isStreaming) return;
+      // Render the user's message immediately — never wait on the backend save.
       setMessages((current) => [
         ...current,
         {
           id: `user-${Date.now()}`,
           role: "user",
           content: input.prompt,
+          seq: Date.now(),
+          emailId: currentEmailId ?? undefined,
         },
       ]);
 
@@ -1814,8 +2007,20 @@ export default function EmailTemplateProject() {
 
   useEffect(() => {
     if (isStreaming) return;
-    setMessages(mapChatMessages(chatQuery.data, email));
-  }, [chatQuery.data, email, isStreaming]);
+    setMessages((previous) => {
+      const server = mapChatMessages(chatQuery.data, email);
+      // Preserve client-only rows (the live/finished timeline and stream errors)
+      // for the active email so they aren't wiped by the server refetch.
+      const clientOnly = previous.filter(
+        (message) =>
+          (message.role === "timeline" || message.role === "error") &&
+          (!currentEmailId || message.emailId === currentEmailId),
+      );
+      return [...server, ...clientOnly].sort(
+        (a, b) => (a.seq ?? 0) - (b.seq ?? 0),
+      );
+    });
+  }, [chatQuery.data, currentEmailId, email, isStreaming]);
 
   useEffect(() => {
     if (hasPreview) {
@@ -1888,7 +2093,9 @@ export default function EmailTemplateProject() {
     const length = searchParams.get("length") ?? undefined;
     const audience = searchParams.get("audience") ?? undefined;
 
-    setMessages([{ id: "new-prompt", role: "user", content: prompt }]);
+    setMessages([
+      { id: "new-prompt", role: "user", content: prompt, seq: Date.now() },
+    ]);
     void createEmail({ prompt, tone, length, audience })
       .then(async (created) => {
         setCurrentEmailId(created.id);
@@ -2016,6 +2223,11 @@ export default function EmailTemplateProject() {
                       <StatusMessage key={message.id}>
                         {message.content}
                       </StatusMessage>
+                    );
+                  }
+                  if (message.role === "timeline") {
+                    return (
+                      <TimelineMessage key={message.id} message={message} />
                     );
                   }
                   return (
