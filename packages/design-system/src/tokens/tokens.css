@@ -29,8 +29,9 @@
   --accent-fg: #ffffff;
   --link: #2f6fea;
   --link-hover: #2558c6;
-  --rule: #2f6fea;
-  --rule-rgb: 47 111 234;
+  /* Border/rule shadows are neutral ink, never blue. */
+  --rule: #101114;
+  --rule-rgb: 16 17 20;
   --ink-shadow-rgb: 16 17 20;
 
   /* ── Landing compatibility aliases ───────────────────────────── */
@@ -191,6 +192,9 @@
   --accent-deep: #dfe5ef;
   --accent-soft: #23272f;
   --accent-fg: #101114;
+  /* Keep rule borders visible on dark surfaces. */
+  --rule: #ffffff;
+  --rule-rgb: 255 255 255;
 }
 
 [data-density="compact"] {
