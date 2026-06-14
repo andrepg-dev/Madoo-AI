@@ -30,6 +30,7 @@ import { ScreenshotService } from "./screenshot.service";
 import { S3Service } from "../s3/s3.service";
 import { SEED_TEMPLATES } from "../templates/seed-templates";
 import { WebsiteBrandService } from "./website-brand.service";
+import { ConversationTitleAgent } from "./conversation-title.agent";
 
 const EMIT_EMAIL_TOOL: Tool = {
   name: "emit_email",
@@ -232,6 +233,7 @@ export class GenerationService {
     private readonly screenshot: ScreenshotService,
     private readonly s3: S3Service,
     private readonly websiteBrand: WebsiteBrandService,
+    private readonly conversationTitleAgent: ConversationTitleAgent,
   ) {
     const key = this.config.get<string>("ANTHROPIC_API_KEY");
     this.model =
@@ -433,6 +435,11 @@ export class GenerationService {
           content: userPrompt,
         },
       ],
+      titleContext: {
+        prompt: ctx.prompt,
+        tone: ctx.tone,
+        audience: ctx.audience,
+      },
       emit,
     });
 
@@ -569,6 +576,11 @@ export class GenerationService {
     kind: GenerationRunKind;
     modelMessages: MessageParam[];
     fullCodeForRetry?: string;
+    titleContext?: {
+      prompt: string;
+      tone?: string | null;
+      audience?: string | null;
+    };
     emit: (p: Record<string, unknown>) => void;
   }): Promise<{
     assistantText: string;
@@ -577,7 +589,15 @@ export class GenerationService {
     variantId?: string;
     applied: boolean;
   }> {
-    const { emailId, workspaceId, kind, modelMessages, fullCodeForRetry, emit } = params;
+    const {
+      emailId,
+      workspaceId,
+      kind,
+      modelMessages,
+      fullCodeForRetry,
+      titleContext,
+      emit,
+    } = params;
 
     if (!this.anthropic) {
       throw new InternalServerErrorException("ANTHROPIC_API_KEY is not configured.");
@@ -606,8 +626,6 @@ export class GenerationService {
     };
 
     try {
-      emit({ type: "step", message: "Calling to LLM..." });
-
       const systemBlocks: MessageCreateParams["system"] = [
         {
           type: "text",
@@ -857,6 +875,20 @@ export class GenerationService {
         },
       });
 
+      const conversationTitle =
+        kind === "INITIAL" && titleContext
+          ? await this.conversationTitleAgent.generateTitle({
+              prompt: titleContext.prompt,
+              tone: titleContext.tone,
+              audience: titleContext.audience,
+              subject: input.subject,
+              assistantText,
+            })
+          : undefined;
+      if (conversationTitle) {
+        emit({ type: "conversation_title", value: conversationTitle });
+      }
+
       emit({ type: "step", message: "Generating preview screenshot..." });
       const previewUrl = await this.createAndPersistVariantPreview(
         variant.id,
@@ -875,7 +907,7 @@ export class GenerationService {
         where: { id: emailId },
         data: {
           status: "READY",
-          title: input.subject,
+          ...(conversationTitle ? { title: conversationTitle } : {}),
         },
       });
 
@@ -898,6 +930,7 @@ export class GenerationService {
         type: "done",
         variantId: variant.id,
         subject: variant.subject,
+        conversationTitle,
         compiledHtml: variant.compiledHtml,
         seq: variant.seq,
       });

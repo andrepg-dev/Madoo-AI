@@ -7,6 +7,7 @@ import { GenerationService } from "./generation.service";
 import { ReactToHtmlService } from "./react-to-html.service";
 import { ScreenshotService } from "./screenshot.service";
 import { WebsiteBrandService } from "./website-brand.service";
+import { ConversationTitleAgent } from "./conversation-title.agent";
 
 @Module({
   imports: [ConfigModule, PrismaModule, S3Module, BillingModule],
@@ -15,6 +16,7 @@ import { WebsiteBrandService } from "./website-brand.service";
     ReactToHtmlService,
     ScreenshotService,
     WebsiteBrandService,
+    ConversationTitleAgent,
   ],
   exports: [GenerationService, ReactToHtmlService, ScreenshotService],
 })

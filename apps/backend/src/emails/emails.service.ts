@@ -74,16 +74,29 @@ export class EmailsService {
       );
     }
 
-    const email = await this.prisma.email.create({
-      data: {
-        workspaceId,
-        prompt: dto.prompt.trim(),
-        tone: dto.tone ?? null,
-        length: dto.length ?? null,
-        audience: dto.audience ?? null,
-        templateId,
-        status: "DRAFT",
-      },
+    const prompt = dto.prompt.trim();
+    const email = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.email.create({
+        data: {
+          workspaceId,
+          prompt,
+          tone: dto.tone ?? null,
+          length: dto.length ?? null,
+          audience: dto.audience ?? null,
+          templateId,
+          status: "DRAFT",
+        },
+      });
+      await tx.emailChatMessage.create({
+        data: {
+          workspaceId,
+          emailId: created.id,
+          role: "USER",
+          kind: "TEXT",
+          content: prompt,
+        },
+      });
+      return created;
     });
     return this.toDto(email.id);
   }
@@ -214,11 +227,12 @@ export class EmailsService {
     const compiledHtml = this.reactToHtml.compile(tpl.componentCode);
     const previewUrl = await this.createPreviewUrl(compiledHtml);
     const now = new Date();
+    const prompt = dto.prompt.trim();
     const email = await this.prisma.$transaction(async (tx) => {
       const created = await tx.email.create({
         data: {
           workspaceId,
-          prompt: dto.prompt.trim(),
+          prompt,
           tone: dto.tone ?? null,
           length: dto.length ?? null,
           audience: dto.audience ?? null,
@@ -237,6 +251,15 @@ export class EmailsService {
           compiledHtml,
           variableSchema: { variables: [] },
           previewUrl,
+        },
+      });
+      await tx.emailChatMessage.create({
+        data: {
+          workspaceId,
+          emailId: created.id,
+          role: "USER",
+          kind: "TEXT",
+          content: prompt,
         },
       });
       await tx.emailGenerationRun.create({
@@ -383,15 +406,26 @@ export class EmailsService {
       if (!pp) throw new NotFoundException("Pending prompt not found.");
       if (pp.consumed) throw new BadRequestException("Already consumed.");
 
+      const prompt = pp.prompt.trim();
       const email = await tx.email.create({
         data: {
           workspaceId: membership.workspaceId,
-          prompt: pp.prompt.trim(),
+          prompt,
           tone: pp.tone ?? null,
           length: pp.length ?? null,
           audience: pp.audience ?? null,
           status: "DRAFT",
           sourcePendingPromptId: pp.id,
+        },
+      });
+
+      await tx.emailChatMessage.create({
+        data: {
+          workspaceId: membership.workspaceId,
+          emailId: email.id,
+          role: "USER",
+          kind: "TEXT",
+          content: prompt,
         },
       });
 
