@@ -2,6 +2,8 @@ import { Body, Controller, Param, Post, Req, UseGuards } from "@nestjs/common";
 import {
   SendTestEmailInputSchema,
   type SendTestEmailResponse,
+  type TestLinksResponse,
+  type TestSpamResponse,
 } from "@madoo/shared";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -30,5 +32,21 @@ export class TestingController {
       userEmail: user.email,
       body: parsed,
     });
+  }
+
+  @Post(":id/test/links")
+  checkLinks(
+    @Req() req: WorkspaceScopedRequest,
+    @Param("id") id: string,
+  ): Promise<TestLinksResponse> {
+    return this.testing.checkLinks(id, req.workspace.id);
+  }
+
+  @Post(":id/test/spam")
+  checkSpam(
+    @Req() req: WorkspaceScopedRequest,
+    @Param("id") id: string,
+  ): Promise<TestSpamResponse> {
+    return this.testing.checkSpam(id, req.workspace.id);
   }
 }
