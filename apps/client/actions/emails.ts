@@ -64,6 +64,16 @@ export async function fetchEmailChat(
   return EmailChatMessageListSchema.parse(raw);
 }
 
+export async function truncateEmailChat(
+  emailId: string,
+  from: string,
+): Promise<void> {
+  await FetchWrapper<unknown>(`/emails/${emailId}/chat/truncate`, {
+    method: "POST",
+    body: JSON.stringify({ from }),
+  });
+}
+
 export async function fetchEmails(): Promise<EmailDto[]> {
   const raw = await FetchWrapper<unknown>("/emails");
   return EmailListDtoSchema.parse(raw);

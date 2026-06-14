@@ -24,12 +24,30 @@ Wired it up.
 The backend edit agent already worked (every message after the first runs
 `runEdit`); only the button was missing its handler — no backend change needed.
 
-## Note
+## In-place edit (truncate + re-run)
 
-This re-sends the edited instruction as a new turn rather than truncating
-history in place (that would need backend chat-history mutation). Out-of-credits
-still gates the run as usual.
+Editing now rewinds the conversation instead of appending:
+
+- **Backend:** `POST /v1/emails/:id/chat/truncate` with `{ from: ISO }`
+  (`TruncateEmailChatSchema`) deletes every `EmailChatMessage` with
+  `createdAt >= from` (`emails.service.truncateChatMessages`). Action:
+  `truncateEmailChat(emailId, from)`.
+- **Client `editMessage(message, text)`:** optimistically drops the edited turn
+  and everything after it, calls truncate with the message's timestamp, then
+  re-submits the corrected text through `submitChatPrompt`. The first (synthetic
+  brief) message uses `email.createdAt`, which clears all chat rows.
+
+The chat→messages sync effect early-returns while streaming, so the optimistic
+slice isn't clobbered before the run starts; the post-stream refetch returns the
+truncated history plus the new turn.
+
+## Limitation
+
+Only the **chat history** is rewound, not the email **variant** state (chat
+messages and variants aren't linked in the schema), so the re-run edits the
+current email forward rather than restoring it to the earlier point.
+Out-of-credits still gates the run.
 
 ## Verify
 
-`npx tsc --noEmit -p apps/client/tsconfig.json` → clean.
+`tsc` clean for backend and client. Backend restart needed for the new route.

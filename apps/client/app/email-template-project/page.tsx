@@ -4,6 +4,7 @@ import {
   createEmail,
   fetchEmail,
   fetchEmailChat,
+  truncateEmailChat,
   updateEmailShare,
 } from "@/actions/emails";
 import { fetchBillingOverview } from "@/actions/billing";
@@ -2173,6 +2174,29 @@ export default function EmailTemplateProject() {
     [currentEmailId, isStreaming, router, startStream, variant?.id],
   );
 
+  // In-place edit: drop the edited turn and everything after it, then re-run the
+  // corrected instruction so the conversation continues from that point.
+  const editMessage = useCallback(
+    async (message: ChatMessage, text: string) => {
+      if (isStreaming || !currentEmailId) return;
+
+      setMessages((current) => {
+        const index = current.findIndex((item) => item.id === message.id);
+        return index === -1 ? current : current.slice(0, index);
+      });
+
+      const from = new Date(message.seq ?? Date.now()).toISOString();
+      try {
+        await truncateEmailChat(currentEmailId, from);
+      } catch {
+        // Best-effort: even if truncation fails, still re-send the instruction.
+      }
+
+      await submitChatPrompt({ prompt: text });
+    },
+    [currentEmailId, isStreaming, submitChatPrompt],
+  );
+
   const updateScrollState = useCallback(() => {
     const messages = messagesRef.current;
 
@@ -2414,7 +2438,7 @@ export default function EmailTemplateProject() {
                       <HumanMessage
                         disabled={isStreaming}
                         key={message.id}
-                        onEdit={(text) => void submitChatPrompt({ prompt: text })}
+                        onEdit={(text) => void editMessage(message, text)}
                       >
                         {message.content}
                       </HumanMessage>
