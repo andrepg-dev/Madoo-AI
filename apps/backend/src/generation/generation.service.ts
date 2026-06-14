@@ -22,7 +22,11 @@ import type {
 } from "@prisma/client";
 import { Observable } from "rxjs";
 import { createHash } from "node:crypto";
-import { parseVariableSchemaJson, type VariableSchemaRoot } from "@madoo/shared";
+import {
+  buildRenderVariables,
+  parseVariableSchemaJson,
+  type VariableSchemaRoot,
+} from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
 import { ReactToHtmlService } from "./react-to-html.service";
@@ -819,7 +823,10 @@ export class GenerationService {
           });
           emit({ type: "subject", value: input.subject });
           emit({ type: "step", message: "Rendering HTML preview..." });
-          compiledHtml = this.reactToHtml.compile(input.componentCode, {});
+          compiledHtml = this.reactToHtml.compile(
+            input.componentCode,
+            buildRenderVariables(variableSchema),
+          );
           validated = true;
           break;
         } catch (err) {

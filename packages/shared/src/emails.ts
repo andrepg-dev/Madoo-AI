@@ -112,6 +112,22 @@ export function parseVariableSchemaJson(raw: unknown): VariableSchemaRoot {
   };
 }
 
+/**
+ * Values passed to the renderer: static variables use their fixed default,
+ * dynamic variables render as a `{{name}}` merge tag (replaced per-recipient
+ * outside Madoo). The preview highlights these tags so they're easy to spot.
+ */
+export function buildRenderVariables(
+  schema: VariableSchemaRoot,
+): Record<string, string> {
+  return Object.fromEntries(
+    schema.variables.map((variable) => [
+      variable.name,
+      variable.scope === "static" ? variable.default : `{{${variable.name}}}`,
+    ]),
+  );
+}
+
 export const TemplateSlugSchema = z.enum([
   "launch",
   "newsletter",

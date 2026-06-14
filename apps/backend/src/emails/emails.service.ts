@@ -13,6 +13,7 @@ import {
   EmailDtoSchema,
   EmailShareDtoSchema,
   PublicEmailDtoSchema,
+  buildRenderVariables,
   parseVariableSchemaJson,
   type CreateEmailFromTemplateInput,
   type CreateEmailInput,
@@ -357,12 +358,9 @@ export class EmailsService {
     });
     if (!variant) throw new NotFoundException("Email variant not found.");
 
-    const renderVariables = Object.fromEntries(
-      dto.variableSchema.variables.map((variable) => [variable.name, variable.default]),
-    );
     const compiledHtml = this.reactToHtml.compile(
       variant.componentCode,
-      renderVariables,
+      buildRenderVariables(dto.variableSchema),
     );
     let previewUrl: string | null = null;
     try {
