@@ -1417,8 +1417,8 @@ function EmailPreviewSidebar({
       ) : null}
 
       <div className="flex h-full min-w-105 flex-col">
-        <div className="shrink-0 bg-[#F2F2F2] rounded-t-3xl">
-          <div className="flex min-h-13 items-center gap-3 bg-white px-4">
+        <div className="shrink-0 bg-madoo-bg rounded-t-3xl">
+          <div className="flex min-h-13 items-center gap-3 bg-madoo-bg px-4">
             <Button
               aria-label={
                 expanded ? "Collapse email preview" : "Expand email preview"
