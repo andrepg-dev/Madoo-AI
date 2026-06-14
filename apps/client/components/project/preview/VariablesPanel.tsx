@@ -11,7 +11,7 @@ import type {
   VariableSpec,
 } from "@madoo/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type VariableScope = "dynamic" | "static";
 
@@ -47,14 +47,14 @@ export function VariablesPanel({
 }: VariablesPanelProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [scopes, setScopes] = useState<Record<string, VariableScope>>({});
-
-  // Reset the draft whenever the variant or its variable set changes.
-  useEffect(() => {
-    setValues(Object.fromEntries(variables.map((v) => [v.name, v.default])));
-    setScopes(Object.fromEntries(variables.map((v) => [v.name, defaultScope(v)])));
-  }, [variantId, variables]);
+  // Local draft is the source of truth while the panel is open; the parent keys
+  // this component by variant id, so it re-initializes when the variant changes.
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(variables.map((v) => [v.name, v.default])),
+  );
+  const [scopes, setScopes] = useState<Record<string, VariableScope>>(() =>
+    Object.fromEntries(variables.map((v) => [v.name, defaultScope(v)])),
+  );
 
   const valueOf = (variable: VariableSpec) =>
     values[variable.name] ?? variable.default;
@@ -89,11 +89,15 @@ export function VariablesPanel({
     },
   });
 
-  // Scope (dynamic/static) commits immediately — no confirm button.
+  // Scope (dynamic/static) flips optimistically and persists in the background —
+  // the UI never waits on the backend. Revert if the save fails.
   const handleScopeChange = (name: string, scope: VariableScope) => {
+    const prevScopes = scopes;
     const nextScopes = { ...scopes, [name]: scope };
     setScopes(nextScopes);
-    mutation.mutate(buildSchema(values, nextScopes));
+    mutation.mutate(buildSchema(values, nextScopes), {
+      onError: () => setScopes(prevScopes),
+    });
   };
 
   // Value edits are batched behind an explicit save (avoids a request per key).
@@ -170,7 +174,6 @@ export function VariablesPanel({
                 />
 
                 <ScopeToggle
-                  disabled={mutation.isPending}
                   onChange={(next) => handleScopeChange(variable.name, next)}
                   value={scope}
                 />
@@ -199,11 +202,9 @@ export function VariablesPanel({
 }
 
 function ScopeToggle({
-  disabled,
   onChange,
   value,
 }: {
-  disabled?: boolean;
   onChange: (scope: VariableScope) => void;
   value: VariableScope;
 }) {
@@ -214,13 +215,11 @@ function ScopeToggle({
         <button
           aria-pressed={value === scope}
           className={cn(
-            "flex-1 rounded-md px-2 py-1 text-[11px] font-medium capitalize transition-colors disabled:cursor-not-allowed",
+            "flex-1 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium capitalize transition-colors",
             value === scope
               ? "bg-white text-madoo-ink shadow-madoo-border"
-              : "text-madoo-ink-muted enabled:hover:text-madoo-ink",
-            !disabled && "cursor-pointer",
+              : "text-madoo-ink-muted hover:text-madoo-ink",
           )}
-          disabled={disabled}
           key={scope}
           onClick={() => onChange(scope)}
           type="button"

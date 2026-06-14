@@ -1554,6 +1554,7 @@ function EmailPreviewSidebar({
           {variablesOpen && canEditVariables && variant ? (
             <VariablesPanel
               emailId={emailId!}
+              key={variant.id}
               onClose={() => setVariablesOpen(false)}
               variables={variant.variableSchema.variables}
               variantId={variant.id}

@@ -44,12 +44,15 @@ already present. So this was UI-only.
 
 ## Follow-up tweaks
 
-- **Scope auto-saves.** Switching a variable dynamic↔static commits immediately
-  (`handleScopeChange` → mutate) — no confirm. The explicit "Save & update
-  preview" bar now keys off `valuesDirty` only (value edits still batch behind
-  the button to avoid a request per keystroke). Scope buttons disable while a
-  save is in flight. Dropped the success toast (the live preview is the
-  confirmation); kept the error toast.
+- **Scope flips optimistically.** Switching dynamic↔static updates the UI
+  instantly and persists in the background — it never waits on the backend (no
+  disable-while-pending). On save failure the local scope reverts. The explicit
+  "Save & update preview" bar keys off `valuesDirty` only (value edits still
+  batch behind the button to avoid a request per keystroke). Dropped the success
+  toast (the live preview is the confirmation); kept the error toast. The panel
+  is keyed by `variant.id` and seeds its draft from props via `useState`
+  initializers (no reset-`useEffect`), so background saves don't clobber the
+  local draft.
 - **Toolbar toggle color fixed.** The "Variables" button used `variant="ghost"`
   with a `bg-madoo-ink` className override, but the DS `cx` doesn't tailwind-
   merge, so `bg-transparent` won and the white label was invisible. Switched to
