@@ -474,7 +474,8 @@ export class EmailsService {
       include: {
         variants: {
           orderBy: { seq: "desc" },
-          take: 3,
+          // Keep the full edit history available for the version dropdown.
+          take: 50,
         },
       },
     });

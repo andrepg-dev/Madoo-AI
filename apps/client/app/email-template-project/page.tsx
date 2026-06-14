@@ -89,6 +89,7 @@ import type {
   ConnectionProvider,
   EmailChatMessageDto,
   EmailDto,
+  EmailVariantDto,
 } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
@@ -1366,6 +1367,70 @@ function ExportProviderModal({
   );
 }
 
+function VersionsDropdown({
+  variants,
+  activeId,
+  latestId,
+  onSelect,
+}: {
+  variants: EmailVariantDto[];
+  activeId: string | undefined;
+  latestId: string | undefined;
+  onSelect: (id: string | null) => void;
+}) {
+  if (variants.length <= 1) return null;
+
+  const ordered = [...variants].sort((a, b) => b.seq - a.seq);
+  const active = ordered.find((item) => item.id === activeId) ?? ordered[0];
+
+  return (
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <Button
+          className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium"
+          size="sm"
+          variant="secondary"
+        >
+          <span>
+            Version {active.seq}
+            {active.id === latestId ? " · latest" : ""}
+          </span>
+          <HugeiconsIcon
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-madoo-ink-muted"
+            icon={ArrowDown01Icon}
+            primaryColor="currentColor"
+          />
+        </Button>
+      </DropdownTrigger>
+      <DropdownContent align="start" className="w-56 gap-0.5 p-1.5!">
+        {ordered.map((item) => (
+          <DropdownItem
+            className="justify-start! gap-2 px-2! py-1.5! text-[13px]!"
+            key={item.id}
+            onSelect={() => onSelect(item.id === latestId ? null : item.id)}
+          >
+            <span className="flex w-full items-center justify-between gap-2">
+              <span className="truncate">
+                Version {item.seq}
+                {item.id === latestId ? " (latest)" : ""}
+              </span>
+              {item.id === active.id ? (
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 text-madoo-accent-deep"
+                  icon={Tick02Icon}
+                  primaryColor="currentColor"
+                />
+              ) : null}
+            </span>
+          </DropdownItem>
+        ))}
+      </DropdownContent>
+    </Dropdown>
+  );
+}
+
 function EmailPreviewSidebar({
   expanded,
   email,
@@ -1375,6 +1440,7 @@ function EmailPreviewSidebar({
   onOpenPreview,
   onOpenPricing,
   onOpenTesting,
+  onSelectVersion,
   onToggleExpanded,
   open,
   setMode,
@@ -1383,6 +1449,7 @@ function EmailPreviewSidebar({
   setWidth,
   subject,
   theme,
+  variant,
   width,
 }: {
   expanded: boolean;
@@ -1393,6 +1460,7 @@ function EmailPreviewSidebar({
   onOpenPreview: () => void;
   onOpenPricing: () => void;
   onOpenTesting: () => void;
+  onSelectVersion: (id: string | null) => void;
   onToggleExpanded: () => void;
   open: boolean;
   setMode: (mode: PreviewMode) => void;
@@ -1401,6 +1469,7 @@ function EmailPreviewSidebar({
   setWidth: (width: number) => void;
   subject: string;
   theme: TemplateTheme;
+  variant: EmailVariantDto | null;
   width: number;
 }) {
   const [isResizing, setIsResizing] = useState(false);
@@ -1408,7 +1477,8 @@ function EmailPreviewSidebar({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(900);
 
-  const variant = latestVariant(email);
+  const variants = email?.variants ?? [];
+  const latestVariantId = latestVariant(email)?.id;
   const canEditVariables = Boolean(emailId && variant);
 
   const syncIframeHeight = useCallback(() => {
@@ -1590,27 +1660,34 @@ function EmailPreviewSidebar({
           </div>
 
           <div className="flex min-h-11 items-center justify-between gap-2 px-4">
-            {canEditVariables ? (
-              <Button
-                aria-label="Toggle variables panel"
-                aria-pressed={variablesOpen}
-                className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
-                onClick={() => setVariablesOpen((open) => !open)}
-                size="sm"
-                variant={variablesOpen ? "primary" : "secondary"}
-              >
-                <HugeiconsIcon
-                  aria-hidden="true"
-                  icon={SourceCodeIcon}
-                  primaryColor="currentColor"
-                  size={15}
-                  strokeWidth={1.55}
-                />
-                <span>Variables</span>
-              </Button>
-            ) : (
-              <span />
-            )}
+            <div className="flex items-center gap-2">
+              {canEditVariables ? (
+                <Button
+                  aria-label="Toggle variables panel"
+                  aria-pressed={variablesOpen}
+                  className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
+                  onClick={() => setVariablesOpen((open) => !open)}
+                  size="sm"
+                  variant={variablesOpen ? "primary" : "secondary"}
+                >
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    icon={SourceCodeIcon}
+                    primaryColor="currentColor"
+                    size={15}
+                    strokeWidth={1.55}
+                  />
+                  <span>Variables</span>
+                </Button>
+              ) : null}
+
+              <VersionsDropdown
+                activeId={variant?.id}
+                latestId={latestVariantId}
+                onSelect={onSelectVersion}
+                variants={variants}
+              />
+            </div>
 
             <div className="flex items-center gap-2">
               <SegmentedControl
@@ -1963,14 +2040,26 @@ export default function EmailTemplateProject() {
 
   const email = emailQuery.data;
   const variant = latestVariant(email);
-  const previewSrcDoc = streamedHtml ?? variant?.compiledHtml ?? null;
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
+  // The version shown in the preview: a picked older variant, else the latest.
+  const activeVariant =
+    email?.variants.find((item) => item.id === selectedVariantId) ?? variant;
+  // Jump back to the newest version whenever a new edit produces one.
+  const latestVariantId = variant?.id;
+  useEffect(() => {
+    setSelectedVariantId(null);
+  }, [latestVariantId]);
+
+  const previewSrcDoc = streamedHtml ?? activeVariant?.compiledHtml ?? null;
   const hasPreview = Boolean(previewSrcDoc);
   const highlightedPreviewSrcDoc = useMemo(
     () => highlightMergeTags(previewSrcDoc),
     [previewSrcDoc],
   );
   const previewSubject =
-    streamedSubject ?? variant?.subject ?? "Untitled email";
+    streamedSubject ?? activeVariant?.subject ?? "Untitled email";
   const storedConversationTitle =
     email?.title && email.title !== variant?.subject ? email.title : null;
   const conversationTitle =
@@ -2521,6 +2610,7 @@ export default function EmailTemplateProject() {
             onOpenPreview={() => setPreviewOverlayOpen(true)}
             onOpenPricing={() => setPricingOpen(true)}
             onOpenTesting={() => setTestingModalOpen(true)}
+            onSelectVersion={setSelectedVariantId}
             onToggleExpanded={togglePreviewExpanded}
             open={sidebarOpen}
             setMode={setPreviewMode}
@@ -2529,6 +2619,7 @@ export default function EmailTemplateProject() {
             setWidth={updatePreviewWidth}
             subject={previewSubject}
             theme={templateTheme}
+            variant={activeVariant}
             width={previewWidth}
           />
         ) : null}
