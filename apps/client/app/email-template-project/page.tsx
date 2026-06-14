@@ -1679,7 +1679,82 @@ function EmailPreviewSidebar({
   );
 }
 
-function HumanMessage({ children }: { children: string }) {
+function HumanMessage({
+  children,
+  disabled,
+  onEdit,
+}: {
+  children: string;
+  disabled?: boolean;
+  onEdit?: (text: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(children);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoGrow = (element: HTMLTextAreaElement) => {
+    element.style.height = "auto";
+    element.style.height = `${element.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    const element = textareaRef.current;
+    if (!editing || !element) return;
+    element.focus();
+    element.setSelectionRange(element.value.length, element.value.length);
+    autoGrow(element);
+  }, [editing]);
+
+  const startEditing = () => {
+    setDraft(children);
+    setEditing(true);
+  };
+
+  const submitEdit = () => {
+    const trimmed = draft.trim();
+    setEditing(false);
+    if (!trimmed || trimmed === children.trim()) return;
+    onEdit?.(trimmed);
+  };
+
+  if (editing) {
+    return (
+      <div className="ml-auto w-full max-w-xl">
+        <textarea
+          className="w-full resize-none rounded-lg bg-madoo-bg px-4 py-2 font-figtree text-sm text-madoo-ink shadow-madoo-border outline-none"
+          onChange={(event) => {
+            setDraft(event.target.value);
+            autoGrow(event.target);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setEditing(false);
+            } else if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              submitEdit();
+            }
+          }}
+          ref={textareaRef}
+          value={draft}
+        />
+        <div className="mt-2 flex justify-end gap-2">
+          <Button onClick={() => setEditing(false)} size="sm" variant="ghost">
+            Cancel
+          </Button>
+          <Button
+            disabled={!draft.trim()}
+            onClick={submitEdit}
+            size="sm"
+            variant="primary"
+          >
+            Send
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="ml-auto">
       <pre className="max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
@@ -1687,7 +1762,11 @@ function HumanMessage({ children }: { children: string }) {
       </pre>
 
       <div className="flex gap-1 my-1.5 mt-3 max-w-min ml-auto">
-        <ActionButton icon={Edit02Icon} label="Edit message" />
+        <ActionButton
+          icon={Edit02Icon}
+          label="Edit message"
+          onClick={disabled ? undefined : startEditing}
+        />
         <CopyActionButton label="Copy message" text={children} />
       </div>
     </div>
@@ -2332,7 +2411,11 @@ export default function EmailTemplateProject() {
                 {messages.map((message) => {
                   if (message.role === "user") {
                     return (
-                      <HumanMessage key={message.id}>
+                      <HumanMessage
+                        disabled={isStreaming}
+                        key={message.id}
+                        onEdit={(text) => void submitChatPrompt({ prompt: text })}
+                      >
                         {message.content}
                       </HumanMessage>
                     );
