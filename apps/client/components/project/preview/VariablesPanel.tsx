@@ -192,16 +192,22 @@ export function VariablesPanel({
                   ) : null}
                 </div>
 
-                <Input
-                  className="mt-2"
-                  inputSize="sm"
-                  onChange={(event) =>
-                    handleValueChange(variable.name, event.target.value)
-                  }
-                  placeholder="Value"
-                  type={inputTypeForRole(variable.role)}
-                  value={valueOf(variable)}
-                />
+                {scope === "static" ? (
+                  <Input
+                    className="mt-2"
+                    inputSize="sm"
+                    onChange={(event) =>
+                      handleValueChange(variable.name, event.target.value)
+                    }
+                    placeholder="Value"
+                    type={inputTypeForRole(variable.role)}
+                    value={valueOf(variable)}
+                  />
+                ) : (
+                  <p className="mt-2 truncate rounded-lg bg-madoo-accent-soft px-2.5 py-1.5 font-madoo-mono text-xs text-madoo-accent-deep">
+                    {`{{${variable.name}}}`}
+                  </p>
+                )}
 
                 <ScopeToggle
                   onChange={(next) => handleScopeChange(variable.name, next)}
