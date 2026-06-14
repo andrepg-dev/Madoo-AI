@@ -1313,7 +1313,7 @@ function EmailPreviewSidebar({
   width: number;
 }) {
   const [isResizing, setIsResizing] = useState(false);
-  const [variablesOpen, setVariablesOpen] = useState(false);
+  const [variablesOpen, setVariablesOpen] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(900);
 
