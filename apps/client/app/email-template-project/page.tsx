@@ -132,6 +132,53 @@ function ActionButton({
   );
 }
 
+function CopyActionButton({
+  label = "Copy",
+  text,
+}: {
+  label?: string;
+  text: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const handleCopy = () => {
+    copyText(text);
+    setCopied(true);
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <Button
+      aria-label={copied ? "Copied" : label}
+      className="h-6 w-6 rounded-md"
+      onClick={handleCopy}
+      size="sm"
+      variant="icon"
+    >
+      <HugeiconsIcon
+        aria-hidden="true"
+        className={cn(
+          copied && "animate-madoo-checkbox-control-in text-emerald-600",
+        )}
+        icon={copied ? Tick02Icon : Copy01Icon}
+        key={copied ? "copied" : "copy"}
+        primaryColor="currentColor"
+        size={13}
+        strokeWidth={copied ? 2 : 1.5}
+      />
+    </Button>
+  );
+}
+
 function HeaderMenuIcon({ icon }: { icon: IconSvgElement }) {
   return (
     <HugeiconsIcon
@@ -1598,11 +1645,7 @@ function HumanMessage({ children }: { children: string }) {
 
       <div className="flex gap-1 my-1.5 mt-3 max-w-min ml-auto">
         <ActionButton icon={Edit02Icon} label="Edit message" />
-        <ActionButton
-          icon={Copy01Icon}
-          label="Copy message"
-          onClick={() => copyText(children)}
-        />
+        <CopyActionButton label="Copy message" text={children} />
       </div>
     </div>
   );
@@ -1622,11 +1665,7 @@ function AiMessage({
       </Streamdown>
 
       <div className="flex gap-1 mt-1.5">
-        <ActionButton
-          icon={Copy01Icon}
-          label="Copy response"
-          onClick={() => copyText(children)}
-        />
+        <CopyActionButton label="Copy response" text={children} />
         <ActionButton icon={ThumbsUpIcon} label="Like response" />
         <ActionButton icon={ThumbsDownIcon} label="Dislike response" />
         <ActionButton
