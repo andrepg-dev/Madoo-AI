@@ -280,6 +280,13 @@ export const EditEmailSchema = z.object({
 
 export type EditEmailInput = z.infer<typeof EditEmailSchema>;
 
+/** Delete chat messages from `from` (inclusive) onward — used to edit a turn. */
+export const TruncateEmailChatSchema = z.object({
+  from: z.string().datetime(),
+});
+
+export type TruncateEmailChatInput = z.infer<typeof TruncateEmailChatSchema>;
+
 export const UpdateEmailVariantVariableSchemaSchema = z.object({
   variableSchema: VariableSchemaRootSchema,
 });

@@ -25,6 +25,7 @@ import {
   CreateEmailSchema,
   EditEmailSchema,
   RenameEmailSchema,
+  TruncateEmailChatSchema,
   TransferEmailSchema,
   UpdateEmailShareSchema,
   UpdateEmailVariantVariableSchemaSchema,
@@ -79,6 +80,17 @@ export class EmailsController {
     @Param("id") id: string,
   ) {
     return this.emails.listChatMessages(id, req.workspace.id, user.sub);
+  }
+
+  @Post(":id/chat/truncate")
+  truncateChat(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const dto = TruncateEmailChatSchema.parse(body);
+    return this.emails.truncateChatMessages(id, req.workspace.id, user.sub, dto);
   }
 
   @Delete(":id")

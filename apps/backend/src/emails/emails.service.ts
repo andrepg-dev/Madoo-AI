@@ -24,6 +24,7 @@ import {
   type PublicEmailDto,
   type RenameEmailInput,
   type TransferEmailInput,
+  type TruncateEmailChatInput,
   type UpdateEmailShareInput,
   type UpdateEmailVariantVariableSchemaInput,
 } from "@madoo/shared";
@@ -147,6 +148,21 @@ export class EmailsService {
         createdAt: row.createdAt.toISOString(),
       }),
     );
+  }
+
+  /** Delete chat messages from `from` (inclusive) onward — used to edit a turn. */
+  async truncateChatMessages(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: TruncateEmailChatInput,
+  ): Promise<{ ok: true; deleted: number }> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    const { count } = await this.prisma.emailChatMessage.deleteMany({
+      where: { emailId, workspaceId, createdAt: { gte: new Date(dto.from) } },
+    });
+    return { ok: true, deleted: count };
   }
 
   async remove(emailId: string, workspaceId: string, userId: string): Promise<void> {
