@@ -122,7 +122,7 @@ export function DropdownTrigger({
     "aria-expanded": open,
     "data-state": open ? "open" : "closed",
     className: cx(
-      "inline-flex cursor-pointer items-center justify-center rounded-[var(--radius-lg)] border-0 bg-[var(--surface)] text-[color:var(--ink)] shadow-[var(--shadow-border)] transition-[background,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] hover:shadow-[var(--shadow-border-rule-hover)] data-[state=open]:bg-[var(--surface-2)] data-[state=open]:shadow-[var(--shadow-border-rule-hover)]",
+      "inline-flex cursor-pointer items-center justify-center rounded-lg border-0 bg-(--surface) text-(--ink) shadow-madoo-border transition-[background,color,box-shadow] duration-(--duration-fast) ease-out hover:bg-(--surface-2) hover:shadow-(--shadow-border-rule-hover) data-[state=open]:bg-(--surface-2) data-[state=open]:shadow-(--shadow-border-rule-hover)",
       className,
     ),
     onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
@@ -196,7 +196,7 @@ export function DropdownContent({
       aria-hidden={!open}
       data-state={open ? "open" : "closed"}
       className={cx(
-        "absolute z-[var(--z-popover)] flex min-w-[180px] flex-col gap-0.5 rounded-[var(--radius-lg)] bg-[var(--surface)] shadow-[var(--shadow-border-rule-hover)] will-change-[opacity,transform] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
+        "absolute z-[var(--z-popover)] flex min-w-45 flex-col gap-0.5 rounded-lg bg-(--surface) shadow-(--shadow-border-rule-hover) will-change-[opacity,transform] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-dropdown-out data-[state=open]:animate-madoo-dropdown-in data-[state=open]:[&>*]:animate-madoo-dropdown-item-in data-[state=open]:[&>*:nth-child(2)]:[animation-delay:18ms] data-[state=open]:[&>*:nth-child(3)]:[animation-delay:30ms] data-[state=open]:[&>*:nth-child(4)]:[animation-delay:42ms] motion-reduce:animate-none motion-reduce:[&>*]:animate-none",
         positionClass,
         className,
       )}
@@ -226,7 +226,7 @@ export function DropdownItem({
       type="button"
       role="menuitem"
       className={cx(
-        "flex w-full cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-md)] border-0 bg-transparent px-2.5 py-[9px] text-left font-[inherit] text-[14px] leading-[1.2] text-[color:var(--ink)] transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none disabled:cursor-not-allowed disabled:text-[color:var(--ink-faint)]",
+        "flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border-0 bg-transparent px-2.5 py-2.25 text-left font-[inherit] text-[14px] leading-[1.2] text-(--ink) transition-[background,color] duration-(--duration-fast) ease-out hover:bg-(--surface-2) focus-visible:bg-(--surface-2) focus-visible:outline-none disabled:cursor-not-allowed disabled:text-(--ink-faint)",
         className,
       )}
       onClick={(event) => {
@@ -248,7 +248,7 @@ export function DropdownDivider({ className, ...rest }: DropdownDividerProps) {
   return (
     <div
       role="separator"
-      className={cx("-mx-2 h-px shadow-[var(--shadow-border-top)]", className)}
+      className={cx("-mx-2 h-px shadow-(--shadow-border-top)", className)}
       {...rest}
     />
   );

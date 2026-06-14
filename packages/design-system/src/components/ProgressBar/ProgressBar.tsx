@@ -33,14 +33,14 @@ export function ProgressBar({
       aria-label={label}
       className={cx(
         "flex w-full overflow-hidden rounded-full bg-madoo-surface-2",
-        variant === "thin" ? "h-[3px] rounded-none" : "h-1.5",
+        variant === "thin" ? "h-0.75 rounded-none" : "h-1.5",
         className,
       )}
       {...rest}
     >
       <div
         className={cx(
-          "h-full transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-out)]",
+          "h-full transition-[width] duration-(--duration-slow) ease-out",
           fillToneClasses[tone],
         )}
         style={{ width: `${clamped}%` }}

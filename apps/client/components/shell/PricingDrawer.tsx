@@ -170,7 +170,7 @@ function BillingSwitch({
   const isYearly = billingInterval === "ANNUAL";
 
   return (
-    <div className="flex items-center gap-3 text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted max-sm:w-full max-sm:justify-between">
+    <div className="flex items-center gap-3 text-(length:--font-size-sm) leading-none text-madoo-ink-muted max-sm:w-full max-sm:justify-between">
       <button
         type="button"
         className={cx(
@@ -186,7 +186,7 @@ function BillingSwitch({
         role="switch"
         aria-checked={isYearly}
         aria-label="Use yearly billing"
-        className="relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-0 bg-madoo-surface shadow-[var(--shadow-border)] transition-[background,box-shadow] hover:bg-madoo-surface-2 hover:shadow-[var(--shadow-border-rule-hover)]"
+        className="relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-0 bg-madoo-surface shadow-madoo-border transition-[background,box-shadow] hover:bg-madoo-surface-2 hover:shadow-(--shadow-border-rule-hover)"
         onClick={() => onChange(isYearly ? "MONTHLY" : "ANNUAL")}
       >
         <span
@@ -269,17 +269,17 @@ function PlanCard({
   return (
     <Card
       className={cx(
-        "flex min-h-[390px] flex-col gap-5 !rounded-[20px] !bg-madoo-surface !p-4",
+        "flex min-h-97.5 flex-col gap-5 rounded-[20px]! bg-madoo-surface! p-4!",
         plan.featured &&
-          "!bg-[color-mix(in_srgb,var(--surface)_72%,var(--accent-soft))] shadow-[var(--shadow-border-accent)]",
+          "bg-[color-mix(in_srgb,var(--surface)_72%,var(--accent-soft))]! shadow-(--shadow-border-accent)",
       )}
     >
-      <div className="flex min-h-[72px] items-start justify-between gap-3">
+      <div className="flex min-h-18 items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-xl font-semibold leading-none text-madoo-ink">
             {PLAN_DISPLAY_NAMES[plan.tier]}
           </h3>
-          <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+          <p className="mt-2 text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
             {plan.description}
           </p>
         </div>
@@ -296,13 +296,13 @@ function PlanCard({
             {displayPrice === 0 ? "Free" : `$${displayPrice}`}
           </span>
           {displayPrice > 0 ? (
-            <span className="pb-1 text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+            <span className="pb-1 text-(length:--font-size-sm) text-madoo-ink-muted">
               / month
             </span>
           ) : null}
         </div>
         {billingInterval === "ANNUAL" && displayPrice > 0 ? (
-          <p className="mt-2 text-[length:var(--font-size-sm)] font-medium leading-none text-madoo-accent-deep">
+          <p className="mt-2 text-(length:--font-size-sm) font-medium leading-none text-madoo-accent-deep">
             Save ${getYearlySavings(plan.tier)} yearly
           </p>
         ) : null}
@@ -320,12 +320,12 @@ function PlanCard({
           }
           onSelect(plan);
         }}
-        className="mt-auto h-10! rounded-[var(--radius-lg)]!"
+        className="mt-auto h-10! rounded-lg!"
       >
         {isCurrent && hasStripeCustomer ? "Manage billing" : cta}
       </Button>
 
-      <ul className="grid gap-2.5 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-soft">
+      <ul className="grid gap-2.5 text-(length:--font-size-sm) leading-5 text-madoo-ink-soft">
         {plan.features.map((feature) => (
           <FeatureRow
             key={`${plan.tier}-${feature.value ?? ""}-${feature.label}`}
@@ -447,15 +447,15 @@ export function PricingDrawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="pricing-drawer-title"
-        className="flex max-h-[calc(100dvh-32px)] w-full max-w-[980px] flex-col overflow-hidden rounded-[24px] bg-madoo-bg font-madoo-sans text-madoo-ink shadow-[var(--shadow-border-rule-hover)] animate-madoo-modal-in max-sm:max-h-[calc(100dvh-24px)] max-sm:rounded-[20px] motion-reduce:animate-none"
+        className="flex max-h-[calc(100dvh-32px)] w-full max-w-245 flex-col overflow-hidden rounded-[24px] bg-madoo-bg font-madoo-sans text-madoo-ink shadow-(--shadow-border-rule-hover) animate-madoo-modal-in max-sm:max-h-[calc(100dvh-24px)] max-sm:rounded-[20px] motion-reduce:animate-none"
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="flex items-start gap-3 px-5 py-4 shadow-[var(--shadow-border-bottom-soft)] max-sm:px-4">
-          <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))] text-madoo-accent-fg shadow-[inset_0_0_0_0.5px_rgb(255_255_255_/_0.28)]">
+        <header className="flex items-start gap-3 px-5 py-4 shadow-(--shadow-border-bottom-soft) max-sm:px-4">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))] text-madoo-accent-fg shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.28)]">
             <AppIcon icon={Crown02Icon} size={18} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-[length:var(--font-size-xs)] font-medium uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
+            <div className="text-(length:--font-size-xs) font-medium uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
               Plans & Pricing
             </div>
             <h2
@@ -464,7 +464,7 @@ export function PricingDrawer({
             >
               Upgrade your workspace
             </h2>
-            <p className="mt-2 max-w-2xl text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+            <p className="mt-2 max-w-2xl text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
               More credits, stored templates, members, test emails, model
               access, exports, and preview sharing.
             </p>
@@ -503,13 +503,13 @@ export function PricingDrawer({
             ))}
           </div>
 
-          <section className="mt-5 rounded-[20px] bg-madoo-surface p-4 shadow-[var(--shadow-border)]">
+          <section className="mt-5 rounded-[20px] bg-madoo-surface p-4 shadow-madoo-border">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold leading-none text-madoo-ink">
                   Frequently asked questions
                 </h3>
-                <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+                <p className="mt-2 text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
                   Short answers before you change workspace billing.
                 </p>
               </div>
@@ -520,9 +520,9 @@ export function PricingDrawer({
               {pricingFaqs.map((faq) => (
                 <details
                   key={faq.question}
-                  className="group rounded-[var(--radius-lg)] bg-madoo-bg-2 px-3.5 py-3 shadow-[var(--shadow-border)]"
+                  className="group rounded-lg bg-madoo-bg-2 px-3.5 py-3 shadow-madoo-border"
                 >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-left text-[length:var(--font-size-sm)] font-medium text-madoo-ink [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-left text-(length:--font-size-sm) font-medium text-madoo-ink [&::-webkit-details-marker]:hidden">
                     {faq.question}
                     <Icon
                       name="chevronDown"
@@ -530,7 +530,7 @@ export function PricingDrawer({
                       className="shrink-0 text-madoo-ink-muted transition-transform group-open:rotate-180"
                     />
                   </summary>
-                  <p className="mt-2 text-[length:var(--font-size-sm)] leading-5 text-madoo-ink-muted">
+                  <p className="mt-2 text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
                     {faq.answer}
                   </p>
                 </details>

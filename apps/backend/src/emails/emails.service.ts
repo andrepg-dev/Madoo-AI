@@ -7,15 +7,24 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import type { EmailStatus } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import {
   EmailChatMessageDtoSchema,
   EmailDtoSchema,
+  EmailShareDtoSchema,
+  PublicEmailDtoSchema,
+  buildRenderVariables,
   parseVariableSchemaJson,
   type CreateEmailFromTemplateInput,
   type CreateEmailInput,
   type EmailChatMessageDto,
   type EmailDto,
+  type EmailShareDto,
   type EmailVariantDto,
+  type PublicEmailDto,
+  type RenameEmailInput,
+  type TransferEmailInput,
+  type UpdateEmailShareInput,
   type UpdateEmailVariantVariableSchemaInput,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
@@ -72,16 +81,29 @@ export class EmailsService {
       );
     }
 
-    const email = await this.prisma.email.create({
-      data: {
-        workspaceId,
-        prompt: dto.prompt.trim(),
-        tone: dto.tone ?? null,
-        length: dto.length ?? null,
-        audience: dto.audience ?? null,
-        templateId,
-        status: "DRAFT",
-      },
+    const prompt = dto.prompt.trim();
+    const email = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.email.create({
+        data: {
+          workspaceId,
+          prompt,
+          tone: dto.tone ?? null,
+          length: dto.length ?? null,
+          audience: dto.audience ?? null,
+          templateId,
+          status: "DRAFT",
+        },
+      });
+      await tx.emailChatMessage.create({
+        data: {
+          workspaceId,
+          emailId: created.id,
+          role: "USER",
+          kind: "TEXT",
+          content: prompt,
+        },
+      });
+      return created;
     });
     return this.toDto(email.id);
   }
@@ -133,6 +155,65 @@ export class EmailsService {
     await this.prisma.email.delete({ where: { id: emailId } });
   }
 
+  async rename(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: RenameEmailInput,
+  ): Promise<EmailDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    await this.prisma.email.update({
+      where: { id: emailId },
+      data: { title: dto.title.trim() },
+    });
+    return this.toDto(emailId);
+  }
+
+  async transfer(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: TransferEmailInput,
+  ): Promise<EmailDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.workspaces.assertMembership(userId, dto.targetWorkspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+
+    if (workspaceId === dto.targetWorkspaceId) {
+      throw new BadRequestException("Email already belongs to this workspace.");
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.email.update({
+        where: { id: emailId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.emailVariant.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.emailGenerationRun.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.emailChatMessage.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.emailVfsSnapshot.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+      this.prisma.supportTicket.updateMany({
+        where: { emailId, workspaceId },
+        data: { workspaceId: dto.targetWorkspaceId },
+      }),
+    ]);
+
+    return this.toDto(emailId);
+  }
+
   /**
    * Atomically materialize a prebuilt template into a fully saved Email.
    * Charges 1 AI credit (records an INITIAL EmailGenerationRun) and sets
@@ -153,11 +234,12 @@ export class EmailsService {
     const compiledHtml = this.reactToHtml.compile(tpl.componentCode);
     const previewUrl = await this.createPreviewUrl(compiledHtml);
     const now = new Date();
+    const prompt = dto.prompt.trim();
     const email = await this.prisma.$transaction(async (tx) => {
       const created = await tx.email.create({
         data: {
           workspaceId,
-          prompt: dto.prompt.trim(),
+          prompt,
           tone: dto.tone ?? null,
           length: dto.length ?? null,
           audience: dto.audience ?? null,
@@ -176,6 +258,15 @@ export class EmailsService {
           compiledHtml,
           variableSchema: { variables: [] },
           previewUrl,
+        },
+      });
+      await tx.emailChatMessage.create({
+        data: {
+          workspaceId,
+          emailId: created.id,
+          role: "USER",
+          kind: "TEXT",
+          content: prompt,
         },
       });
       await tx.emailGenerationRun.create({
@@ -267,12 +358,9 @@ export class EmailsService {
     });
     if (!variant) throw new NotFoundException("Email variant not found.");
 
-    const renderVariables = Object.fromEntries(
-      dto.variableSchema.variables.map((variable) => [variable.name, variable.default]),
-    );
     const compiledHtml = this.reactToHtml.compile(
       variant.componentCode,
-      renderVariables,
+      buildRenderVariables(dto.variableSchema),
     );
     let previewUrl: string | null = null;
     try {
@@ -322,15 +410,26 @@ export class EmailsService {
       if (!pp) throw new NotFoundException("Pending prompt not found.");
       if (pp.consumed) throw new BadRequestException("Already consumed.");
 
+      const prompt = pp.prompt.trim();
       const email = await tx.email.create({
         data: {
           workspaceId: membership.workspaceId,
-          prompt: pp.prompt.trim(),
+          prompt,
           tone: pp.tone ?? null,
           length: pp.length ?? null,
           audience: pp.audience ?? null,
           status: "DRAFT",
           sourcePendingPromptId: pp.id,
+        },
+      });
+
+      await tx.emailChatMessage.create({
+        data: {
+          workspaceId: membership.workspaceId,
+          emailId: email.id,
+          role: "USER",
+          kind: "TEXT",
+          content: prompt,
         },
       });
 
@@ -394,9 +493,79 @@ export class EmailsService {
       title: row.title,
       templateId: row.templateId,
       templateSavedAt: row.templateSavedAt?.toISOString() ?? null,
+      visibility: row.visibility,
+      publicId: row.publicId,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       variants,
+    });
+  }
+
+  /**
+   * Toggle an email's public/private share link. Making it PUBLIC mints a
+   * stable, unguessable `publicId` (kept across toggles so an existing link
+   * keeps working). PRIVATE keeps the id but the public route stops serving it.
+   */
+  async setShare(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: UpdateEmailShareInput,
+  ): Promise<EmailShareDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+
+    const current = await this.prisma.email.findUnique({
+      where: { id: emailId },
+      select: { publicId: true },
+    });
+    const publicId =
+      dto.visibility === "PUBLIC"
+        ? current?.publicId ?? randomUUID()
+        : current?.publicId ?? null;
+
+    const updated = await this.prisma.email.update({
+      where: { id: emailId },
+      data: { visibility: dto.visibility, publicId },
+      select: { id: true, visibility: true, publicId: true },
+    });
+
+    return EmailShareDtoSchema.parse({
+      id: updated.id,
+      visibility: updated.visibility,
+      publicId: updated.publicId,
+    });
+  }
+
+  /**
+   * Resolve a public share link. Only PUBLIC emails are served and only their
+   * latest rendered variant — no workspace, prompt, or chat data is exposed.
+   */
+  async getPublicByPublicId(publicId: string): Promise<PublicEmailDto> {
+    const email = await this.prisma.email.findFirst({
+      where: { publicId, visibility: "PUBLIC" },
+      select: {
+        publicId: true,
+        title: true,
+        createdAt: true,
+        variants: {
+          orderBy: { seq: "desc" },
+          take: 1,
+          select: { subject: true, compiledHtml: true },
+        },
+      },
+    });
+    const variant = email?.variants[0];
+    if (!email || !email.publicId || !variant) {
+      throw new NotFoundException("Shared email not found.");
+    }
+
+    return PublicEmailDtoSchema.parse({
+      publicId: email.publicId,
+      title: email.title,
+      subject: variant.subject,
+      compiledHtml: variant.compiledHtml,
+      createdAt: email.createdAt.toISOString(),
     });
   }
 

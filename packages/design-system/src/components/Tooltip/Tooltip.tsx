@@ -28,11 +28,11 @@ export interface TooltipProps extends Omit<
 }
 
 const toneClasses: Record<TooltipTone, string> = {
-  ink: "bg-madoo-ink text-madoo-accent-fg shadow-[var(--shadow-border-ink)] [--tooltip-bg:var(--ink)]",
+  ink: "bg-madoo-ink text-madoo-accent-fg shadow-(--shadow-border-ink) [--tooltip-bg:var(--ink)]",
   light:
-    "bg-madoo-surface text-madoo-ink-soft shadow-[var(--shadow-border)] [--tooltip-bg:var(--surface)]",
+    "bg-madoo-surface text-madoo-ink-soft shadow-madoo-border [--tooltip-bg:var(--surface)]",
   accent:
-    "bg-madoo-accent text-madoo-accent-fg shadow-[var(--shadow-border-accent)] [--tooltip-bg:var(--accent)]",
+    "bg-madoo-accent text-madoo-accent-fg shadow-(--shadow-border-accent) [--tooltip-bg:var(--accent)]",
 };
 
 const sideClasses: Record<TooltipSide, string> = {
@@ -143,7 +143,7 @@ export const Tooltip = forwardRef<HTMLSpanElement, TooltipProps>(
             id={tooltipId}
             role="tooltip"
             className={cx(
-              "invisible pointer-events-none absolute z-[var(--z-popover)] inline-flex w-max max-w-[min(280px,calc(100vw-32px))] origin-center scale-[0.98] items-center rounded-[var(--radius-lg)] px-2.5 py-[7px] text-left font-madoo-sans text-[12.5px] font-medium leading-[1.35] whitespace-normal opacity-0 transition-[opacity,visibility,transform] duration-150 ease-[var(--ease-out)] group-hover:visible group-hover:scale-100 group-hover:opacity-100 group-focus-within:visible group-focus-within:scale-100 group-focus-within:opacity-100",
+              "invisible pointer-events-none absolute z-[var(--z-popover)] inline-flex w-max max-w-[min(280px,calc(100vw-32px))] origin-center scale-[0.98] items-center rounded-lg px-2.5 py-1.75 text-left font-madoo-sans text-[12.5px] font-medium leading-[1.35] whitespace-normal opacity-0 transition-[opacity,visibility,transform] duration-150 ease-out group-hover:visible group-hover:scale-100 group-hover:opacity-100 group-focus-within:visible group-focus-within:scale-100 group-focus-within:opacity-100",
               toneClasses[tone],
               sideClasses[side],
               alignClasses(side, align),
@@ -152,7 +152,7 @@ export const Tooltip = forwardRef<HTMLSpanElement, TooltipProps>(
             {content}
             <span
               className={cx(
-                "absolute -z-10 h-2 w-2 rotate-45 bg-[var(--tooltip-bg)] opacity-0 shadow-[inherit] transition-[opacity,transform] duration-150 ease-[var(--ease-out)] group-hover:opacity-100 group-focus-within:opacity-100",
+                "absolute -z-10 h-2 w-2 rotate-45 bg-(--tooltip-bg) opacity-0 shadow-[inherit] transition-[opacity,transform] duration-150 ease-out group-hover:opacity-100 group-focus-within:opacity-100",
                 arrowClasses(side, align),
               )}
               aria-hidden="true"

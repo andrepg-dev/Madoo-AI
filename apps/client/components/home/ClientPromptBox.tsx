@@ -2,15 +2,19 @@
 
 import {
   Add01Icon,
+  Alert02Icon,
   ArrowUp01Icon,
+  Cancel01Icon,
   Mic02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchBillingOverview } from "@/actions/billing";
 import { cn } from "@/lib/utils";
 import { buildLandingAuthUrl } from "@/lib/auth-redirect";
 import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
-import { Select } from "@madoo/design-system";
+import { Button, Select } from "@madoo/design-system";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -136,12 +140,17 @@ export function ClientPromptBox({
   const user = useAuthStore((state) => state.user);
   const searchCommandOpen = useClientStore((state) => state.searchCommandOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
+  const setPricingOpen = useClientStore((state) => state.setPricingOpen);
+  const workspaceId = useClientStore((state) => state.workspaceId);
   const [prompt, setPrompt] = useState("");
+  const [creditsAlertDismissed, setCreditsAlertDismissed] = useState(false);
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
   >({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const hasPrompt = prompt.trim().length > 0;
+  const submitDisabled = disabled || isSubmitting;
   const isChatVariant = variant === "chat";
   const placeholderBody = useTypingPlaceholder(
     isChatVariant ? [] : placeholders,
@@ -150,10 +159,26 @@ export function ClientPromptBox({
     ? "Write a message..."
     : `Hi Madoo ${placeholderBody}`;
 
-  const submitPrompt = () => {
+  const { data: billingOverview } = useQuery({
+    queryKey: ["billing-overview", workspaceId],
+    queryFn: fetchBillingOverview,
+    enabled: Boolean(user),
+  });
+  const aiUsage = billingOverview?.usage.aiGenerations;
+  const outOfCredits = Boolean(
+    aiUsage && aiUsage.limit !== -1 && aiUsage.used >= aiUsage.limit,
+  );
+  const showCreditsAlert = outOfCredits && !creditsAlertDismissed;
+
+  // Re-surface the alert whenever the workspace regains credits then runs out again.
+  useEffect(() => {
+    if (!outOfCredits) setCreditsAlertDismissed(false);
+  }, [outOfCredits]);
+
+  const submitPrompt = async () => {
     const trimmedPrompt = prompt.trim();
 
-    if (!trimmedPrompt) return;
+    if (!trimmedPrompt || submitDisabled) return;
 
     const input: PromptSubmitInput = { prompt: trimmedPrompt };
     const params = new URLSearchParams({ prompt: trimmedPrompt });
@@ -174,7 +199,14 @@ export function ClientPromptBox({
     }
 
     if (onSubmit) {
-      void Promise.resolve(onSubmit(input)).then(() => setPrompt(""));
+      setIsSubmitting(true);
+      // Clear instantly so the message feels sent before the backend responds.
+      setPrompt("");
+      try {
+        await onSubmit(input);
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -193,7 +225,7 @@ export function ClientPromptBox({
     }
 
     event.preventDefault();
-    submitPrompt();
+    void submitPrompt();
   };
 
   useEffect(() => {
@@ -271,14 +303,55 @@ export function ClientPromptBox({
         classNames?.root,
       )}
     >
+      {showCreditsAlert ? (
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-lg bg-madoo-warn-soft px-2.5 py-1.5 font-madoo-sans text-[12.5px] leading-[1.5] text-madoo-warn shadow-madoo-border"
+        >
+          <HugeiconsIcon
+            icon={Alert02Icon}
+            size={15}
+            strokeWidth={1.8}
+            className="shrink-0"
+            aria-hidden="true"
+          />
+          <p className="min-w-0 flex-1">
+            <span className="font-medium">Out of credits.</span>{" "}
+            <button
+              type="button"
+              onClick={() => setPricingOpen(true)}
+              className="cursor-pointer font-medium underline underline-offset-2 transition hover:opacity-70"
+            >
+              Upgrade plan
+            </button>{" "}
+            to keep generating.
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setCreditsAlertDismissed(true)}
+            aria-label="Dismiss out of credits alert"
+            className="-mr-1 h-6 w-6 shrink-0 p-0!"
+          >
+            <HugeiconsIcon
+              icon={Cancel01Icon}
+              size={14}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+          </Button>
+        </div>
+      ) : null}
+
       <div
         className={cn(
           "overflow-visible",
           !classNames?.panel &&
-            "madoo-paper-border bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] !shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)_/_0.12)]",
+            "madoo-paper-border bg-[color-mix(in_srgb,var(--surface)_66%,var(--accent-soft))] shadow-[var(--shadow-border),0_0_0_1px_rgb(var(--rule-rgb)/0.12)]!",
           isChatVariant
             ? "w-full min-w-0 max-w-full rounded-2xl"
-            : "min-w-[650px] max-w-[calc(100vw-32px)] rounded-3xl",
+            : "min-w-162.5 max-w-[calc(100vw-32px)] rounded-3xl",
           classNames?.panel,
         )}
       >
@@ -364,11 +437,11 @@ export function ClientPromptBox({
 
             <button
               type="button"
-              onClick={submitPrompt}
-              disabled={!hasPrompt || disabled}
+              onClick={() => void submitPrompt()}
+              disabled={!hasPrompt || submitDisabled}
               className={cn(
                 "inline-flex items-center justify-center rounded-full text-xs text-white transition",
-                hasPrompt && !disabled
+                hasPrompt && !submitDisabled
                   ? "cursor-pointer bg-black"
                   : "cursor-not-allowed bg-[#7d7d7a] opacity-80",
                 isChatVariant ? "h-7 w-7" : "h-8 px-4",

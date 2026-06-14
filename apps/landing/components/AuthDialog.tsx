@@ -403,7 +403,7 @@ export default function AuthDialog({
         tabIndex={-1}
       />
 
-      <div className="font-ibm-plex-sans relative w-full max-w-[390px] rounded-[28px] bg-madoo-paper px-7 py-7 text-madoo-ink shadow-[0_28px_90px_rgb(7_17_35/0.28),0_0_0_1px_rgb(var(--madoo-rule-rgb)/0.12),inset_0_1px_0_rgb(255_255_255/0.92)]">
+      <div className="font-ibm-plex-sans relative w-full max-w-97.5 rounded-[28px] bg-madoo-paper px-7 py-7 text-madoo-ink shadow-[0_28px_90px_rgb(7_17_35/0.28),0_0_0_1px_rgb(var(--madoo-rule-rgb)/0.12),inset_0_1px_0_rgb(255_255_255/0.92)]">
         <button
           type="button"
           className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full text-zinc-500 transition hover:bg-black/5 hover:text-zinc-900"

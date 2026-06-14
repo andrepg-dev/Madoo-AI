@@ -4,7 +4,10 @@
   "private": true,
   "description": "Madoo AI client platform",
   "scripts": {
+    "copy-axe": "node scripts/copy-axe.mjs",
+    "predev": "node scripts/copy-axe.mjs",
     "dev": "next dev --port 3003",
+    "prebuild": "node scripts/copy-axe.mjs",
     "build": "next build",
     "start": "next start --port 3003",
     "lint": "next lint",
@@ -16,6 +19,7 @@
     "@madoo/design-system": "workspace:*",
     "@madoo/shared": "workspace:*",
     "@tanstack/react-query": "^5.100.5",
+    "axe-core": "^4.12.1",
     "clsx": "^2.1.1",
     "next": "^15.1.0",
     "react": "^19.0.0",

@@ -4,7 +4,10 @@ import {
   createEmail,
   fetchEmail,
   fetchEmailChat,
+  updateEmailShare,
 } from "@/actions/emails";
+import { fetchBillingOverview } from "@/actions/billing";
+import { fetchWorkspaces } from "@/actions/workspaces";
 import {
   createGmailDraft,
   createOutlookDraft,
@@ -19,37 +22,74 @@ import {
 } from "@/lib/export-instructions";
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
+import { PreviewOverlay } from "@/components/project/preview/PreviewOverlay";
+import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
+import {
+  AccessLevelSelect,
+  type AccessLevel,
+} from "@/components/project/share/AccessLevelSelect";
+import { TestingModal } from "@/components/project/testing/TestingModal";
+import { PricingDrawer } from "@/components/shell/PricingDrawer";
 import {
   consumeEmailSseStream,
   type StreamEmailEvent,
 } from "@/lib/email-stream";
 import { playCompletionSound } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
 import {
   ArrowDown01Icon,
   ArrowDown02Icon,
+  ArrowLeft01Icon,
   Copy01Icon,
+  CrownPlusIcon,
   Download01Icon,
   Edit02Icon,
+  EyeIcon,
+  FileExportIcon,
+  Globe02Icon,
+  HelpCircleIcon,
+  LinkSquare02Icon,
   Moon02Icon,
   PanelLeftIcon,
   PanelRightIcon,
+  Plug01Icon,
   RefreshIcon,
+  Settings01Icon,
+  Share08Icon,
   SparklesIcon,
   SourceCodeIcon,
+  SquareLock02Icon,
+  StarIcon,
+  TestTube02Icon,
+  Tick02Icon,
   Sun01Icon,
   ThumbsDownIcon,
   ThumbsUpIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Button, Modal, SegmentedControl, useToast } from "@madoo/design-system";
+import {
+  Avatar,
+  Button,
+  Card,
+  Dropdown,
+  DropdownContent,
+  DropdownDivider,
+  DropdownItem,
+  DropdownTrigger,
+  Input,
+  Modal,
+  ProgressBar,
+  SegmentedControl,
+  useToast,
+} from "@madoo/design-system";
 import type {
   ConnectionProvider,
   EmailChatMessageDto,
   EmailDto,
 } from "@madoo/shared";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -92,42 +132,299 @@ function ActionButton({
   );
 }
 
-const userGreeting = "Hi madoo, how are you?";
+function CopyActionButton({
+  label = "Copy",
+  text,
+}: {
+  label?: string;
+  text: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<number | null>(null);
 
-const aiGreeting = `¡Hola! Todo bien por aquí, ¿y tú? 😊
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current);
+    },
+    [],
+  );
 
-Estoy listo para ayudarte a crear o modificar tu aplicación web. ¿Qué te gustaría construir hoy? Por ejemplo:
+  const handleCopy = () => {
+    copyText(text);
+    setCopied(true);
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setCopied(false), 1500);
+  };
 
-- Una página de inicio o landing page
-- Un blog o portafolio
-- Una app con base de datos y login de usuarios
-- Una tienda online
+  return (
+    <Button
+      aria-label={copied ? "Copied" : label}
+      className="h-6 w-6 rounded-md"
+      onClick={handleCopy}
+      size="sm"
+      variant="icon"
+    >
+      <HugeiconsIcon
+        aria-hidden="true"
+        className={cn(
+          copied && "animate-madoo-checkbox-control-in text-emerald-600",
+        )}
+        icon={copied ? Tick02Icon : Copy01Icon}
+        key={copied ? "copied" : "copy"}
+        primaryColor="currentColor"
+        size={13}
+        strokeWidth={copied ? 2 : 1.5}
+      />
+    </Button>
+  );
+}
 
-Cuéntame tu idea y empezamos. 🚀`;
+function HeaderMenuIcon({ icon }: { icon: IconSvgElement }) {
+  return (
+    <HugeiconsIcon
+      aria-hidden="true"
+      icon={icon}
+      primaryColor="currentColor"
+      size={16}
+      strokeWidth={1.55}
+    />
+  );
+}
 
-const userCampaignRequest =
-  "Create a polished launch email for our new AI campaign builder. Keep it concise and make the CTA feel clear.";
-const suggestedEmailSubject = "Build campaigns faster with Madoo";
+function formatCreditReset(value: string | undefined): string {
+  if (!value) return "next month";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return "next month";
+  }
+}
 
-const aiCampaignResponse = `Here’s a sharper direction:
+function ConversationTitleDropdown({ title }: { title: string }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const user = useAuthStore((state) => state.user);
+  const workspaceId = useClientStore((state) => state.workspaceId);
+  const [starred, setStarred] = useState(false);
 
-**Subject:** Build campaigns faster with Madoo
+  const { data: billingOverview, isLoading: billingLoading } = useQuery({
+    queryKey: ["billing-overview", workspaceId],
+    queryFn: fetchBillingOverview,
+    enabled: Boolean(user && workspaceId),
+  });
 
-Hi there,
+  const usage = billingOverview?.usage.aiGenerations;
+  const usageLimit = usage?.limit ?? 0;
+  const creditsLeft =
+    usageLimit === -1 ? null : Math.max(usageLimit - (usage?.used ?? 0), 0);
+  const creditsPct =
+    usageLimit === -1
+      ? 100
+      : usageLimit > 0 && creditsLeft !== null
+        ? Math.min(100, Math.round((creditsLeft / usageLimit) * 100))
+        : 0;
+  const creditsText = billingLoading
+    ? "Loading"
+    : usageLimit === -1
+      ? "Unlimited"
+      : `${creditsLeft ?? 0} left`;
 
-Meet Madoo, your AI workspace for turning campaign ideas into polished email templates without starting from a blank page.
+  return (
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <Button
+          className="h-8 max-w-[min(360px,calc(100vw-32px))] gap-1.5 px-2.5 py-0! text-[13px]"
+          variant="ghost"
+        >
+          <Image
+            src={"/madoo-transparent.png"}
+            alt="Madoo AI Logo"
+            width={20}
+            height={20}
+          />
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate font-medium">{title}</span>
+            <HugeiconsIcon
+              aria-hidden="true"
+              icon={ArrowDown01Icon}
+              primaryColor="currentColor"
+              className="size-4 shrink-0 text-madoo-ink-muted"
+            />
+          </div>
+        </Button>
+      </DropdownTrigger>
+      <DropdownContent align="start" className="w-72 gap-1 p-1.5!">
+        <DropdownItem
+          className="justify-start! px-2! py-1.5! text-[13px]!"
+          onSelect={() => router.push("/dashboard/projects")}
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={ArrowLeft01Icon} />
+            Back to dashboard
+          </span>
+        </DropdownItem>
+        <DropdownDivider />
 
-- Draft launch emails in minutes
-- Adjust tone and length without rewriting
-- Keep brand structure consistent across campaigns
+        <DropdownItem
+          className="justify-start! gap-2 px-2! py-1.5!"
+          onSelect={() => router.push("/settings")}
+        >
+          <Avatar
+            name={user?.name ?? user?.email ?? "User"}
+            src={user?.avatarUrl ?? undefined}
+            size="sm"
+          />
+          <span className="grid min-w-0 flex-1 gap-0.5 text-left">
+            <span className="truncate font-medium">
+              {user?.name ?? "User profile"}
+            </span>
+            <span className="truncate text-xs text-madoo-ink-muted">
+              {user?.email ?? "Manage your profile"}
+            </span>
+          </span>
+        </DropdownItem>
 
-**CTA:** Start your next campaign`;
+        <Card surface="secondary" className="grid gap-1.5 p-2!">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-(length:--font-size-base) font-normal">
+              Credits
+            </span>
+            <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+              {creditsText}
+            </span>
+          </div>
+          <ProgressBar value={creditsPct} tone="ink" label="Credits left" />
+          <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+            Credits reset {formatCreditReset(usage?.resetsAt)}
+          </span>
+        </Card>
+
+        <DropdownDivider />
+
+        <DropdownItem
+          className="justify-start! px-2! py-1! text-[13px]!"
+          onSelect={() => router.push("/settings")}
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={Settings01Icon} />
+            Settings
+          </span>
+        </DropdownItem>
+        <DropdownItem
+          className="justify-start! px-2! py-1! text-[13px]!"
+          onSelect={() =>
+            toast({ tone: "default", title: "Providers coming soon" })
+          }
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={Plug01Icon} />
+            Providers
+          </span>
+        </DropdownItem>
+        <DropdownItem
+          className="justify-start! px-2! py-1! text-[13px]!"
+          onSelect={() => {
+            setStarred((value) => !value);
+            toast({
+              tone: "success",
+              title: starred ? "Project unstarred" : "Project starred",
+            });
+          }}
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={StarIcon} />
+            {starred ? "Unstar project" : "Star project"}
+          </span>
+        </DropdownItem>
+        <DropdownItem
+          className="justify-start! px-2! py-1! text-[13px]!"
+          onSelect={() => router.push("/settings?area=support")}
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={HelpCircleIcon} />
+            Help
+          </span>
+        </DropdownItem>
+      </DropdownContent>
+    </Dropdown>
+  );
+}
+
+type TimelineStep = {
+  id: string;
+  label: string;
+  state: "active" | "done";
+};
 
 type ChatMessage = {
   id: string;
-  role: "user" | "assistant" | "status" | "error";
+  role: "user" | "assistant" | "status" | "error" | "timeline";
   content: string;
+  /** Chronological sort key so server rows and client-only rows interleave. */
+  seq?: number;
+  /** Owning email, used to drop client-only rows when switching projects. */
+  emailId?: string;
+  steps?: TimelineStep[];
+  startedAt?: number;
+  finishedAt?: number;
 };
+
+function createTimelineMessage(
+  emailId: string,
+  firstLabel: string,
+): ChatMessage {
+  const now = Date.now();
+  return {
+    id: `timeline-${now}-${Math.random().toString(36).slice(2, 7)}`,
+    role: "timeline",
+    content: "",
+    seq: now,
+    emailId,
+    startedAt: now,
+    steps: [{ id: `step-${now}`, label: firstLabel, state: "active" }],
+  };
+}
+
+/** Append a step to a timeline, marking earlier steps done. Skips repeats. */
+function appendTimelineStep(
+  list: ChatMessage[],
+  timelineId: string,
+  label: string,
+): ChatMessage[] {
+  return list.map((message) => {
+    if (message.id !== timelineId || message.role !== "timeline") return message;
+    const steps = message.steps ?? [];
+    if (steps.length && steps[steps.length - 1].label === label) return message;
+    return {
+      ...message,
+      steps: [
+        ...steps.map((step) => ({ ...step, state: "done" as const })),
+        { id: `step-${Date.now()}-${steps.length}`, label, state: "active" },
+      ],
+    };
+  });
+}
+
+/** Mark a timeline finished; its steps stay in the conversation as a record. */
+function finishTimeline(
+  list: ChatMessage[],
+  timelineId: string,
+): ChatMessage[] {
+  return list.map((message) => {
+    if (message.id !== timelineId || message.role !== "timeline") return message;
+    return {
+      ...message,
+      finishedAt: Date.now(),
+      steps: (message.steps ?? []).map((step) => ({
+        ...step,
+        state: "done" as const,
+      })),
+    };
+  });
+}
 
 type PreviewMode = "desktop" | "responsive";
 type TemplateTheme = "light" | "dark";
@@ -162,56 +459,114 @@ function latestVariant(email: EmailDto | null | undefined) {
   return email?.variants[email.variants.length - 1] ?? null;
 }
 
+const MERGE_TAG_PATTERN = /\{\{[^}]+\}\}/;
+const MERGE_TAG_SPLIT = /(\{\{[^}]+\}\})/g;
+const MERGE_TAG_STYLE =
+  "color:#2f6fea;background:rgba(47,111,234,0.12);border-radius:3px;padding:0 3px;font-weight:600;";
+
+/**
+ * Wrap `{{variable}}` merge tags (dynamic variables) in colored spans so they
+ * stand out in the preview. Preview-only — only touches body text nodes, never
+ * attributes or the exported HTML.
+ */
+function highlightMergeTags(html: string | null): string | null {
+  if (!html || typeof window === "undefined" || !html.includes("{{")) {
+    return html;
+  }
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const targets: Text[] = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.nodeValue && MERGE_TAG_PATTERN.test(node.nodeValue)) {
+      targets.push(node as Text);
+    }
+  }
+
+  for (const textNode of targets) {
+    const fragment = doc.createDocumentFragment();
+    for (const part of textNode.nodeValue!.split(MERGE_TAG_SPLIT)) {
+      if (!part) continue;
+      if (MERGE_TAG_PATTERN.test(part)) {
+        const span = doc.createElement("span");
+        span.setAttribute("style", MERGE_TAG_STYLE);
+        span.textContent = part;
+        fragment.appendChild(span);
+      } else {
+        fragment.appendChild(doc.createTextNode(part));
+      }
+    }
+    textNode.parentNode?.replaceChild(fragment, textNode);
+  }
+
+  return `<!DOCTYPE html>${doc.documentElement.outerHTML}`;
+}
+
 function mapChatMessages(
   chat: EmailChatMessageDto[] | undefined,
   email: EmailDto | null | undefined,
 ): ChatMessage[] {
-  if (!chat?.length) {
-    if (!email) {
-      return [
-        { id: "default-user", role: "user", content: userGreeting },
-        { id: "default-ai", role: "assistant", content: aiGreeting },
-        {
-          id: "default-request",
-          role: "user",
-          content: userCampaignRequest,
-        },
-        {
-          id: "default-response",
-          role: "assistant",
-          content: aiCampaignResponse,
-        },
-      ];
-    }
-    return [
-      {
-        id: `${email.id}-prompt`,
-        role: "user",
-        content: email.prompt,
-      },
-      {
-        id: `${email.id}-status`,
-        role: "status",
-        content:
-          email.status === "READY"
-            ? "Email is ready."
-            : "Generation is in progress.",
-      },
-    ];
-  }
-
-  return chat
-    .filter((message) => message.kind !== "THINKING")
-    .map((message) => ({
-      id: message.id,
-      role:
-        message.role === "USER"
+  const visibleChat: ChatMessage[] =
+    chat
+      ?.filter((message) => message.kind !== "THINKING")
+      .map((message) => ({
+        id: message.id,
+        role: (message.role === "USER"
           ? "user"
           : message.kind === "STATUS"
             ? "status"
-            : "assistant",
-      content: message.content,
-    }));
+            : "assistant") as ChatMessage["role"],
+        content: message.content,
+        seq: Date.parse(message.createdAt) || 0,
+        emailId: email?.id,
+      })) ?? [];
+
+  // Always lead with the user's brief, even before the chat rows have loaded.
+  const messages: ChatMessage[] =
+    email && !visibleChat.some((message) => message.role === "user")
+      ? [
+          {
+            id: `${email.id}-prompt`,
+            role: "user",
+            content: email.prompt,
+            seq: Date.parse(email.createdAt) || 0,
+            emailId: email.id,
+          },
+          ...visibleChat,
+        ]
+      : visibleChat;
+
+  // While generating (e.g. after a reload, with no live SSE), keep a visible
+  // progress line until the assistant reply lands instead of a lone bubble.
+  if (
+    email?.status === "GENERATING" &&
+    !messages.some(
+      (message) =>
+        message.role === "assistant" ||
+        message.role === "status" ||
+        message.role === "timeline",
+    )
+  ) {
+    messages.push({
+      id: `${email.id}-generating`,
+      role: "status",
+      content: "Generating your email…",
+      seq: Date.now(),
+      emailId: email.id,
+    });
+  }
+
+  return messages;
+}
+
+function deriveConversationTitle(
+  messages: ChatMessage[],
+  fallback: string,
+): string {
+  const firstUserMessage = messages.find((message) => message.role === "user");
+  const title = firstUserMessage?.content.replace(/\s+/g, " ").trim();
+  if (!title) return fallback;
+  return title.length > 48 ? `${title.slice(0, 45).trimEnd()}...` : title;
 }
 
 function upsertMessage(list: ChatMessage[], next: ChatMessage) {
@@ -263,61 +618,244 @@ function HeaderPillButton({
   );
 }
 
-function getEmailTemplateSrcDoc(theme: TemplateTheme) {
-  const dark = theme === "dark";
-  const pageBg = dark ? "#111827" : "#f5f7fb";
-  const cardBg = dark ? "#171923" : "#ffffff";
-  const text = dark ? "#f9fafb" : "#101114";
-  const muted = dark ? "#a8b0bd" : "#5f6673";
-  const accent = dark ? "#8fd6ff" : "#356bff";
-  const divider = dark ? "#2a3142" : "#e5e9f2";
+function ShareProjectDropdown({
+  email,
+  emailId,
+  onUpgrade,
+}: {
+  email: EmailDto | null | undefined;
+  emailId: string | null;
+  onUpgrade: () => void;
+}) {
+  const user = useAuthStore((state) => state.user);
+  const workspaceId = useClientStore((state) => state.workspaceId);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("edit");
 
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      html { margin: 0; overflow: hidden; }
-      body { margin: 0; overflow: hidden; background: ${pageBg}; font-family: Arial, sans-serif; color: ${text}; }
-      .wrap { width: 100%; padding: 32px 12px; box-sizing: border-box; }
-      .email { max-width: 640px; margin: 0 auto; overflow: hidden; border-radius: 18px; background: ${cardBg}; box-shadow: 0 24px 70px rgba(16,17,20,0.12); }
-      .hero { border-radius: 18px 18px 0 0; padding: 38px 36px 30px; background: linear-gradient(135deg, ${accent}, ${dark ? "#202637" : "#eef5ff"}); color: ${dark ? "#07111f" : "#ffffff"}; }
-      .eyebrow { margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-      h1 { margin: 0; font-size: 34px; line-height: 1.04; letter-spacing: 0; }
-      .body { padding: 34px 36px 38px; }
-      p { margin: 0; color: ${muted}; font-size: 16px; line-height: 1.6; }
-      .grid { display: grid; gap: 12px; margin: 28px 0; }
-      .item { border: 1px solid ${divider}; border-radius: 14px; padding: 16px; }
-      .item strong { display: block; margin-bottom: 6px; color: ${text}; font-size: 15px; }
-      .cta { display: inline-block; margin-top: 4px; border-radius: 999px; background: ${accent}; color: ${dark ? "#07111f" : "#ffffff"}; padding: 13px 20px; font-size: 14px; font-weight: 700; text-decoration: none; }
-      @media (max-width: 520px) {
-        .wrap { padding: 0; }
-        .hero, .body { padding-left: 22px; padding-right: 22px; }
-        h1 { font-size: 28px; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <article class="email">
-        <section class="hero">
-          <p class="eyebrow">Madoo AI</p>
-          <h1>Build campaign emails from one focused prompt.</h1>
-        </section>
-        <section class="body">
-          <p>Turn rough launch ideas into polished, responsive email templates your team can review, test, and export faster.</p>
-          <div class="grid">
-            <div class="item"><strong>Faster drafting</strong><p>Generate structure, copy, and CTA direction in seconds.</p></div>
-            <div class="item"><strong>Production-ready preview</strong><p>Check responsive layout before sending work downstream.</p></div>
-            <div class="item"><strong>Brand-aware output</strong><p>Keep spacing, tone, and visual hierarchy consistent.</p></div>
+  const { data: workspaces = [] } = useQuery({
+    queryKey: ["workspaces"],
+    queryFn: fetchWorkspaces,
+    enabled: Boolean(user),
+    staleTime: 60_000,
+  });
+  const activeWorkspace =
+    workspaces.find((item) => item.id === workspaceId) ?? workspaces[0] ?? null;
+  const workspaceName = activeWorkspace?.name ?? "Madoo workspace";
+  const workspaceInitial = workspaceName.trim().charAt(0).toUpperCase() || "M";
+
+  const isPublic = email?.visibility === "PUBLIC";
+  const publicUrl = useMemo(() => {
+    if (!email?.publicId) return null;
+    const path = `/share/${email.publicId}`;
+    if (typeof window === "undefined") return path;
+    return new URL(path, window.location.origin).toString();
+  }, [email?.publicId]);
+
+  const shareMutation = useMutation({
+    mutationFn: (visibility: "PUBLIC" | "PRIVATE") => {
+      if (!emailId) throw new Error("Generate an email first.");
+      return updateEmailShare(emailId, { visibility });
+    },
+    onSuccess: async (_data, visibility) => {
+      await queryClient.invalidateQueries({ queryKey: ["email", emailId] });
+      toast({
+        tone: "success",
+        title:
+          visibility === "PUBLIC" ? "Public link enabled" : "Link set to private",
+        body:
+          visibility === "PUBLIC"
+            ? "Anyone with the link can now view this email."
+            : "The public link no longer opens this email.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Could not update sharing",
+        body:
+          error instanceof Error ? error.message : "Try again in a moment.",
+      });
+    },
+  });
+
+  const copyLink = async () => {
+    if (!publicUrl) return;
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast({ tone: "danger", title: "Copy failed" });
+    }
+  };
+
+  return (
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <HeaderPillButton
+          className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
+          label="Share email"
+          leftIcon={Share08Icon}
+        >
+          Share
+        </HeaderPillButton>
+      </DropdownTrigger>
+      <DropdownContent align="end" className="w-[min(88vw,420px)] gap-0 p-0!">
+        <div className="grid gap-4 p-4">
+          <div className="grid gap-1">
+            <h3 className="text-lg font-semibold tracking-normal text-madoo-ink">
+              Share email
+            </h3>
+            <p className="text-xs text-madoo-ink-muted">
+              Create a public link so clients can preview this email — no Madoo
+              account needed.
+            </p>
           </div>
-          <a class="cta" href="#">Start next campaign</a>
-        </section>
-      </article>
-    </div>
-  </body>
-</html>`;
+
+          <div className="grid gap-3 rounded-xl bg-madoo-surface-2 p-3">
+            <div className="flex items-center gap-3">
+              <span
+                className={cn(
+                  "grid size-9 shrink-0 place-items-center rounded-lg",
+                  isPublic
+                    ? "bg-madoo-ink text-white"
+                    : "bg-white text-madoo-ink shadow-madoo-border",
+                )}
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={isPublic ? Globe02Icon : SquareLock02Icon}
+                  primaryColor="currentColor"
+                  size={18}
+                  strokeWidth={1.7}
+                />
+              </span>
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="truncate text-sm font-medium text-madoo-ink">
+                  {isPublic ? "Public link" : "Private"}
+                </span>
+                <span className="truncate text-xs text-madoo-ink-muted">
+                  {isPublic
+                    ? "Anyone with the link can view"
+                    : "Only your workspace can access"}
+                </span>
+              </span>
+              <Button
+                className="h-8 rounded-lg"
+                disabled={!emailId || shareMutation.isPending}
+                onClick={() =>
+                  shareMutation.mutate(isPublic ? "PRIVATE" : "PUBLIC")
+                }
+                size="sm"
+                type="button"
+                variant={isPublic ? "secondary" : "primary"}
+              >
+                {shareMutation.isPending
+                  ? "Saving…"
+                  : isPublic
+                    ? "Make private"
+                    : "Create link"}
+              </Button>
+            </div>
+
+            {isPublic && publicUrl ? (
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <Input
+                    aria-label="Public share link"
+                    className="h-9! bg-white!"
+                    inputSize="lg"
+                    onFocus={(event) => event.currentTarget.select()}
+                    readOnly
+                    value={publicUrl}
+                    variant="default"
+                  />
+                </div>
+                <Button
+                  aria-label="Copy public link"
+                  className="h-9 min-w-20 rounded-lg"
+                  leftIcon={
+                    <HugeiconsIcon
+                      aria-hidden="true"
+                      icon={copied ? Tick02Icon : Copy01Icon}
+                      primaryColor="currentColor"
+                      size={15}
+                      strokeWidth={1.8}
+                    />
+                  }
+                  onClick={copyLink}
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                >
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+                <a
+                  aria-label="Open public link"
+                  className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-madoo-ink shadow-madoo-border transition hover:bg-madoo-surface"
+                  href={publicUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    icon={LinkSquare02Icon}
+                    primaryColor="currentColor"
+                    size={16}
+                    strokeWidth={1.7}
+                  />
+                </a>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-2">
+            <p className="text-xs font-semibold text-madoo-ink-muted">
+              Who has access
+            </p>
+            <div className="flex items-center gap-3">
+              <Avatar
+                name={user?.name ?? user?.email ?? "User"}
+                src={user?.avatarUrl ?? undefined}
+                size="sm"
+              />
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="truncate text-sm font-medium text-madoo-ink">
+                  {user?.name ?? "User"} (you)
+                </span>
+                <span className="truncate text-xs text-madoo-ink-muted">
+                  {user?.email ?? "Signed in user"}
+                </span>
+              </span>
+              <span className="text-xs font-medium text-madoo-ink-muted">
+                Owner
+              </span>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-ink text-xs font-semibold text-white">
+                {workspaceInitial}
+              </span>
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="truncate text-sm font-medium text-madoo-ink">
+                  {workspaceName}
+                </span>
+                <span className="truncate text-xs text-madoo-ink-muted">
+                  People in this workspace
+                </span>
+              </span>
+              <AccessLevelSelect
+                onChange={setAccessLevel}
+                onUpgrade={onUpgrade}
+                value={accessLevel}
+              />
+            </div>
+          </div>
+        </div>
+      </DropdownContent>
+    </Dropdown>
+  );
 }
 
 type ExportTab = "email" | "application" | "file";
@@ -609,7 +1147,7 @@ function ExportProviderModal({
   onClose: () => void;
   variantId: string | null;
 }) {
-  const [tab, setTab] = useState<ExportTab>("email");
+  const [tab, setTab] = useState<ExportTab>("application");
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -748,9 +1286,11 @@ function ExportProviderModal({
     >
       <div className="space-y-4">
         <div className="flex w-fit items-center rounded-xl bg-madoo-surface-2 p-1">
+          {/* Providers export is hidden until ESP integrations are available.
           <ExportTabButton active={tab === "email"} onClick={() => setTab("email")}>
             Providers
           </ExportTabButton>
+          */}
           <ExportTabButton
             active={tab === "application"}
             onClick={() => setTab("application")}
@@ -762,7 +1302,8 @@ function ExportProviderModal({
           </ExportTabButton>
         </div>
 
-        <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+        <div className="grid max-h-90 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+          {/* Providers export is hidden until ESP integrations are available.
           {tab === "email"
             ? emailExportProviders.map((provider) => (
                 <ExportProviderCard
@@ -773,6 +1314,7 @@ function ExportProviderModal({
                 />
               ))
             : null}
+          */}
 
           {tab === "application"
             ? applicationExportProviders.map((provider) => (
@@ -825,8 +1367,13 @@ function ExportProviderModal({
 
 function EmailPreviewSidebar({
   expanded,
+  email,
+  emailId,
   mode,
   onOpenExport,
+  onOpenPreview,
+  onOpenPricing,
+  onOpenTesting,
   onToggleExpanded,
   open,
   setMode,
@@ -838,8 +1385,13 @@ function EmailPreviewSidebar({
   width,
 }: {
   expanded: boolean;
+  email: EmailDto | null | undefined;
+  emailId: string | null;
   mode: PreviewMode;
   onOpenExport: () => void;
+  onOpenPreview: () => void;
+  onOpenPricing: () => void;
+  onOpenTesting: () => void;
   onToggleExpanded: () => void;
   open: boolean;
   setMode: (mode: PreviewMode) => void;
@@ -851,8 +1403,12 @@ function EmailPreviewSidebar({
   width: number;
 }) {
   const [isResizing, setIsResizing] = useState(false);
+  const [variablesOpen, setVariablesOpen] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(900);
+
+  const variant = latestVariant(email);
+  const canEditVariables = Boolean(emailId && variant);
 
   const syncIframeHeight = useCallback(() => {
     const iframe = iframeRef.current;
@@ -942,7 +1498,7 @@ function EmailPreviewSidebar({
         >
           <span
             className={cn(
-              "absolute inset-y-0 left-0 w-[3px] bg-madoo-accent opacity-0 transition-opacity",
+              "absolute inset-y-0 left-0 w-0.75 bg-madoo-accent opacity-0 transition-opacity",
               "group-hover:opacity-100 group-focus-visible:opacity-100",
               isResizing && "opacity-100",
             )}
@@ -950,14 +1506,14 @@ function EmailPreviewSidebar({
         </button>
       ) : null}
 
-      <div className="flex h-full min-w-[420px] flex-col">
-        <div className="shrink-0 bg-[#F2F2F2] rounded-t-3xl">
-          <div className="flex min-h-13 items-center gap-3 bg-white px-4">
+      <div className="flex h-full min-w-105 flex-col">
+        <div className="shrink-0 rounded-t-3xl bg-madoo-bg shadow-(--shadow-border-bottom)">
+          <div className="flex min-h-13 items-center gap-3 bg-madoo-bg px-4">
             <Button
               aria-label={
                 expanded ? "Collapse email preview" : "Expand email preview"
               }
-              className="size-9 shrink-0 rounded-lg bg-white text-[#101114] shadow-madoo-border hover:bg-[#f3f4f6]"
+              className="size-9 shrink-0 rounded-lg"
               onClick={onToggleExpanded}
               size="sm"
               type="button"
@@ -989,28 +1545,41 @@ function EmailPreviewSidebar({
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              <HeaderPillButton
-                className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
-                label="Share email"
-              >
-                Share
-              </HeaderPillButton>
+              <ShareProjectDropdown
+                email={email}
+                emailId={emailId}
+                onUpgrade={onOpenPricing}
+              />
               <HeaderPillButton
                 className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
                 label="Preview email"
+                leftIcon={EyeIcon}
+                onClick={onOpenPreview}
               >
                 Preview
               </HeaderPillButton>
               <HeaderPillButton
                 className="text-white shadow-none"
                 label="Upgrade exports"
+                leftIcon={CrownPlusIcon}
+                onClick={onOpenPricing}
                 style={{ backgroundColor: "#101114", color: "#ffffff" }}
               >
                 Upgrade
               </HeaderPillButton>
               <HeaderPillButton
                 className="text-white shadow-none"
+                label="Test email"
+                leftIcon={TestTube02Icon}
+                onClick={onOpenTesting}
+                style={{ backgroundColor: "#16a34a", color: "#ffffff" }}
+              >
+                Test
+              </HeaderPillButton>
+              <HeaderPillButton
+                className="text-white shadow-none"
                 label="Export email"
+                leftIcon={FileExportIcon}
                 onClick={onOpenExport}
                 style={{ backgroundColor: "#356bff", color: "#ffffff" }}
               >
@@ -1019,40 +1588,74 @@ function EmailPreviewSidebar({
             </div>
           </div>
 
-          <div className="flex min-h-11 items-center justify-end gap-2 px-4">
-            <SegmentedControl
-              aria-label="Preview mode"
-              className="rounded-lg bg-madoo-surface p-1 shadow-none"
-              items={previewModeItems}
-              onChange={(value) => setMode(value as PreviewMode)}
-              value={mode}
-            />
+          <div className="flex min-h-11 items-center justify-between gap-2 px-4">
+            {canEditVariables ? (
+              <Button
+                aria-label="Toggle variables panel"
+                aria-pressed={variablesOpen}
+                className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
+                onClick={() => setVariablesOpen((open) => !open)}
+                size="sm"
+                variant={variablesOpen ? "primary" : "secondary"}
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={SourceCodeIcon}
+                  primaryColor="currentColor"
+                  size={15}
+                  strokeWidth={1.55}
+                />
+                <span>Variables</span>
+              </Button>
+            ) : (
+              <span />
+            )}
 
-            <Button
-              aria-label={`Use ${theme === "light" ? "dark" : "light"} email theme`}
-              className="h-8 gap-2 rounded-lg bg-white px-3 text-xs font-medium text-madoo-ink shadow-madoo-border hover:bg-[#f3f4f6]"
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              size="sm"
-              variant="ghost"
-            >
-              <HugeiconsIcon
-                aria-hidden="true"
-                icon={theme === "light" ? Moon02Icon : Sun01Icon}
-                primaryColor="currentColor"
-                size={15}
-                strokeWidth={1.55}
+            <div className="flex items-center gap-2">
+              <SegmentedControl
+                aria-label="Preview mode"
+                className="rounded-lg bg-madoo-surface p-1 shadow-none"
+                items={previewModeItems}
+                onChange={(value) => setMode(value as PreviewMode)}
+                value={mode}
               />
-              <span>{theme === "light" ? "Dark" : "Light"}</span>
-            </Button>
+
+              <Button
+                aria-label={`Use ${theme === "light" ? "dark" : "light"} email theme`}
+                className="h-8 gap-2 rounded-lg bg-white px-3 text-xs font-medium text-madoo-ink shadow-madoo-border hover:bg-[#f3f4f6]"
+                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                size="sm"
+                variant="ghost"
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={theme === "light" ? Moon02Icon : Sun01Icon}
+                  primaryColor="currentColor"
+                  size={15}
+                  strokeWidth={1.55}
+                />
+                <span>{theme === "light" ? "Dark" : "Light"}</span>
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden shadow-madoo-border">
-          <div className="madoo-preview-scrollbar mr-1 h-full overflow-y-auto">
+        <div className="flex min-h-0 flex-1 overflow-hidden shadow-madoo-border">
+          {variablesOpen && canEditVariables && variant ? (
+            <VariablesPanel
+              emailId={emailId!}
+              key={variant.id}
+              onClose={() => setVariablesOpen(false)}
+              variables={variant.variableSchema.variables}
+              variantId={variant.id}
+            />
+          ) : null}
+
+          <div className="madoo-preview-scrollbar mr-1 h-full min-w-0 flex-1 overflow-y-auto">
             <div
               className={cn(
-                "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)_/_0.14)] transition-[width] duration-300",
-                mode === "desktop" ? "w-full" : "w-[390px]",
+                "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)/0.14)] transition-[width] duration-300",
+                mode === "desktop" ? "w-full" : "w-97.5",
               )}
             >
               <iframe
@@ -1079,17 +1682,13 @@ function EmailPreviewSidebar({
 function HumanMessage({ children }: { children: string }) {
   return (
     <div className="ml-auto">
-      <pre className="max-w-xl whitespace-pre-wrap break-words rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
+      <pre className="max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
         {children}
       </pre>
 
       <div className="flex gap-1 my-1.5 mt-3 max-w-min ml-auto">
         <ActionButton icon={Edit02Icon} label="Edit message" />
-        <ActionButton
-          icon={Copy01Icon}
-          label="Copy message"
-          onClick={() => copyText(children)}
-        />
+        <CopyActionButton label="Copy message" text={children} />
       </div>
     </div>
   );
@@ -1109,11 +1708,7 @@ function AiMessage({
       </Streamdown>
 
       <div className="flex gap-1 mt-1.5">
-        <ActionButton
-          icon={Copy01Icon}
-          label="Copy response"
-          onClick={() => copyText(children)}
-        />
+        <CopyActionButton label="Copy response" text={children} />
         <ActionButton icon={ThumbsUpIcon} label="Like response" />
         <ActionButton icon={ThumbsDownIcon} label="Dislike response" />
         <ActionButton
@@ -1142,22 +1737,129 @@ function ErrorMessage({ children }: { children: string }) {
   );
 }
 
+/**
+ * Live, then permanent, record of the generation steps. Expanded while working,
+ * collapses to "Worked for Ns" when done but stays in the conversation.
+ */
+function TimelineMessage({ message }: { message: ChatMessage }) {
+  const steps = message.steps ?? [];
+  const finished = Boolean(message.finishedAt);
+  const [expanded, setExpanded] = useState(true);
+
+  useEffect(() => {
+    if (finished) setExpanded(false);
+  }, [finished]);
+
+  const elapsedSeconds =
+    message.finishedAt && message.startedAt
+      ? Math.max(1, Math.round((message.finishedAt - message.startedAt) / 1000))
+      : null;
+  const activeLabel =
+    steps.find((step) => step.state === "active")?.label ??
+    steps[steps.length - 1]?.label ??
+    "Working…";
+
+  return (
+    <div className="mr-auto w-full max-w-md">
+      <button
+        aria-expanded={expanded}
+        className="flex w-full items-center gap-2.5 rounded-xl bg-madoo-surface-2 px-3 py-2 text-left shadow-madoo-border transition hover:bg-madoo-surface"
+        onClick={() => setExpanded((value) => !value)}
+        type="button"
+      >
+        {finished ? (
+          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-madoo-ink text-white">
+            <HugeiconsIcon
+              aria-hidden="true"
+              icon={Tick02Icon}
+              primaryColor="currentColor"
+              size={12}
+              strokeWidth={2}
+            />
+          </span>
+        ) : (
+          <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-madoo-border border-t-madoo-ink" />
+        )}
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-madoo-ink">
+          {finished
+            ? `Worked for ${elapsedSeconds ?? 1}s`
+            : activeLabel}
+        </span>
+        <HugeiconsIcon
+          aria-hidden="true"
+          className={cn(
+            "shrink-0 text-madoo-ink-muted transition-transform",
+            expanded && "rotate-180",
+          )}
+          icon={ArrowDown01Icon}
+          primaryColor="currentColor"
+          size={15}
+          strokeWidth={1.7}
+        />
+      </button>
+
+      {expanded && steps.length ? (
+        <ol className="mt-2 grid pl-2">
+          {steps.map((step, index) => {
+            const isActive = step.state === "active" && !finished;
+            const isLast = index === steps.length - 1;
+            return (
+              <li className="flex gap-2.5" key={step.id}>
+                <span className="flex flex-col items-center">
+                  <span
+                    className={cn(
+                      "mt-1 size-2.5 shrink-0 rounded-full",
+                      isActive
+                        ? "bg-madoo-ink ring-4 ring-madoo-ink/10"
+                        : "bg-madoo-ink/60",
+                    )}
+                  />
+                  {!isLast ? (
+                    <span className="my-0.5 w-px flex-1 bg-madoo-border" />
+                  ) : null}
+                </span>
+                <span
+                  className={cn(
+                    "pb-2.5 text-xs",
+                    isActive
+                      ? "font-medium text-madoo-ink"
+                      : "text-madoo-ink-muted",
+                  )}
+                >
+                  {step.label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
+    </div>
+  );
+}
+
 export default function EmailTemplateProject() {
   const messagesRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const sidebarOpen = useClientStore((state) => state.sidebarOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
+  const pricingOpen = useClientStore((state) => state.pricingOpen);
+  const setPricingOpen = useClientStore((state) => state.setPricingOpen);
   const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     mapChatMessages(undefined, null),
   );
   const [streamedHtml, setStreamedHtml] = useState<string | null>(null);
   const [streamedSubject, setStreamedSubject] = useState<string | null>(null);
+  const [streamedConversationTitle, setStreamedConversationTitle] = useState<
+    string | null
+  >(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [testingModalOpen, setTestingModalOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [templateTheme, setTemplateTheme] = useState<TemplateTheme>("light");
   const [previewWidth, setPreviewWidth] = useState(defaultPreviewWidthVw);
@@ -1165,6 +1867,7 @@ export default function EmailTemplateProject() {
     defaultPreviewWidthVw,
   );
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [previewOverlayOpen, setPreviewOverlayOpen] = useState(false);
   const processedStartupRef = useRef<string | null>(null);
 
   const emailQuery = useQuery({
@@ -1180,10 +1883,20 @@ export default function EmailTemplateProject() {
 
   const email = emailQuery.data;
   const variant = latestVariant(email);
-  const previewSrcDoc =
-    streamedHtml ?? variant?.compiledHtml ?? getEmailTemplateSrcDoc(templateTheme);
+  const previewSrcDoc = streamedHtml ?? variant?.compiledHtml ?? null;
+  const hasPreview = Boolean(previewSrcDoc);
+  const highlightedPreviewSrcDoc = useMemo(
+    () => highlightMergeTags(previewSrcDoc),
+    [previewSrcDoc],
+  );
   const previewSubject =
-    streamedSubject ?? variant?.subject ?? email?.title ?? suggestedEmailSubject;
+    streamedSubject ?? variant?.subject ?? "Untitled email";
+  const storedConversationTitle =
+    email?.title && email.title !== variant?.subject ? email.title : null;
+  const conversationTitle =
+    streamedConversationTitle ??
+    storedConversationTitle ??
+    deriveConversationTitle(messages, "New conversation");
   const startupKey = useMemo(() => searchParams.toString(), [searchParams]);
 
   const invalidateEmailState = useCallback(
@@ -1203,32 +1916,24 @@ export default function EmailTemplateProject() {
       emailId: string,
       mode: "generate" | "edit",
       instruction?: string,
+      baseVariantId?: string,
     ) => {
-      const statusId = `${mode}-${Date.now()}-status`;
       const assistantId = `${mode}-${Date.now()}-assistant`;
+      const timeline = createTimelineMessage(
+        emailId,
+        mode === "generate" ? "Starting generation…" : "Applying your edits…",
+      );
+      const timelineId = timeline.id;
       let assistantText = "";
 
       setIsStreaming(true);
-      setSidebarOpen(true);
-      setMessages((current) =>
-        upsertMessage(current, {
-          id: statusId,
-          role: "status",
-          content:
-            mode === "generate"
-              ? "Starting generation..."
-              : "Applying edits...",
-        }),
-      );
+      // Append the live timeline; the user's message is already on screen.
+      setMessages((current) => [...current, timeline]);
 
       const handleEvent = (event: StreamEmailEvent) => {
         if (event.type === "step") {
           setMessages((current) =>
-            upsertMessage(current, {
-              id: statusId,
-              role: "status",
-              content: event.message,
-            }),
+            appendTimelineStep(current, timelineId, event.message),
           );
           return;
         }
@@ -1240,6 +1945,8 @@ export default function EmailTemplateProject() {
               id: assistantId,
               role: "assistant",
               content: assistantText,
+              seq: Date.now(),
+              emailId,
             }),
           );
           return;
@@ -1250,33 +1957,60 @@ export default function EmailTemplateProject() {
           return;
         }
 
+        if (event.type === "conversation_title") {
+          setStreamedConversationTitle(event.value);
+          return;
+        }
+
+        if (event.type === "code-chunk") {
+          setMessages((current) =>
+            appendTimelineStep(current, timelineId, "Writing the email template…"),
+          );
+          return;
+        }
+
+        if (event.type === "preview_url") {
+          setMessages((current) =>
+            appendTimelineStep(current, timelineId, "Preview image ready"),
+          );
+          return;
+        }
+
         if (event.type === "done") {
           playCompletionSound();
-          if (event.compiledHtml) setStreamedHtml(event.compiledHtml);
-          if (event.subject) setStreamedSubject(event.subject);
-          if (!assistantText.trim()) {
-            setMessages((current) =>
-              upsertMessage(current, {
-                id: assistantId,
-                role: "assistant",
-                content: event.chatOnly
-                  ? "I added guidance to the conversation."
-                  : `Generated email${event.subject ? `: ${event.subject}` : "."}`,
-              }),
-            );
+          if (event.compiledHtml) {
+            setStreamedHtml(event.compiledHtml);
+            setSidebarOpen(true);
           }
-          setMessages((current) =>
-            current.filter((message) => message.id !== statusId),
-          );
+          if (event.subject) setStreamedSubject(event.subject);
+          if (event.conversationTitle) {
+            setStreamedConversationTitle(event.conversationTitle);
+          }
+          // Keep the timeline in the conversation as a record; finalize it.
+          setMessages((current) => {
+            const finished = finishTimeline(current, timelineId);
+            if (assistantText.trim()) return finished;
+            return upsertMessage(finished, {
+              id: assistantId,
+              role: "assistant",
+              content: event.chatOnly
+                ? "I added guidance to the conversation."
+                : `Generated email${event.subject ? `: ${event.subject}` : "."}`,
+              seq: Date.now(),
+              emailId,
+            });
+          });
           return;
         }
 
         if (event.type === "error") {
           setMessages((current) =>
-            upsertMessage(current, {
+            upsertMessage(finishTimeline(current, timelineId), {
               id: `${mode}-${Date.now()}-error`,
               role: "error",
               content: event.message,
+              seq: Date.now(),
+              emailId,
             }),
           );
         }
@@ -1288,17 +2022,22 @@ export default function EmailTemplateProject() {
           handleEvent,
           undefined,
           mode === "edit"
-            ? JSON.stringify({ instruction: instruction ?? "" })
+            ? JSON.stringify({
+                instruction: instruction ?? "",
+                ...(baseVariantId ? { baseVariantId } : {}),
+              })
             : undefined,
         );
         await invalidateEmailState(emailId);
       } catch (error) {
         setMessages((current) =>
-          upsertMessage(current, {
+          upsertMessage(finishTimeline(current, timelineId), {
             id: `${mode}-${Date.now()}-error`,
             role: "error",
             content:
               error instanceof Error ? error.message : "Email stream failed.",
+            seq: Date.now(),
+            emailId,
           }),
         );
       } finally {
@@ -1310,18 +2049,49 @@ export default function EmailTemplateProject() {
 
   const submitChatPrompt = useCallback(
     async (input: PromptSubmitInput) => {
-      if (!currentEmailId || isStreaming) return;
+      if (isStreaming) return;
+      // Render the user's message immediately — never wait on the backend save.
       setMessages((current) => [
         ...current,
         {
           id: `user-${Date.now()}`,
           role: "user",
           content: input.prompt,
+          seq: Date.now(),
+          emailId: currentEmailId ?? undefined,
         },
       ]);
-      await startStream(currentEmailId, "edit", input.prompt);
+
+      if (currentEmailId) {
+        await startStream(currentEmailId, "edit", input.prompt, variant?.id);
+        return;
+      }
+
+      try {
+        const created = await createEmail({
+          prompt: input.prompt,
+          tone: input.tone,
+          length: input.length,
+          audience: input.audience,
+        });
+        setCurrentEmailId(created.id);
+        router.replace(`/email-template-project?id=${created.id}`);
+        await startStream(created.id, "generate");
+      } catch (error) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: `create-${Date.now()}-error`,
+            role: "error",
+            content:
+              error instanceof Error
+                ? error.message
+                : "Could not create email project.",
+          },
+        ]);
+      }
     },
-    [currentEmailId, isStreaming, startStream],
+    [currentEmailId, isStreaming, router, startStream, variant?.id],
   );
 
   const updateScrollState = useCallback(() => {
@@ -1358,17 +2128,34 @@ export default function EmailTemplateProject() {
   useEffect(() => {
     setStreamedHtml(null);
     setStreamedSubject(null);
+    setStreamedConversationTitle(null);
   }, [currentEmailId]);
 
   useEffect(() => {
     if (isStreaming) return;
-    setMessages(mapChatMessages(chatQuery.data, email));
-  }, [chatQuery.data, email, isStreaming]);
+    setMessages((previous) => {
+      const server = mapChatMessages(chatQuery.data, email);
+      // Preserve client-only rows (the live/finished timeline and stream errors)
+      // for the active email so they aren't wiped by the server refetch.
+      const clientOnly = previous.filter(
+        (message) =>
+          (message.role === "timeline" || message.role === "error") &&
+          (!currentEmailId || message.emailId === currentEmailId),
+      );
+      return [...server, ...clientOnly].sort(
+        (a, b) => (a.seq ?? 0) - (b.seq ?? 0),
+      );
+    });
+  }, [chatQuery.data, currentEmailId, email, isStreaming]);
 
   useEffect(() => {
-    if (!currentEmailId) return;
-    setSidebarOpen(true);
-  }, [currentEmailId, setSidebarOpen]);
+    if (hasPreview) {
+      setSidebarOpen(true);
+      return;
+    }
+    setSidebarOpen(false);
+    setPreviewExpanded(false);
+  }, [hasPreview, setSidebarOpen]);
 
   useEffect(() => {
     if (!startupKey || processedStartupRef.current === startupKey) return;
@@ -1432,8 +2219,9 @@ export default function EmailTemplateProject() {
     const length = searchParams.get("length") ?? undefined;
     const audience = searchParams.get("audience") ?? undefined;
 
-    setMessages([{ id: "new-prompt", role: "user", content: prompt }]);
-    setSidebarOpen(true);
+    setMessages([
+      { id: "new-prompt", role: "user", content: prompt, seq: Date.now() },
+    ]);
     void createEmail({ prompt, tone, length, audience })
       .then(async (created) => {
         setCurrentEmailId(created.id);
@@ -1457,7 +2245,6 @@ export default function EmailTemplateProject() {
     invalidateEmailState,
     router,
     searchParams,
-    setSidebarOpen,
     startStream,
     startupKey,
   ]);
@@ -1485,31 +2272,45 @@ export default function EmailTemplateProject() {
     setPreviewExpanded(true);
   };
 
+  const openStandalonePreview = useCallback(() => {
+    if (!previewSrcDoc) {
+      toast({
+        tone: "danger",
+        title: "No preview yet",
+        body: "Generate an email before opening the preview.",
+      });
+      return;
+    }
+
+    const blob = new Blob([previewSrcDoc], {
+      type: "text/html;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const previewWindow = window.open(url, "_blank");
+    if (!previewWindow) {
+      URL.revokeObjectURL(url);
+      toast({
+        tone: "danger",
+        title: "Preview blocked",
+        body: "Allow popups for Madoo and try again.",
+      });
+      return;
+    }
+    previewWindow.opener = null;
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }, [previewSrcDoc, toast]);
+
   return (
     <main className="relative h-screen overflow-hidden bg-white">
       <header
         className={cn(
           "fixed left-3 top-0 z-30 flex h-11 w-fit items-center bg-white transition-[opacity,transform]",
-          previewExpanded && "pointer-events-none -translate-y-3 opacity-0",
+          hasPreview &&
+            previewExpanded &&
+            "pointer-events-none -translate-y-3 opacity-0",
         )}
       >
-        <Button className="h-8 px-3 py-0!" variant="ghost">
-          <Image
-            src={"/madoo-transparent.png"}
-            alt="Madoo AI Logo"
-            width={26}
-            height={26}
-          />
-          <div className="flex gap-2 items-center">
-            <span className="font-medium">Hello friends</span>
-            <HugeiconsIcon
-              aria-hidden="true"
-              icon={ArrowDown01Icon}
-              primaryColor="currentColor"
-              className="size-4 text-madoo-ink-muted"
-            />
-          </div>
-        </Button>
+        <ConversationTitleDropdown title={conversationTitle} />
       </header>
 
       <div className="flex h-full min-h-0 overflow-hidden">
@@ -1517,7 +2318,7 @@ export default function EmailTemplateProject() {
         <section
           className={cn(
             "flex min-w-0 flex-1 flex-col pb-4 pt-11 transition-opacity",
-            previewExpanded && "pointer-events-none opacity-0",
+            hasPreview && previewExpanded && "pointer-events-none opacity-0",
           )}
         >
           {/* messages */}
@@ -1527,11 +2328,6 @@ export default function EmailTemplateProject() {
             onScroll={updateScrollState}
           >
             <div className="mx-auto w-full max-w-2xl px-4">
-              {/* time */}
-              <span className="flex w-full justify-center text-xs text-madoo-ink-muted">
-                Jun 8 at 9:42 AM
-              </span>
-
               <div className="mt-8 flex flex-col gap-8">
                 {messages.map((message) => {
                   if (message.role === "user") {
@@ -1555,10 +2351,17 @@ export default function EmailTemplateProject() {
                       </StatusMessage>
                     );
                   }
+                  if (message.role === "timeline") {
+                    return (
+                      <TimelineMessage key={message.id} message={message} />
+                    );
+                  }
                   return (
                     <AiMessage
                       key={message.id}
-                      onOpenPreview={() => setSidebarOpen(true)}
+                      onOpenPreview={() => {
+                        if (hasPreview) setSidebarOpen(true);
+                      }}
                     >
                       {message.content}
                     </AiMessage>
@@ -1568,8 +2371,8 @@ export default function EmailTemplateProject() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[calc(42rem+2rem)] shrink-0 px-4">
-            <div className="pointer-events-none absolute inset-x-4 -top-4 h-4 bg-gradient-to-b from-white/0 via-white/80 to-white" />
+          <div className="relative mx-auto w-full max-w-176 shrink-0 px-4">
+            <div className="pointer-events-none absolute inset-x-4 -top-4 h-4 bg-linear-to-b from-white/0 via-white/80 to-white" />
             {canScrollDown ? (
               <Button
                 aria-label="Scroll to latest message"
@@ -1590,10 +2393,10 @@ export default function EmailTemplateProject() {
             <ClientPromptBox
               classNames={{
                 root: "w-full",
-                panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)_/_0.18)]",
-                textarea: "min-h-17 rounded-t-2xl px-4.5 pt-[17px]",
+                panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)/0.18)]",
+                textarea: "min-h-17 rounded-t-2xl px-4.5 pt-4.25",
               }}
-              disabled={!currentEmailId || isStreaming}
+              disabled={isStreaming}
               onSubmit={submitChatPrompt}
               showOptions={false}
               variant="chat"
@@ -1601,26 +2404,52 @@ export default function EmailTemplateProject() {
           </div>
         </section>
 
-        <EmailPreviewSidebar
-          expanded={previewExpanded}
-          mode={previewMode}
-          onOpenExport={() => setExportModalOpen(true)}
-          onToggleExpanded={togglePreviewExpanded}
-          open={sidebarOpen}
-          setMode={setPreviewMode}
-          srcDoc={previewSrcDoc}
-          setTheme={setTemplateTheme}
-          setWidth={updatePreviewWidth}
-          subject={previewSubject}
-          theme={templateTheme}
-          width={previewWidth}
-        />
+        {hasPreview && previewSrcDoc ? (
+          <EmailPreviewSidebar
+            email={email}
+            emailId={currentEmailId}
+            expanded={previewExpanded}
+            mode={previewMode}
+            onOpenExport={() => setExportModalOpen(true)}
+            onOpenPreview={() => setPreviewOverlayOpen(true)}
+            onOpenPricing={() => setPricingOpen(true)}
+            onOpenTesting={() => setTestingModalOpen(true)}
+            onToggleExpanded={togglePreviewExpanded}
+            open={sidebarOpen}
+            setMode={setPreviewMode}
+            srcDoc={highlightedPreviewSrcDoc ?? ""}
+            setTheme={setTemplateTheme}
+            setWidth={updatePreviewWidth}
+            subject={previewSubject}
+            theme={templateTheme}
+            width={previewWidth}
+          />
+        ) : null}
       </div>
+
+      <PreviewOverlay
+        onClose={() => setPreviewOverlayOpen(false)}
+        onOpenInNewTab={openStandalonePreview}
+        open={previewOverlayOpen && Boolean(previewSrcDoc)}
+        srcDoc={previewSrcDoc ?? ""}
+        subject={previewSubject}
+      />
 
       <ExportProviderModal
         emailId={currentEmailId}
         onClose={() => setExportModalOpen(false)}
         open={exportModalOpen}
+        variantId={variant?.id ?? null}
+      />
+      <PricingDrawer
+        onClose={() => setPricingOpen(false)}
+        open={pricingOpen}
+      />
+      <TestingModal
+        emailId={currentEmailId}
+        html={previewSrcDoc ?? ""}
+        onClose={() => setTestingModalOpen(false)}
+        open={testingModalOpen}
         variantId={variant?.id ?? null}
       />
     </main>

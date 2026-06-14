@@ -112,6 +112,22 @@ export function parseVariableSchemaJson(raw: unknown): VariableSchemaRoot {
   };
 }
 
+/**
+ * Values passed to the renderer: static variables use their fixed default,
+ * dynamic variables render as a `{{name}}` merge tag (replaced per-recipient
+ * outside Madoo). The preview highlights these tags so they're easy to spot.
+ */
+export function buildRenderVariables(
+  schema: VariableSchemaRoot,
+): Record<string, string> {
+  return Object.fromEntries(
+    schema.variables.map((variable) => [
+      variable.name,
+      variable.scope === "static" ? variable.default : `{{${variable.name}}}`,
+    ]),
+  );
+}
+
 export const TemplateSlugSchema = z.enum([
   "launch",
   "newsletter",
@@ -184,6 +200,9 @@ export const EmailVariantDtoSchema = z.object({
 
 export type EmailVariantDto = z.infer<typeof EmailVariantDtoSchema>;
 
+export const EmailVisibilitySchema = z.enum(["PRIVATE", "PUBLIC"]);
+export type EmailVisibility = z.infer<typeof EmailVisibilitySchema>;
+
 export const EmailDtoSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -195,12 +214,53 @@ export const EmailDtoSchema = z.object({
   title: z.string().nullable(),
   templateId: z.string().nullable(),
   templateSavedAt: z.string().nullable(),
+  visibility: EmailVisibilitySchema.default("PRIVATE"),
+  publicId: z.string().nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
   variants: z.array(EmailVariantDtoSchema),
 });
 
 export type EmailDto = z.infer<typeof EmailDtoSchema>;
+
+/** Input for toggling an email's share visibility (public/private link). */
+export const UpdateEmailShareSchema = z.object({
+  visibility: EmailVisibilitySchema,
+});
+
+export type UpdateEmailShareInput = z.infer<typeof UpdateEmailShareSchema>;
+
+/** Share state returned after toggling visibility. */
+export const EmailShareDtoSchema = z.object({
+  id: z.string(),
+  visibility: EmailVisibilitySchema,
+  publicId: z.string().nullable(),
+});
+
+export type EmailShareDto = z.infer<typeof EmailShareDtoSchema>;
+
+/** Read-only payload served on the public, unauthenticated share page. */
+export const PublicEmailDtoSchema = z.object({
+  publicId: z.string(),
+  title: z.string().nullable(),
+  subject: z.string(),
+  compiledHtml: z.string(),
+  createdAt: z.string(),
+});
+
+export type PublicEmailDto = z.infer<typeof PublicEmailDtoSchema>;
+
+export const RenameEmailSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+});
+
+export type RenameEmailInput = z.infer<typeof RenameEmailSchema>;
+
+export const TransferEmailSchema = z.object({
+  targetWorkspaceId: z.string().min(1),
+});
+
+export type TransferEmailInput = z.infer<typeof TransferEmailSchema>;
 
 export const EmailChatMessageDtoSchema = z.object({
   id: z.string(),

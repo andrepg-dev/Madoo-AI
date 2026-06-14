@@ -702,7 +702,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
 
       <main lang={locale} className="relative min-h-screen w-full">
         <div className="relative z-50 bg-madoo-page px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
-          <div className="relative isolate mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-9 overflow-visible rounded-2xl pt-36 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-[260px] 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
+          <div className="relative isolate mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-9 overflow-visible rounded-2xl pt-36 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-65 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
             <video
               src="/background-video.mp4"
               aria-hidden="true"
@@ -753,7 +753,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
             </div>
 
             <div className="relative z-[60] flex flex-col gap-2">
-              <div className="madoo-paper-border min-w-[700px] overflow-visible rounded-3xl bg-white">
+              <div className="madoo-paper-border min-w-175 overflow-visible rounded-3xl bg-white">
                 <textarea
                   ref={promptTextareaRef}
                   value={prompt}
@@ -834,7 +834,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                 <h6 className="text-xs font-light text-zinc-600">
                   {copy.hero.exportLabel}
                 </h6>
-                <div className="mt-3 w-[700px] overflow-hidden">
+                <div className="mt-3 w-175 overflow-hidden">
                   <div className="madoo-provider-marquee flex w-max gap-3">
                     {movingExportProviders.map((provider, index) => (
                       <div
@@ -899,7 +899,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                   return (
                     <article
                       key={feature.title}
-                      className="madoo-paper-border madoo-paper-border-hover group min-h-[190px] rounded-lg bg-white p-5 transition"
+                      className="madoo-paper-border madoo-paper-border-hover group min-h-47.5 rounded-lg bg-white p-5 transition"
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f3faff] text-[#071b38] transition group-hover:bg-[#e7f0ff]">
                         <HugeiconsIcon

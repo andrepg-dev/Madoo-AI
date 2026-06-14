@@ -7,6 +7,7 @@ import { TemplatesModule } from "../templates/templates.module";
 import { BillingModule } from "../billing/billing.module";
 import { S3Module } from "../s3/s3.module";
 import { EmailsController } from "./emails.controller";
+import { PublicEmailsController } from "./public-emails.controller";
 import { EmailsService } from "./emails.service";
 
 @Module({
@@ -19,7 +20,7 @@ import { EmailsService } from "./emails.service";
     BillingModule,
     S3Module,
   ],
-  controllers: [EmailsController],
+  controllers: [EmailsController, PublicEmailsController],
   providers: [EmailsService],
   exports: [EmailsService],
 })

@@ -39,7 +39,7 @@ export function Banner({
     <div
       role="status"
       className={cx(
-        "flex items-start gap-2.5 rounded-[var(--radius-lg)] p-3 font-madoo-sans text-[12.5px] leading-[1.5]",
+        "flex items-start gap-2.5 rounded-lg p-3 font-madoo-sans text-[12.5px] leading-[1.5]",
         toneClasses[tone],
         className,
       )}
@@ -47,7 +47,7 @@ export function Banner({
     >
       <div
         className={cx(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-lg)]",
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
           iconToneClasses[tone],
         )}
         aria-hidden="true"

@@ -25,7 +25,7 @@ export type Toast = {
 type ToastInput = Omit<Toast, "id"> & { id?: string };
 
 const toastToneClasses: Record<ToastTone, string> = {
-  default: "bg-madoo-surface text-madoo-ink shadow-[var(--shadow-border)]",
+  default: "bg-madoo-surface text-madoo-ink shadow-madoo-border",
   success:
     "bg-[rgba(232,248,240,0.96)] text-[#1f5c43] shadow-[inset_0_0_0_1px_rgba(36,132,96,0.45)]",
   danger:
@@ -97,7 +97,7 @@ export function Toaster({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             className={cx(
-              "pointer-events-auto flex w-full min-w-[min(240px,100%)] max-w-[360px] animate-madoo-toast-in items-start gap-2.5 rounded-[var(--radius-lg)] px-3.5 py-2.5 text-[13px] leading-[1.4] motion-reduce:animate-none",
+              "pointer-events-auto flex w-full min-w-[min(240px,100%)] max-w-90 animate-madoo-toast-in items-start gap-2.5 rounded-lg px-3.5 py-2.5 text-[13px] leading-[1.4] motion-reduce:animate-none",
               toastToneClasses[t.tone ?? "default"],
             )}
             role="status"

@@ -22,7 +22,11 @@ import type {
 } from "@prisma/client";
 import { Observable } from "rxjs";
 import { createHash } from "node:crypto";
-import { parseVariableSchemaJson, type VariableSchemaRoot } from "@madoo/shared";
+import {
+  buildRenderVariables,
+  parseVariableSchemaJson,
+  type VariableSchemaRoot,
+} from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
 import { ReactToHtmlService } from "./react-to-html.service";
@@ -30,6 +34,7 @@ import { ScreenshotService } from "./screenshot.service";
 import { S3Service } from "../s3/s3.service";
 import { SEED_TEMPLATES } from "../templates/seed-templates";
 import { WebsiteBrandService } from "./website-brand.service";
+import { ConversationTitleAgent } from "./conversation-title.agent";
 
 const EMIT_EMAIL_TOOL: Tool = {
   name: "emit_email",
@@ -107,8 +112,15 @@ const INSPECT_WEBSITE_BRAND_TOOL: Tool = {
 const STATIC_INSTRUCTION = [
   "You are Madoo's transactional HTML email generator, powered by 'HTML Coditor'.",
   "Output MUST call tool emit_email once when finished only when the user request include some email modification.",
-  "componentCode must be valid TSX: Import Html, Body, Container, Section, Text, Button etc from 'html-coditor'.",
-  "Use inline styles or tailwind clasess",
+  "componentCode must be valid TSX. Import React with `import * as React from 'react'` and import components from '@react-email/components': Html, Head, Preview, Body, Container, Section, Row, Column, Text, Button, Hr, Img, Link.",
+  "Style every component with inline `style` objects (email-safe), exactly like the reference templates. Do not rely on Tailwind classes, external CSS, flexbox, grid, position, or float — email clients ignore them.",
+  "EMAIL STRUCTURE (required for every email): wrap everything in <Html lang> with <Head /> and a one-line <Preview> inbox preheader, then <Body> (page background color) > <Container> centered at maxWidth 600 (use 560-600). Put a white content surface on the inner Sections.",
+  "Inside the Container, stack clear <Section>s in this order: (1) brand header (logo <Img> or brand name), (2) hero — a small uppercase eyebrow <Text>, a large headline <Text>, and a supporting paragraph <Text>, (3) a primary <Button> CTA with href, (4) optional supporting content using <Row>/<Column> for columns or stacked cards, (5) a <Hr> divider, (6) a footer <Section> with a context line and an Unsubscribe <Link>.",
+  "Use a consistent spacing scale with generous padding (Section padding around 28-44px horizontal and comfortable vertical rhythm); never cram content edge-to-edge.",
+  "Typographic hierarchy: eyebrow ~11px uppercase, letter-spaced, muted; headline ~30-40px bold with tight line-height; body 15-16px with line-height ~1.6-1.75; footer ~11-12px muted.",
+  "Build any multi-column layout with <Row>/<Column> (table-based) so it survives Outlook/Gmail and collapses gracefully on mobile; keep the email single-column overall.",
+  "Always give <Img> an explicit width and meaningful alt text; give the <Button> inline padding, border-radius, and display:inline-block.",
+  "Even for 'simple' briefs keep the full skeleton (header, hero, CTA, footer with unsubscribe). Simple means less copy and fewer sections — not missing structure.",
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
@@ -232,6 +244,7 @@ export class GenerationService {
     private readonly screenshot: ScreenshotService,
     private readonly s3: S3Service,
     private readonly websiteBrand: WebsiteBrandService,
+    private readonly conversationTitleAgent: ConversationTitleAgent,
   ) {
     const key = this.config.get<string>("ANTHROPIC_API_KEY");
     this.model =
@@ -433,6 +446,11 @@ export class GenerationService {
           content: userPrompt,
         },
       ],
+      titleContext: {
+        prompt: ctx.prompt,
+        tone: ctx.tone,
+        audience: ctx.audience,
+      },
       emit,
     });
 
@@ -443,12 +461,19 @@ export class GenerationService {
       kind: "THINKING",
       content: result.thinkingText,
     });
+    // Always persist a conversational reply. With the emit_email tool the model
+    // often returns an empty text block; without this fallback the streamed
+    // reply would vanish on the next chat refetch, leaving a lone user message.
     await this.appendChatMessage({
       workspaceId,
       emailId,
       role: "ASSISTANT",
       kind: "TEXT",
-      content: result.assistantText,
+      content:
+        result.assistantText.trim() ||
+        (result.applied
+          ? "I drafted your email — open the preview on the right to review it, then tell me what you'd like to adjust."
+          : "I added some guidance above. Ask me for a concrete draft whenever you're ready."),
     });
   }
 
@@ -559,7 +584,11 @@ export class GenerationService {
       emailId,
       role: "ASSISTANT",
       kind: "TEXT",
-      content: result.assistantText,
+      content:
+        result.assistantText.trim() ||
+        (result.applied
+          ? "Done — I updated the email. Check the preview and tell me the next change."
+          : "I couldn't turn that into an edit. Try rephrasing what you'd like changed."),
     });
   }
 
@@ -569,6 +598,11 @@ export class GenerationService {
     kind: GenerationRunKind;
     modelMessages: MessageParam[];
     fullCodeForRetry?: string;
+    titleContext?: {
+      prompt: string;
+      tone?: string | null;
+      audience?: string | null;
+    };
     emit: (p: Record<string, unknown>) => void;
   }): Promise<{
     assistantText: string;
@@ -577,7 +611,15 @@ export class GenerationService {
     variantId?: string;
     applied: boolean;
   }> {
-    const { emailId, workspaceId, kind, modelMessages, fullCodeForRetry, emit } = params;
+    const {
+      emailId,
+      workspaceId,
+      kind,
+      modelMessages,
+      fullCodeForRetry,
+      titleContext,
+      emit,
+    } = params;
 
     if (!this.anthropic) {
       throw new InternalServerErrorException("ANTHROPIC_API_KEY is not configured.");
@@ -606,8 +648,6 @@ export class GenerationService {
     };
 
     try {
-      emit({ type: "step", message: "Calling to LLM..." });
-
       const systemBlocks: MessageCreateParams["system"] = [
         {
           type: "text",
@@ -783,7 +823,10 @@ export class GenerationService {
           });
           emit({ type: "subject", value: input.subject });
           emit({ type: "step", message: "Rendering HTML preview..." });
-          compiledHtml = this.reactToHtml.compile(input.componentCode, {});
+          compiledHtml = this.reactToHtml.compile(
+            input.componentCode,
+            buildRenderVariables(variableSchema),
+          );
           validated = true;
           break;
         } catch (err) {
@@ -857,6 +900,20 @@ export class GenerationService {
         },
       });
 
+      const conversationTitle =
+        kind === "INITIAL" && titleContext
+          ? await this.conversationTitleAgent.generateTitle({
+              prompt: titleContext.prompt,
+              tone: titleContext.tone,
+              audience: titleContext.audience,
+              subject: input.subject,
+              assistantText,
+            })
+          : undefined;
+      if (conversationTitle) {
+        emit({ type: "conversation_title", value: conversationTitle });
+      }
+
       emit({ type: "step", message: "Generating preview screenshot..." });
       const previewUrl = await this.createAndPersistVariantPreview(
         variant.id,
@@ -875,7 +932,7 @@ export class GenerationService {
         where: { id: emailId },
         data: {
           status: "READY",
-          title: input.subject,
+          ...(conversationTitle ? { title: conversationTitle } : {}),
         },
       });
 
@@ -898,6 +955,7 @@ export class GenerationService {
         type: "done",
         variantId: variant.id,
         subject: variant.subject,
+        conversationTitle,
         compiledHtml: variant.compiledHtml,
         seq: variant.seq,
       });

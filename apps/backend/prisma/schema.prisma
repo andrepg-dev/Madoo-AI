@@ -126,6 +126,11 @@ enum EmailStatus {
   ERROR
 }
 
+enum EmailVisibility {
+  PRIVATE
+  PUBLIC
+}
+
 enum GenerationRunKind {
   INITIAL
   EDIT
@@ -163,6 +168,9 @@ model Email {
   title           String?
   templateId      String?
   templateSavedAt DateTime?
+
+  visibility EmailVisibility @default(PRIVATE)
+  publicId   String?         @unique
 
   sourcePendingPromptId String? @unique
 

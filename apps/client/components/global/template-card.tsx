@@ -32,7 +32,7 @@ export default function TemplateCard({
       onClick={onClick}
       type="button"
     >
-      <div className="relative flex aspect-[4/5] min-h-52 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition-[box-shadow,transform] duration-150 group-enabled:group-hover:-translate-y-0.5 group-enabled:group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.18),0_12px_28px_rgb(16_24_40/0.08)] group-focus-visible:shadow-[inset_0_0_0_1.5px_var(--accent)]">
+      <div className="relative flex aspect-4/5 min-h-52 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition-[box-shadow,transform] duration-150 group-enabled:group-hover:-translate-y-0.5 group-enabled:group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.18),0_12px_28px_rgb(16_24_40/0.08)] group-focus-visible:shadow-[inset_0_0_0_1.5px_var(--accent)]">
         {previewUrl ? (
           <img
             alt=""

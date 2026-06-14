@@ -162,7 +162,7 @@ function SidebarNavButton({
       <NavIcon icon={item.icon} size={15} />
       <span
         className={cx(
-          "min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+          "min-w-0 flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-(--duration-base) ease-out",
           collapsed ? "max-w-0 opacity-0" : "max-w-36 opacity-100",
         )}
       >
@@ -171,12 +171,12 @@ function SidebarNavButton({
       {item.shortcut ? (
         <span
           className={cx(
-            "ml-auto inline-flex gap-0.5 overflow-hidden transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+            "ml-auto inline-flex gap-0.5 overflow-hidden transition-[opacity,max-width] duration-(--duration-base) ease-out",
             collapsed ? "max-w-0 opacity-0" : "max-w-12 opacity-100",
           )}
         >
-          <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">⌘</Kbd>
-          <Kbd className="!h-[18px] !w-[18px] !text-[9.5px]">
+          <Kbd className="h-4.5! w-4.5! text-[9.5px]!">⌘</Kbd>
+          <Kbd className="h-4.5! w-4.5! text-[9.5px]!">
             {item.shortcut}
           </Kbd>
         </span>
@@ -184,10 +184,10 @@ function SidebarNavButton({
     </>
   );
   const className = cx(
-    "inline-flex h-[32px] min-h-[32px] w-full cursor-pointer select-none items-center overflow-hidden rounded-[var(--radius-lg)] border-0 py-0 font-madoo-sans text-[length:var(--font-size-base)] leading-none no-underline transition-[width,padding,background,color,box-shadow,opacity] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+    "inline-flex h-8 min-h-8 w-full cursor-pointer select-none items-center overflow-hidden rounded-lg border-0 py-0 font-madoo-sans text-(length:--font-size-base) leading-none no-underline transition-[width,padding,background,color,box-shadow,opacity] duration-(--duration-base) ease-out",
     active
       ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)] font-normal text-madoo-accent-deep shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)] hover:text-madoo-accent-deep"
-      : "bg-transparent font-normal text-madoo-ink-soft hover:bg-[rgb(var(--rule-rgb)_/_0.08)] hover:text-madoo-ink",
+      : "bg-transparent font-normal text-madoo-ink-soft hover:bg-[rgb(var(--rule-rgb)/0.08)] hover:text-madoo-ink",
     "justify-start gap-2.5 px-2.5",
   );
 
@@ -231,7 +231,7 @@ function DropdownLink({
       href={href}
       role="menuitem"
       className={cx(
-        "flex w-full cursor-pointer items-center justify-start gap-3 rounded-[var(--radius-md)] border-0 bg-transparent px-2.5 py-[9px] text-left font-madoo-sans text-[14px] leading-[1.2] text-[color:var(--ink)] no-underline transition-[background,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none",
+        "flex w-full cursor-pointer items-center justify-start gap-3 rounded-md border-0 bg-transparent px-2.5 py-2.25 text-left font-madoo-sans text-[14px] leading-[1.2] text-(--ink) no-underline transition-[background,color] duration-(--duration-fast) ease-out hover:bg-(--surface-2) focus-visible:bg-(--surface-2) focus-visible:outline-none",
         className,
       )}
     >
@@ -263,12 +263,13 @@ export function Sidebar() {
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(true);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
-  const [pricingOpen, setPricingOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const authUser = useAuthStore((state) => state.user);
   const setAuthUser = useAuthStore((state) => state.setUser);
   const workspaceId = useClientStore((state) => state.workspaceId);
   const setWorkspaceId = useClientStore((state) => state.setWorkspaceId);
+  const pricingOpen = useClientStore((state) => state.pricingOpen);
+  const setPricingOpen = useClientStore((state) => state.setPricingOpen);
   const setSearchCommandOpen = useClientStore(
     (state) => state.setSearchCommandOpen,
   );
@@ -401,13 +402,13 @@ export function Sidebar() {
   return (
     <aside
       className={cx(
-        "group/sidebar flex h-[100dvh] flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] py-3 transition-[width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
-        collapsed ? "w-[60px] px-3" : "w-[260px] px-3",
+        "group/sidebar flex h-dvh flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] py-3 transition-[width] duration-(--duration-base) ease-out",
+        collapsed ? "w-15 px-3" : "w-65 px-3",
       )}
     >
       <div
         className={cx(
-          "relative flex min-h-[30px] items-center",
+          "relative flex min-h-7.5 items-center",
           "w-full justify-between px-0.5",
         )}
       >
@@ -415,7 +416,7 @@ export function Sidebar() {
           aria-label="Madoo home"
           href="/"
           className={cx(
-            "inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-lg)] text-madoo-ink-soft transition-[background,color,opacity] duration-[var(--duration-fast)] hover:bg-madoo-surface-2 hover:text-madoo-ink",
+            "inline-flex h-7 w-7 items-center justify-center rounded-lg text-madoo-ink-soft transition-[background,color,opacity] duration-(--duration-fast) hover:bg-madoo-surface-2 hover:text-madoo-ink",
             collapsed &&
               "group-hover/sidebar:pointer-events-none group-hover/sidebar:opacity-0",
           )}
@@ -440,7 +441,7 @@ export function Sidebar() {
           }}
           className={cx(
             collapsed &&
-              "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 transition-[opacity,transform] duration-[var(--duration-fast)] group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
+              "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 transition-[opacity,transform] duration-(--duration-fast) group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
           )}
         >
           <AppIcon
@@ -470,7 +471,7 @@ export function Sidebar() {
             rightIcon={
               <span
                 className={cx(
-                  "ml-auto inline-flex overflow-hidden transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+                  "ml-auto inline-flex overflow-hidden transition-[opacity,max-width] duration-(--duration-base) ease-out",
                   collapsed ? "max-w-0 opacity-0" : "max-w-4 opacity-100",
                 )}
               >
@@ -480,13 +481,13 @@ export function Sidebar() {
             size="sm"
             variant={collapsed ? "secondary" : "ghost"}
             className={cx(
-              "h-8! min-h-8! overflow-hidden py-0! font-normal! transition-[width,padding,background,color,box-shadow] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+              "h-8! min-h-8! overflow-hidden py-0! font-normal! transition-[width,padding,background,color,box-shadow] duration-(--duration-base) ease-out",
               "justify-start! gap-2! px-1! pr-3!",
             )}
           >
             <span
               className={cx(
-                "min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+                "min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-(--duration-base) ease-out",
                 collapsed ? "max-w-0 opacity-0" : "max-w-44 opacity-100",
               )}
             >
@@ -495,7 +496,7 @@ export function Sidebar() {
           </Button>
         </DropdownTrigger>
 
-        <DropdownContent className="!grid w-80 gap-2 !p-2">
+        <DropdownContent className="grid! w-80 gap-2 p-2!">
           <div className="flex items-center gap-2.5 p-1">
             <Avatar
               name={activeWorkspaceName}
@@ -503,34 +504,34 @@ export function Sidebar() {
               size="sm"
             />
             <div className="min-w-0">
-              <span className="text-[length:var(--font-size-base)] font-normal">
+              <span className="text-(length:--font-size-base) font-normal">
                 {activeWorkspaceName}
               </span>
               {user ? (
-                <span className="block truncate text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+                <span className="block truncate text-(length:--font-size-sm) text-madoo-ink-muted">
                   {currentPlanName} plan
                 </span>
               ) : null}
             </div>
           </div>
 
-          <Card surface="secondary" className="grid gap-2 !p-2.5">
+          <Card surface="secondary" className="grid gap-2 p-2.5!">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[length:var(--font-size-base)] font-normal">
+              <span className="text-(length:--font-size-base) font-normal">
                 Credits
               </span>
-              <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+              <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
                 {creditsText}
               </span>
             </div>
             <ProgressBar value={creditsPct} tone="ink" label="Credits left" />
-            <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+            <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
               Credits reset {formatResetDate(usage?.resetsAt)}
             </span>
           </Card>
 
           <div className="grid gap-1.5 p-1">
-            <span className="text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+            <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
               All workspaces
             </span>
             {workspaces.length > 0 ? (
@@ -539,7 +540,7 @@ export function Sidebar() {
                 return (
                   <DropdownItem
                     key={item.id}
-                    className="!px-0"
+                    className="px-0!"
                     disabled={switchWorkspaceMutation.isPending}
                     onSelect={() => switchWorkspaceMutation.mutate(item.id)}
                   >
@@ -557,7 +558,7 @@ export function Sidebar() {
                 );
               })
             ) : (
-              <span className="px-1 py-2 text-[length:var(--font-size-sm)] text-madoo-ink-muted">
+              <span className="px-1 py-2 text-(length:--font-size-sm) text-madoo-ink-muted">
                 {user ? "No workspaces found" : "Sign in to sync workspaces"}
               </span>
             )}
@@ -565,7 +566,7 @@ export function Sidebar() {
 
           {user ? (
             <DropdownItem
-              className="!justify-start !text-[length:var(--font-size-base)] !font-normal shadow-madoo-border"
+              className="justify-start! text-(length:--font-size-base)! font-normal! shadow-madoo-border"
               onSelect={() => {
                 setWorkspaceOpen(false);
                 setCreateWorkspaceOpen(true);
@@ -576,7 +577,7 @@ export function Sidebar() {
             </DropdownItem>
           ) : (
             <DropdownItem
-              className="!justify-start !text-[length:var(--font-size-base)] !font-normal shadow-madoo-border"
+              className="justify-start! text-(length:--font-size-base)! font-normal! shadow-madoo-border"
               onSelect={() => {
                 setWorkspaceOpen(false);
                 handleSignIn();
@@ -609,7 +610,7 @@ export function Sidebar() {
 
       <div
         className={cx(
-          "overflow-hidden px-2.5 pt-6 pb-1 font-madoo-sans text-[length:var(--font-size-base)] text-ellipsis whitespace-nowrap text-madoo-ink-soft/70",
+          "overflow-hidden px-2.5 pt-6 pb-1 font-madoo-sans text-(length:--font-size-base) text-ellipsis whitespace-nowrap text-madoo-ink-soft/70",
           collapsed ? "invisible" : "visible",
         )}
       >
@@ -642,25 +643,25 @@ export function Sidebar() {
               aria-label="Upgrade to Pro"
               block
               leftIcon={
-                <span className="grid size-5 place-items-center rounded-[var(--radius-sm)] bg-white/18">
+                <span className="grid size-5 place-items-center rounded-sm bg-white/18">
                   <AppIcon icon={Crown02Icon} size={15} />
                 </span>
               }
               size="sm"
               variant="accent"
               onClick={() => setPricingOpen(true)}
-              className="h-10! min-h-10! justify-center! rounded-[var(--radius-lg)]! bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))]! text-[length:var(--font-size-sm)]! font-medium! shadow-[inset_0_0_0_0.5px_rgb(255_255_255_/_0.28),var(--shadow-border-accent)]! hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent-deep)_88%,white),var(--accent-deep))]!"
+              className="h-10! min-h-10! justify-center! rounded-lg! bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))]! text-(length:--font-size-sm)! font-medium! shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.28),var(--shadow-border-accent)]! hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent-deep)_88%,white),var(--accent-deep))]!"
             >
               <span className="truncate">Upgrade to Pro</span>
             </Button>
           </div>
 
-          <div className="madoo-paper-border flex min-h-[68px] items-center justify-between gap-3 rounded-[var(--radius-xl)] bg-madoo-bg-2/50 px-3.5 py-3">
+          <div className="madoo-paper-border flex min-h-17 items-center justify-between gap-3 rounded-xl bg-madoo-bg-2/50 px-3.5 py-3">
             <span className="grid min-w-0 flex-1 gap-1">
-              <span className="truncate font-madoo-sans text-[length:var(--font-size-base)] leading-none text-madoo-ink">
+              <span className="truncate font-madoo-sans text-(length:--font-size-base) leading-none text-madoo-ink">
                 Share Madoo
               </span>
-              <span className="truncate text-[length:var(--font-size-xs)] leading-none">
+              <span className="truncate text-(length:--font-size-xs) leading-none">
                 100 credits per paid referral
               </span>
             </span>
@@ -695,7 +696,7 @@ export function Sidebar() {
               className="w-max shadow-none! hover:shadow-none! data-[state=open]:shadow-none!"
             />
           </DropdownTrigger>
-          <DropdownContent side="top" className="w-56 !p-2">
+          <DropdownContent side="top" className="w-56 p-2!">
             <div className="flex items-center gap-2.5 p-1.5">
               <Avatar
                 name={user?.name ?? user?.email ?? "User"}
@@ -704,10 +705,10 @@ export function Sidebar() {
                 circle
               />
               <span className="grid min-w-0 gap-0.5">
-                <span className="truncate text-[length:var(--font-size-base)] leading-none">
+                <span className="truncate text-(length:--font-size-base) leading-none">
                   {user?.name ?? "Guest"}
                 </span>
-                <span className="truncate text-[length:var(--font-size-sm)] leading-none text-madoo-ink-muted">
+                <span className="truncate text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
                   {user?.email ?? "Not signed in"}
                 </span>
               </span>
@@ -718,7 +719,7 @@ export function Sidebar() {
                 <DropdownLink href="/settings">Profile</DropdownLink>
                 <DropdownLink href="/settings">Settings</DropdownLink>
                 <DropdownItem
-                  className="!justify-start text-madoo-danger"
+                  className="justify-start! text-madoo-danger"
                   disabled={signOutMutation.isPending}
                   onSelect={() => signOutMutation.mutate()}
                 >
@@ -726,7 +727,7 @@ export function Sidebar() {
                 </DropdownItem>
               </>
             ) : (
-              <DropdownItem className="!justify-start" onSelect={handleSignIn}>
+              <DropdownItem className="justify-start!" onSelect={handleSignIn}>
                 Sign in
               </DropdownItem>
             )}

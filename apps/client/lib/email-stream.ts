@@ -7,6 +7,7 @@ export type StreamEmailEvent =
       warning?: string;
     }
   | { type: "subject"; value: string }
+  | { type: "conversation_title"; value: string }
   | { type: "thinking-chunk"; value: string }
   | { type: "assistant-chunk"; value: string }
   | { type: "code-chunk"; value: string }
@@ -30,6 +31,7 @@ export type StreamEmailEvent =
       type: "done";
       variantId?: string;
       subject?: string;
+      conversationTitle?: string;
       compiledHtml?: string;
       seq?: number;
       chatOnly?: boolean;

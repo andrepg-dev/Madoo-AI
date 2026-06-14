@@ -15,7 +15,7 @@ interface BaseCardProps {
 }
 
 const cardBase =
-  "rounded-[var(--radius-lg)] bg-madoo-surface p-4 font-madoo-sans text-madoo-ink shadow-[var(--shadow-border)] transition-[background,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]";
+  "rounded-lg bg-madoo-surface p-4 font-madoo-sans text-madoo-ink shadow-madoo-border transition-[background,box-shadow] duration-(--duration-fast) ease-out";
 
 export interface CardProps
   extends BaseCardProps,
@@ -30,9 +30,9 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
       ref={ref}
       className={cx(
         cardBase,
-        size === "lg" && "rounded-[var(--radius-lg)]",
+        size === "lg" && "rounded-lg",
         surface === "secondary" && "bg-madoo-surface-2",
-        padded && "p-[22px]",
+        padded && "p-5.5",
         className,
       )}
       {...rest}
@@ -73,12 +73,12 @@ export const SelectableCard = forwardRef<HTMLButtonElement, SelectableCardProps>
         aria-pressed={selected}
         className={cx(
           cardBase,
-          "cursor-pointer appearance-none text-left hover:shadow-[var(--shadow-border-rule-hover)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-border-rule-hover)]",
-          size === "lg" && "rounded-[var(--radius-lg)]",
+          "cursor-pointer appearance-none text-left hover:shadow-(--shadow-border-rule-hover) focus-visible:outline-none focus-visible:shadow-(--shadow-border-rule-hover)",
+          size === "lg" && "rounded-lg",
           surface === "secondary" && "bg-madoo-surface-2",
-          padded && "p-[22px]",
+          padded && "p-5.5",
           selected &&
-            "bg-madoo-surface-2 shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)_/_0.34)] hover:shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)_/_0.34)] focus-visible:shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)_/_0.34)]",
+            "bg-madoo-surface-2 shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)/0.34)] hover:shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)/0.34)] focus-visible:shadow-[inset_0_0_0_0.5px_rgb(var(--rule-rgb)/0.34)]",
           className,
         )}
         {...rest}

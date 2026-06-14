@@ -7,6 +7,7 @@ import {
   BoltIcon,
   Cancel01Icon,
   Copy01Icon,
+  Delete02Icon,
   Download01Icon,
   Edit02Icon,
   Folder01Icon,
@@ -16,6 +17,7 @@ import {
   InboxIcon,
   LockIcon,
   Logout01Icon,
+  MoreHorizontalIcon,
   Notification01Icon,
   RefreshIcon,
   Search01Icon,
@@ -48,6 +50,7 @@ export type IconName =
   | "settings"
   | "edit"
   | "copy"
+  | "delete"
   | "download"
   | "send"
   | "refresh"
@@ -59,7 +62,8 @@ export type IconName =
   | "bell"
   | "logOut"
   | "barChart"
-  | "user";
+  | "user"
+  | "moreHorizontal";
 
 const ICONS: Record<IconName, IconSvgElement> = {
   sparkle: SparklesIcon,
@@ -78,6 +82,7 @@ const ICONS: Record<IconName, IconSvgElement> = {
   settings: Settings01Icon,
   edit: Edit02Icon,
   copy: Copy01Icon,
+  delete: Delete02Icon,
   download: Download01Icon,
   send: SentIcon,
   refresh: RefreshIcon,
@@ -90,6 +95,7 @@ const ICONS: Record<IconName, IconSvgElement> = {
   logOut: Logout01Icon,
   barChart: BarChartIcon,
   user: UserIcon,
+  moreHorizontal: MoreHorizontalIcon,
 };
 
 export const ICON_NAMES = Object.keys(ICONS) as IconName[];
