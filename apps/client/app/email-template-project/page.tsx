@@ -23,6 +23,7 @@ import {
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
 import { PreviewOverlay } from "@/components/project/preview/PreviewOverlay";
+import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
 import {
   AccessLevelSelect,
   type AccessLevel,
@@ -1312,8 +1313,12 @@ function EmailPreviewSidebar({
   width: number;
 }) {
   const [isResizing, setIsResizing] = useState(false);
+  const [variablesOpen, setVariablesOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(900);
+
+  const variant = latestVariant(email);
+  const canEditVariables = Boolean(emailId && variant);
 
   const syncIframeHeight = useCallback(() => {
     const iframe = iframeRef.current;
@@ -1493,36 +1498,74 @@ function EmailPreviewSidebar({
             </div>
           </div>
 
-          <div className="flex min-h-11 items-center justify-end gap-2 px-4">
-            <SegmentedControl
-              aria-label="Preview mode"
-              className="rounded-lg bg-madoo-surface p-1 shadow-none"
-              items={previewModeItems}
-              onChange={(value) => setMode(value as PreviewMode)}
-              value={mode}
-            />
+          <div className="flex min-h-11 items-center justify-between gap-2 px-4">
+            {canEditVariables ? (
+              <Button
+                aria-label="Toggle variables panel"
+                aria-pressed={variablesOpen}
+                className={cn(
+                  "h-8 gap-2 rounded-lg px-3 text-xs font-medium shadow-madoo-border hover:bg-[#f3f4f6]",
+                  variablesOpen
+                    ? "bg-madoo-ink text-white hover:bg-madoo-ink-soft"
+                    : "bg-white text-madoo-ink",
+                )}
+                onClick={() => setVariablesOpen((open) => !open)}
+                size="sm"
+                variant="ghost"
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={SourceCodeIcon}
+                  primaryColor="currentColor"
+                  size={15}
+                  strokeWidth={1.55}
+                />
+                <span>Variables</span>
+              </Button>
+            ) : (
+              <span />
+            )}
 
-            <Button
-              aria-label={`Use ${theme === "light" ? "dark" : "light"} email theme`}
-              className="h-8 gap-2 rounded-lg bg-white px-3 text-xs font-medium text-madoo-ink shadow-madoo-border hover:bg-[#f3f4f6]"
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              size="sm"
-              variant="ghost"
-            >
-              <HugeiconsIcon
-                aria-hidden="true"
-                icon={theme === "light" ? Moon02Icon : Sun01Icon}
-                primaryColor="currentColor"
-                size={15}
-                strokeWidth={1.55}
+            <div className="flex items-center gap-2">
+              <SegmentedControl
+                aria-label="Preview mode"
+                className="rounded-lg bg-madoo-surface p-1 shadow-none"
+                items={previewModeItems}
+                onChange={(value) => setMode(value as PreviewMode)}
+                value={mode}
               />
-              <span>{theme === "light" ? "Dark" : "Light"}</span>
-            </Button>
+
+              <Button
+                aria-label={`Use ${theme === "light" ? "dark" : "light"} email theme`}
+                className="h-8 gap-2 rounded-lg bg-white px-3 text-xs font-medium text-madoo-ink shadow-madoo-border hover:bg-[#f3f4f6]"
+                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                size="sm"
+                variant="ghost"
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={theme === "light" ? Moon02Icon : Sun01Icon}
+                  primaryColor="currentColor"
+                  size={15}
+                  strokeWidth={1.55}
+                />
+                <span>{theme === "light" ? "Dark" : "Light"}</span>
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden shadow-madoo-border">
-          <div className="madoo-preview-scrollbar mr-1 h-full overflow-y-auto">
+        <div className="flex min-h-0 flex-1 overflow-hidden shadow-madoo-border">
+          {variablesOpen && canEditVariables && variant ? (
+            <VariablesPanel
+              emailId={emailId!}
+              onClose={() => setVariablesOpen(false)}
+              variables={variant.variableSchema.variables}
+              variantId={variant.id}
+            />
+          ) : null}
+
+          <div className="madoo-preview-scrollbar mr-1 h-full min-w-0 flex-1 overflow-y-auto">
             <div
               className={cn(
                 "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)/0.14)] transition-[width] duration-300",
