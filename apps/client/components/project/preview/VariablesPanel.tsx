@@ -1,6 +1,9 @@
 "use client";
 
-import { updateEmailVariantVariableSchema } from "@/actions/emails";
+import {
+  updateEmailVariantVariableSchema,
+  uploadEmailImage,
+} from "@/actions/emails";
 import { cn } from "@/lib/utils";
 import {
   Cancel01Icon,
@@ -137,6 +140,14 @@ export function VariablesPanel({
     }, VALUE_SAVE_DEBOUNCE_MS);
   };
 
+  // Discrete value changes (e.g. an uploaded image URL) persist immediately.
+  const persistValue = (name: string, value: string) => {
+    cancelPendingSave();
+    const nextValues = { ...values, [name]: value };
+    setValues(nextValues);
+    mutation.mutate(buildSchema(nextValues, scopesRef.current));
+  };
+
   return (
     <aside
       aria-label="Email variables"
@@ -192,7 +203,17 @@ export function VariablesPanel({
                   ) : null}
                 </div>
 
-                {scope === "static" ? (
+                {scope !== "static" ? (
+                  <p className="mt-2 truncate rounded-lg bg-madoo-accent-soft px-2.5 py-1.5 font-madoo-mono text-xs text-madoo-accent-deep">
+                    {`{{${variable.name}}}`}
+                  </p>
+                ) : variable.role === "image" ? (
+                  <ImageUploader
+                    emailId={emailId}
+                    onUploaded={(url) => persistValue(variable.name, url)}
+                    value={valueOf(variable)}
+                  />
+                ) : (
                   <Input
                     className="mt-2"
                     inputSize="sm"
@@ -203,10 +224,6 @@ export function VariablesPanel({
                     type={inputTypeForRole(variable.role)}
                     value={valueOf(variable)}
                   />
-                ) : (
-                  <p className="mt-2 truncate rounded-lg bg-madoo-accent-soft px-2.5 py-1.5 font-madoo-mono text-xs text-madoo-accent-deep">
-                    {`{{${variable.name}}}`}
-                  </p>
                 )}
 
                 <ScopeToggle
@@ -219,6 +236,102 @@ export function VariablesPanel({
         )}
       </div>
     </aside>
+  );
+}
+
+function ImageUploader({
+  emailId,
+  onUploaded,
+  value,
+}: {
+  emailId: string;
+  onUploaded: (url: string) => void;
+  value: string;
+}) {
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hasImage = /^https?:\/\//i.test(value);
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ tone: "danger", title: "Not an image", body: "Pick an image file." });
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      onUploaded(await uploadEmailImage(emailId, form));
+    } catch (error) {
+      toast({
+        tone: "danger",
+        title: "Upload failed",
+        body: error instanceof Error ? error.message : "Try again.",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "mt-2 flex min-h-20 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg bg-madoo-bg-2 p-2 text-center shadow-madoo-border transition-shadow",
+        dragOver && "shadow-(--shadow-border-accent)",
+      )}
+      onClick={() => inputRef.current?.click()}
+      onDragLeave={() => setDragOver(false)}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setDragOver(true);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragOver(false);
+        void upload(event.dataTransfer.files?.[0]);
+      }}
+    >
+      {hasImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt="Variable"
+          className="max-h-28 w-full rounded-md object-contain"
+          src={value}
+        />
+      ) : null}
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-madoo-ink-muted">
+        {uploading ? (
+          <>
+            <HugeiconsIcon
+              aria-hidden="true"
+              className="animate-spin"
+              icon={Loading03Icon}
+              primaryColor="currentColor"
+              size={12}
+              strokeWidth={2.2}
+            />
+            Uploading…
+          </>
+        ) : hasImage ? (
+          "Drag a new image to replace"
+        ) : (
+          "Drag & drop or click to upload"
+        )}
+      </span>
+      <input
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          void upload(event.target.files?.[0]);
+          event.target.value = "";
+        }}
+        ref={inputRef}
+        type="file"
+      />
+    </div>
   );
 }
 

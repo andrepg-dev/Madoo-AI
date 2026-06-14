@@ -5,6 +5,7 @@ import {
   CreateEmailFromTemplateSchema,
   CreateEmailSchema,
   EmailChatMessageDtoSchema,
+  EmailImageUploadResponseSchema,
   EmailDtoSchema,
   EmailShareDtoSchema,
   PublicEmailDtoSchema,
@@ -62,6 +63,17 @@ export async function fetchEmailChat(
 ): Promise<EmailChatMessageDto[]> {
   const raw = await FetchWrapper<unknown>(`/emails/${id}/chat`);
   return EmailChatMessageListSchema.parse(raw);
+}
+
+export async function uploadEmailImage(
+  emailId: string,
+  formData: FormData,
+): Promise<string> {
+  const raw = await FetchWrapper<unknown>(`/emails/${emailId}/images`, {
+    method: "POST",
+    body: formData,
+  });
+  return EmailImageUploadResponseSchema.parse(raw).url;
 }
 
 export async function truncateEmailChat(
