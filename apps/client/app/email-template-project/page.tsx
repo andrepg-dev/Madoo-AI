@@ -6,6 +6,7 @@ import {
   fetchEmailChat,
 } from "@/actions/emails";
 import { fetchBillingOverview } from "@/actions/billing";
+import { fetchWorkspaces } from "@/actions/workspaces";
 import {
   createGmailDraft,
   createOutlookDraft,
@@ -21,6 +22,7 @@ import {
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
 import { TestingModal } from "@/components/project/testing/TestingModal";
+import { PricingDrawer } from "@/components/shell/PricingDrawer";
 import {
   consumeEmailSseStream,
   type StreamEmailEvent,
@@ -32,19 +34,27 @@ import { useClientStore } from "@/stores/client-store";
 import {
   ArrowDown01Icon,
   ArrowDown02Icon,
+  ArrowLeft01Icon,
+  CancelCircleIcon,
   Copy01Icon,
+  CrownPlusIcon,
   Download01Icon,
   Edit02Icon,
+  EyeIcon,
+  FileExportIcon,
   HelpCircleIcon,
+  Link01Icon,
   Moon02Icon,
   PanelLeftIcon,
   PanelRightIcon,
   Plug01Icon,
   RefreshIcon,
   Settings01Icon,
+  Share08Icon,
   SparklesIcon,
   SourceCodeIcon,
   StarIcon,
+  TestTube02Icon,
   Sun01Icon,
   ThumbsDownIcon,
   ThumbsUpIcon,
@@ -59,6 +69,7 @@ import {
   DropdownDivider,
   DropdownItem,
   DropdownTrigger,
+  Input,
   Modal,
   ProgressBar,
   SegmentedControl,
@@ -169,16 +180,16 @@ function ConversationTitleDropdown({ title }: { title: string }) {
     <Dropdown>
       <DropdownTrigger asChild>
         <Button
-          className="h-8 max-w-[min(440px,calc(100vw-32px))] px-3 py-0!"
+          className="h-8 max-w-[min(360px,calc(100vw-32px))] gap-1.5 px-2.5 py-0! text-[13px]"
           variant="ghost"
         >
           <Image
             src={"/madoo-transparent.png"}
             alt="Madoo AI Logo"
-            width={26}
-            height={26}
+            width={20}
+            height={20}
           />
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
             <span className="truncate font-medium">{title}</span>
             <HugeiconsIcon
               aria-hidden="true"
@@ -189,9 +200,20 @@ function ConversationTitleDropdown({ title }: { title: string }) {
           </div>
         </Button>
       </DropdownTrigger>
-      <DropdownContent align="start" className="w-64 gap-1 p-1!">
+      <DropdownContent align="start" className="w-72 gap-1 p-1.5!">
         <DropdownItem
-          className="justify-start! gap-2 px-2! py-1!"
+          className="justify-start! px-2! py-1.5! text-[13px]!"
+          onSelect={() => router.push("/dashboard/projects")}
+        >
+          <span className="flex items-center gap-2.5">
+            <HeaderMenuIcon icon={ArrowLeft01Icon} />
+            Back to dashboard
+          </span>
+        </DropdownItem>
+        <DropdownDivider />
+
+        <DropdownItem
+          className="justify-start! gap-2 px-2! py-1.5!"
           onSelect={() => router.push("/settings")}
         >
           <Avatar
@@ -318,39 +340,54 @@ function mapChatMessages(
   chat: EmailChatMessageDto[] | undefined,
   email: EmailDto | null | undefined,
 ): ChatMessage[] {
-  if (!chat?.length) {
-    if (!email) {
-      return [];
-    }
+  const visibleChat: ChatMessage[] =
+    chat
+      ?.filter((message) => message.kind !== "THINKING")
+      .map((message) => ({
+        id: message.id,
+        role:
+          message.role === "USER"
+            ? "user"
+            : message.kind === "STATUS"
+              ? "status"
+              : "assistant",
+        content: message.content,
+      })) ?? [];
+
+  if (email && !visibleChat.some((message) => message.role === "user")) {
     return [
       {
         id: `${email.id}-prompt`,
         role: "user",
         content: email.prompt,
       },
-      {
-        id: `${email.id}-status`,
-        role: "status",
-        content:
-          email.status === "READY"
-            ? "Email is ready."
-            : "Generation is in progress.",
-      },
+      ...visibleChat,
+      ...(visibleChat.length === 0
+        ? [
+            {
+              id: `${email.id}-status`,
+              role: "status" as const,
+              content:
+                email.status === "READY"
+                  ? "Email is ready."
+                  : "Generation is in progress.",
+            },
+          ]
+        : []),
     ];
   }
 
-  return chat
-    .filter((message) => message.kind !== "THINKING")
-    .map((message) => ({
-      id: message.id,
-      role:
-        message.role === "USER"
-          ? "user"
-          : message.kind === "STATUS"
-            ? "status"
-            : "assistant",
-      content: message.content,
-    }));
+  return visibleChat;
+}
+
+function deriveConversationTitle(
+  messages: ChatMessage[],
+  fallback: string,
+): string {
+  const firstUserMessage = messages.find((message) => message.role === "user");
+  const title = firstUserMessage?.content.replace(/\s+/g, " ").trim();
+  if (!title) return fallback;
+  return title.length > 48 ? `${title.slice(0, 45).trimEnd()}...` : title;
 }
 
 function upsertMessage(list: ChatMessage[], next: ChatMessage) {
@@ -399,6 +436,217 @@ function HeaderPillButton({
       ) : null}
       <span>{children}</span>
     </Button>
+  );
+}
+
+function ShareProjectDropdown({
+  conversationTitle,
+  onCopyInviteLink,
+  onSharePreview,
+  projectUrl,
+}: {
+  conversationTitle: string;
+  onCopyInviteLink: () => void;
+  onSharePreview: () => void;
+  projectUrl: string | null;
+}) {
+  const user = useAuthStore((state) => state.user);
+  const workspaceId = useClientStore((state) => state.workspaceId);
+  const { toast } = useToast();
+  const [inviteEmail, setInviteEmail] = useState("");
+
+  const { data: workspaces = [] } = useQuery({
+    queryKey: ["workspaces"],
+    queryFn: fetchWorkspaces,
+    enabled: Boolean(user),
+    staleTime: 60_000,
+  });
+  const activeWorkspace =
+    workspaces.find((item) => item.id === workspaceId) ?? workspaces[0] ?? null;
+  const workspaceName = activeWorkspace?.name ?? "Madoo workspace";
+  const workspaceInitial = workspaceName.trim().charAt(0).toUpperCase() || "M";
+
+  const inviteByEmail = () => {
+    const email = inviteEmail.trim();
+    if (!email || !projectUrl) {
+      toast({
+        tone: "danger",
+        title: "Invite needs an email",
+        body: "Add an email after the project is ready.",
+      });
+      return;
+    }
+
+    const subject = encodeURIComponent(`Madoo project: ${conversationTitle}`);
+    const body = encodeURIComponent(
+      `Open this Madoo project:\n\n${projectUrl}`,
+    );
+    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
+  };
+
+  return (
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <HeaderPillButton
+          className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
+          label="Share email"
+          leftIcon={Share08Icon}
+        >
+          Share
+        </HeaderPillButton>
+      </DropdownTrigger>
+      <DropdownContent align="end" className="w-[min(88vw,420px)] gap-0 p-0!">
+        <div className="grid gap-4 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <h3 className="text-lg font-semibold tracking-normal text-madoo-ink">
+              Share project
+            </h3>
+            <button
+              className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-madoo-ink transition hover:bg-madoo-surface"
+              onClick={onCopyInviteLink}
+              type="button"
+            >
+              <HugeiconsIcon
+                aria-hidden="true"
+                icon={Link01Icon}
+                primaryColor="currentColor"
+                size={15}
+                strokeWidth={1.8}
+              />
+              Copy invite link
+            </button>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <Input
+                className="h-9! bg-white!"
+                inputSize="lg"
+                onChange={(event) => setInviteEmail(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") inviteByEmail();
+                }}
+                placeholder="Invite by email"
+                type="email"
+                value={inviteEmail}
+                variant="default"
+              />
+            </div>
+            <Button
+              className="h-9 min-w-18 rounded-lg bg-madoo-ink text-white hover:bg-madoo-ink-soft"
+              disabled={!inviteEmail.trim() || !projectUrl}
+              onClick={inviteByEmail}
+              size="sm"
+              type="button"
+              variant="primary"
+            >
+              Invite
+            </Button>
+          </div>
+
+          <div className="grid gap-3">
+            <p className="text-xs font-semibold text-madoo-ink-muted">
+              Who has project access
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-surface-2 text-madoo-ink">
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={CancelCircleIcon}
+                  primaryColor="currentColor"
+                  size={18}
+                  strokeWidth={1.8}
+                />
+              </span>
+              <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-madoo-ink">
+                Invite link disabled
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={ArrowDown01Icon}
+                  primaryColor="currentColor"
+                  size={16}
+                  strokeWidth={1.6}
+                />
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Avatar
+                name={user?.name ?? user?.email ?? "User"}
+                src={user?.avatarUrl ?? undefined}
+                size="sm"
+              />
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="truncate text-sm font-medium text-madoo-ink">
+                  {user?.name ?? "User"} (you)
+                </span>
+                <span className="truncate text-xs text-madoo-ink-muted">
+                  {user?.email ?? "Signed in user"}
+                </span>
+              </span>
+              <span className="text-xs font-medium text-madoo-ink-muted">
+                Owner
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-3">
+            <p className="text-xs font-semibold text-madoo-ink-muted">
+              General project access
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-ink text-xs font-semibold text-white">
+                {workspaceInitial}
+              </span>
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-madoo-ink">
+                  <span className="truncate">{workspaceName}</span>
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    icon={ArrowDown01Icon}
+                    primaryColor="currentColor"
+                    size={16}
+                    strokeWidth={1.6}
+                  />
+                </span>
+                <span className="truncate text-xs text-madoo-ink-muted">
+                  People in this workspace
+                </span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-madoo-ink">
+                Can edit
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={ArrowDown01Icon}
+                  primaryColor="currentColor"
+                  size={16}
+                  strokeWidth={1.6}
+                />
+              </span>
+            </div>
+          </div>
+
+          <Button
+            className="h-10 rounded-lg bg-white text-sm font-medium text-madoo-ink shadow-madoo-border hover:bg-madoo-surface"
+            disabled={!projectUrl}
+            leftIcon={
+              <HugeiconsIcon
+                aria-hidden="true"
+                icon={Link01Icon}
+                primaryColor="currentColor"
+                size={17}
+                strokeWidth={1.8}
+              />
+            }
+            onClick={onSharePreview}
+            size="sm"
+            type="button"
+            variant="secondary"
+          >
+            Share preview
+          </Button>
+        </div>
+      </DropdownContent>
+    </Dropdown>
   );
 }
 
@@ -691,7 +939,7 @@ function ExportProviderModal({
   onClose: () => void;
   variantId: string | null;
 }) {
-  const [tab, setTab] = useState<ExportTab>("email");
+  const [tab, setTab] = useState<ExportTab>("application");
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -830,9 +1078,11 @@ function ExportProviderModal({
     >
       <div className="space-y-4">
         <div className="flex w-fit items-center rounded-xl bg-madoo-surface-2 p-1">
+          {/* Providers export is hidden until ESP integrations are available.
           <ExportTabButton active={tab === "email"} onClick={() => setTab("email")}>
             Providers
           </ExportTabButton>
+          */}
           <ExportTabButton
             active={tab === "application"}
             onClick={() => setTab("application")}
@@ -845,6 +1095,7 @@ function ExportProviderModal({
         </div>
 
         <div className="grid max-h-90 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+          {/* Providers export is hidden until ESP integrations are available.
           {tab === "email"
             ? emailExportProviders.map((provider) => (
                 <ExportProviderCard
@@ -855,6 +1106,7 @@ function ExportProviderModal({
                 />
               ))
             : null}
+          */}
 
           {tab === "application"
             ? applicationExportProviders.map((provider) => (
@@ -907,11 +1159,17 @@ function ExportProviderModal({
 
 function EmailPreviewSidebar({
   expanded,
+  conversationTitle,
   mode,
+  onCopyInviteLink,
   onOpenExport,
+  onOpenPreview,
+  onOpenPricing,
+  onSharePreview,
   onOpenTesting,
   onToggleExpanded,
   open,
+  projectUrl,
   setMode,
   srcDoc,
   setTheme,
@@ -921,11 +1179,17 @@ function EmailPreviewSidebar({
   width,
 }: {
   expanded: boolean;
+  conversationTitle: string;
   mode: PreviewMode;
+  onCopyInviteLink: () => void;
   onOpenExport: () => void;
+  onOpenPreview: () => void;
+  onOpenPricing: () => void;
+  onSharePreview: () => void;
   onOpenTesting: () => void;
   onToggleExpanded: () => void;
   open: boolean;
+  projectUrl: string | null;
   setMode: (mode: PreviewMode) => void;
   srcDoc: string;
   setTheme: (theme: TemplateTheme) => void;
@@ -1073,21 +1337,25 @@ function EmailPreviewSidebar({
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              <HeaderPillButton
-                className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
-                label="Share email"
-              >
-                Share
-              </HeaderPillButton>
+              <ShareProjectDropdown
+                conversationTitle={conversationTitle}
+                onCopyInviteLink={onCopyInviteLink}
+                onSharePreview={onSharePreview}
+                projectUrl={projectUrl}
+              />
               <HeaderPillButton
                 className="bg-white text-[#101114] hover:bg-[#f3f4f6]"
                 label="Preview email"
+                leftIcon={EyeIcon}
+                onClick={onOpenPreview}
               >
                 Preview
               </HeaderPillButton>
               <HeaderPillButton
                 className="text-white shadow-none"
                 label="Upgrade exports"
+                leftIcon={CrownPlusIcon}
+                onClick={onOpenPricing}
                 style={{ backgroundColor: "#101114", color: "#ffffff" }}
               >
                 Upgrade
@@ -1095,6 +1363,7 @@ function EmailPreviewSidebar({
               <HeaderPillButton
                 className="text-white shadow-none"
                 label="Test email"
+                leftIcon={TestTube02Icon}
                 onClick={onOpenTesting}
                 style={{ backgroundColor: "#16a34a", color: "#ffffff" }}
               >
@@ -1103,6 +1372,7 @@ function EmailPreviewSidebar({
               <HeaderPillButton
                 className="text-white shadow-none"
                 label="Export email"
+                leftIcon={FileExportIcon}
                 onClick={onOpenExport}
                 style={{ backgroundColor: "#356bff", color: "#ffffff" }}
               >
@@ -1239,6 +1509,7 @@ export default function EmailTemplateProject() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const sidebarOpen = useClientStore((state) => state.sidebarOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
   const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
@@ -1247,9 +1518,13 @@ export default function EmailTemplateProject() {
   );
   const [streamedHtml, setStreamedHtml] = useState<string | null>(null);
   const [streamedSubject, setStreamedSubject] = useState<string | null>(null);
+  const [streamedConversationTitle, setStreamedConversationTitle] = useState<
+    string | null
+  >(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
   const [testingModalOpen, setTestingModalOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [templateTheme, setTemplateTheme] = useState<TemplateTheme>("light");
@@ -1276,8 +1551,19 @@ export default function EmailTemplateProject() {
   const previewSrcDoc = streamedHtml ?? variant?.compiledHtml ?? null;
   const hasPreview = Boolean(previewSrcDoc);
   const previewSubject =
-    streamedSubject ?? variant?.subject ?? email?.title ?? "Untitled email";
-  const conversationTitle = currentEmailId ? previewSubject : "New conversation";
+    streamedSubject ?? variant?.subject ?? "Untitled email";
+  const storedConversationTitle =
+    email?.title && email.title !== variant?.subject ? email.title : null;
+  const conversationTitle =
+    streamedConversationTitle ??
+    storedConversationTitle ??
+    deriveConversationTitle(messages, "New conversation");
+  const projectUrl = useMemo(() => {
+    if (!currentEmailId) return null;
+    const path = `/email-template-project?id=${encodeURIComponent(currentEmailId)}`;
+    if (typeof window === "undefined") return path;
+    return new URL(path, window.location.origin).toString();
+  }, [currentEmailId]);
   const startupKey = useMemo(() => searchParams.toString(), [searchParams]);
 
   const invalidateEmailState = useCallback(
@@ -1344,6 +1630,11 @@ export default function EmailTemplateProject() {
           return;
         }
 
+        if (event.type === "conversation_title") {
+          setStreamedConversationTitle(event.value);
+          return;
+        }
+
         if (event.type === "code-chunk") {
           setMessages((current) =>
             upsertMessage(current, {
@@ -1362,6 +1653,9 @@ export default function EmailTemplateProject() {
             setSidebarOpen(true);
           }
           if (event.subject) setStreamedSubject(event.subject);
+          if (event.conversationTitle) {
+            setStreamedConversationTitle(event.conversationTitle);
+          }
           if (!assistantText.trim()) {
             setMessages((current) =>
               upsertMessage(current, {
@@ -1503,6 +1797,7 @@ export default function EmailTemplateProject() {
   useEffect(() => {
     setStreamedHtml(null);
     setStreamedSubject(null);
+    setStreamedConversationTitle(null);
   }, [currentEmailId]);
 
   useEffect(() => {
@@ -1632,6 +1927,96 @@ export default function EmailTemplateProject() {
     setPreviewExpanded(true);
   };
 
+  const openStandalonePreview = useCallback(() => {
+    if (!previewSrcDoc) {
+      toast({
+        tone: "danger",
+        title: "No preview yet",
+        body: "Generate an email before opening the preview.",
+      });
+      return;
+    }
+
+    const blob = new Blob([previewSrcDoc], {
+      type: "text/html;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const previewWindow = window.open(url, "_blank");
+    if (!previewWindow) {
+      URL.revokeObjectURL(url);
+      toast({
+        tone: "danger",
+        title: "Preview blocked",
+        body: "Allow popups for Madoo and try again.",
+      });
+      return;
+    }
+    previewWindow.opener = null;
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }, [previewSrcDoc, toast]);
+
+  const copyProjectLink = useCallback(async () => {
+    if (!projectUrl) {
+      toast({
+        tone: "danger",
+        title: "No project yet",
+        body: "Generate an email before copying a link.",
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(projectUrl);
+      toast({
+        tone: "success",
+        title: "Invite link copied",
+        body: "Project link is ready to paste.",
+      });
+    } catch {
+      toast({
+        tone: "danger",
+        title: "Copy failed",
+        body: "Could not copy the project link.",
+      });
+    }
+  }, [projectUrl, toast]);
+
+  const shareProject = useCallback(async () => {
+    if (!projectUrl) {
+      toast({
+        tone: "danger",
+        title: "No project yet",
+        body: "Generate an email before sharing.",
+      });
+      return;
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: conversationTitle,
+          url: projectUrl,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(projectUrl);
+      toast({
+        tone: "success",
+        title: "Preview link copied",
+        body: "Project link is ready to paste.",
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      toast({
+        tone: "danger",
+        title: "Share failed",
+        body: "Could not copy the project link.",
+      });
+    }
+  }, [conversationTitle, projectUrl, toast]);
+
   return (
     <main className="relative h-screen overflow-hidden bg-white">
       <header
@@ -1733,12 +2118,18 @@ export default function EmailTemplateProject() {
 
         {hasPreview && previewSrcDoc ? (
           <EmailPreviewSidebar
+            conversationTitle={conversationTitle}
             expanded={previewExpanded}
             mode={previewMode}
+            onCopyInviteLink={copyProjectLink}
             onOpenExport={() => setExportModalOpen(true)}
+            onOpenPreview={openStandalonePreview}
+            onOpenPricing={() => setPricingOpen(true)}
+            onSharePreview={shareProject}
             onOpenTesting={() => setTestingModalOpen(true)}
             onToggleExpanded={togglePreviewExpanded}
             open={sidebarOpen}
+            projectUrl={projectUrl}
             setMode={setPreviewMode}
             srcDoc={previewSrcDoc}
             setTheme={setTemplateTheme}
@@ -1755,6 +2146,10 @@ export default function EmailTemplateProject() {
         onClose={() => setExportModalOpen(false)}
         open={exportModalOpen}
         variantId={variant?.id ?? null}
+      />
+      <PricingDrawer
+        onClose={() => setPricingOpen(false)}
+        open={pricingOpen}
       />
       <TestingModal
         emailId={currentEmailId}
