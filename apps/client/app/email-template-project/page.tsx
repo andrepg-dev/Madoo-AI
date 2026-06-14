@@ -1481,6 +1481,8 @@ function EmailPreviewSidebar({
   const latestVariantId = latestVariant(email)?.id;
   const canEditVariables = Boolean(emailId && variant);
 
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
   const syncIframeHeight = useCallback(() => {
     const iframe = iframeRef.current;
     const documentElement = iframe?.contentDocument?.documentElement;
@@ -1492,6 +1494,21 @@ function EmailPreviewSidebar({
       Math.max(documentElement.scrollHeight, body.scrollHeight, 640),
     );
   }, []);
+
+  // Measure on load and keep measuring as the content reflows (images/fonts
+  // loading), so the outer scroll container always covers the full email.
+  const handleIframeLoad = useCallback(() => {
+    syncIframeHeight();
+    const body = iframeRef.current?.contentDocument?.body;
+    resizeObserverRef.current?.disconnect();
+    if (body && typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => syncIframeHeight());
+      observer.observe(body);
+      resizeObserverRef.current = observer;
+    }
+  }, [syncIframeHeight]);
+
+  useEffect(() => () => resizeObserverRef.current?.disconnect(), []);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(syncIframeHeight);
@@ -1741,10 +1758,10 @@ function EmailPreviewSidebar({
                   "block w-full border-0 bg-white",
                   isResizing && "pointer-events-none",
                 )}
-                onLoad={syncIframeHeight}
+                onLoad={handleIframeLoad}
                 ref={iframeRef}
                 scrolling="no"
-                sandbox=""
+                sandbox="allow-same-origin"
                 srcDoc={srcDoc}
                 style={{ height: iframeHeight }}
                 title="Generated email template preview"
