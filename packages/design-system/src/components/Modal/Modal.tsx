@@ -11,7 +11,7 @@ import { Icon } from "../Icon";
 
 const MODAL_EXIT_MS = 170;
 
-export type ModalSize = "sm" | "md" | "lg" | "xl";
+export type ModalSize = "sm" | "md" | "lg" | "xl" | "xxl";
 
 export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   open: boolean;
@@ -34,6 +34,7 @@ const sizeClasses: Record<ModalSize, string> = {
   md: "max-w-120",
   lg: "max-w-160",
   xl: "max-w-205",
+  xxl: "max-w-260",
 };
 
 function useModalPresence(open: boolean) {

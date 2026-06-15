@@ -886,7 +886,7 @@ function CommunityTemplateUseModal({
       }
       onClose={onClose}
       open={open}
-      size="xl"
+      size="xxl"
       title={activeTemplate?.name ?? "Community template"}
     >
       {isLoading ? (
@@ -894,7 +894,7 @@ function CommunityTemplateUseModal({
           Loading template
         </div>
       ) : detail ? (
-        <div className="grid grid-cols-[minmax(220px,320px)_minmax(0,1fr)] gap-4 max-[760px]:grid-cols-1">
+        <div className="grid grid-cols-[minmax(220px,300px)_minmax(0,1fr)] gap-4 max-[760px]:grid-cols-1">
           <section className="min-h-0 rounded-lg bg-white p-3 shadow-madoo-border">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h3 className="m-0 text-sm font-medium text-madoo-ink">
@@ -910,7 +910,7 @@ function CommunityTemplateUseModal({
               {detail.viewCount} {detail.viewCount === 1 ? "view" : "views"} ·{" "}
               {detail.useCount} {detail.useCount === 1 ? "use" : "uses"}
             </p>
-            <div className="madoo-preview-scrollbar max-h-120 space-y-3 overflow-y-auto pr-1">
+            <div className="madoo-preview-scrollbar max-h-[78vh] space-y-3 overflow-y-auto pr-1">
               {draft.variables.length ? (
                 draft.variables.map((variable) => {
                   const scope = defaultScope(variable);
@@ -968,7 +968,7 @@ function CommunityTemplateUseModal({
 
           <section className="overflow-hidden rounded-lg bg-white shadow-madoo-border">
             <iframe
-              className="h-130 w-full border-0 bg-white"
+              className="h-[78vh] min-h-130 w-full border-0 bg-white"
               sandbox=""
               srcDoc={detail.compiledHtml}
               title={`${detail.name} preview`}
