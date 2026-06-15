@@ -329,7 +329,9 @@ export class EmailsService {
     let lastErr: unknown;
     for (let attempt = 1; attempt <= EmailsService.PREVIEW_MAX_ATTEMPTS; attempt += 1) {
       try {
-        const buffer = await this.screenshot.screenshotHtml(compiledHtml);
+        const buffer = await this.screenshot.screenshotHtml(compiledHtml, {
+          highlightVariables: true,
+        });
         return await this.s3.uploadBuffer(buffer, "image/png", "email-previews");
       } catch (err) {
         lastErr = err;
