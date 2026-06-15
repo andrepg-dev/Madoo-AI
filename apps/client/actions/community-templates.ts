@@ -65,6 +65,12 @@ export async function useCommunityTemplate(
   return EmailDtoSchema.parse(raw);
 }
 
+export async function makeCommunityTemplatePrivate(id: string): Promise<void> {
+  await FetchWrapper<void>(`/community-templates/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
 export async function setCommunityTemplateStarred(
   id: string,
   starred: boolean,

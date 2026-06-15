@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -28,7 +29,9 @@ type CommunityTemplateRow = {
   compiledHtml?: string;
   previewUrl: string | null;
   variableSchema: unknown;
+  viewCount: number;
   useCount: number;
+  authorUserId: string;
   authorName: string | null;
   createdAt: Date;
   stars?: Array<{ id: string }>;
@@ -36,11 +39,11 @@ type CommunityTemplateRow = {
 
 type PublicCommunityTemplateDto = Omit<
   CommunityTemplateDto,
-  "starred" | "useCount"
+  "starred" | "viewCount" | "useCount" | "owned"
 >;
 type PublicCommunityTemplateRow = Omit<
   CommunityTemplateRow,
-  "stars" | "useCount"
+  "stars" | "viewCount" | "useCount" | "authorUserId"
 >;
 
 function cleanOptional(value: string | null | undefined): string | null {
@@ -67,7 +70,7 @@ export class CommunityTemplatesService {
         },
       },
     });
-    return rows.map((row) => this.toDto(row));
+    return rows.map((row) => this.toDto(row, userId));
   }
 
   async listPublic(): Promise<PublicCommunityTemplateDto[]> {
@@ -99,8 +102,19 @@ export class CommunityTemplatesService {
       },
     });
     if (!row) throw new NotFoundException("Community template not found.");
+
+    // Count a view only when someone other than the author opens it, so
+    // authors can't inflate their own stats. Reflect it in the response.
+    if (row.authorUserId !== userId) {
+      await this.prisma.communityTemplate.update({
+        where: { id },
+        data: { viewCount: { increment: 1 } },
+      });
+      row.viewCount += 1;
+    }
+
     return CommunityTemplateDetailDtoSchema.parse({
-      ...this.toDto(row),
+      ...this.toDto(row, userId),
       componentCode: row.componentCode,
       compiledHtml: row.compiledHtml,
     });
@@ -156,7 +170,7 @@ export class CommunityTemplatesService {
         },
       },
     });
-    return this.toDto(created);
+    return this.toDto(created, userId);
   }
 
   async use(
@@ -221,10 +235,29 @@ export class CommunityTemplatesService {
       },
     });
     if (!row) throw new NotFoundException("Community template not found.");
-    return this.toDto(row);
+    return this.toDto(row, userId);
   }
 
-  private toDto(row: CommunityTemplateRow): CommunityTemplateDto {
+  async makePrivate(id: string, userId: string): Promise<void> {
+    const row = await this.prisma.communityTemplate.findUnique({
+      where: { id },
+      select: { id: true, authorUserId: true },
+    });
+    if (!row) throw new NotFoundException("Community template not found.");
+    if (row.authorUserId !== userId) {
+      throw new ForbiddenException(
+        "Only the author can make this template private.",
+      );
+    }
+    // Deleting the published copy removes it from the gallery (stars cascade);
+    // the author's original email in their workspace is untouched.
+    await this.prisma.communityTemplate.delete({ where: { id } });
+  }
+
+  private toDto(
+    row: CommunityTemplateRow,
+    viewerUserId: string | null,
+  ): CommunityTemplateDto {
     const variableSchema: VariableSchemaRoot = parseVariableSchemaJson(
       row.variableSchema,
     );
@@ -239,9 +272,11 @@ export class CommunityTemplatesService {
           ? row.previewUrl.trim()
           : null,
       variableSchema,
+      viewCount: row.viewCount,
       useCount: row.useCount,
       authorName: row.authorName,
       starred: Boolean(row.stars?.length),
+      owned: viewerUserId !== null && row.authorUserId === viewerUserId,
       createdAt: row.createdAt.toISOString(),
     });
   }
@@ -249,11 +284,16 @@ export class CommunityTemplatesService {
   private toPublicDto(
     row: PublicCommunityTemplateRow,
   ): PublicCommunityTemplateDto {
-    const dto = this.toDto({
-      ...row,
-      useCount: 0,
-      stars: [],
-    });
+    const dto = this.toDto(
+      {
+        ...row,
+        authorUserId: "",
+        viewCount: 0,
+        useCount: 0,
+        stars: [],
+      },
+      null,
+    );
     return {
       id: dto.id,
       name: dto.name,
