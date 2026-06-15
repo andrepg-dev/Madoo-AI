@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
-import puppeteer from "puppeteer";
+import puppeteer, { type Page } from "puppeteer";
 import os from "node:os";
 
 @Injectable()
@@ -51,9 +51,79 @@ export class ScreenshotService {
     return "Red flag: screenshot pipeline failed for unknown launch/render reason. Inspect stack trace.";
   }
 
+  /**
+   * `domcontentloaded` fires before `<img>` resources finish downloading, so a
+   * naive capture renders blank/missing images. Wait until every image has
+   * settled (load or error) and web fonts are ready, bounded by a timeout so a
+   * slow/broken asset can't hang the capture forever. Runs as a string so the
+   * browser-context DOM globals don't need the TS `dom` lib on the backend.
+   */
+  private async waitForAssets(page: Page): Promise<void> {
+    const script = `(async () => {
+      const images = Array.from(document.images).map((img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise((resolve) => {
+              img.addEventListener('load', resolve, { once: true });
+              img.addEventListener('error', resolve, { once: true });
+            }),
+      );
+      await Promise.all(images);
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (e) {}
+      }
+    })()`;
+
+    await Promise.race([
+      page.evaluate(script).catch(() => undefined),
+      new Promise((resolve) => setTimeout(resolve, 12_000)),
+    ]);
+  }
+
+  /**
+   * Wrap `{{variable}}` merge tags in colored spans, mirroring the in-app
+   * preview (`highlightMergeTags` on the client). Only touches text nodes — never
+   * attributes like href/style — so links stay intact. Runs as a string so the
+   * browser-context DOM globals don't need the TS `dom` lib on the backend.
+   */
+  private async highlightMergeTags(page: Page): Promise<void> {
+    const script = String.raw`(() => {
+      const PATTERN = /\{\{[^}]+\}\}/;
+      const SPLIT = /(\{\{[^}]+\}\})/g;
+      const STYLE = "color:#2f6fea;background:rgba(47,111,234,0.12);border-radius:3px;padding:0 3px;font-weight:600;";
+      if (!document.body) return;
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const targets = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (node.nodeValue && PATTERN.test(node.nodeValue)) targets.push(node);
+      }
+      for (const textNode of targets) {
+        const frag = document.createDocumentFragment();
+        for (const part of textNode.nodeValue.split(SPLIT)) {
+          if (!part) continue;
+          if (PATTERN.test(part)) {
+            const span = document.createElement('span');
+            span.setAttribute('style', STYLE);
+            span.textContent = part;
+            frag.appendChild(span);
+          } else {
+            frag.appendChild(document.createTextNode(part));
+          }
+        }
+        if (textNode.parentNode) textNode.parentNode.replaceChild(frag, textNode);
+      }
+    })()`;
+
+    await page.evaluate(script).catch(() => undefined);
+  }
+
   async screenshotHtml(
     html: string,
-    options: { type?: "png" | "jpeg"; quality?: number } = {},
+    options: {
+      type?: "png" | "jpeg";
+      quality?: number;
+      highlightVariables?: boolean;
+    } = {},
   ): Promise<Buffer> {
     const type = options.type ?? "png";
     let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
@@ -89,8 +159,12 @@ export class ScreenshotService {
       // (p.ej. fuentes externas). Usamos una condición más segura.
       await page.setContent(html, { waitUntil: "domcontentloaded" });
 
+      // Espera a que imágenes y fuentes carguen antes de capturar.
+      await this.waitForAssets(page);
+      // Resalta los merge tags como en el preview de la app (solo previews).
+      if (options.highlightVariables) await this.highlightMergeTags(page);
       // Pequeña pausa para que el layout termine de calcular antes de capturar.
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 150));
 
       const element = await page.$("table, body");
       if (!element) {
@@ -135,7 +209,8 @@ export class ScreenshotService {
       page.setDefaultNavigationTimeout(60_000);
 
       await page.setContent(html, { waitUntil: "domcontentloaded" });
-      await new Promise((r) => setTimeout(r, 250));
+      await this.waitForAssets(page);
+      await new Promise((r) => setTimeout(r, 150));
 
       const pdf = await page.pdf({
         format: "A4",

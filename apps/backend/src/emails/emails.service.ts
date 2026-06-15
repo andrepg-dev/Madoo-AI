@@ -24,6 +24,7 @@ import {
   type PublicEmailDto,
   type RenameEmailInput,
   type TransferEmailInput,
+  type TruncateEmailChatInput,
   type UpdateEmailShareInput,
   type UpdateEmailVariantVariableSchemaInput,
 } from "@madoo/shared";
@@ -147,6 +148,48 @@ export class EmailsService {
         createdAt: row.createdAt.toISOString(),
       }),
     );
+  }
+
+  /** Upload an image (for an image-role variable) to S3 and return its URL. */
+  async uploadImage(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    file: { buffer: Buffer; mimetype: string } | undefined,
+  ): Promise<{ url: string }> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    if (!file) {
+      throw new BadRequestException("No image file provided.");
+    }
+    const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+    if (!allowed.includes(file.mimetype)) {
+      throw new BadRequestException("Image must be PNG, JPEG, WEBP, or GIF.");
+    }
+    if (file.buffer.byteLength > 8 * 1024 * 1024) {
+      throw new BadRequestException("Image must be smaller than 8 MB.");
+    }
+    const url = await this.s3.uploadBuffer(
+      file.buffer,
+      file.mimetype,
+      "email-images",
+    );
+    return { url };
+  }
+
+  /** Delete chat messages from `from` (inclusive) onward — used to edit a turn. */
+  async truncateChatMessages(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: TruncateEmailChatInput,
+  ): Promise<{ ok: true; deleted: number }> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    const { count } = await this.prisma.emailChatMessage.deleteMany({
+      where: { emailId, workspaceId, createdAt: { gte: new Date(dto.from) } },
+    });
+    return { ok: true, deleted: count };
   }
 
   async remove(emailId: string, workspaceId: string, userId: string): Promise<void> {
@@ -286,7 +329,9 @@ export class EmailsService {
     let lastErr: unknown;
     for (let attempt = 1; attempt <= EmailsService.PREVIEW_MAX_ATTEMPTS; attempt += 1) {
       try {
-        const buffer = await this.screenshot.screenshotHtml(compiledHtml);
+        const buffer = await this.screenshot.screenshotHtml(compiledHtml, {
+          highlightVariables: true,
+        });
         return await this.s3.uploadBuffer(buffer, "image/png", "email-previews");
       } catch (err) {
         lastErr = err;
@@ -458,7 +503,8 @@ export class EmailsService {
       include: {
         variants: {
           orderBy: { seq: "desc" },
-          take: 3,
+          // Keep the full edit history available for the version dropdown.
+          take: 50,
         },
       },
     });

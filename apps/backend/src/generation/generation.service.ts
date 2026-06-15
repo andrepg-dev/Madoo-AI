@@ -119,17 +119,22 @@ const STATIC_INSTRUCTION = [
   "Use a consistent spacing scale with generous padding (Section padding around 28-44px horizontal and comfortable vertical rhythm); never cram content edge-to-edge.",
   "Typographic hierarchy: eyebrow ~11px uppercase, letter-spaced, muted; headline ~30-40px bold with tight line-height; body 15-16px with line-height ~1.6-1.75; footer ~11-12px muted.",
   "Build any multi-column layout with <Row>/<Column> (table-based) so it survives Outlook/Gmail and collapses gracefully on mobile; keep the email single-column overall.",
-  "Always give <Img> an explicit width and meaningful alt text; give the <Button> inline padding, border-radius, and display:inline-block.",
+  "Always give <Img> an explicit width and meaningful alt text; give the <Button> inline padding and display:inline-block.",
+  "Set borderRadius: 0 on every element by default — Container, Sections, cards, Buttons, Images, and dividers. Sharp 90-degree corners are the house style. Use a non-zero border-radius ONLY when the user explicitly asks for rounded/soft corners, or for an element that must be round (e.g. a circular avatar). When in doubt, keep it 0.",
+  "Do not use emojis anywhere — not in the subject, headings, body, buttons, eyebrow, or footer. Use real words, and an <Img> when a visual is needed. Include an emoji only if the user explicitly asks for one.",
+  "For a brand logo or hero image, render an <Img> bound to an image variable (role=image, scope=static) with a sensible placeholder image URL default, so the user can upload their own image in Madoo. Don't fake a logo with text/emoji when a real image fits.",
   "Even for 'simple' briefs keep the full skeleton (header, hero, CTA, footer with unsubscribe). Simple means less copy and fewer sections — not missing structure.",
+  "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl} with scope=static (the same destination for everyone). The footer unsubscribe link uses href={unsubscribeUrl} with scope=dynamic (role=url) so the sending platform can inject the real opt-out URL. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
   "role is optional and must only be one of: text, url, image, date. Never use role for variable identity such as recipient_name or company_name; put identity in name.",
   "Every variable must set scope: dynamic or static.",
-  "Use scope=dynamic for personalized data that may be replaced outside Madoo (recipientName, companyName, ctaUrl, planName, invoiceNumber, dates from CRM).",
+  "Use scope=dynamic for personalized data that may be replaced outside Madoo (recipientName, companyName, unsubscribeUrl, planName, invoiceNumber, dates from CRM).",
   "Use scope=static for template constants that stay fixed across uses (heroTitle, offerText, footerLine, buttonLabel, feature bullets).",
+  "Links/URLs are generally NOT dynamic: a URL variable (role=url) defaults to scope=static because the same link is shown to every recipient (ctaUrl, store/product/landing links, social links). Use scope=dynamic for a URL ONLY when each recipient gets a different value injected by the sending platform — primarily unsubscribeUrl (and per-recipient tracked links if the user explicitly asks for them).",
   "Variable discipline: use only a small set of meaningful merge fields, usually 3-6 and never more than 8 unless the user explicitly asks for many personalized fields.",
-  "Create variables only for important personalized or template-specific parts: recipientName, companyName, productName, offer, discountCode, eventDate, ctaUrl, senderName.",
+  "Create variables only for important personalized or template-specific parts: recipientName, companyName, productName, offer, discountCode, eventDate, ctaUrl, unsubscribeUrl, senderName.",
   "Do not create variables for CTA/button labels, closing text, feature bullets, generic body sentences, every headline fragment, colors, spacing, layout styles, decorative labels, or text that should stay fixed for all recipients.",
   "Banned variable examples: ctaLabel, ctaButtonLabel, buttonLabel, closingText, closingLine, feature1, feature2, feature3, featureOne, featureTwo, featureThree.",
   "If a value is not expected to change per recipient or template use, keep it as inline copy inside componentCode instead of adding it to variableSchema.",
@@ -398,7 +403,9 @@ export class GenerationService {
     let lastErr: unknown;
     for (let attempt = 1; attempt <= PREVIEW_MAX_ATTEMPTS; attempt += 1) {
       try {
-        const buffer = await this.screenshot.screenshotHtml(compiledHtml);
+        const buffer = await this.screenshot.screenshotHtml(compiledHtml, {
+          highlightVariables: true,
+        });
         const previewUrl = await this.s3.uploadBuffer(buffer, "image/png");
         await this.prisma.emailVariant.update({
           where: { id: variantId },

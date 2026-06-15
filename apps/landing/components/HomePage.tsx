@@ -209,7 +209,7 @@ const localeCopy = {
     value: {
       eyebrow: "Built for modern email operations",
       title:
-        "Create AI-assisted email templates, then ship them with confidence.",
+        "Create AI-assisted email templates",
       description:
         "Start with a prompt, turn it into a branded email template, review every production detail, and export it to the tool your team already uses.",
       status: "AI-assisted template creation",

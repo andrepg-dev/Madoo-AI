@@ -4,6 +4,7 @@ import {
   createEmail,
   fetchEmail,
   fetchEmailChat,
+  truncateEmailChat,
   updateEmailShare,
 } from "@/actions/emails";
 import { fetchBillingOverview } from "@/actions/billing";
@@ -88,6 +89,7 @@ import type {
   ConnectionProvider,
   EmailChatMessageDto,
   EmailDto,
+  EmailVariantDto,
 } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
@@ -367,6 +369,8 @@ type ChatMessage = {
   seq?: number;
   /** Owning email, used to drop client-only rows when switching projects. */
   emailId?: string;
+  /** Object URLs for images attached to a user message (display only). */
+  images?: string[];
   steps?: TimelineStep[];
   startedAt?: number;
   finishedAt?: number;
@@ -833,6 +837,7 @@ function ShareProjectDropdown({
                 Owner
               </span>
             </div>
+            <div className="h-px bg-[rgb(var(--rule-rgb)/0.14)]" />
             <div className="flex items-start gap-3">
               <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-ink text-xs font-semibold text-white">
                 {workspaceInitial}
@@ -1365,6 +1370,70 @@ function ExportProviderModal({
   );
 }
 
+function VersionsDropdown({
+  variants,
+  activeId,
+  latestId,
+  onSelect,
+}: {
+  variants: EmailVariantDto[];
+  activeId: string | undefined;
+  latestId: string | undefined;
+  onSelect: (id: string | null) => void;
+}) {
+  if (variants.length <= 1) return null;
+
+  const ordered = [...variants].sort((a, b) => b.seq - a.seq);
+  const active = ordered.find((item) => item.id === activeId) ?? ordered[0];
+
+  return (
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <Button
+          className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium"
+          size="sm"
+          variant="secondary"
+        >
+          <span>
+            Version {active.seq}
+            {active.id === latestId ? " · latest" : ""}
+          </span>
+          <HugeiconsIcon
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-madoo-ink-muted"
+            icon={ArrowDown01Icon}
+            primaryColor="currentColor"
+          />
+        </Button>
+      </DropdownTrigger>
+      <DropdownContent align="start" className="w-56 gap-0.5 p-1.5!">
+        {ordered.map((item) => (
+          <DropdownItem
+            className="justify-start! gap-2 px-2! py-1.5! text-[13px]!"
+            key={item.id}
+            onSelect={() => onSelect(item.id === latestId ? null : item.id)}
+          >
+            <span className="flex w-full items-center justify-between gap-2">
+              <span className="truncate">
+                Version {item.seq}
+                {item.id === latestId ? " (latest)" : ""}
+              </span>
+              {item.id === active.id ? (
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 text-madoo-accent-deep"
+                  icon={Tick02Icon}
+                  primaryColor="currentColor"
+                />
+              ) : null}
+            </span>
+          </DropdownItem>
+        ))}
+      </DropdownContent>
+    </Dropdown>
+  );
+}
+
 function EmailPreviewSidebar({
   expanded,
   email,
@@ -1374,6 +1443,7 @@ function EmailPreviewSidebar({
   onOpenPreview,
   onOpenPricing,
   onOpenTesting,
+  onSelectVersion,
   onToggleExpanded,
   open,
   setMode,
@@ -1382,6 +1452,7 @@ function EmailPreviewSidebar({
   setWidth,
   subject,
   theme,
+  variant,
   width,
 }: {
   expanded: boolean;
@@ -1392,6 +1463,7 @@ function EmailPreviewSidebar({
   onOpenPreview: () => void;
   onOpenPricing: () => void;
   onOpenTesting: () => void;
+  onSelectVersion: (id: string | null) => void;
   onToggleExpanded: () => void;
   open: boolean;
   setMode: (mode: PreviewMode) => void;
@@ -1400,6 +1472,7 @@ function EmailPreviewSidebar({
   setWidth: (width: number) => void;
   subject: string;
   theme: TemplateTheme;
+  variant: EmailVariantDto | null;
   width: number;
 }) {
   const [isResizing, setIsResizing] = useState(false);
@@ -1407,8 +1480,11 @@ function EmailPreviewSidebar({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(900);
 
-  const variant = latestVariant(email);
+  const variants = email?.variants ?? [];
+  const latestVariantId = latestVariant(email)?.id;
   const canEditVariables = Boolean(emailId && variant);
+
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   const syncIframeHeight = useCallback(() => {
     const iframe = iframeRef.current;
@@ -1421,6 +1497,21 @@ function EmailPreviewSidebar({
       Math.max(documentElement.scrollHeight, body.scrollHeight, 640),
     );
   }, []);
+
+  // Measure on load and keep measuring as the content reflows (images/fonts
+  // loading), so the outer scroll container always covers the full email.
+  const handleIframeLoad = useCallback(() => {
+    syncIframeHeight();
+    const body = iframeRef.current?.contentDocument?.body;
+    resizeObserverRef.current?.disconnect();
+    if (body && typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => syncIframeHeight());
+      observer.observe(body);
+      resizeObserverRef.current = observer;
+    }
+  }, [syncIframeHeight]);
+
+  useEffect(() => () => resizeObserverRef.current?.disconnect(), []);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(syncIframeHeight);
@@ -1589,27 +1680,34 @@ function EmailPreviewSidebar({
           </div>
 
           <div className="flex min-h-11 items-center justify-between gap-2 px-4">
-            {canEditVariables ? (
-              <Button
-                aria-label="Toggle variables panel"
-                aria-pressed={variablesOpen}
-                className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
-                onClick={() => setVariablesOpen((open) => !open)}
-                size="sm"
-                variant={variablesOpen ? "primary" : "secondary"}
-              >
-                <HugeiconsIcon
-                  aria-hidden="true"
-                  icon={SourceCodeIcon}
-                  primaryColor="currentColor"
-                  size={15}
-                  strokeWidth={1.55}
-                />
-                <span>Variables</span>
-              </Button>
-            ) : (
-              <span />
-            )}
+            <div className="flex items-center gap-2">
+              {canEditVariables ? (
+                <Button
+                  aria-label="Toggle variables panel"
+                  aria-pressed={variablesOpen}
+                  className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
+                  onClick={() => setVariablesOpen((open) => !open)}
+                  size="sm"
+                  variant={variablesOpen ? "primary" : "secondary"}
+                >
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    icon={SourceCodeIcon}
+                    primaryColor="currentColor"
+                    size={15}
+                    strokeWidth={1.55}
+                  />
+                  <span>Variables</span>
+                </Button>
+              ) : null}
+
+              <VersionsDropdown
+                activeId={variant?.id}
+                latestId={latestVariantId}
+                onSelect={onSelectVersion}
+                variants={variants}
+              />
+            </div>
 
             <div className="flex items-center gap-2">
               <SegmentedControl
@@ -1663,10 +1761,10 @@ function EmailPreviewSidebar({
                   "block w-full border-0 bg-white",
                   isResizing && "pointer-events-none",
                 )}
-                onLoad={syncIframeHeight}
+                onLoad={handleIframeLoad}
                 ref={iframeRef}
                 scrolling="no"
-                sandbox=""
+                sandbox="allow-same-origin"
                 srcDoc={srcDoc}
                 style={{ height: iframeHeight }}
                 title="Generated email template preview"
@@ -1679,15 +1777,109 @@ function EmailPreviewSidebar({
   );
 }
 
-function HumanMessage({ children }: { children: string }) {
+function HumanMessage({
+  children,
+  disabled,
+  images,
+  onEdit,
+}: {
+  children: string;
+  disabled?: boolean;
+  images?: string[];
+  onEdit?: (text: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(children);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoGrow = (element: HTMLTextAreaElement) => {
+    element.style.height = "auto";
+    element.style.height = `${element.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    const element = textareaRef.current;
+    if (!editing || !element) return;
+    element.focus();
+    element.setSelectionRange(element.value.length, element.value.length);
+    autoGrow(element);
+  }, [editing]);
+
+  const startEditing = () => {
+    setDraft(children);
+    setEditing(true);
+  };
+
+  const submitEdit = () => {
+    const trimmed = draft.trim();
+    setEditing(false);
+    if (!trimmed || trimmed === children.trim()) return;
+    onEdit?.(trimmed);
+  };
+
+  if (editing) {
+    return (
+      <div className="ml-auto w-full max-w-xl">
+        <textarea
+          className="w-full resize-none rounded-lg bg-madoo-bg px-4 py-2 font-figtree text-sm text-madoo-ink shadow-madoo-border outline-none"
+          onChange={(event) => {
+            setDraft(event.target.value);
+            autoGrow(event.target);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setEditing(false);
+            } else if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              submitEdit();
+            }
+          }}
+          ref={textareaRef}
+          value={draft}
+        />
+        <div className="mt-2 flex justify-end gap-2">
+          <Button onClick={() => setEditing(false)} size="sm" variant="ghost">
+            Cancel
+          </Button>
+          <Button
+            disabled={!draft.trim()}
+            onClick={submitEdit}
+            size="sm"
+            variant="primary"
+          >
+            Send
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="ml-auto">
+      {images && images.length > 0 ? (
+        <div className="mb-1.5 flex max-w-xl flex-wrap justify-end gap-2">
+          {images.map((url) => (
+            <img
+              key={url}
+              src={url}
+              alt="Attached"
+              className="h-20 w-20 rounded-lg object-cover shadow-madoo-border"
+            />
+          ))}
+        </div>
+      ) : null}
+
       <pre className="max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
         {children}
       </pre>
 
       <div className="flex gap-1 my-1.5 mt-3 max-w-min ml-auto">
-        <ActionButton icon={Edit02Icon} label="Edit message" />
+        <ActionButton
+          icon={Edit02Icon}
+          label="Edit message"
+          onClick={disabled ? undefined : startEditing}
+        />
         <CopyActionButton label="Copy message" text={children} />
       </div>
     </div>
@@ -1883,14 +2075,26 @@ export default function EmailTemplateProject() {
 
   const email = emailQuery.data;
   const variant = latestVariant(email);
-  const previewSrcDoc = streamedHtml ?? variant?.compiledHtml ?? null;
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
+  // The version shown in the preview: a picked older variant, else the latest.
+  const activeVariant =
+    email?.variants.find((item) => item.id === selectedVariantId) ?? variant;
+  // Jump back to the newest version whenever a new edit produces one.
+  const latestVariantId = variant?.id;
+  useEffect(() => {
+    setSelectedVariantId(null);
+  }, [latestVariantId]);
+
+  const previewSrcDoc = streamedHtml ?? activeVariant?.compiledHtml ?? null;
   const hasPreview = Boolean(previewSrcDoc);
   const highlightedPreviewSrcDoc = useMemo(
     () => highlightMergeTags(previewSrcDoc),
     [previewSrcDoc],
   );
   const previewSubject =
-    streamedSubject ?? variant?.subject ?? "Untitled email";
+    streamedSubject ?? activeVariant?.subject ?? "Untitled email";
   const storedConversationTitle =
     email?.title && email.title !== variant?.subject ? email.title : null;
   const conversationTitle =
@@ -2050,6 +2254,10 @@ export default function EmailTemplateProject() {
   const submitChatPrompt = useCallback(
     async (input: PromptSubmitInput) => {
       if (isStreaming) return;
+      // Local previews for attached images (display only — not yet persisted).
+      const imageUrls = (input.images ?? []).map((file) =>
+        URL.createObjectURL(file),
+      );
       // Render the user's message immediately — never wait on the backend save.
       setMessages((current) => [
         ...current,
@@ -2059,6 +2267,7 @@ export default function EmailTemplateProject() {
           content: input.prompt,
           seq: Date.now(),
           emailId: currentEmailId ?? undefined,
+          images: imageUrls.length > 0 ? imageUrls : undefined,
         },
       ]);
 
@@ -2092,6 +2301,29 @@ export default function EmailTemplateProject() {
       }
     },
     [currentEmailId, isStreaming, router, startStream, variant?.id],
+  );
+
+  // In-place edit: drop the edited turn and everything after it, then re-run the
+  // corrected instruction so the conversation continues from that point.
+  const editMessage = useCallback(
+    async (message: ChatMessage, text: string) => {
+      if (isStreaming || !currentEmailId) return;
+
+      setMessages((current) => {
+        const index = current.findIndex((item) => item.id === message.id);
+        return index === -1 ? current : current.slice(0, index);
+      });
+
+      const from = new Date(message.seq ?? Date.now()).toISOString();
+      try {
+        await truncateEmailChat(currentEmailId, from);
+      } catch {
+        // Best-effort: even if truncation fails, still re-send the instruction.
+      }
+
+      await submitChatPrompt({ prompt: text });
+    },
+    [currentEmailId, isStreaming, submitChatPrompt],
   );
 
   const updateScrollState = useCallback(() => {
@@ -2332,7 +2564,12 @@ export default function EmailTemplateProject() {
                 {messages.map((message) => {
                   if (message.role === "user") {
                     return (
-                      <HumanMessage key={message.id}>
+                      <HumanMessage
+                        disabled={isStreaming}
+                        key={message.id}
+                        images={message.images}
+                        onEdit={(text) => void editMessage(message, text)}
+                      >
                         {message.content}
                       </HumanMessage>
                     );
@@ -2414,6 +2651,7 @@ export default function EmailTemplateProject() {
             onOpenPreview={() => setPreviewOverlayOpen(true)}
             onOpenPricing={() => setPricingOpen(true)}
             onOpenTesting={() => setTestingModalOpen(true)}
+            onSelectVersion={setSelectedVariantId}
             onToggleExpanded={togglePreviewExpanded}
             open={sidebarOpen}
             setMode={setPreviewMode}
@@ -2422,6 +2660,7 @@ export default function EmailTemplateProject() {
             setWidth={updatePreviewWidth}
             subject={previewSubject}
             theme={templateTheme}
+            variant={activeVariant}
             width={previewWidth}
           />
         ) : null}

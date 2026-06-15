@@ -41,7 +41,9 @@ async function main() {
 
   for (const v of variants) {
     try {
-      const buffer = await screenshot.screenshotHtml(v.compiledHtml);
+      const buffer = await screenshot.screenshotHtml(v.compiledHtml, {
+        highlightVariables: true,
+      });
       const url = await s3.uploadBuffer(buffer, "image/png", "email-previews");
       await prisma.emailVariant.update({
         where: { id: v.id },

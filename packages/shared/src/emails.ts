@@ -280,6 +280,22 @@ export const EditEmailSchema = z.object({
 
 export type EditEmailInput = z.infer<typeof EditEmailSchema>;
 
+/** Response after uploading an image for an image-role variable. */
+export const EmailImageUploadResponseSchema = z.object({
+  url: z.string().url(),
+});
+
+export type EmailImageUploadResponse = z.infer<
+  typeof EmailImageUploadResponseSchema
+>;
+
+/** Delete chat messages from `from` (inclusive) onward — used to edit a turn. */
+export const TruncateEmailChatSchema = z.object({
+  from: z.string().datetime(),
+});
+
+export type TruncateEmailChatInput = z.infer<typeof TruncateEmailChatSchema>;
+
 export const UpdateEmailVariantVariableSchemaSchema = z.object({
   variableSchema: VariableSchemaRootSchema,
 });

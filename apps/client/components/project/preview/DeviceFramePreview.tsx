@@ -56,7 +56,7 @@ export function DeviceFramePreview({
         </div>
       ) : null}
 
-      <div className="madoo-preview-scrollbar flex min-h-0 flex-1 justify-center overflow-auto">
+      <div className="madoo-preview-scrollbar flex min-h-0 flex-1 justify-center">
         {device === "desktop" ? (
           <div className="flex h-full w-full max-w-[1180px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgb(0_0_0/0.45)]">
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-black/5 bg-[#f3f4f6] px-4">

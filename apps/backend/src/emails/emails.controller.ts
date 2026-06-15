@@ -8,9 +8,12 @@ import {
   Post,
   Req,
   Sse,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
 import type { MessageEvent } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { Observable } from "rxjs";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -25,6 +28,7 @@ import {
   CreateEmailSchema,
   EditEmailSchema,
   RenameEmailSchema,
+  TruncateEmailChatSchema,
   TransferEmailSchema,
   UpdateEmailShareSchema,
   UpdateEmailVariantVariableSchemaSchema,
@@ -79,6 +83,28 @@ export class EmailsController {
     @Param("id") id: string,
   ) {
     return this.emails.listChatMessages(id, req.workspace.id, user.sub);
+  }
+
+  @Post(":id/images")
+  @UseInterceptors(FileInterceptor("file"))
+  uploadImage(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    return this.emails.uploadImage(id, req.workspace.id, user.sub, file);
+  }
+
+  @Post(":id/chat/truncate")
+  truncateChat(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const dto = TruncateEmailChatSchema.parse(body);
+    return this.emails.truncateChatMessages(id, req.workspace.id, user.sub, dto);
   }
 
   @Delete(":id")
