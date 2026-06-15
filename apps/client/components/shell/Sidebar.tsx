@@ -316,9 +316,12 @@ export function Sidebar() {
     : usageLimit === -1
       ? "Unlimited"
       : `${creditsLeft ?? 0} left`;
-  const currentPlanName = billingOverview
-    ? PLAN_DISPLAY_NAMES[billingOverview.subscription.plan]
-    : "Free";
+  const currentPlan = billingOverview?.subscription.plan ?? "FREE";
+  // No free tier — the entry plan is a 7-day trial.
+  const planLabel =
+    currentPlan === "FREE"
+      ? "Trial"
+      : `${PLAN_DISPLAY_NAMES[currentPlan]} plan`;
 
   const switchWorkspaceMutation = useMutation({
     mutationFn: setActiveWorkspace,
@@ -496,7 +499,7 @@ export function Sidebar() {
           </Button>
         </DropdownTrigger>
 
-        <DropdownContent className="grid! w-80 gap-2 p-2!">
+        <DropdownContent className="w-80 max-w-[calc(100vw-1rem)] gap-2 overflow-hidden p-2!">
           <div className="flex items-center gap-2.5 p-1">
             <Avatar
               name={activeWorkspaceName}
@@ -504,12 +507,12 @@ export function Sidebar() {
               size="sm"
             />
             <div className="min-w-0">
-              <span className="text-(length:--font-size-base) font-normal">
+              <span className="block truncate text-(length:--font-size-base) font-normal">
                 {activeWorkspaceName}
               </span>
               {user ? (
                 <span className="block truncate text-(length:--font-size-sm) text-madoo-ink-muted">
-                  {currentPlanName} plan
+                  {planLabel}
                 </span>
               ) : null}
             </div>
@@ -734,18 +737,35 @@ export function Sidebar() {
           </DropdownContent>
         </Dropdown>
 
-        <Button
-          aria-label="Open inbox menu"
-          leftIcon={<AppIcon icon={InboxIcon} size={15} />}
-          rightIcon={
-            !collapsed ? (
-              <AppIcon icon={ArrowDown01Icon} size={12} />
-            ) : undefined
-          }
-          size="sm"
-          variant="ghost"
-          className="w-max"
-        />
+        <Dropdown>
+          <DropdownTrigger asChild>
+            <Button
+              aria-label="Open updates menu"
+              leftIcon={<AppIcon icon={InboxIcon} size={15} />}
+              rightIcon={
+                !collapsed ? (
+                  <AppIcon icon={ArrowDown01Icon} size={12} />
+                ) : undefined
+              }
+              size="sm"
+              variant="ghost"
+              className="w-max"
+            />
+          </DropdownTrigger>
+          <DropdownContent side="right" align="end" className="w-64 p-0!">
+            <div className="grid justify-items-center gap-1.5 px-4 py-6 text-center">
+              <span className="grid size-9 place-items-center rounded-full bg-madoo-surface-2 text-madoo-ink-muted">
+                <AppIcon icon={InboxIcon} size={16} />
+              </span>
+              <span className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
+                What's new
+              </span>
+              <span className="text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
+                Product news and updates will show up here.
+              </span>
+            </div>
+          </DropdownContent>
+        </Dropdown>
       </div>
       <CreateWorkspaceModal
         open={createWorkspaceOpen}
