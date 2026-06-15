@@ -258,11 +258,15 @@
 }
 
 .madoo-hero-float-email {
-  animation: madoo-hero-float-email 8s ease-in-out infinite;
+  animation: madoo-hero-float-email 7.5s ease-in-out infinite;
+  transform-origin: 55% 55%;
+  will-change: transform;
 }
 
 .madoo-hero-float-browser {
-  animation: madoo-hero-float-browser 9s ease-in-out infinite;
+  animation: madoo-hero-float-browser 8.5s ease-in-out -1.2s infinite;
+  transform-origin: 45% 55%;
+  will-change: transform;
 }
 
 .madoo-prompt-textarea::-webkit-scrollbar {
@@ -361,24 +365,34 @@
 }
 
 @keyframes madoo-hero-float-email {
-  0%,
-  100% {
+  0% {
     transform: translate3d(0, 0, 0) rotate(-9deg);
   }
 
-  50% {
-    transform: translate3d(0.5rem, -0.75rem, 0) rotate(-7deg);
+  35% {
+    transform: translate3d(0.85rem, -1rem, 0) rotate(-7.5deg);
+  }
+
+  70% {
+    transform: translate3d(-0.35rem, 0.45rem, 0) rotate(-10deg);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-9deg);
   }
 }
 
 @keyframes madoo-hero-float-browser {
-  0%,
-  100% {
+  0% {
     transform: translate3d(0, 0, 0) rotate(6deg);
   }
 
   50% {
-    transform: translate3d(-0.6rem, 0.85rem, 0) rotate(4deg);
+    transform: translate3d(-1rem, 0.8rem, 0) rotate(4.25deg);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) rotate(6deg);
   }
 }
 
