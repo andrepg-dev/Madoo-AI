@@ -451,9 +451,12 @@ export const CommunityTemplateDtoSchema = z.object({
   category: z.string().nullable(),
   previewUrl: z.string().nullable(),
   variableSchema: VariableSchemaRootSchema,
+  viewCount: z.number(),
   useCount: z.number(),
   authorName: z.string().nullable(),
   starred: z.boolean().default(false),
+  /** True when the requesting user authored this template (can make it private). */
+  owned: z.boolean().default(false),
   createdAt: z.string(),
 });
 

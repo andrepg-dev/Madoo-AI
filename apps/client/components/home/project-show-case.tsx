@@ -8,6 +8,7 @@ import {
 import {
   fetchCommunityTemplate,
   fetchCommunityTemplates,
+  makeCommunityTemplatePrivate,
   setCommunityTemplateStarred,
   shareEmailToCommunity,
   useCommunityTemplate,
@@ -128,6 +129,8 @@ export function ProjectShowCase() {
   const [selectedTemplate, setSelectedTemplate] =
     useState<SeedTemplateDto | null>(null);
   const [shareTarget, setShareTarget] = useState<EmailDto | null>(null);
+  const [privateTarget, setPrivateTarget] =
+    useState<CommunityTemplateDto | null>(null);
   const [selectedCommunityTemplateId, setSelectedCommunityTemplateId] =
     useState<string | null>(null);
 
@@ -284,6 +287,25 @@ export function ProjectShowCase() {
     },
   });
 
+  const makePrivateMutation = useMutation({
+    mutationFn: (template: CommunityTemplateDto) =>
+      makeCommunityTemplatePrivate(template.id),
+    onSuccess: async () => {
+      setPrivateTarget(null);
+      await queryClient.invalidateQueries({
+        queryKey: ["community-templates"],
+      });
+      toast({ tone: "success", title: "Template made private" });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Could not make private",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
   const useCommunityMutation = useMutation({
     mutationFn: ({
       id,
@@ -366,7 +388,6 @@ export function ProjectShowCase() {
             {activeProjectTab === "projects"
               ? recentEmails.map((email) => (
                   <TemplateCard
-                    avatarLabel={getEmailTitle(email)}
                     badge={
                       email.status === "GENERATING" ? "Generating" : undefined
                     }
@@ -399,7 +420,6 @@ export function ProjectShowCase() {
             {activeProjectTab === "templates"
               ? seedTemplates.map((template) => (
                   <TemplateCard
-                    avatarLabel="Madoo"
                     badge={template.category ?? undefined}
                     key={template.slug}
                     onClick={() => setSelectedTemplate(template)}
@@ -412,9 +432,16 @@ export function ProjectShowCase() {
             {activeProjectTab === "community"
               ? communityTemplates.map((template) => (
                   <TemplateCard
-                    avatarLabel={template.authorName ?? template.name}
                     badge={template.category ?? undefined}
                     key={template.id}
+                    menu={
+                      template.owned ? (
+                        <CommunityCardMenu
+                          onMakePrivate={() => setPrivateTarget(template)}
+                          title={template.name}
+                        />
+                      ) : undefined
+                    }
                     onClick={() => setSelectedCommunityTemplateId(template.id)}
                     onToggleStar={() =>
                       communityStarMutation.mutate({
@@ -529,6 +556,17 @@ export function ProjectShowCase() {
         }
         open={Boolean(selectedCommunityTemplateId)}
       />
+
+      <MakePrivateModal
+        isPending={makePrivateMutation.isPending}
+        onClose={() => {
+          if (!makePrivateMutation.isPending) setPrivateTarget(null);
+        }}
+        onConfirm={() =>
+          privateTarget ? makePrivateMutation.mutate(privateTarget) : undefined
+        }
+        template={privateTarget}
+      />
     </div>
   );
 }
@@ -569,6 +607,92 @@ function EmailCardMenu({
         </DropdownItem>
       </DropdownContent>
     </Dropdown>
+  );
+}
+
+function CommunityCardMenu({
+  onMakePrivate,
+  title,
+}: {
+  onMakePrivate: () => void;
+  title: string;
+}) {
+  return (
+    <Dropdown>
+      <DropdownTrigger asChild>
+        <Button
+          aria-label={`Open actions for ${title}`}
+          className="min-h-7 min-w-7 shrink-0 rounded-md px-0!"
+          size="sm"
+          variant="ghost"
+        >
+          <Icon name="moreHorizontal" size={14} />
+        </Button>
+      </DropdownTrigger>
+      <DropdownContent
+        align="end"
+        className="w-52 gap-0.5 overflow-hidden p-1!"
+      >
+        <DropdownItem
+          className={compactMenuItemClass}
+          onSelect={onMakePrivate}
+        >
+          <span className="flex items-center gap-2.5">
+            <Icon name="lock" size={14} />
+            Make private
+          </span>
+        </DropdownItem>
+      </DropdownContent>
+    </Dropdown>
+  );
+}
+
+function MakePrivateModal({
+  isPending,
+  onClose,
+  onConfirm,
+  template,
+}: {
+  isPending: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  template: CommunityTemplateDto | null;
+}) {
+  return (
+    <Modal
+      footer={
+        <>
+          <Button
+            disabled={isPending}
+            onClick={onClose}
+            size="sm"
+            variant="ghost"
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={isPending}
+            onClick={onConfirm}
+            size="sm"
+            variant="primary"
+          >
+            {isPending ? "Making private" : "Make private"}
+          </Button>
+        </>
+      }
+      onClose={onClose}
+      open={Boolean(template)}
+      size="sm"
+      title="Make template private"
+    >
+      <p className="m-0 text-sm leading-6 text-madoo-ink-muted">
+        This removes{" "}
+        <span className="font-medium text-madoo-ink">{template?.name}</span> from
+        the public community gallery. Others will no longer be able to find,
+        star, or use it, and its stars will be lost. Your original email stays in
+        your workspace, and you can share it again later.
+      </p>
+    </Modal>
   );
 }
 
@@ -782,6 +906,10 @@ function CommunityTemplateUseModal({
                 </span>
               ) : null}
             </div>
+            <p className="m-0 mb-3 text-[11px] font-medium text-madoo-ink-muted">
+              {detail.viewCount} {detail.viewCount === 1 ? "view" : "views"} ·{" "}
+              {detail.useCount} {detail.useCount === 1 ? "use" : "uses"}
+            </p>
             <div className="madoo-preview-scrollbar max-h-120 space-y-3 overflow-y-auto pr-1">
               {draft.variables.length ? (
                 draft.variables.map((variable) => {

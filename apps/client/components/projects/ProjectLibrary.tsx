@@ -158,7 +158,7 @@ function ProjectPreview({ email }: { email: EmailDto }) {
   const previewUrl = latestVariant(email)?.previewUrl;
 
   return (
-    <div className="relative flex aspect-4/3 w-full items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]">
+    <div className="relative flex aspect-4/5 min-h-52 w-full items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]">
       {previewUrl ? (
         <img
           alt=""
@@ -234,11 +234,6 @@ function ProjectGridCard({
           onToggleStar={onToggleStar}
           onTransfer={onTransfer}
         />
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-madoo-ink-faint">
-          {email.templateSavedAt ? "Template" : "Email"}
-        </span>
       </div>
     </article>
   );

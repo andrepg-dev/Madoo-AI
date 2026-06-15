@@ -2,7 +2,6 @@ import { Icon, cx } from "@madoo/design-system";
 import type { ReactNode } from "react";
 
 type TemplateCardProps = {
-  avatarLabel?: string;
   badge?: string;
   disabled?: boolean;
   menu?: ReactNode;
@@ -15,7 +14,6 @@ type TemplateCardProps = {
 };
 
 export default function TemplateCard({
-  avatarLabel,
   badge,
   disabled,
   menu,
@@ -26,7 +24,6 @@ export default function TemplateCard({
   subtitle,
   title,
 }: TemplateCardProps) {
-  const initials = (avatarLabel ?? title).trim().charAt(0).toUpperCase() || "M";
   const hasActions = Boolean(onToggleStar || menu);
 
   return (
@@ -65,55 +62,50 @@ export default function TemplateCard({
         </div>
       </button>
 
-      <div className="mt-2.5 grid grid-cols-[28px_minmax(0,1fr)] items-start gap-1.5">
-        <span className="inline-flex size-6 items-center justify-center rounded-full bg-[#7224aa] text-sm text-white">
-          {initials}
-        </span>
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <button
-              aria-label={title}
-              className="min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-none"
-              disabled={disabled}
-              onClick={onClick}
-              type="button"
+      <div className="mt-2.5 min-w-0">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <button
+            aria-label={title}
+            className="min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-none"
+            disabled={disabled}
+            onClick={onClick}
+            type="button"
+          >
+            <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium leading-[1.2] text-[#101114]">
+              {title}
+            </h3>
+          </button>
+          {hasActions ? (
+            <div
+              className={cx(
+                "flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
+                starred && "opacity-100",
+              )}
             >
-              <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium leading-[1.2] text-[#101114]">
-                {title}
-              </h3>
-            </button>
-            {hasActions ? (
-              <div
-                className={cx(
-                  "flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
-                  starred && "opacity-100",
-                )}
-              >
-                {onToggleStar ? (
-                  <button
-                    aria-label={starred ? `Unstar ${title}` : `Star ${title}`}
-                    aria-pressed={starred}
-                    className={cx(
-                      "grid size-7 cursor-pointer place-items-center rounded-md border-0 bg-white/90 p-0 text-madoo-ink-muted shadow-madoo-border transition-[background,color] hover:bg-white hover:text-amber-500 focus-visible:outline-none focus-visible:shadow-[var(--shadow-border-accent)]",
-                      starred && "text-amber-500 [&_svg]:fill-current",
-                    )}
-                    disabled={disabled}
-                    onClick={onToggleStar}
-                    type="button"
-                  >
-                    <Icon name="star" size={13} />
-                  </button>
-                ) : null}
-                {menu}
-              </div>
-            ) : null}
-          </div>
-          {subtitle ? (
-            <p className="m-0 mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-none text-madoo-ink-muted">
-              {subtitle}
-            </p>
+              {onToggleStar ? (
+                <button
+                  aria-label={starred ? `Unstar ${title}` : `Star ${title}`}
+                  aria-pressed={starred}
+                  className={cx(
+                    "grid size-7 cursor-pointer place-items-center rounded-md border-0 bg-white/90 p-0 text-madoo-ink-muted shadow-madoo-border transition-[background,color] hover:bg-white hover:text-amber-500 focus-visible:outline-none focus-visible:shadow-[var(--shadow-border-accent)]",
+                    starred && "text-amber-500 [&_svg]:fill-current",
+                  )}
+                  disabled={disabled}
+                  onClick={onToggleStar}
+                  type="button"
+                >
+                  <Icon name="star" size={13} />
+                </button>
+              ) : null}
+              {menu}
+            </div>
           ) : null}
         </div>
+        {subtitle ? (
+          <p className="m-0 mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-none text-madoo-ink-muted">
+            {subtitle}
+          </p>
+        ) : null}
       </div>
     </article>
   );

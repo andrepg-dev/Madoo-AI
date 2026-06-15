@@ -21,24 +21,10 @@ import {
   Dropdown,
   DropdownContent,
   DropdownItem,
-  Select,
 } from "@madoo/design-system";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-
-const promptOptions = [
-  {
-    label: "Tone",
-    options: ["Friendly", "Professional", "Bold", "Luxury"],
-    menuWidth: 160,
-  },
-  {
-    label: "Length",
-    options: ["Short", "Medium", "Long"],
-    menuWidth: 144,
-  },
-] as const;
 
 const placeholders = [
   "draft an email template for a product launch with a clear CTA...",
@@ -125,7 +111,6 @@ type ClientPromptBoxProps = {
   };
   disabled?: boolean;
   onSubmit?: (input: PromptSubmitInput) => void | Promise<void>;
-  showOptions?: boolean;
   variant?: "home" | "chat";
 };
 
@@ -148,7 +133,6 @@ export function ClientPromptBox({
   classNames,
   disabled = false,
   onSubmit,
-  showOptions = true,
   variant = "home",
 }: ClientPromptBoxProps) {
   const router = useRouter();
@@ -159,9 +143,6 @@ export function ClientPromptBox({
   const workspaceId = useClientStore((state) => state.workspaceId);
   const [prompt, setPrompt] = useState("");
   const [creditsAlertDismissed, setCreditsAlertDismissed] = useState(false);
-  const [promptOptionValues, setPromptOptionValues] = useState<
-    Record<string, string>
-  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [images, setImages] = useState<PromptImage[]>([]);
@@ -243,14 +224,6 @@ export function ClientPromptBox({
     const params = new URLSearchParams({ prompt: trimmedPrompt });
 
     if (images.length > 0) input.images = images.map((image) => image.file);
-
-    for (const [key, value] of Object.entries(promptOptionValues)) {
-      const normalizedKey = key.toLowerCase() as "tone" | "length";
-      if (value) {
-        params.set(normalizedKey, value);
-        input[normalizedKey] = value;
-      }
-    }
 
     if (!user) {
       window.location.assign(
@@ -537,29 +510,6 @@ export function ClientPromptBox({
                 </DropdownItem>
               </DropdownContent>
             </Dropdown>
-
-            {showOptions ? (
-              <div className="flex items-center gap-1.5">
-                {promptOptions.map((option) => (
-                  <Select
-                    key={option.label}
-                    value={promptOptionValues[option.label] ?? ""}
-                    options={option.options}
-                    placeholder={option.label}
-                    menuTitle={option.label}
-                    menuWidth={option.menuWidth}
-                    size="sm"
-                    variant="ghost"
-                    onChange={(value) =>
-                      setPromptOptionValues((current) => ({
-                        ...current,
-                        [option.label]: value,
-                      }))
-                    }
-                  />
-                ))}
-              </div>
-            ) : null}
           </div>
 
           <div className="flex items-center gap-2">

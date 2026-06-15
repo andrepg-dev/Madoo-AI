@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -65,5 +67,11 @@ export class CommunityTemplatesController {
   ) {
     const dto = SetCommunityTemplateStarredSchema.parse(body);
     return this.communityTemplates.setStarred(id, user.sub, dto);
+  }
+
+  @Delete(":id")
+  @HttpCode(204)
+  makePrivate(@CurrentUser() user: { sub: string }, @Param("id") id: string) {
+    return this.communityTemplates.makePrivate(id, user.sub);
   }
 }

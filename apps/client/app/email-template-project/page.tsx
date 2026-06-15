@@ -2673,7 +2673,6 @@ export default function EmailTemplateProject() {
               }}
               disabled={isStreaming}
               onSubmit={submitChatPrompt}
-              showOptions={false}
               variant="chat"
             />
           </div>
