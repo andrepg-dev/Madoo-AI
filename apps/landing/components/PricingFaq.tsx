@@ -7,7 +7,7 @@ const faqs = [
   {
     question: "What's Madoo AI and how does it work?",
     answer:
-      "Madoo AI is an AI email design company. It's built for marketers and agencies that don't want to keep using drag-and-drop tools and want to create professional email templates with pre-trained, specialized AI tools.",
+      "Madoo AI is an AI email design company. It's built for marketers and agencies that don't want to keep using drag-and-drop tools and want to create professional email templates with professional specialized AI tools.",
   },
   {
     question: "Can I change my plan?",

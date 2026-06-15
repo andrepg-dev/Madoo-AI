@@ -232,6 +232,12 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
 
   const groupedItems = useMemo(() => groupItems(filteredItems), [filteredItems]);
   const activeItem = filteredItems[activeIndex];
+  // Only recent-project rows carry a rendered template screenshot in imageSrc;
+  // provider rows use a favicon, so don't preview those.
+  const previewItem =
+    activeItem?.group === "Recent projects" && activeItem.imageSrc
+      ? activeItem
+      : undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -262,6 +268,8 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
 
   const openItem = (item: SearchItem | undefined) => {
     if (!item) return;
+    // Providers aren't navigable yet — selecting one is a no-op.
+    if (item.group === "Providers") return;
     router.push(item.href);
     onClose();
   };
@@ -307,11 +315,22 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
       <div
         aria-label="Search"
         aria-modal="true"
-        className="flex h-[min(500px,calc(100dvh-110px))] w-[min(720px,calc(100vw-32px))] origin-center flex-col overflow-hidden rounded-[20px] bg-madoo-surface text-sm text-madoo-ink shadow-[var(--shadow-border-rule-hover),0_18px_52px_rgb(var(--ink-shadow-rgb)/0.16)] will-change-[opacity,transform] data-[state=closed]:animate-madoo-modal-out data-[state=open]:animate-madoo-modal-in max-sm:h-[min(520px,calc(100dvh-24px))] max-sm:w-full max-sm:rounded-[18px] motion-reduce:animate-none"
+        className={cx(
+          "flex h-[min(540px,calc(100dvh-110px))] origin-center flex-row overflow-hidden rounded-[20px] bg-madoo-surface text-sm text-madoo-ink shadow-[var(--shadow-border-rule-hover),0_18px_52px_rgb(var(--ink-shadow-rgb)/0.16)] transition-[width] duration-200 ease-out will-change-[opacity,transform] data-[state=closed]:animate-madoo-modal-out data-[state=open]:animate-madoo-modal-in max-sm:h-[min(520px,calc(100dvh-24px))] max-sm:w-full max-sm:rounded-[18px] motion-reduce:animate-none",
+          previewItem
+            ? "w-[min(980px,calc(100vw-32px))]"
+            : "w-[min(720px,calc(100vw-32px))]",
+        )}
         data-state={open ? "open" : "closed"}
         onClick={stopPropagation}
         role="dialog"
       >
+        <div
+          className={cx(
+            "flex h-full w-full min-w-0 flex-col",
+            previewItem ? "sm:w-[440px] sm:shrink-0" : "sm:w-full",
+          )}
+        >
         <div className="flex h-10.5 shrink-0 animate-madoo-modal-content-in items-center gap-2 px-4 max-sm:h-10.5 max-sm:px-3 motion-reduce:animate-none">
           <span className="text-madoo-ink-soft">
             <CommandIcon icon={Search01Icon} size={14} />
@@ -441,6 +460,19 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
             Open
           </Button>
         </div>
+        </div>
+
+        {previewItem?.imageSrc ? (
+          <aside className="hidden min-w-0 flex-1 flex-col border-l border-[rgb(var(--rule-rgb)/0.12)] bg-[rgb(var(--rule-rgb)/0.04)] sm:flex">
+            <div className="madoo-command-scrollbar min-h-0 flex-1 overflow-y-auto p-5">
+              <img
+                alt={previewItem.label}
+                className="w-full rounded-lg bg-white object-contain object-top shadow-madoo-border"
+                src={previewItem.imageSrc}
+              />
+            </div>
+          </aside>
+        ) : null}
       </div>
     </div>
   );

@@ -153,7 +153,8 @@ export function VariablesPanel({
       aria-label="Email variables"
       className="flex h-full w-72 shrink-0 flex-col bg-madoo-bg shadow-[inset_-1px_0_0_rgb(var(--rule-rgb)/0.12)]"
     >
-      <header className="flex items-start justify-between gap-2 px-4 pt-4">
+      <div className="madoo-preview-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4">
+      <header className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-madoo-ink">Variables</h3>
@@ -181,7 +182,7 @@ export function VariablesPanel({
         </Button>
       </header>
 
-      <div className="madoo-preview-scrollbar mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pb-4">
+      <div className="mt-3 space-y-3">
         {variables.length === 0 ? (
           <p className="rounded-lg bg-madoo-surface p-3 text-xs leading-5 text-madoo-ink-muted shadow-madoo-border">
             This email has no editable variables.
@@ -234,6 +235,7 @@ export function VariablesPanel({
             );
           })
         )}
+      </div>
       </div>
     </aside>
   );

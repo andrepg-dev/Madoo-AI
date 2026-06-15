@@ -28,6 +28,7 @@ import {
   CreateEmailSchema,
   EditEmailSchema,
   RenameEmailSchema,
+  SetEmailStarredSchema,
   TruncateEmailChatSchema,
   TransferEmailSchema,
   UpdateEmailShareSchema,
@@ -126,6 +127,17 @@ export class EmailsController {
   ) {
     const dto = RenameEmailSchema.parse(body);
     return this.emails.rename(id, req.workspace.id, user.sub, dto);
+  }
+
+  @Patch(":id/star")
+  setStarred(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const dto = SetEmailStarredSchema.parse(body);
+    return this.emails.setStarred(id, req.workspace.id, user.sub, dto);
   }
 
   @Patch(":id/share")

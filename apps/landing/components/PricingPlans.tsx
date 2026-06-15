@@ -2,115 +2,19 @@
 
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  PRICING_PLANS,
+  getPlanDisplayPrice,
+  getPlanYearlySavings,
+  type PricingBillingInterval,
+  type PricingFeature,
+  type PricingPlan,
+} from "@madoo/shared";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-type BillingInterval = "monthly" | "yearly";
-type PlanTier = "basic" | "medium" | "pro" | "enterprise";
-
-type PricingFeature = {
-  label: string;
-  value?: string;
-  emphasized?: boolean;
-};
-
-type PricingPlan = {
-  tier: PlanTier;
-  name: string;
-  description: string;
-  monthlyPrice: number;
-  cta: string;
-  featured?: boolean;
-  features: PricingFeature[];
-};
-
-const tierPrices: Record<PlanTier, number> = {
-  basic: 20,
-  medium: 45,
-  pro: 95,
-  enterprise: 0,
-};
-
-const plans: PricingPlan[] = [
-  {
-    tier: "basic",
-    name: "Basic",
-    description:
-      "For solo creators building more templates and exports.",
-    monthlyPrice: tierPrices.basic,
-    cta: "Try Basic",
-    features: [
-      { value: "100", label: "monthly credits", emphasized: true },
-      { value: "50", label: "stored templates", emphasized: true },
-      { value: "2", label: "members", emphasized: true },
-      { value: "50", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
-      { label: "Export to any provider of your choice" },
-      { label: "Sharing preview template links" },
-    ],
-  },
-  {
-    tier: "medium",
-    name: "Medium",
-    description: "Amazing for small teams and agencies.",
-    monthlyPrice: tierPrices.medium,
-    cta: "Try Medium",
-    featured: true,
-    features: [
-      { value: "250", label: "monthly credits", emphasized: true },
-      { value: "150", label: "stored templates", emphasized: true },
-      { value: "3", label: "members", emphasized: true },
-      { value: "100", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
-      { label: "Export to any provider of your choice" },
-      { label: "Sharing preview template links" },
-    ],
-  },
-  {
-    tier: "pro",
-    name: "Pro",
-    description: "For agencies that need more storage and volume.",
-    monthlyPrice: tierPrices.pro,
-    cta: "Try Pro",
-    features: [
-      { value: "550", label: "monthly credits", emphasized: true },
-      { value: "300", label: "stored templates", emphasized: true },
-      { value: "5", label: "members", emphasized: true },
-      { value: "300", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
-      { label: "Export to any provider of your choice" },
-      { label: "Sharing preview template links" },
-    ],
-  },
-  // {
-  //   tier: "enterprise",
-  //   name: "Enterprise",
-  //   description: "Built for large agencies needing flexibility, scale and governance",
-  //   monthlyPrice: tierPrices.enterprise,
-  //   cta: "Contact sales",
-  //   features: [
-  //     { label: "Custom monthly credits" },
-  //     { label: "Custom stored templates" },
-  //     { label: "Custom members" },
-  //     { label: "Access to any model" },
-  //     { label: "Export to any provider of your choice" },
-  //     { label: "Sharing preview template links" },
-  //   ],
-  // },
-];
-
-function getDisplayPrice(monthlyPrice: number, billingInterval: BillingInterval) {
-  if (billingInterval === "monthly") {
-    return monthlyPrice;
-  }
-
-  return Math.round(monthlyPrice * 0.8);
-}
-
-function getYearlySavings(monthlyPrice: number) {
-  return (monthlyPrice - getDisplayPrice(monthlyPrice, "yearly")) * 12;
-}
+type BillingInterval = PricingBillingInterval;
 
 function BillingSwitch({
   billingInterval,
@@ -192,24 +96,12 @@ function PriceBlock({
   monthlyPrice,
   billingInterval,
   helper,
-  enterprisePricing,
 }: {
   monthlyPrice: number;
   billingInterval: BillingInterval;
   helper?: string;
-  enterprisePricing?: boolean;
 }) {
-  if (enterprisePricing) {
-    return (
-      <div className="mt- flex flex-col justify-center">
-        <div className="text-xl  leading-none text-madoo-muted my-3.5">
-          Platform fee
-        </div>
-      </div>
-    );
-  }
-
-  const displayPrice = getDisplayPrice(monthlyPrice, billingInterval);
+  const displayPrice = getPlanDisplayPrice(monthlyPrice, billingInterval);
 
   return (
     <div className="mt- flex flex-col justify-center">
@@ -221,7 +113,7 @@ function PriceBlock({
           <span>/ month</span>
           {billingInterval === "yearly" ? (
             <span className="font-medium leading-none text-madoo-accent">
-              Save ${getYearlySavings(monthlyPrice)}
+              Save ${getPlanYearlySavings(monthlyPrice)}
             </span>
           ) : null}
         </span>
@@ -266,7 +158,6 @@ function PlanCard({
       <PriceBlock
         monthlyPrice={plan.monthlyPrice}
         billingInterval={billingInterval}
-        enterprisePricing={plan.tier === "enterprise"}
       />
 
       <Link
@@ -306,9 +197,9 @@ export function PricingPlans() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        {plans.map((plan) => (
+        {PRICING_PLANS.map((plan) => (
           <PlanCard
-            key={plan.tier}
+            key={plan.id}
             plan={plan}
             billingInterval={billingInterval}
           />

@@ -210,6 +210,8 @@ export function DropdownContent({
 export interface DropdownItemProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   onSelect?: () => void;
+  /** Render the child element (e.g. a Next.js <Link>) instead of a <button>. */
+  asChild?: boolean;
 }
 
 export function DropdownItem({
@@ -217,24 +219,49 @@ export function DropdownItem({
   className,
   onClick,
   onSelect,
+  asChild = false,
   ...rest
 }: DropdownItemProps) {
   const { setOpen } = useDropdown();
+
+  const itemClassName = cx(
+    "flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border-0 bg-transparent px-2.5 py-2.25 text-left font-[inherit] text-[14px] leading-[1.2] text-(--ink) transition-[background,color] duration-(--duration-fast) ease-out hover:bg-(--surface-2) focus-visible:bg-(--surface-2) focus-visible:outline-none disabled:cursor-not-allowed disabled:text-(--ink-faint)",
+    className,
+  );
+
+  const handleClick = (event: ReactMouseEvent<HTMLElement>) => {
+    onClick?.(event as ReactMouseEvent<HTMLButtonElement>);
+    if (event.defaultPrevented || rest.disabled) return;
+    onSelect?.();
+    setOpen(false);
+  };
+
+  if (asChild) {
+    const child = Children.only(children);
+    if (!isValidElement(child)) return null;
+
+    const childProps = child.props as {
+      className?: string;
+      onClick?: (event: ReactMouseEvent<HTMLElement>) => void;
+    };
+
+    return cloneElement(child as ReactElement<Record<string, unknown>>, {
+      role: "menuitem",
+      ...rest,
+      className: cx(itemClassName, childProps.className),
+      onClick: (event: ReactMouseEvent<HTMLElement>) => {
+        childProps.onClick?.(event);
+        handleClick(event);
+      },
+    });
+  }
 
   return (
     <button
       type="button"
       role="menuitem"
-      className={cx(
-        "flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border-0 bg-transparent px-2.5 py-2.25 text-left font-[inherit] text-[14px] leading-[1.2] text-(--ink) transition-[background,color] duration-(--duration-fast) ease-out hover:bg-(--surface-2) focus-visible:bg-(--surface-2) focus-visible:outline-none disabled:cursor-not-allowed disabled:text-(--ink-faint)",
-        className,
-      )}
-      onClick={(event) => {
-        onClick?.(event);
-        if (event.defaultPrevented || rest.disabled) return;
-        onSelect?.();
-        setOpen(false);
-      }}
+      className={itemClassName}
+      onClick={handleClick}
       {...rest}
     >
       {children}

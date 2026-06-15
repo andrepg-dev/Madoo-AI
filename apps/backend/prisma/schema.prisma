@@ -172,6 +172,8 @@ model Email {
   visibility EmailVisibility @default(PRIVATE)
   publicId   String?         @unique
 
+  starred Boolean @default(false)
+
   sourcePendingPromptId String? @unique
 
   createdAt DateTime @default(now())

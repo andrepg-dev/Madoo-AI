@@ -18,94 +18,18 @@ import {
   useToast,
 } from "@madoo/design-system";
 import {
-  PLAN_DISPLAY_NAMES,
-  PLAN_LIMITS,
-  PLAN_PRICES,
-  PLAN_PRICES_ANNUAL,
+  PRICING_PLANS,
+  getPlanDisplayPrice,
+  getPlanYearlySavings,
   type BillingInterval,
   type Plan,
+  type PricingFeature,
+  type PricingPlan,
 } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 
 type PaidPlan = Exclude<Plan, "FREE">;
-
-type PricingFeature = {
-  label: string;
-  value?: string;
-  emphasized?: boolean;
-};
-
-type PricingPlan = {
-  tier: Plan;
-  description: string;
-  featured?: boolean;
-  features: PricingFeature[];
-};
-
-const plans: PricingPlan[] = [
-  {
-    tier: "FREE",
-    description: "For trying Madoo with a single workspace.",
-    features: [
-      {
-        value: String(PLAN_LIMITS.FREE.aiGenerations),
-        label: "monthly AI credits",
-        emphasized: true,
-      },
-      {
-        value: String(PLAN_LIMITS.FREE.workspaces),
-        label: "workspace",
-        emphasized: true,
-      },
-      { label: "Create email templates" },
-      { label: "Save generated projects" },
-    ],
-  },
-  {
-    tier: "STARTER",
-    description: "For solo creators building more templates.",
-    featured: true,
-    features: [
-      {
-        value: String(PLAN_LIMITS.STARTER.aiGenerations),
-        label: "monthly AI credits",
-        emphasized: true,
-      },
-      {
-        value: String(PLAN_LIMITS.STARTER.workspaces),
-        label: "workspaces",
-        emphasized: true,
-      },
-      { label: "Template generation and editing" },
-      { label: "Provider-ready exports" },
-    ],
-  },
-  {
-    tier: "GROWTH",
-    description: "For teams and agencies that need higher volume.",
-    features: [
-      {
-        value:
-          PLAN_LIMITS.GROWTH.aiGenerations === -1
-            ? "Unlimited"
-            : String(PLAN_LIMITS.GROWTH.aiGenerations),
-        label: "AI credits",
-        emphasized: true,
-      },
-      {
-        value:
-          PLAN_LIMITS.GROWTH.workspaces === -1
-            ? "Unlimited"
-            : String(PLAN_LIMITS.GROWTH.workspaces),
-        label: "workspaces",
-        emphasized: true,
-      },
-      { label: "Team-friendly template workflow" },
-      { label: "Provider-ready exports" },
-    ],
-  },
-];
 
 const pricingFaqs = [
   {
@@ -142,22 +66,11 @@ function AppIcon({ icon, size = 16 }: { icon: IconSvgElement; size?: number }) {
   );
 }
 
-function getDisplayPrice(plan: Plan, billingInterval: BillingInterval) {
-  return billingInterval === "ANNUAL"
-    ? PLAN_PRICES_ANNUAL[plan]
-    : PLAN_PRICES[plan];
-}
-
-function getYearlySavings(plan: Plan) {
-  return (PLAN_PRICES[plan] - PLAN_PRICES_ANNUAL[plan]) * 12;
-}
-
-function getPlanCta(plan: PricingPlan, currentPlan: Plan) {
-  if (plan.tier === currentPlan) return "Current plan";
-  if (plan.tier === "FREE") return "Included";
+function getPlanCta(plan: PricingPlan, currentPlan: Plan, isCurrent: boolean) {
+  if (isCurrent) return "Current plan";
   return currentPlan === "FREE"
-    ? `Upgrade to ${PLAN_DISPLAY_NAMES[plan.tier]}`
-    : `Switch to ${PLAN_DISPLAY_NAMES[plan.tier]}`;
+    ? `Upgrade to ${plan.name}`
+    : `Switch to ${plan.name}`;
 }
 
 function BillingSwitch({
@@ -256,15 +169,12 @@ function PlanCard({
   onSelect: (plan: PricingPlan) => void;
   onManage: () => void;
 }) {
-  const displayPrice = getDisplayPrice(plan.tier, billingInterval);
-  const isCurrent = plan.tier === currentPlan;
-  const isFree = plan.tier === "FREE";
+  const interval = billingInterval === "ANNUAL" ? "yearly" : "monthly";
+  const displayPrice = getPlanDisplayPrice(plan.monthlyPrice, interval);
+  const isCurrent = plan.checkoutPlan === currentPlan;
   const buttonDisabled =
-    isFree ||
-    (isCurrent && !hasStripeCustomer) ||
-    checkoutPending ||
-    portalPending;
-  const cta = getPlanCta(plan, currentPlan);
+    (isCurrent && !hasStripeCustomer) || checkoutPending || portalPending;
+  const cta = getPlanCta(plan, currentPlan, isCurrent);
 
   return (
     <Card
@@ -277,7 +187,7 @@ function PlanCard({
       <div className="flex min-h-18 items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-xl font-semibold leading-none text-madoo-ink">
-            {PLAN_DISPLAY_NAMES[plan.tier]}
+            {plan.name}
           </h3>
           <p className="mt-2 text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
             {plan.description}
@@ -293,17 +203,15 @@ function PlanCard({
       <div>
         <div className="flex items-end gap-2">
           <span className="text-4xl font-semibold leading-none text-madoo-ink">
-            {displayPrice === 0 ? "Free" : `$${displayPrice}`}
+            ${displayPrice}
           </span>
-          {displayPrice > 0 ? (
-            <span className="pb-1 text-(length:--font-size-sm) text-madoo-ink-muted">
-              / month
-            </span>
-          ) : null}
+          <span className="pb-1 text-(length:--font-size-sm) text-madoo-ink-muted">
+            / month
+          </span>
         </div>
-        {billingInterval === "ANNUAL" && displayPrice > 0 ? (
+        {billingInterval === "ANNUAL" ? (
           <p className="mt-2 text-(length:--font-size-sm) font-medium leading-none text-madoo-accent-deep">
-            Save ${getYearlySavings(plan.tier)} yearly
+            Save ${getPlanYearlySavings(plan.monthlyPrice)} yearly
           </p>
         ) : null}
       </div>
@@ -328,7 +236,7 @@ function PlanCard({
       <ul className="grid gap-2.5 text-(length:--font-size-sm) leading-5 text-madoo-ink-soft">
         {plan.features.map((feature) => (
           <FeatureRow
-            key={`${plan.tier}-${feature.value ?? ""}-${feature.label}`}
+            key={`${plan.id}-${feature.value ?? ""}-${feature.label}`}
           >
             <FeatureText {...feature} />
           </FeatureRow>
@@ -419,10 +327,8 @@ export function PricingDrawer({
       return;
     }
 
-    if (plan.tier === "FREE") return;
-
     checkoutMutation.mutate({
-      plan: plan.tier,
+      plan: plan.checkoutPlan,
       interval: billingInterval,
     });
   };
@@ -488,9 +394,9 @@ export function PricingDrawer({
           </div>
 
           <div className="grid gap-3 lg:grid-cols-3">
-            {plans.map((plan) => (
+            {PRICING_PLANS.map((plan) => (
               <PlanCard
-                key={plan.tier}
+                key={plan.id}
                 plan={plan}
                 billingInterval={billingInterval}
                 currentPlan={currentPlan}

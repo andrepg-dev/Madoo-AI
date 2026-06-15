@@ -293,6 +293,9 @@ importers:
       '@madoo/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@madoo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       next:
         specifier: ^15.1.0
         version: 15.5.15(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

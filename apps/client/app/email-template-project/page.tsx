@@ -4,6 +4,7 @@ import {
   createEmail,
   fetchEmail,
   fetchEmailChat,
+  setEmailStarred,
   truncateEmailChat,
   updateEmailShare,
 } from "@/actions/emails";
@@ -93,6 +94,7 @@ import type {
 } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
@@ -205,12 +207,41 @@ function formatCreditReset(value: string | undefined): string {
   }
 }
 
-function ConversationTitleDropdown({ title }: { title: string }) {
-  const router = useRouter();
+function ConversationTitleDropdown({
+  title,
+  emailId,
+  starred,
+}: {
+  title: string;
+  emailId: string | null;
+  starred: boolean;
+}) {
   const { toast } = useToast();
   const user = useAuthStore((state) => state.user);
   const workspaceId = useClientStore((state) => state.workspaceId);
-  const [starred, setStarred] = useState(false);
+  const queryClient = useQueryClient();
+
+  const starMutation = useMutation({
+    mutationFn: (next: boolean) => setEmailStarred(emailId!, next),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["email", updated.id], updated);
+      queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
+        current?.map((item) => (item.id === updated.id ? updated : item)) ??
+        current,
+      );
+      toast({
+        tone: "success",
+        title: updated.starred ? "Project starred" : "Project unstarred",
+      });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Could not update star",
+        body: error instanceof Error ? error.message : "Try again.",
+      });
+    },
+  });
 
   const { data: billingOverview, isLoading: billingLoading } = useQuery({
     queryKey: ["billing-overview", workspaceId],
@@ -260,33 +291,34 @@ function ConversationTitleDropdown({ title }: { title: string }) {
       </DropdownTrigger>
       <DropdownContent align="start" className="w-72 gap-1 p-1.5!">
         <DropdownItem
+          asChild
           className="justify-start! px-2! py-1.5! text-[13px]!"
-          onSelect={() => router.push("/dashboard/projects")}
         >
-          <span className="flex items-center gap-2.5">
-            <HeaderMenuIcon icon={ArrowLeft01Icon} />
-            Back to dashboard
-          </span>
+          <Link href="/dashboard/projects">
+            <span className="flex items-center gap-2.5">
+              <HeaderMenuIcon icon={ArrowLeft01Icon} />
+              Back to dashboard
+            </span>
+          </Link>
         </DropdownItem>
         <DropdownDivider />
 
-        <DropdownItem
-          className="justify-start! gap-2 px-2! py-1.5!"
-          onSelect={() => router.push("/settings")}
-        >
-          <Avatar
-            name={user?.name ?? user?.email ?? "User"}
-            src={user?.avatarUrl ?? undefined}
-            size="sm"
-          />
-          <span className="grid min-w-0 flex-1 gap-0.5 text-left">
-            <span className="truncate font-medium">
-              {user?.name ?? "User profile"}
+        <DropdownItem asChild className="justify-start! gap-2 px-2! py-1.5!">
+          <Link href="/settings">
+            <Avatar
+              name={user?.name ?? user?.email ?? "User"}
+              src={user?.avatarUrl ?? undefined}
+              size="sm"
+            />
+            <span className="grid min-w-0 flex-1 gap-0.5 text-left">
+              <span className="truncate font-medium">
+                {user?.name ?? "User profile"}
+              </span>
+              <span className="truncate text-xs text-madoo-ink-muted">
+                {user?.email ?? "Manage your profile"}
+              </span>
             </span>
-            <span className="truncate text-xs text-madoo-ink-muted">
-              {user?.email ?? "Manage your profile"}
-            </span>
-          </span>
+          </Link>
         </DropdownItem>
 
         <Card surface="secondary" className="grid gap-1.5 p-2!">
@@ -307,13 +339,15 @@ function ConversationTitleDropdown({ title }: { title: string }) {
         <DropdownDivider />
 
         <DropdownItem
+          asChild
           className="justify-start! px-2! py-1! text-[13px]!"
-          onSelect={() => router.push("/settings")}
         >
-          <span className="flex items-center gap-2.5">
-            <HeaderMenuIcon icon={Settings01Icon} />
-            Settings
-          </span>
+          <Link href="/settings">
+            <span className="flex items-center gap-2.5">
+              <HeaderMenuIcon icon={Settings01Icon} />
+              Settings
+            </span>
+          </Link>
         </DropdownItem>
         <DropdownItem
           className="justify-start! px-2! py-1! text-[13px]!"
@@ -328,12 +362,10 @@ function ConversationTitleDropdown({ title }: { title: string }) {
         </DropdownItem>
         <DropdownItem
           className="justify-start! px-2! py-1! text-[13px]!"
+          disabled={!emailId || starMutation.isPending}
           onSelect={() => {
-            setStarred((value) => !value);
-            toast({
-              tone: "success",
-              title: starred ? "Project unstarred" : "Project starred",
-            });
+            if (!emailId) return;
+            starMutation.mutate(!starred);
           }}
         >
           <span className="flex items-center gap-2.5">
@@ -342,13 +374,15 @@ function ConversationTitleDropdown({ title }: { title: string }) {
           </span>
         </DropdownItem>
         <DropdownItem
+          asChild
           className="justify-start! px-2! py-1! text-[13px]!"
-          onSelect={() => router.push("/settings?area=support")}
         >
-          <span className="flex items-center gap-2.5">
-            <HeaderMenuIcon icon={HelpCircleIcon} />
-            Help
-          </span>
+          <Link href="/settings?area=support">
+            <span className="flex items-center gap-2.5">
+              <HeaderMenuIcon icon={HelpCircleIcon} />
+              Help
+            </span>
+          </Link>
         </DropdownItem>
       </DropdownContent>
     </Dropdown>
@@ -2542,7 +2576,11 @@ export default function EmailTemplateProject() {
             "pointer-events-none -translate-y-3 opacity-0",
         )}
       >
-        <ConversationTitleDropdown title={conversationTitle} />
+        <ConversationTitleDropdown
+          title={conversationTitle}
+          emailId={currentEmailId}
+          starred={email?.starred ?? false}
+        />
       </header>
 
       <div className="flex h-full min-h-0 overflow-hidden">

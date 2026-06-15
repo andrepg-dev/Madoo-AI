@@ -216,12 +216,20 @@ export const EmailDtoSchema = z.object({
   templateSavedAt: z.string().nullable(),
   visibility: EmailVisibilitySchema.default("PRIVATE"),
   publicId: z.string().nullable().default(null),
+  starred: z.boolean().default(false),
   createdAt: z.string(),
   updatedAt: z.string(),
   variants: z.array(EmailVariantDtoSchema),
 });
 
 export type EmailDto = z.infer<typeof EmailDtoSchema>;
+
+/** Input for starring/unstarring a project. */
+export const SetEmailStarredSchema = z.object({
+  starred: z.boolean(),
+});
+
+export type SetEmailStarredInput = z.infer<typeof SetEmailStarredSchema>;
 
 /** Input for toggling an email's share visibility (public/private link). */
 export const UpdateEmailShareSchema = z.object({
