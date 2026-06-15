@@ -3,16 +3,26 @@
 import {
   Add01Icon,
   AiIdeaIcon,
+  ArrowRight01Icon,
+  Attachment01Icon,
+  Cancel01Icon,
   Download01Icon,
+  Image01Icon,
   Mic02Icon,
   WebDesign01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Select } from "@madoo/design-system";
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  Select,
+  cx,
+} from "@madoo/design-system";
 import { CLIENT_APP_URL } from "@/lib/env";
 import type { LandingCommunityTemplate } from "@/lib/community-templates";
 import Image from "next/image";
-import type { KeyboardEvent, SVGAttributes } from "react";
+import type { ChangeEvent, KeyboardEvent, SVGAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
 import AuthDialog from "./AuthDialog";
 import { LandingHeader } from "./LandingHeader";
@@ -673,6 +683,11 @@ export default function HomePage({
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const ctaPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentsRef = useRef<PromptAttachment[]>([]);
+  attachmentsRef.current = attachments;
   const hasPrompt = prompt.trim().length > 0;
   const toneLabel = copy.promptOptions[0]?.label;
   const lengthLabel = copy.promptOptions[1]?.label;
@@ -685,8 +700,44 @@ export default function HomePage({
   const heroPlaceholder = `${copy.hero.placeholderPrefix}${heroPlaceholderBody}`;
   const ctaPlaceholder = `${copy.cta.placeholderPrefix}${ctaPlaceholderBody}`;
 
+  // Revoke any leftover object URLs when the page unmounts.
+  useEffect(() => {
+    return () => {
+      for (const attachment of attachmentsRef.current) {
+        if (attachment.url) URL.revokeObjectURL(attachment.url);
+      }
+    };
+  }, []);
+
   const openAuthDialog = () => setAuthDialogOpen(true);
   const closeAuthDialog = () => setAuthDialogOpen(false);
+
+  const addFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const next = Array.from(files).map((file) => ({
+      id: `${Date.now()}-${file.name}-${Math.random().toString(36).slice(2)}`,
+      file,
+      url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+    }));
+    setAttachments((current) => [...current, ...next]);
+  };
+
+  const onAttachmentInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    addFiles(event.target.files);
+    // Reset so picking the same file again still fires onChange.
+    event.target.value = "";
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((current) => {
+      const target = current.find((attachment) => attachment.id === id);
+      if (target?.url) URL.revokeObjectURL(target.url);
+      return current.filter((attachment) => attachment.id !== id);
+    });
+  };
+
+  const openImagePicker = () => imageInputRef.current?.click();
+  const openFilePicker = () => fileInputRef.current?.click();
   const onTemplateCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -753,6 +804,22 @@ export default function HomePage({
         nextUrl={nextUrl}
       />
 
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={onAttachmentInputChange}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        hidden
+        onChange={onAttachmentInputChange}
+      />
+
       <main lang={locale} className="relative min-h-screen w-full">
         <div className="relative z-50 bg-madoo-page px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
           <div className="relative isolate mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-9 overflow-visible rounded-2xl pt-36 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-65 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
@@ -807,6 +874,11 @@ export default function HomePage({
 
             <div className="relative z-[60] flex flex-col gap-2">
               <div className="madoo-paper-border min-w-175 overflow-visible rounded-3xl bg-white">
+                <AttachmentPreviewList
+                  attachments={attachments}
+                  className="px-5 pb-1 pt-5"
+                  onRemove={removeAttachment}
+                />
                 <textarea
                   ref={promptTextareaRef}
                   value={prompt}
@@ -818,18 +890,11 @@ export default function HomePage({
 
                 <div className="flex items-center justify-between px-3.5 pb-3">
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
-                      aria-label={copy.hero.addAttachment}
-                    >
-                      <HugeiconsIcon
-                        icon={Add01Icon}
-                        size={18}
-                        strokeWidth={1}
-                        aria-hidden="true"
-                      />
-                    </button>
+                    <AttachMenu
+                      label={copy.hero.addAttachment}
+                      onUploadFile={openFilePicker}
+                      onUploadImage={openImagePicker}
+                    />
 
                     <div className="flex items-center gap-1.5">
                       {copy.promptOptions.map((option) => (
@@ -1196,7 +1261,12 @@ export default function HomePage({
               {copy.cta.title}
             </h2>
 
-            <div className="madoo-paper-border mt-9 w-full max-w-xl overflow-hidden rounded-3xl bg-white text-left">
+            <div className="madoo-paper-border mt-9 w-full max-w-xl overflow-visible rounded-3xl bg-white text-left">
+              <AttachmentPreviewList
+                attachments={attachments}
+                className="px-5 pb-1 pt-5"
+                onRemove={removeAttachment}
+              />
               <textarea
                 ref={ctaPromptTextareaRef}
                 value={prompt}
@@ -1207,18 +1277,11 @@ export default function HomePage({
               />
 
               <div className="flex items-center justify-between px-3.5 pb-3">
-                <button
-                  type="button"
-                  className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
-                  aria-label={copy.hero.addAttachment}
-                >
-                  <HugeiconsIcon
-                    icon={Add01Icon}
-                    size={18}
-                    strokeWidth={1}
-                    aria-hidden="true"
-                  />
-                </button>
+                <AttachMenu
+                  label={copy.hero.addAttachment}
+                  onUploadFile={openFilePicker}
+                  onUploadImage={openImagePicker}
+                />
 
                 <div className="flex items-center gap-2">
                   <button
@@ -1251,5 +1314,167 @@ export default function HomePage({
         </section>
       </main>
     </>
+  );
+}
+
+type PromptAttachment = {
+  id: string;
+  file: File;
+  /** Object URL for image previews; null for non-image files. */
+  url: string | null;
+};
+
+function AttachMenu({
+  label,
+  onUploadFile,
+  onUploadImage,
+}: {
+  label: string;
+  onUploadFile: () => void;
+  onUploadImage: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dropdown open={open} onOpenChange={setOpen}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+      >
+        <HugeiconsIcon
+          icon={Add01Icon}
+          size={18}
+          strokeWidth={1.4}
+          aria-hidden="true"
+        />
+      </button>
+
+      <DropdownContent
+        side="top"
+        align="start"
+        className="min-w-48 rounded-lg p-1"
+      >
+        <AttachMenuItem
+          icon={Image01Icon}
+          label="Upload image"
+          onSelect={onUploadImage}
+        />
+        <AttachMenuItem
+          icon={Attachment01Icon}
+          label="Upload file"
+          onSelect={onUploadFile}
+        />
+      </DropdownContent>
+    </Dropdown>
+  );
+}
+
+function AttachMenuItem({
+  icon,
+  label,
+  onSelect,
+}: {
+  icon: typeof Image01Icon;
+  label: string;
+  onSelect: () => void;
+}) {
+  return (
+    <DropdownItem
+      onSelect={onSelect}
+      className="rounded-md px-2.5 py-1.5 text-[13px] text-[#101114] hover:bg-madoo-blue-500! hover:text-white! focus-visible:bg-madoo-blue-500! focus-visible:text-white!"
+    >
+      <span className="flex items-center gap-2">
+        <HugeiconsIcon
+          icon={icon}
+          size={15}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+        <span>{label}</span>
+      </span>
+      <HugeiconsIcon
+        icon={ArrowRight01Icon}
+        size={13}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+    </DropdownItem>
+  );
+}
+
+function AttachmentPreviewList({
+  attachments,
+  className,
+  onRemove,
+}: {
+  attachments: PromptAttachment[];
+  className?: string;
+  onRemove: (id: string) => void;
+}) {
+  if (attachments.length === 0) return null;
+
+  return (
+    <div className={cx("flex flex-wrap gap-2", className)}>
+      {attachments.map((attachment) =>
+        attachment.url ? (
+          <div
+            key={attachment.id}
+            className="group relative h-16 w-16 overflow-hidden rounded-lg shadow-madoo-border"
+          >
+            <img
+              src={attachment.url}
+              alt={attachment.file.name}
+              className="h-full w-full object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => onRemove(attachment.id)}
+              aria-label={`Remove ${attachment.file.name}`}
+              className="absolute right-1 top-1 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/65 text-white opacity-0 transition hover:bg-black group-hover:opacity-100"
+            >
+              <HugeiconsIcon
+                icon={Cancel01Icon}
+                size={11}
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        ) : (
+          <div
+            key={attachment.id}
+            className="flex max-w-56 items-center gap-2 rounded-lg bg-white px-2.5 py-2 shadow-madoo-border"
+          >
+            <HugeiconsIcon
+              icon={Attachment01Icon}
+              size={15}
+              strokeWidth={1.8}
+              className="shrink-0 text-[#101114]"
+              aria-hidden="true"
+            />
+            <span className="min-w-0 truncate text-xs text-[#101114]">
+              {attachment.file.name}
+            </span>
+            <button
+              type="button"
+              onClick={() => onRemove(attachment.id)}
+              aria-label={`Remove ${attachment.file.name}`}
+              className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-[#101114]"
+            >
+              <HugeiconsIcon
+                icon={Cancel01Icon}
+                size={12}
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        ),
+      )}
+    </div>
   );
 }
