@@ -7,6 +7,7 @@ import {
   DiamondIcon,
   Folder01Icon,
   Home01Icon,
+  Mail01Icon,
   Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
@@ -35,6 +36,8 @@ type SearchItem = {
   description?: string;
   id: string;
   imageSrc?: string;
+  /** Rendered email screenshot, shown in the right-hand hover preview only. */
+  previewUrl?: string;
   label: string;
   href: string;
   group: "Recent projects" | "Navigate to" | "Providers";
@@ -149,8 +152,9 @@ function emailToSearchItem(email: EmailDto): SearchItem {
     description: email.prompt,
     href: `/email-template-project?id=${encodeURIComponent(email.id)}`,
     group: "Recent projects",
-    icon: DiamondIcon,
-    imageSrc:
+    // Row shows a clean icon; the screenshot is only used in the hover preview.
+    icon: Mail01Icon,
+    previewUrl:
       email.variants[email.variants.length - 1]?.previewUrl ?? undefined,
   };
 }
@@ -232,10 +236,10 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
 
   const groupedItems = useMemo(() => groupItems(filteredItems), [filteredItems]);
   const activeItem = filteredItems[activeIndex];
-  // Only recent-project rows carry a rendered template screenshot in imageSrc;
+  // Only recent-project rows carry a rendered template screenshot (previewUrl);
   // provider rows use a favicon, so don't preview those.
   const previewItem =
-    activeItem?.group === "Recent projects" && activeItem.imageSrc
+    activeItem?.group === "Recent projects" && activeItem.previewUrl
       ? activeItem
       : undefined;
 
@@ -462,13 +466,13 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
         </div>
         </div>
 
-        {previewItem?.imageSrc ? (
+        {previewItem?.previewUrl ? (
           <aside className="hidden min-w-0 flex-1 flex-col border-l border-[rgb(var(--rule-rgb)/0.12)] bg-[rgb(var(--rule-rgb)/0.04)] sm:flex">
             <div className="madoo-command-scrollbar min-h-0 flex-1 overflow-y-auto p-5">
               <img
                 alt={previewItem.label}
                 className="w-full rounded-lg bg-white object-contain object-top shadow-madoo-border"
-                src={previewItem.imageSrc}
+                src={previewItem.previewUrl}
               />
             </div>
           </aside>
