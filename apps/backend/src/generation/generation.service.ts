@@ -124,14 +124,15 @@ const STATIC_INSTRUCTION = [
   "Do not use emojis anywhere — not in the subject, headings, body, buttons, eyebrow, or footer. Use real words, and an <Img> when a visual is needed. Include an emoji only if the user explicitly asks for one.",
   "For a brand logo or hero image, render an <Img> bound to an image variable (role=image, scope=static) with a sensible placeholder image URL default, so the user can upload their own image in Madoo. Don't fake a logo with text/emoji when a real image fits.",
   "Even for 'simple' briefs keep the full skeleton (header, hero, CTA, footer with unsubscribe). Simple means less copy and fewer sections — not missing structure.",
-  "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl}; the footer unsubscribe link uses href={unsubscribeUrl} with scope=dynamic (role=url) so the sending platform can inject the real opt-out URL. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
+  "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl} with scope=static (the same destination for everyone). The footer unsubscribe link uses href={unsubscribeUrl} with scope=dynamic (role=url) so the sending platform can inject the real opt-out URL. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
   "role is optional and must only be one of: text, url, image, date. Never use role for variable identity such as recipient_name or company_name; put identity in name.",
   "Every variable must set scope: dynamic or static.",
-  "Use scope=dynamic for personalized data that may be replaced outside Madoo (recipientName, companyName, ctaUrl, unsubscribeUrl, planName, invoiceNumber, dates from CRM).",
+  "Use scope=dynamic for personalized data that may be replaced outside Madoo (recipientName, companyName, unsubscribeUrl, planName, invoiceNumber, dates from CRM).",
   "Use scope=static for template constants that stay fixed across uses (heroTitle, offerText, footerLine, buttonLabel, feature bullets).",
+  "Links/URLs are generally NOT dynamic: a URL variable (role=url) defaults to scope=static because the same link is shown to every recipient (ctaUrl, store/product/landing links, social links). Use scope=dynamic for a URL ONLY when each recipient gets a different value injected by the sending platform — primarily unsubscribeUrl (and per-recipient tracked links if the user explicitly asks for them).",
   "Variable discipline: use only a small set of meaningful merge fields, usually 3-6 and never more than 8 unless the user explicitly asks for many personalized fields.",
   "Create variables only for important personalized or template-specific parts: recipientName, companyName, productName, offer, discountCode, eventDate, ctaUrl, unsubscribeUrl, senderName.",
   "Do not create variables for CTA/button labels, closing text, feature bullets, generic body sentences, every headline fragment, colors, spacing, layout styles, decorative labels, or text that should stay fixed for all recipients.",
@@ -402,7 +403,9 @@ export class GenerationService {
     let lastErr: unknown;
     for (let attempt = 1; attempt <= PREVIEW_MAX_ATTEMPTS; attempt += 1) {
       try {
-        const buffer = await this.screenshot.screenshotHtml(compiledHtml);
+        const buffer = await this.screenshot.screenshotHtml(compiledHtml, {
+          highlightVariables: true,
+        });
         const previewUrl = await this.s3.uploadBuffer(buffer, "image/png");
         await this.prisma.emailVariant.update({
           where: { id: variantId },
