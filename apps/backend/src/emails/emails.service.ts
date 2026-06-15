@@ -14,6 +14,7 @@ import {
   EmailShareDtoSchema,
   PublicEmailDtoSchema,
   buildRenderVariables,
+  extractVariableSchemaFromComponent,
   parseVariableSchemaJson,
   type CreateEmailFromTemplateInput,
   type CreateEmailInput,
@@ -28,6 +29,7 @@ import {
   type TruncateEmailChatInput,
   type UpdateEmailShareInput,
   type UpdateEmailVariantVariableSchemaInput,
+  type VariableSchemaRoot,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
@@ -52,7 +54,10 @@ export class EmailsService {
     private readonly billing: BillingService,
   ) {}
 
-  async assertEmailInWorkspace(emailId: string, workspaceId: string): Promise<void> {
+  async assertEmailInWorkspace(
+    emailId: string,
+    workspaceId: string,
+  ): Promise<void> {
     const row = await this.prisma.email.findFirst({
       where: { id: emailId, workspaceId },
       select: { id: true },
@@ -67,7 +72,9 @@ export class EmailsService {
   ): Promise<EmailDto> {
     await this.workspaces.assertMembership(userId, workspaceId);
     if (dto.templateId && dto.templateSlug) {
-      throw new BadRequestException("Use templateId or templateSlug, not both.");
+      throw new BadRequestException(
+        "Use templateId or templateSlug, not both.",
+      );
     }
 
     let templateId: string | null = dto.templateId ?? null;
@@ -75,7 +82,8 @@ export class EmailsService {
       const tpl = await this.prisma.template.findFirst({
         where: { id: dto.templateId, workspaceId },
       });
-      if (!tpl) throw new BadRequestException("Unknown template for this workspace.");
+      if (!tpl)
+        throw new BadRequestException("Unknown template for this workspace.");
     }
     if (dto.templateSlug) {
       throw new BadRequestException(
@@ -123,7 +131,11 @@ export class EmailsService {
     return Promise.all(rows.map((r) => this.toDto(r.id)));
   }
 
-  async getById(emailId: string, workspaceId: string, userId: string): Promise<EmailDto> {
+  async getById(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<EmailDto> {
     await this.workspaces.assertMembership(userId, workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     return this.toDto(emailId);
@@ -193,7 +205,11 @@ export class EmailsService {
     return { ok: true, deleted: count };
   }
 
-  async remove(emailId: string, workspaceId: string, userId: string): Promise<void> {
+  async remove(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
     await this.workspaces.assertMembership(userId, workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     await this.prisma.email.delete({ where: { id: emailId } });
@@ -259,35 +275,47 @@ export class EmailsService {
   }
 
   /**
-   * Atomically materialize a prebuilt template into a fully saved Email.
-   * Charges 1 AI credit (records an INITIAL EmailGenerationRun) and sets
-   * `templateSavedAt`. No DB rows created if the credit check fails.
+   * Materialize template source into a fully saved, ready Email.
+   * Caller performs membership and billing checks before invoking.
    */
-  async createFromTemplate(
-    workspaceId: string,
-    userId: string,
-    dto: CreateEmailFromTemplateInput,
-  ): Promise<EmailDto> {
-    await this.workspaces.assertMembership(userId, workspaceId);
-    await this.billing.assertCanGenerate(workspaceId);
-    await this.templates.ensureSeedForWorkspace(workspaceId);
-    const tpl = await this.prisma.template.findUnique({
-      where: { workspaceId_slug: { workspaceId, slug: dto.templateSlug } },
-    });
-    if (!tpl) throw new BadRequestException("Unknown template slug for this workspace.");
-    const compiledHtml = this.reactToHtml.compile(tpl.componentCode);
+  async materializeTemplate({
+    workspaceId,
+    componentCode,
+    variableSchema,
+    prompt,
+    subject,
+    templateId = null,
+    tone = null,
+    length = null,
+    audience = null,
+  }: {
+    workspaceId: string;
+    userId: string;
+    componentCode: string;
+    variableSchema: VariableSchemaRoot;
+    prompt: string;
+    subject: string;
+    templateId?: string | null;
+    tone?: string | null;
+    length?: string | null;
+    audience?: string | null;
+  }): Promise<EmailDto> {
+    const compiledHtml = this.reactToHtml.compile(
+      componentCode,
+      buildRenderVariables(variableSchema),
+    );
     const previewUrl = await this.createPreviewUrl(compiledHtml);
     const now = new Date();
-    const prompt = dto.prompt.trim();
+    const trimmedPrompt = prompt.trim();
     const email = await this.prisma.$transaction(async (tx) => {
       const created = await tx.email.create({
         data: {
           workspaceId,
-          prompt,
-          tone: dto.tone ?? null,
-          length: dto.length ?? null,
-          audience: dto.audience ?? null,
-          templateId: tpl.id,
+          prompt: trimmedPrompt,
+          tone,
+          length,
+          audience,
+          templateId,
           templateSavedAt: now,
           status: "READY",
         },
@@ -297,10 +325,10 @@ export class EmailsService {
           workspaceId,
           emailId: created.id,
           seq: 1,
-          subject: tpl.name,
-          componentCode: tpl.componentCode,
+          subject,
+          componentCode,
           compiledHtml,
-          variableSchema: { variables: [] },
+          variableSchema,
           previewUrl,
         },
       });
@@ -310,7 +338,7 @@ export class EmailsService {
           emailId: created.id,
           role: "USER",
           kind: "TEXT",
-          content: prompt,
+          content: trimmedPrompt,
         },
       });
       await tx.emailGenerationRun.create({
@@ -326,14 +354,59 @@ export class EmailsService {
     return this.toDto(email.id);
   }
 
+  /**
+   * Atomically materialize a prebuilt template into a fully saved Email.
+   * Charges 1 AI credit (records an INITIAL EmailGenerationRun) and sets
+   * `templateSavedAt`. No DB rows created if the credit check fails.
+   */
+  async createFromTemplate(
+    workspaceId: string,
+    userId: string,
+    dto: CreateEmailFromTemplateInput,
+  ): Promise<EmailDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.billing.assertCanGenerate(workspaceId);
+    await this.templates.ensureSeedForWorkspace(workspaceId);
+    const tpl = await this.prisma.template.findUnique({
+      where: { workspaceId_slug: { workspaceId, slug: dto.templateSlug } },
+    });
+    if (!tpl)
+      throw new BadRequestException(
+        "Unknown template slug for this workspace.",
+      );
+    const variableSchema = tpl.variableSchema
+      ? parseVariableSchemaJson(tpl.variableSchema)
+      : extractVariableSchemaFromComponent(tpl.componentCode);
+    return this.materializeTemplate({
+      workspaceId,
+      userId,
+      componentCode: tpl.componentCode,
+      variableSchema,
+      prompt: dto.prompt,
+      subject: tpl.name,
+      templateId: tpl.id,
+      tone: dto.tone ?? null,
+      length: dto.length ?? null,
+      audience: dto.audience ?? null,
+    });
+  }
+
   private async createPreviewUrl(compiledHtml: string): Promise<string> {
     let lastErr: unknown;
-    for (let attempt = 1; attempt <= EmailsService.PREVIEW_MAX_ATTEMPTS; attempt += 1) {
+    for (
+      let attempt = 1;
+      attempt <= EmailsService.PREVIEW_MAX_ATTEMPTS;
+      attempt += 1
+    ) {
       try {
         const buffer = await this.screenshot.screenshotHtml(compiledHtml, {
           highlightVariables: true,
         });
-        return await this.s3.uploadBuffer(buffer, "image/png", "email-previews");
+        return await this.s3.uploadBuffer(
+          buffer,
+          "image/png",
+          "email-previews",
+        );
       } catch (err) {
         lastErr = err;
         this.logger.warn(
@@ -346,7 +419,11 @@ export class EmailsService {
     );
   }
 
-  async saveTemplate(emailId: string, workspaceId: string, userId: string): Promise<void> {
+  async saveTemplate(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
     await this.workspaces.assertMembership(userId, workspaceId);
     const email = await this.prisma.email.findFirst({
       where: { id: emailId, workspaceId },
@@ -362,11 +439,15 @@ export class EmailsService {
       },
     });
     if (!email) throw new NotFoundException("Email not found.");
-    if (!email.templateId) throw new BadRequestException("Email is not a pre-built template email.");
-    if (email.templateSavedAt) throw new BadRequestException("Template already saved.");
+    if (!email.templateId)
+      throw new BadRequestException("Email is not a pre-built template email.");
+    if (email.templateSavedAt)
+      throw new BadRequestException("Template already saved.");
     const latestVariant = email.variants[0];
     if (!latestVariant) {
-      throw new BadRequestException("Template email has no variant to preview.");
+      throw new BadRequestException(
+        "Template email has no variant to preview.",
+      );
     }
     await this.billing.assertCanGenerate(workspaceId);
     const previewUrl = await this.createPreviewUrl(latestVariant.compiledHtml);
@@ -523,7 +604,8 @@ export class EmailsService {
       compiledHtml: v.compiledHtml,
       variableSchema: parseVariableSchemaJson(v.variableSchema),
       previewUrl:
-        typeof v.previewUrl === "string" && /^https?:\/\//i.test(v.previewUrl.trim())
+        typeof v.previewUrl === "string" &&
+        /^https?:\/\//i.test(v.previewUrl.trim())
           ? v.previewUrl.trim()
           : null,
       createdAt: v.createdAt.toISOString(),
@@ -584,8 +666,8 @@ export class EmailsService {
     });
     const publicId =
       dto.visibility === "PUBLIC"
-        ? current?.publicId ?? randomUUID()
-        : current?.publicId ?? null;
+        ? (current?.publicId ?? randomUUID())
+        : (current?.publicId ?? null);
 
     const updated = await this.prisma.email.update({
       where: { id: emailId },
@@ -644,7 +726,10 @@ export class EmailsService {
     return email;
   }
 
-  forbidWorkspaceMismatch(workspaceId: string, resourceWorkspaceId: string): void {
+  forbidWorkspaceMismatch(
+    workspaceId: string,
+    resourceWorkspaceId: string,
+  ): void {
     if (workspaceId !== resourceWorkspaceId) throw new ForbiddenException();
   }
 }
