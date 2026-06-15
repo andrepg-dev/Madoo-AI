@@ -324,7 +324,7 @@ function ProjectActionsMenu({
           <Icon name="moreHorizontal" size={14} />
         </Button>
       </DropdownTrigger>
-      <DropdownContent align="end" className="w-50 gap-0.5 p-1!">
+      <DropdownContent align="end" className="w-50 gap-0.5 overflow-hidden p-1!">
         <DropdownItem
           className={compactMenuItemClass}
           onSelect={() => onToggleStar(email)}
