@@ -20,13 +20,15 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  pendingPrompts PendingPrompt[]
-  memberships    Membership[]
-  authAccounts   AuthAccount[]
-  providerConnections ProviderConnection[]
-  supportTickets SupportTicket[]
-  sentWorkspaceInvites WorkspaceInvite[] @relation("WorkspaceInviteInviter")
-  acceptedWorkspaceInvites WorkspaceInvite[] @relation("WorkspaceInviteAcceptedBy")
+  pendingPrompts           PendingPrompt[]
+  memberships              Membership[]
+  authAccounts             AuthAccount[]
+  providerConnections      ProviderConnection[]
+  supportTickets           SupportTicket[]
+  sentWorkspaceInvites     WorkspaceInvite[]       @relation("WorkspaceInviteInviter")
+  acceptedWorkspaceInvites WorkspaceInvite[]       @relation("WorkspaceInviteAcceptedBy")
+  communityTemplates       CommunityTemplate[]
+  communityTemplateStars   CommunityTemplateStar[]
 
   @@index([email])
 }
@@ -96,18 +98,18 @@ enum Role {
 }
 
 model Workspace {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  avatarUrl String?
+  id                     String   @id @default(cuid())
+  name                   String
+  slug                   String   @unique
+  avatarUrl              String?
   templateCreationReason String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
-  members            Membership[]
-  emails             Email[]
-  emailVariants      EmailVariant[]
-  templates          Template[]
+  members             Membership[]
+  emails              Email[]
+  emailVariants       EmailVariant[]
+  templates           Template[]
   emailGenerationRuns EmailGenerationRun[]
   emailChatMessages   EmailChatMessage[]
   emailVfsSnapshots   EmailVfsSnapshot[]
@@ -179,14 +181,14 @@ model Email {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspace           Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  template              Template?           @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  sourcePendingPrompt   PendingPrompt?      @relation(fields: [sourcePendingPromptId], references: [id])
-  variants              EmailVariant[]
-  generationRuns        EmailGenerationRun[]
-  chatMessages          EmailChatMessage[]
-  vfsSnapshot           EmailVfsSnapshot?
-  supportTickets        SupportTicket[]
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template            Template?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sourcePendingPrompt PendingPrompt?       @relation(fields: [sourcePendingPromptId], references: [id])
+  variants            EmailVariant[]
+  generationRuns      EmailGenerationRun[]
+  chatMessages        EmailChatMessage[]
+  vfsSnapshot         EmailVfsSnapshot?
+  supportTickets      SupportTicket[]
 
   @@index([workspaceId, createdAt])
 }
@@ -222,12 +224,12 @@ model EmailGenerationRun {
 
   status GenerationRunStatus @default(STARTED)
 
-  inputTokens       Int?
-  cachedTokens      Int?
-  outputTokens      Int?
-  cacheCreationInputTokens  Int?
-  cacheReadInputTokens      Int?
-  latencyMs                 Int?
+  inputTokens              Int?
+  cachedTokens             Int?
+  outputTokens             Int?
+  cacheCreationInputTokens Int?
+  cacheReadInputTokens     Int?
+  latencyMs                Int?
 
   errorMessage String? @db.Text
 
@@ -264,9 +266,9 @@ model EmailVfsSnapshot {
   workspaceId String
   emailId     String @unique
 
-  filePath       String @default("Email.tsx")
-  componentCode  String @db.Text
-  componentHash  String
+  filePath        String  @default("Email.tsx")
+  componentCode   String  @db.Text
+  componentHash   String
   sourceVariantId String?
 
   createdAt DateTime @default(now())
@@ -287,7 +289,8 @@ model Template {
   category    String?
   description String?
 
-  componentCode String @db.Text
+  componentCode  String @db.Text
+  variableSchema Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -297,6 +300,50 @@ model Template {
 
   @@unique([workspaceId, slug])
   @@index([workspaceId])
+}
+
+/// A template shared to the global, cross-workspace community gallery.
+model CommunityTemplate {
+  id String @id @default(cuid())
+
+  name        String
+  description String?
+  category    String?
+
+  componentCode  String  @db.Text
+  compiledHtml   String  @db.Text
+  previewUrl     String? @db.Text
+  variableSchema Json
+
+  authorUserId  String
+  authorName    String?
+  sourceEmailId String?
+
+  useCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User                    @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  stars  CommunityTemplateStar[]
+
+  @@index([createdAt])
+}
+
+/// Per-user favorite of a community template.
+model CommunityTemplateStar {
+  id String @id @default(cuid())
+
+  communityTemplateId String
+  userId              String
+
+  createdAt DateTime @default(now())
+
+  communityTemplate CommunityTemplate @relation(fields: [communityTemplateId], references: [id], onDelete: Cascade)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityTemplateId, userId])
+  @@index([userId])
 }
 
 model AuditLog {
@@ -364,16 +411,16 @@ model SupportTicket {
 }
 
 model WorkspaceInvite {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   workspaceId      String
   email            String?
   role             Role
-  token            String   @unique
+  token            String    @unique
   invitedByUserId  String
   expiresAt        DateTime
   acceptedByUserId String?
   acceptedAt       DateTime?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   invitedBy  User      @relation("WorkspaceInviteInviter", fields: [invitedByUserId], references: [id], onDelete: Cascade)

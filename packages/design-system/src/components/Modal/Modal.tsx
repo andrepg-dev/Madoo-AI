@@ -5,6 +5,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { cx } from "../../lib/cx";
 import { Icon } from "../Icon";
 
@@ -66,6 +67,11 @@ export function Modal({
   ...rest
 }: ModalProps) {
   const present = useModalPresence(open);
+  const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalElement(document.body);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -84,7 +90,7 @@ export function Modal({
   };
   const stop = (e: MouseEvent) => e.stopPropagation();
 
-  return (
+  const modal = (
     <div
       className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[rgba(20,15,10,0.4)] p-6 backdrop-blur-sm will-change-[opacity,backdrop-filter] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-modal-overlay-out data-[state=open]:animate-madoo-modal-overlay-in max-[640px]:items-end max-[640px]:p-3 motion-reduce:animate-none"
       role="presentation"
@@ -144,4 +150,6 @@ export function Modal({
       </div>
     </div>
   );
+
+  return portalElement ? createPortal(modal, portalElement) : modal;
 }

@@ -5,6 +5,7 @@ import { AssistantModule } from "./assistant/assistant.module";
 import { AuditLogsModule } from "./audit-logs/audit-logs.module";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
+import { CommunityTemplatesModule } from "./community-templates/community-templates.module";
 import { ConnectionsModule } from "./connections/connections.module";
 import { EmailsModule } from "./emails/emails.module";
 import { ExportsModule } from "./exports/exports.module";
@@ -66,6 +67,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     AuditLogsModule,
     AssistantModule,
     BillingModule,
+    CommunityTemplatesModule,
     SupportModule,
     TestingModule,
     InvitesModule,

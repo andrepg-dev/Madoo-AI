@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import {
   TemplateDtoSchema,
+  buildRenderVariables,
+  extractVariableSchemaFromComponent,
+  parseVariableSchemaJson,
   type TemplateDto,
   type TemplateSeedPreviewDto,
   type TemplateSlug,
@@ -21,19 +24,29 @@ export class TemplatesService {
    * Used by the prebuilt-template preview UI before the user pays the credit
    * to save it.
    */
-  async previewSeed(workspaceId: string, slug: TemplateSlug): Promise<TemplateSeedPreviewDto> {
+  async previewSeed(
+    workspaceId: string,
+    slug: TemplateSlug,
+  ): Promise<TemplateSeedPreviewDto> {
     await this.ensureSeedForWorkspace(workspaceId);
     const tpl = await this.prisma.template.findUnique({
       where: { workspaceId_slug: { workspaceId, slug } },
     });
-    if (!tpl) throw new NotFoundException("Unknown template slug for this workspace.");
-    const compiledHtml = this.reactToHtml.compile(tpl.componentCode);
+    if (!tpl)
+      throw new NotFoundException("Unknown template slug for this workspace.");
+    const variableSchema = tpl.variableSchema
+      ? parseVariableSchemaJson(tpl.variableSchema)
+      : extractVariableSchemaFromComponent(tpl.componentCode);
+    const compiledHtml = this.reactToHtml.compile(
+      tpl.componentCode,
+      buildRenderVariables(variableSchema),
+    );
     return {
       slug,
       name: tpl.name,
       componentCode: tpl.componentCode,
       compiledHtml,
-      variableSchema: { variables: [] },
+      variableSchema,
     };
   }
 
@@ -41,6 +54,9 @@ export class TemplatesService {
   async ensureSeedForWorkspace(workspaceId: string): Promise<void> {
     for (const slug of SEED_TEMPLATE_SLUGS) {
       const meta = SEED_TEMPLATES[slug];
+      const variableSchema = extractVariableSchemaFromComponent(
+        meta.componentCode,
+      );
       await this.prisma.template.upsert({
         where: { workspaceId_slug: { workspaceId, slug } },
         create: {
@@ -50,12 +66,14 @@ export class TemplatesService {
           category: meta.category,
           description: meta.description,
           componentCode: meta.componentCode,
+          variableSchema,
         },
         update: {
           name: meta.name,
           category: meta.category,
           description: meta.description,
           componentCode: meta.componentCode,
+          variableSchema,
         },
       });
     }
@@ -68,9 +86,10 @@ export class TemplatesService {
   ): Promise<{ id: string; name: string; slug: string }> {
     const variant = await this.prisma.emailVariant.findFirst({
       where: { id: variantId, workspaceId },
-      select: { componentCode: true },
+      select: { componentCode: true, variableSchema: true },
     });
-    if (!variant) throw new NotFoundException("Variant not found in workspace.");
+    if (!variant)
+      throw new NotFoundException("Variant not found in workspace.");
 
     const base = name
       .toLowerCase()
@@ -86,6 +105,7 @@ export class TemplatesService {
         slug,
         name,
         componentCode: variant.componentCode,
+        variableSchema: parseVariableSchemaJson(variant.variableSchema),
       },
       select: { id: true, name: true, slug: true },
     });

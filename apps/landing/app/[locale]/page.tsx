@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import HomePage from "../../components/HomePage";
+import { fetchLandingCommunityTemplates } from "../../lib/community-templates";
 
 const locales = ["en", "es"] as const;
 
@@ -18,5 +19,7 @@ export default async function LocalePage({
     notFound();
   }
 
-  return <HomePage locale={locale} />;
+  const communityTemplates = await fetchLandingCommunityTemplates();
+
+  return <HomePage locale={locale} communityTemplates={communityTemplates} />;
 }

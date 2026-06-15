@@ -10,6 +10,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Select } from "@madoo/design-system";
 import { CLIENT_APP_URL } from "@/lib/env";
+import type { LandingCommunityTemplate } from "@/lib/community-templates";
 import Image from "next/image";
 import type { KeyboardEvent, SVGAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -145,6 +146,19 @@ type Locale = "en" | "es";
 
 type HomePageProps = {
   locale?: Locale;
+  communityTemplates?: LandingCommunityTemplate[];
+};
+
+type TemplateShowcaseCard = {
+  id?: string;
+  name: string;
+  description: string;
+  imageSrc?: string;
+  isCreateCard?: boolean;
+  isCommunityTemplate?: boolean;
+  authorName?: string | null;
+  category?: string | null;
+  variableCount?: number;
 };
 
 const localeCopy = {
@@ -243,6 +257,9 @@ const localeCopy = {
         "Start from community-tested templates, then adjust copy, layout, tone, and audience with AI.",
       previewAlt: "email template preview",
       hover: "Template Details",
+      by: "By",
+      variables: "variables",
+      communityFallbackDescription: "Community template.",
       cards: [
         {
           name: "Create your own",
@@ -392,6 +409,9 @@ const localeCopy = {
         "Empieza plantillas probadas por la comunidad y ajusta copy, layout, tono y audiencia con IA",
       previewAlt: "vista previa de plantilla de email",
       hover: "Detalles",
+      by: "Por",
+      variables: "variables",
+      communityFallbackDescription: "Plantilla de la comunidad.",
       cards: [
         {
           name: "Crea la tuya",
@@ -580,7 +600,10 @@ function Arrow11(props: SVGAttributes<SVGSVGElement>) {
   );
 }
 
-export default function HomePage({ locale = "en" }: HomePageProps) {
+export default function HomePage({
+  locale = "en",
+  communityTemplates = [],
+}: HomePageProps) {
   const copy = localeCopy[locale];
   const valueFeatures = [
     {
@@ -608,10 +631,40 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
       description: copy.value.qaDescription,
     },
   ];
-  const localizedTemplateCards = templateCards.map((template, index) => ({
-    ...template,
-    ...copy.templates.cards[index],
-  }));
+  const localizedFallbackTemplateCards: TemplateShowcaseCard[] =
+    templateCards.map((template, index) => ({
+      ...template,
+      name: copy.templates.cards[index]?.name ?? template.name,
+      description:
+        copy.templates.cards[index]?.description ?? template.description,
+    }));
+  const communityTemplateCards: TemplateShowcaseCard[] =
+    communityTemplates.map((template, index) => ({
+      id: template.id,
+      name: template.name,
+      description:
+        template.description ??
+        template.category ??
+        copy.templates.communityFallbackDescription,
+      imageSrc:
+        template.previewUrl ??
+        templateCards[(index % (templateCards.length - 1)) + 1]?.imageSrc ??
+        "/templates/news-letter.png",
+      authorName: template.authorName,
+      category: template.category,
+      variableCount: template.variableCount,
+      isCommunityTemplate: true,
+    }));
+  const createTemplateCard =
+    localizedFallbackTemplateCards[0] ?? {
+      name: copy.templates.cards[0].name,
+      description: copy.templates.cards[0].description,
+      isCreateCard: true,
+    };
+  const localizedTemplateCards: TemplateShowcaseCard[] =
+    communityTemplateCards.length > 0
+      ? [createTemplateCard, ...communityTemplateCards]
+      : localizedFallbackTemplateCards;
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
@@ -1066,7 +1119,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {localizedTemplateCards.map((template) => (
                 <article
-                  key={template.name}
+                  key={template.id ?? template.name}
                   role="button"
                   tabIndex={0}
                   onClick={openAuthDialog}
@@ -1086,7 +1139,7 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                   ) : (
                     <div className="relative flex min-h-64 max-h-64 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40">
                       <img
-                        src={template.imageSrc}
+                        src={template.imageSrc ?? "/templates/news-letter.png"}
                         alt={`${template.name} ${copy.templates.previewAlt}`}
                         className="w-full object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
                         loading="lazy"
@@ -1102,6 +1155,21 @@ export default function HomePage({ locale = "en" }: HomePageProps) {
                       <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-4 text-[#6f6961]">
                         {template.description}
                       </p>
+                      {template.isCommunityTemplate ? (
+                        <div className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] leading-4 text-[#8a8178]">
+                          <span className="truncate">
+                            {template.authorName
+                              ? `${copy.templates.by} ${template.authorName}`
+                              : template.category ?? copy.nav.community}
+                          </span>
+                          {(template.variableCount ?? 0) > 0 ? (
+                            <span className="shrink-0">
+                              {template.variableCount}{" "}
+                              {copy.templates.variables}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </article>

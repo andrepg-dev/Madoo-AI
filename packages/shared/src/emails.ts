@@ -3,7 +3,10 @@ import { z } from "zod";
 const JsIdentifierSchema = z
   .string()
   .min(1)
-  .regex(/^[a-zA-Z_$][a-zA-Z0-9_$]*$/, "Variable name must be a valid JS identifier.");
+  .regex(
+    /^[a-zA-Z_$][a-zA-Z0-9_$]*$/,
+    "Variable name must be a valid JS identifier.",
+  );
 
 /** Variable schema expected by Phase 1 contract (name/default/role). */
 export const VariableSpecSchema = z.object({
@@ -66,9 +69,17 @@ function stringifyDefault(value: unknown): string {
   return typeof value === "string" ? value : String(value);
 }
 
-function normalizeVariableRole(role: unknown, type?: string): VariableRole | undefined {
+function normalizeVariableRole(
+  role: unknown,
+  type?: string,
+): VariableRole | undefined {
   const value = typeof role === "string" ? role.trim().toLowerCase() : "";
-  if (value === "text" || value === "url" || value === "image" || value === "date") {
+  if (
+    value === "text" ||
+    value === "url" ||
+    value === "image" ||
+    value === "date"
+  ) {
     return value;
   }
 
@@ -126,6 +137,102 @@ export function buildRenderVariables(
       variable.scope === "static" ? variable.default : `{{${variable.name}}}`,
     ]),
   );
+}
+
+function humanizeVariableName(name: string): string {
+  const spaced = name
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_$]+/g, " ")
+    .trim();
+  if (!spaced) return name;
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/**
+ * Splits a destructuring block (`a = '1', b = "2"`) into top-level `name = value`
+ * entries, respecting string literals so commas inside defaults don't split.
+ */
+function splitTopLevelProps(block: string): string[] {
+  const entries: string[] = [];
+  let current = "";
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = 0; i < block.length; i += 1) {
+    const char = block[i];
+    if (quote) {
+      current += char;
+      if (char === "\\") {
+        current += block[i + 1] ?? "";
+        i += 1;
+      } else if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (char === "'" || char === '"' || char === "`") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === "(" || char === "{" || char === "[") depth += 1;
+    if (char === ")" || char === "}" || char === "]") depth -= 1;
+    if (char === "," && depth === 0) {
+      entries.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) entries.push(current);
+  return entries;
+}
+
+function parseStringLiteral(value: string): string | null {
+  const trimmed = value.trim();
+  const quote = trimmed[0];
+  if (quote !== "'" && quote !== '"' && quote !== "`") return null;
+  if (trimmed[trimmed.length - 1] !== quote) return null;
+  return trimmed
+    .slice(1, -1)
+    .replace(/\\(['"`\\])/g, "$1")
+    .replace(/\\n/g, "\n");
+}
+
+/**
+ * Fallback variable extraction for templates that have no stored schema (seeds).
+ * Reads the `Email = ({ name = 'default', ... } = {}) =>` destructured props and
+ * maps each string default to a `static` variable so the rendered output is
+ * unchanged while the values become editable. Roles are inferred from the name.
+ */
+export function extractVariableSchemaFromComponent(
+  componentCode: string,
+): VariableSchemaRoot {
+  const match = componentCode.match(
+    /\(\s*\{([\s\S]*?)\}\s*(?:=\s*\{\}\s*)?\)\s*=>/,
+  );
+  if (!match) return { variables: [] };
+  const variables: VariableSpec[] = [];
+  const seen = new Set<string>();
+  for (const entry of splitTopLevelProps(match[1])) {
+    const eq = entry.indexOf("=");
+    if (eq === -1) continue;
+    const rawName = entry.slice(0, eq).trim();
+    if (!JsIdentifierSchema.safeParse(rawName).success || seen.has(rawName))
+      continue;
+    const defaultValue = parseStringLiteral(entry.slice(eq + 1));
+    if (defaultValue === null) continue;
+    seen.add(rawName);
+    variables.push(
+      VariableSpecSchema.parse({
+        name: rawName,
+        label: humanizeVariableName(rawName),
+        default: defaultValue,
+        role: normalizeVariableRole(rawName) ?? "text",
+        scope: "static",
+      }),
+    );
+  }
+  return { variables };
 }
 
 export const TemplateSlugSchema = z.enum([
@@ -320,7 +427,9 @@ export const TemplateSeedPreviewDtoSchema = z.object({
   variableSchema: VariableSchemaRootSchema,
 });
 
-export type TemplateSeedPreviewDto = z.infer<typeof TemplateSeedPreviewDtoSchema>;
+export type TemplateSeedPreviewDto = z.infer<
+  typeof TemplateSeedPreviewDtoSchema
+>;
 
 export const CreateEmailFromTemplateSchema = z.object({
   templateSlug: TemplateSlugSchema,
@@ -330,4 +439,66 @@ export const CreateEmailFromTemplateSchema = z.object({
   audience: z.string().optional(),
 });
 
-export type CreateEmailFromTemplateInput = z.infer<typeof CreateEmailFromTemplateSchema>;
+export type CreateEmailFromTemplateInput = z.infer<
+  typeof CreateEmailFromTemplateSchema
+>;
+
+/** A template published to the global community gallery (list/card shape). */
+export const CommunityTemplateDtoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  category: z.string().nullable(),
+  previewUrl: z.string().nullable(),
+  variableSchema: VariableSchemaRootSchema,
+  useCount: z.number(),
+  authorName: z.string().nullable(),
+  starred: z.boolean().default(false),
+  createdAt: z.string(),
+});
+
+export type CommunityTemplateDto = z.infer<typeof CommunityTemplateDtoSchema>;
+
+export const CommunityTemplateListDtoSchema = z.array(
+  CommunityTemplateDtoSchema,
+);
+
+/** Detail payload (adds source + compiled HTML) for the "use template" modal. */
+export const CommunityTemplateDetailDtoSchema =
+  CommunityTemplateDtoSchema.extend({
+    componentCode: z.string(),
+    compiledHtml: z.string(),
+  });
+
+export type CommunityTemplateDetailDto = z.infer<
+  typeof CommunityTemplateDetailDtoSchema
+>;
+
+/** Input to publish one of the workspace's emails to the community gallery. */
+export const ShareEmailToCommunitySchema = z.object({
+  emailId: z.string().min(1),
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(280).optional().nullable(),
+  category: z.string().trim().max(48).optional().nullable(),
+});
+
+export type ShareEmailToCommunityInput = z.infer<
+  typeof ShareEmailToCommunitySchema
+>;
+
+/** Input to materialize a community template into an email (with edited values). */
+export const UseCommunityTemplateSchema = z.object({
+  variableSchema: VariableSchemaRootSchema,
+});
+
+export type UseCommunityTemplateInput = z.infer<
+  typeof UseCommunityTemplateSchema
+>;
+
+export const SetCommunityTemplateStarredSchema = z.object({
+  starred: z.boolean(),
+});
+
+export type SetCommunityTemplateStarredInput = z.infer<
+  typeof SetCommunityTemplateStarredSchema
+>;
