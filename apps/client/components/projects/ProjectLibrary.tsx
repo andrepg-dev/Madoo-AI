@@ -313,7 +313,7 @@ function ProjectActionsMenu({
   const title = projectTitle(email);
 
   return (
-    <Dropdown className="z-20">
+    <Dropdown>
       <DropdownTrigger asChild>
         <Button
           aria-label={`Open actions for ${title}`}
@@ -324,10 +324,7 @@ function ProjectActionsMenu({
           <Icon name="moreHorizontal" size={14} />
         </Button>
       </DropdownTrigger>
-      <DropdownContent
-        align="end"
-        className="w-50 gap-0.5 bg-madoo-surface p-1! shadow-(--shadow-border-rule-hover)"
-      >
+      <DropdownContent align="end" className="w-50 gap-0.5 p-1!">
         <DropdownItem
           className={compactMenuItemClass}
           onSelect={() => onToggleStar(email)}
