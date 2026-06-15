@@ -2,6 +2,7 @@
 
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import { ProjectShowCase } from "@/components/home/project-show-case";
+import { useAuthStore } from "@/stores/auth-store";
 import { useEffect, useRef } from "react";
 
 const emailProviders = [
@@ -29,6 +30,9 @@ const emailProviders = [
 
 export default function Page() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const user = useAuthStore((state) => state.user);
+  const firstName =
+    user?.name?.trim().split(/\s+/)[0] || user?.email?.split("@")[0] || "";
 
   useEffect(() => {
     const video = videoRef.current;
@@ -72,7 +76,11 @@ export default function Page() {
           Connect your email templates with your providers
         </div>
 
-        <h3 className="z-50 text-3xl text-black text-center">Let's craft something, Andre</h3>
+        <h3 className="z-50 text-3xl text-black text-center">
+          {firstName
+            ? `Let's craft something, ${firstName}`
+            : "Let's craft something"}
+        </h3>
         <div className="self-center">
           <ClientPromptBox />
         </div>
