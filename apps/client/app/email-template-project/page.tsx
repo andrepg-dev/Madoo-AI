@@ -369,6 +369,8 @@ type ChatMessage = {
   seq?: number;
   /** Owning email, used to drop client-only rows when switching projects. */
   emailId?: string;
+  /** Object URLs for images attached to a user message (display only). */
+  images?: string[];
   steps?: TimelineStep[];
   startedAt?: number;
   finishedAt?: number;
@@ -1778,10 +1780,12 @@ function EmailPreviewSidebar({
 function HumanMessage({
   children,
   disabled,
+  images,
   onEdit,
 }: {
   children: string;
   disabled?: boolean;
+  images?: string[];
   onEdit?: (text: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -1853,6 +1857,19 @@ function HumanMessage({
 
   return (
     <div className="ml-auto">
+      {images && images.length > 0 ? (
+        <div className="mb-1.5 flex max-w-xl flex-wrap justify-end gap-2">
+          {images.map((url) => (
+            <img
+              key={url}
+              src={url}
+              alt="Attached"
+              className="h-20 w-20 rounded-lg object-cover shadow-madoo-border"
+            />
+          ))}
+        </div>
+      ) : null}
+
       <pre className="max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
         {children}
       </pre>
@@ -2237,6 +2254,10 @@ export default function EmailTemplateProject() {
   const submitChatPrompt = useCallback(
     async (input: PromptSubmitInput) => {
       if (isStreaming) return;
+      // Local previews for attached images (display only — not yet persisted).
+      const imageUrls = (input.images ?? []).map((file) =>
+        URL.createObjectURL(file),
+      );
       // Render the user's message immediately — never wait on the backend save.
       setMessages((current) => [
         ...current,
@@ -2246,6 +2267,7 @@ export default function EmailTemplateProject() {
           content: input.prompt,
           seq: Date.now(),
           emailId: currentEmailId ?? undefined,
+          images: imageUrls.length > 0 ? imageUrls : undefined,
         },
       ]);
 
@@ -2545,6 +2567,7 @@ export default function EmailTemplateProject() {
                       <HumanMessage
                         disabled={isStreaming}
                         key={message.id}
+                        images={message.images}
                         onEdit={(text) => void editMessage(message, text)}
                       >
                         {message.content}

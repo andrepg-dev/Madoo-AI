@@ -4,7 +4,9 @@ import {
   Add01Icon,
   Alert02Icon,
   ArrowUp01Icon,
+  Camera01Icon,
   Cancel01Icon,
+  Image01Icon,
   Mic02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -14,9 +16,15 @@ import { cn } from "@/lib/utils";
 import { buildLandingAuthUrl } from "@/lib/auth-redirect";
 import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
-import { Button, Select } from "@madoo/design-system";
+import {
+  Button,
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  Select,
+} from "@madoo/design-system";
 import { useRouter } from "next/navigation";
-import type { KeyboardEvent } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
 const promptOptions = [
@@ -126,6 +134,13 @@ export type PromptSubmitInput = {
   tone?: string;
   length?: string;
   audience?: string;
+  images?: File[];
+};
+
+type PromptImage = {
+  id: string;
+  file: File;
+  url: string;
 };
 
 export function ClientPromptBox({
@@ -148,7 +163,13 @@ export function ClientPromptBox({
     Record<string, string>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [images, setImages] = useState<PromptImage[]>([]);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const imagesRef = useRef<PromptImage[]>([]);
+  imagesRef.current = images;
   const hasPrompt = prompt.trim().length > 0;
   const submitDisabled = disabled || isSubmitting;
   const isChatVariant = variant === "chat";
@@ -175,6 +196,44 @@ export function ClientPromptBox({
     if (!outOfCredits) setCreditsAlertDismissed(false);
   }, [outOfCredits]);
 
+  const addFiles = (files: FileList | null) => {
+    if (!files) return;
+    const next = Array.from(files)
+      .filter((file) => file.type.startsWith("image/"))
+      .map((file) => ({
+        id: `${Date.now()}-${file.name}-${Math.random().toString(36).slice(2)}`,
+        file,
+        url: URL.createObjectURL(file),
+      }));
+    if (next.length) setImages((current) => [...current, ...next]);
+  };
+
+  const onFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    addFiles(event.target.files);
+    // Reset so picking the same file again still fires onChange.
+    event.target.value = "";
+  };
+
+  const removeImage = (id: string) => {
+    setImages((current) => {
+      const target = current.find((image) => image.id === id);
+      if (target) URL.revokeObjectURL(target.url);
+      return current.filter((image) => image.id !== id);
+    });
+  };
+
+  const resetImages = () => {
+    for (const image of imagesRef.current) URL.revokeObjectURL(image.url);
+    setImages([]);
+  };
+
+  // Revoke any leftover object URLs when the box unmounts.
+  useEffect(() => {
+    return () => {
+      for (const image of imagesRef.current) URL.revokeObjectURL(image.url);
+    };
+  }, []);
+
   const submitPrompt = async () => {
     const trimmedPrompt = prompt.trim();
 
@@ -182,6 +241,8 @@ export function ClientPromptBox({
 
     const input: PromptSubmitInput = { prompt: trimmedPrompt };
     const params = new URLSearchParams({ prompt: trimmedPrompt });
+
+    if (images.length > 0) input.images = images.map((image) => image.file);
 
     for (const [key, value] of Object.entries(promptOptionValues)) {
       const normalizedKey = key.toLowerCase() as "tone" | "length";
@@ -202,6 +263,7 @@ export function ClientPromptBox({
       setIsSubmitting(true);
       // Clear instantly so the message feels sent before the backend responds.
       setPrompt("");
+      resetImages();
       try {
         await onSubmit(input);
       } finally {
@@ -210,6 +272,8 @@ export function ClientPromptBox({
       return;
     }
 
+    // Navigation can't carry File objects, so drop the previews before leaving.
+    resetImages();
     setSidebarOpen(true);
     router.push(`/email-template-project?${params.toString()}`);
   };
@@ -355,6 +419,58 @@ export function ClientPromptBox({
           classNames?.panel,
         )}
       >
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={onFileInputChange}
+        />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={onFileInputChange}
+        />
+
+        {images.length > 0 ? (
+          <div
+            className={cn(
+              "flex flex-wrap gap-2 pb-1",
+              isChatVariant ? "px-4 pt-4" : "px-5 pt-5",
+            )}
+          >
+            {images.map((image) => (
+              <div
+                key={image.id}
+                className="group relative h-16 w-16 overflow-hidden rounded-lg shadow-madoo-border"
+              >
+                <img
+                  src={image.url}
+                  alt={image.file.name}
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(image.id)}
+                  aria-label={`Remove ${image.file.name}`}
+                  className="absolute right-1 top-1 inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black"
+                >
+                  <HugeiconsIcon
+                    icon={Cancel01Icon}
+                    size={11}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <textarea
           data-madoo-control
           ref={promptTextareaRef}
@@ -365,8 +481,10 @@ export function ClientPromptBox({
           className={cn(
             "madoo-prompt-textarea mr-3 max-h-80 w-[calc(100%-0.75rem)] resize-none bg-transparent text-sm text-[#101114] outline-none placeholder:text-[#4b5563]!",
             isChatVariant
-              ? "min-h-14 rounded-t-2xl px-4 pr-8 pt-4"
-              : "min-h-18 rounded-t-3xl px-5 pr-10 pt-5",
+              ? "min-h-14 rounded-t-2xl px-4 pr-8"
+              : "min-h-18 rounded-t-3xl px-5 pr-10",
+            // Drop the top padding when previews already supply the top gap.
+            images.length > 0 ? "pt-2" : isChatVariant ? "pt-4" : "pt-5",
             classNames?.textarea,
           )}
         />
@@ -378,21 +496,47 @@ export function ClientPromptBox({
           )}
         >
           <div className="flex min-w-0 items-center gap-2">
-            <button
-              type="button"
-              className={cn(
-                "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]",
-                isChatVariant ? "h-7 w-7" : "h-8 w-8",
-              )}
-              aria-label="Add attachment"
-            >
-              <HugeiconsIcon
-                icon={Add01Icon}
-                size={isChatVariant ? 16 : 18}
-                strokeWidth={1}
-                aria-hidden="true"
-              />
-            </button>
+            <Dropdown open={attachMenuOpen} onOpenChange={setAttachMenuOpen}>
+              <button
+                type="button"
+                onClick={() => setAttachMenuOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={attachMenuOpen}
+                className={cn(
+                  "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]",
+                  isChatVariant ? "h-7 w-7" : "h-8 w-8",
+                )}
+                aria-label="Add attachment"
+              >
+                <HugeiconsIcon
+                  icon={Add01Icon}
+                  size={isChatVariant ? 16 : 18}
+                  strokeWidth={1}
+                  aria-hidden="true"
+                />
+              </button>
+
+              <DropdownContent side="top" align="start" className="min-w-44">
+                <DropdownItem onSelect={() => imageInputRef.current?.click()}>
+                  <span>Upload image</span>
+                  <HugeiconsIcon
+                    icon={Image01Icon}
+                    size={16}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                </DropdownItem>
+                <DropdownItem onSelect={() => cameraInputRef.current?.click()}>
+                  <span>Take photo</span>
+                  <HugeiconsIcon
+                    icon={Camera01Icon}
+                    size={16}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                </DropdownItem>
+              </DropdownContent>
+            </Dropdown>
 
             {showOptions ? (
               <div className="flex items-center gap-1.5">
