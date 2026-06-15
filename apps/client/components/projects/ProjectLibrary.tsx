@@ -324,7 +324,10 @@ function ProjectActionsMenu({
           <Icon name="moreHorizontal" size={14} />
         </Button>
       </DropdownTrigger>
-      <DropdownContent align="end" className="w-50 gap-0.5 p-1!">
+      <DropdownContent
+        align="end"
+        className="w-50 gap-0.5 bg-madoo-surface p-1! shadow-(--shadow-border-rule-hover)"
+      >
         <DropdownItem
           className={compactMenuItemClass}
           onSelect={() => onToggleStar(email)}
@@ -568,14 +571,6 @@ export function ProjectLibrary({
           <h1 className="m-0 text-[24px] font-semibold leading-none tracking-normal text-[#202124]">
             {title}
           </h1>
-          <Button
-            leftIcon={<Icon name="plus" size={13} />}
-            onClick={() => router.push("/")}
-            size="sm"
-            variant="secondary"
-          >
-            Create
-          </Button>
         </header>
 
         <div className="grid grid-cols-[minmax(220px,1fr)_minmax(132px,160px)_minmax(132px,160px)_auto] items-center gap-2 max-[940px]:grid-cols-2 max-sm:grid-cols-1">
@@ -806,14 +801,6 @@ export function ProjectsFutureState({
           <h1 className="m-0 text-[24px] font-semibold leading-none tracking-normal text-[#202124]">
             {title}
           </h1>
-          <Button
-            leftIcon={<Icon name="plus" size={13} />}
-            onClick={() => router.push("/")}
-            size="sm"
-            variant="secondary"
-          >
-            Create
-          </Button>
         </header>
         <div className="grid min-h-75 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
           <div className="grid justify-items-center gap-2">
