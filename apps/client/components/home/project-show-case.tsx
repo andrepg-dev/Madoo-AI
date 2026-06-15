@@ -22,6 +22,7 @@ import {
   type TemplateDto,
   type TemplateSlug,
 } from "@/actions/templates";
+import EmailPreviewFrame from "@/components/global/email-preview-frame";
 import TemplateCard from "@/components/global/template-card";
 import { useAuthStore } from "@/stores/auth-store";
 import {
@@ -519,10 +520,9 @@ export function ProjectShowCase() {
               Loading preview
             </span>
           ) : previewQuery.data?.compiledHtml ? (
-            <iframe
-              className="h-130 w-full border-0 bg-white"
-              sandbox=""
-              srcDoc={previewQuery.data.compiledHtml}
+            <EmailPreviewFrame
+              className="h-130"
+              html={previewQuery.data.compiledHtml}
               title={`${selectedTemplate?.name ?? "Template"} preview`}
             />
           ) : (
@@ -967,10 +967,9 @@ function CommunityTemplateUseModal({
           </section>
 
           <section className="overflow-hidden rounded-lg bg-white shadow-madoo-border">
-            <iframe
-              className="h-[78vh] min-h-130 w-full border-0 bg-white"
-              sandbox=""
-              srcDoc={detail.compiledHtml}
+            <EmailPreviewFrame
+              className="h-[78vh] min-h-130"
+              html={detail.compiledHtml}
               title={`${detail.name} preview`}
             />
           </section>
