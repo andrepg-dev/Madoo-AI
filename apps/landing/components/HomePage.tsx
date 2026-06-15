@@ -1354,7 +1354,7 @@ function AttachMenu({
       </button>
 
       <DropdownContent
-        side="top"
+        side="bottom"
         align="start"
         className="min-w-48 rounded-lg p-1"
       >
