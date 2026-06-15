@@ -1,12 +1,13 @@
 "use client";
 
-import { ProjectsFutureState } from "@/components/projects/ProjectLibrary";
+import { ProjectLibrary } from "@/components/projects/ProjectLibrary";
 
 export default function StarredPage() {
   return (
-    <ProjectsFutureState
-      body="Starred projects need backend support before this view can show saved favorites."
+    <ProjectLibrary
       title="Starred"
+      emptyTitle="No starred projects yet"
+      starredOnly
     />
   );
 }

@@ -10,6 +10,7 @@ import {
   EmailShareDtoSchema,
   PublicEmailDtoSchema,
   RenameEmailSchema,
+  SetEmailStarredSchema,
   TransferEmailSchema,
   UpdateEmailShareSchema,
   UpdateEmailVariantVariableSchemaSchema,
@@ -101,6 +102,18 @@ export async function renameEmail(
 ): Promise<EmailDto> {
   const body = RenameEmailSchema.parse(input);
   const raw = await FetchWrapper<unknown>(`/emails/${emailId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return EmailDtoSchema.parse(raw);
+}
+
+export async function setEmailStarred(
+  emailId: string,
+  starred: boolean,
+): Promise<EmailDto> {
+  const body = SetEmailStarredSchema.parse({ starred });
+  const raw = await FetchWrapper<unknown>(`/emails/${emailId}/star`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });

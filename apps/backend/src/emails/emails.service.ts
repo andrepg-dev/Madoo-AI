@@ -23,6 +23,7 @@ import {
   type EmailVariantDto,
   type PublicEmailDto,
   type RenameEmailInput,
+  type SetEmailStarredInput,
   type TransferEmailInput,
   type TruncateEmailChatInput,
   type UpdateEmailShareInput,
@@ -541,10 +542,26 @@ export class EmailsService {
       templateSavedAt: row.templateSavedAt?.toISOString() ?? null,
       visibility: row.visibility,
       publicId: row.publicId,
+      starred: row.starred,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       variants,
     });
+  }
+
+  async setStarred(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: SetEmailStarredInput,
+  ): Promise<EmailDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    await this.prisma.email.update({
+      where: { id: emailId },
+      data: { starred: dto.starred },
+    });
+    return this.toDto(emailId);
   }
 
   /**

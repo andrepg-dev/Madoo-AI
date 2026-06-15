@@ -4,6 +4,7 @@ import {
   deleteEmail,
   fetchEmails,
   renameEmail,
+  setEmailStarred,
   transferEmail,
 } from "@/actions/emails";
 import { fetchWorkspaces } from "@/actions/workspaces";
@@ -40,6 +41,8 @@ type ProjectActionDialog =
 type ProjectLibraryProps = {
   emptyTitle?: string;
   title: string;
+  /** When true, only show starred projects (e.g. the Starred view). */
+  starredOnly?: boolean;
 };
 
 const sortOptions = [
@@ -121,12 +124,14 @@ function useFilteredEmails(
   query: string,
   status: StatusFilter,
   sortMode: SortMode,
+  starredOnly: boolean,
 ) {
   return useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const filtered: EmailDto[] = [];
 
     for (const email of emails) {
+      if (starredOnly && !email.starred) continue;
       if (status !== "ANY" && email.status !== status) continue;
 
       if (normalizedQuery) {
@@ -146,7 +151,7 @@ function useFilteredEmails(
     }
 
     return sortEmails(filtered, sortMode);
-  }, [emails, query, sortMode, status]);
+  }, [emails, query, sortMode, status, starredOnly]);
 }
 
 function ProjectPreview({ email }: { email: EmailDto }) {
@@ -157,7 +162,7 @@ function ProjectPreview({ email }: { email: EmailDto }) {
       {previewUrl ? (
         <img
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-top"
           loading="lazy"
           src={previewUrl}
         />
@@ -172,6 +177,11 @@ function ProjectPreview({ email }: { email: EmailDto }) {
       >
         {statusLabels[email.status]}
       </span>
+      {email.starred ? (
+        <span className="absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-md bg-white/90 text-amber-500 shadow-madoo-border backdrop-blur">
+          <Icon name="star" size={13} />
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -181,12 +191,14 @@ function ProjectGridCard({
   onDelete,
   onRename,
   onOpen,
+  onToggleStar,
   onTransfer,
 }: {
   email: EmailDto;
   onDelete: (email: EmailDto) => void;
   onRename: (email: EmailDto) => void;
   onOpen: (email: EmailDto) => void;
+  onToggleStar: (email: EmailDto) => void;
   onTransfer: (email: EmailDto) => void;
 }) {
   const title = projectTitle(email);
@@ -219,6 +231,7 @@ function ProjectGridCard({
           email={email}
           onDelete={onDelete}
           onRename={onRename}
+          onToggleStar={onToggleStar}
           onTransfer={onTransfer}
         />
       </div>
@@ -236,12 +249,14 @@ function ProjectListRow({
   onDelete,
   onRename,
   onOpen,
+  onToggleStar,
   onTransfer,
 }: {
   email: EmailDto;
   onDelete: (email: EmailDto) => void;
   onRename: (email: EmailDto) => void;
   onOpen: (email: EmailDto) => void;
+  onToggleStar: (email: EmailDto) => void;
   onTransfer: (email: EmailDto) => void;
 }) {
   const title = projectTitle(email);
@@ -275,6 +290,7 @@ function ProjectListRow({
         email={email}
         onDelete={onDelete}
         onRename={onRename}
+        onToggleStar={onToggleStar}
         onTransfer={onTransfer}
       />
     </div>
@@ -285,11 +301,13 @@ function ProjectActionsMenu({
   email,
   onDelete,
   onRename,
+  onToggleStar,
   onTransfer,
 }: {
   email: EmailDto;
   onDelete: (email: EmailDto) => void;
   onRename: (email: EmailDto) => void;
+  onToggleStar: (email: EmailDto) => void;
   onTransfer: (email: EmailDto) => void;
 }) {
   const title = projectTitle(email);
@@ -307,6 +325,15 @@ function ProjectActionsMenu({
         </Button>
       </DropdownTrigger>
       <DropdownContent align="end" className="w-50 gap-0.5 p-1!">
+        <DropdownItem
+          className={compactMenuItemClass}
+          onSelect={() => onToggleStar(email)}
+        >
+          <span className="flex items-center gap-2.5">
+            <Icon name="star" size={14} />
+            {email.starred ? "Unstar" : "Star"}
+          </span>
+        </DropdownItem>
         <DropdownItem
           className={compactMenuItemClass}
           onSelect={() => onRename(email)}
@@ -346,6 +373,7 @@ function ProjectActionsMenu({
 export function ProjectLibrary({
   emptyTitle = "No projects yet",
   title,
+  starredOnly = false,
 }: ProjectLibraryProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -370,7 +398,13 @@ export function ProjectLibrary({
     enabled: Boolean(user),
   });
 
-  const filteredEmails = useFilteredEmails(emails, query, status, sortMode);
+  const filteredEmails = useFilteredEmails(
+    emails,
+    query,
+    status,
+    sortMode,
+    starredOnly,
+  );
   const transferTargets =
     actionDialog?.type === "transfer"
       ? workspaces.filter(
@@ -441,6 +475,33 @@ export function ProjectLibrary({
       });
     },
   });
+
+  const starMutation = useMutation({
+    mutationFn: ({ email, starred }: { email: EmailDto; starred: boolean }) =>
+      setEmailStarred(email.id, starred),
+    onSuccess: (updatedEmail) => {
+      queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
+        current?.map((email) =>
+          email.id === updatedEmail.id ? updatedEmail : email,
+        ) ?? [],
+      );
+      toast({
+        tone: "success",
+        title: updatedEmail.starred ? "Project starred" : "Project unstarred",
+      });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Could not update star",
+        body: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const toggleStar = (email: EmailDto) => {
+    starMutation.mutate({ email, starred: !email.starred });
+  };
 
   const closeActionDialog = () => {
     if (
@@ -579,6 +640,7 @@ export function ProjectLibrary({
                     onDelete={deleteProject}
                     onOpen={openEmail}
                     onRename={renameProject}
+                    onToggleStar={toggleStar}
                     onTransfer={transferProject}
                   />
                 ))}
@@ -592,6 +654,7 @@ export function ProjectLibrary({
                     onDelete={deleteProject}
                     onOpen={openEmail}
                     onRename={renameProject}
+                    onToggleStar={toggleStar}
                     onTransfer={transferProject}
                   />
                 ))}
