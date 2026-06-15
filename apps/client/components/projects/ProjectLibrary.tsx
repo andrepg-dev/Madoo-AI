@@ -262,7 +262,7 @@ function ProjectListRow({
   const title = projectTitle(email);
 
   return (
-    <div className="grid min-h-16 grid-cols-[minmax(0,1fr)_120px_140px_40px] items-center gap-4 border-b border-[rgb(var(--rule-rgb)/0.65)] px-4 py-2 last:border-b-0 max-[760px]:grid-cols-[minmax(0,1fr)_40px]">
+    <div className="grid min-h-16 grid-cols-[minmax(0,1fr)_120px_140px_40px] items-center gap-4 px-4 py-2 shadow-(--shadow-border-bottom-soft) last:shadow-none max-[760px]:grid-cols-[minmax(0,1fr)_40px]">
       <button
         className="grid min-w-0 cursor-pointer gap-1 border-0 bg-transparent p-0 text-left"
         onClick={() => onOpen(email)}
