@@ -1944,7 +1944,7 @@ function HumanMessage({
         {text}
       </span>
 
-      <div className="my-1.5 mt-3 flex max-w-min gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+      <div className="my-1.5 flex max-w-min gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         <ActionButton
           icon={Edit02Icon}
           label="Edit message"
