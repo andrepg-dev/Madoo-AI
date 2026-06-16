@@ -455,6 +455,7 @@ function appendTimelineStep(
     if (steps.length && steps[steps.length - 1].label === label) return message;
     return {
       ...message,
+      finishedAt: undefined,
       steps: [
         ...steps.map((step) => ({ ...step, state: "done" as const })),
         { id: `step-${Date.now()}-${steps.length}`, label, state: "active" },
@@ -2023,6 +2024,7 @@ function AiMessage({
   const hasVersions = total > 1;
   const thinkingText = thinking ?? "";
   const showThinking = thinkingText.length > 0 && Boolean(thinkingActive);
+  const showActions = !showThinking;
 
   return (
     <div className="group mb-3.5 mr-auto rounded text-left">
@@ -2037,58 +2039,60 @@ function AiMessage({
         {children}
       </Streamdown>
 
-      <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-        {hasVersions ? (
-          <div className="mr-0.5 flex items-center text-xs text-madoo-ink-muted">
-            <Button
-              aria-label="Previous version"
-              className="h-6 w-6 rounded-md"
-              disabled={versionIndex <= 0}
-              onClick={() => onSelectVersion?.(versionIndex - 1)}
-              size="sm"
-              variant="icon"
-            >
-              <HugeiconsIcon
-                aria-hidden="true"
-                icon={ArrowLeft01Icon}
-                primaryColor="currentColor"
-                size={13}
-                strokeWidth={1.7}
-              />
-            </Button>
-            <span className="min-w-8 text-center tabular-nums">
-              {versionIndex + 1}/{total}
-            </span>
-            <Button
-              aria-label="Next version"
-              className="h-6 w-6 rounded-md"
-              disabled={versionIndex >= total - 1}
-              onClick={() => onSelectVersion?.(versionIndex + 1)}
-              size="sm"
-              variant="icon"
-            >
-              <HugeiconsIcon
-                aria-hidden="true"
-                className="rotate-180"
-                icon={ArrowLeft01Icon}
-                primaryColor="currentColor"
-                size={13}
-                strokeWidth={1.7}
-              />
-            </Button>
-          </div>
-        ) : null}
-        <CopyActionButton label="Copy response" text={children} />
-        <ActionButton icon={ThumbsUpIcon} label="Like response" />
-        <ActionButton icon={ThumbsDownIcon} label="Dislike response" />
-        {onRegenerate ? (
-          <ActionButton
-            icon={RefreshIcon}
-            label="Regenerate response"
-            onClick={regenerating ? undefined : onRegenerate}
-          />
-        ) : null}
-      </div>
+      {showActions ? (
+        <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+          {hasVersions ? (
+            <div className="mr-0.5 flex items-center text-xs text-madoo-ink-muted">
+              <Button
+                aria-label="Previous version"
+                className="h-6 w-6 rounded-md"
+                disabled={versionIndex <= 0}
+                onClick={() => onSelectVersion?.(versionIndex - 1)}
+                size="sm"
+                variant="icon"
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={ArrowLeft01Icon}
+                  primaryColor="currentColor"
+                  size={13}
+                  strokeWidth={1.7}
+                />
+              </Button>
+              <span className="min-w-8 text-center tabular-nums">
+                {versionIndex + 1}/{total}
+              </span>
+              <Button
+                aria-label="Next version"
+                className="h-6 w-6 rounded-md"
+                disabled={versionIndex >= total - 1}
+                onClick={() => onSelectVersion?.(versionIndex + 1)}
+                size="sm"
+                variant="icon"
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  className="rotate-180"
+                  icon={ArrowLeft01Icon}
+                  primaryColor="currentColor"
+                  size={13}
+                  strokeWidth={1.7}
+                />
+              </Button>
+            </div>
+          ) : null}
+          <CopyActionButton label="Copy response" text={children} />
+          <ActionButton icon={ThumbsUpIcon} label="Like response" />
+          <ActionButton icon={ThumbsDownIcon} label="Dislike response" />
+          {onRegenerate ? (
+            <ActionButton
+              icon={RefreshIcon}
+              label="Regenerate response"
+              onClick={regenerating ? undefined : onRegenerate}
+            />
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2267,11 +2271,20 @@ export default function EmailTemplateProject() {
       // Append the live timeline; the user's message is already on screen.
       setMessages((current) => [...current, timeline]);
 
+      const showTimelineProgress = (label: string) => {
+        if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
+          thinkingFinishedAt = Date.now();
+        }
+        setMessages((current) =>
+          thinkingText || assistantText
+            ? upsertAssistant(appendTimelineStep(current, timelineId, label))
+            : appendTimelineStep(current, timelineId, label),
+        );
+      };
+
       const handleEvent = (event: StreamEmailEvent) => {
         if (event.type === "step") {
-          setMessages((current) =>
-            appendTimelineStep(current, timelineId, event.message),
-          );
+          showTimelineProgress(event.message);
           return;
         }
 
@@ -2315,16 +2328,12 @@ export default function EmailTemplateProject() {
         }
 
         if (event.type === "code-chunk") {
-          setMessages((current) =>
-            appendTimelineStep(current, timelineId, "Writing the email template…"),
-          );
+          showTimelineProgress("Writing the email template…");
           return;
         }
 
         if (event.type === "preview_url") {
-          setMessages((current) =>
-            appendTimelineStep(current, timelineId, "Preview image ready"),
-          );
+          showTimelineProgress("Preview image ready");
           return;
         }
 

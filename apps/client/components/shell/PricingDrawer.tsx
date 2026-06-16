@@ -117,7 +117,7 @@ function BillingSwitch({
         )}
         onClick={() => onChange("ANNUAL")}
       >
-        Pay yearly (Save 20%)
+        Pay yearly (Save 16%)
       </button>
     </div>
   );
