@@ -32,7 +32,7 @@ const faqs = [
   {
     question: "What if I don't find my export provider?",
     answer:
-      "If you don't find your provider, you can report it inside the platform with the add provider button. We'll review it, and if we accept and add that provider, we'll give you 150 AI credits for free.",
+      "If you don't find your provider, you can report it inside the platform with the add provider button.",
   },
 ];
 

@@ -65,7 +65,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "How does annual billing work?",
-    a: "Annual plans are billed upfront for the full year at a 20% discount. You can switch back to monthly at renewal.",
+    a: "Annual plans are billed upfront for the full year at a 16% discount. You can switch back to monthly at renewal.",
   },
 ];
 
@@ -425,7 +425,7 @@ function BillingPageContent() {
                   color: billing === "ANNUAL" ? "var(--accent-fg)" : "var(--accent-deep)",
                 }}
               >
-                SAVE 20%
+                SAVE 16%
               </span>
             </button>
           </div>

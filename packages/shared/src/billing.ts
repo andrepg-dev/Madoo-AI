@@ -26,14 +26,14 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
 
 export const PLAN_PRICES: Record<Plan, number> = {
   FREE: 0,
-  STARTER: 19,
-  GROWTH: 49,
+  STARTER: 25,
+  GROWTH: 50,
 };
 
 export const PLAN_PRICES_ANNUAL: Record<Plan, number> = {
   FREE: 0,
-  STARTER: 15,
-  GROWTH: 39,
+  STARTER: 21,
+  GROWTH: 42,
 };
 
 export type BillingInterval = "MONTHLY" | "ANNUAL";

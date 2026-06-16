@@ -10,6 +10,7 @@ import {
   EmailShareDtoSchema,
   PublicEmailDtoSchema,
   RenameEmailSchema,
+  SetEmailChatMessageFeedbackSchema,
   SetEmailStarredSchema,
   TransferEmailSchema,
   UpdateEmailShareSchema,
@@ -22,6 +23,7 @@ import {
   type EmailShareDto,
   type PublicEmailDto,
   type RenameEmailInput,
+  type SetEmailChatMessageFeedbackInput,
   type TransferEmailInput,
   type UpdateEmailShareInput,
   type UpdateEmailVariantVariableSchemaInput,
@@ -37,6 +39,7 @@ export type {
   EmailShareDto,
   PublicEmailDto,
   RenameEmailInput,
+  SetEmailChatMessageFeedbackInput,
   TransferEmailInput,
   UpdateEmailShareInput,
   UpdateEmailVariantVariableSchemaInput,
@@ -85,6 +88,22 @@ export async function truncateEmailChat(
     method: "POST",
     body: JSON.stringify({ from }),
   });
+}
+
+export async function setEmailChatMessageFeedback(
+  emailId: string,
+  messageId: string,
+  input: SetEmailChatMessageFeedbackInput,
+): Promise<EmailChatMessageDto> {
+  const body = SetEmailChatMessageFeedbackSchema.parse(input);
+  const raw = await FetchWrapper<unknown>(
+    `/emails/${emailId}/chat/${messageId}/feedback`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    },
+  );
+  return EmailChatMessageDtoSchema.parse(raw);
 }
 
 export async function fetchEmails(): Promise<EmailDto[]> {

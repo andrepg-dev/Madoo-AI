@@ -11,6 +11,7 @@ import {
   createEmail,
   fetchEmail,
   fetchEmailChat,
+  setEmailChatMessageFeedback,
   setEmailStarred,
   truncateEmailChat,
   updateEmailShare,
@@ -85,6 +86,7 @@ import {
   Modal,
   ProgressBar,
   SegmentedControl,
+  Textarea,
   useToast,
 } from "@madoo/design-system";
 import type {
@@ -114,15 +116,21 @@ function ActionButton({
   icon,
   label,
   onClick,
+  selected = false,
 }: {
   icon: IconSvgElement;
   label: string;
   onClick?: () => void;
+  selected?: boolean;
 }) {
   return (
     <Button
       aria-label={label}
-      className="h-6 w-6 rounded-md"
+      aria-pressed={selected}
+      className={cn(
+        "h-6 w-6 rounded-md",
+        selected && "bg-white text-madoo-ink shadow-madoo-border",
+      )}
       onClick={onClick}
       variant="icon"
       size="sm"
@@ -347,7 +355,7 @@ function ConversationTitleDropdown({
           asChild
           className="justify-start! px-2! py-1! text-[13px]!"
         >
-          <Link href="/settings">
+          <Link href="/settings?area=workspace&section=overview">
             <span className="flex items-center gap-2.5">
               <HeaderMenuIcon icon={Settings01Icon} />
               Settings
@@ -400,6 +408,8 @@ type TimelineStep = {
   state: "active" | "done";
 };
 
+type AiMessageFeedback = "LIKE" | "DISLIKE";
+
 type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "status" | "error" | "timeline";
@@ -413,11 +423,16 @@ type ChatMessage = {
   /** Assistant response-version group (regenerations of the same turn). */
   groupId?: string;
   /** All sibling responses in the group, oldest → newest. */
-  versions?: { id: string; content: string }[];
+  versions?: {
+    id: string;
+    content: string;
+    feedback?: AiMessageFeedback | null;
+  }[];
   /** Index of the currently shown sibling within `versions`. */
   versionIndex?: number;
   /** Model reasoning shown in a collapsible block above the answer. */
   thinking?: string;
+  feedback?: AiMessageFeedback | null;
   /** How long the reasoning took (live only); drives "Thought for Ns". */
   thinkingSeconds?: number;
   /** True while reasoning is still streaming; drives the live label. */
@@ -455,6 +470,7 @@ function appendTimelineStep(
     if (steps.length && steps[steps.length - 1].label === label) return message;
     return {
       ...message,
+      finishedAt: undefined,
       steps: [
         ...steps.map((step) => ({ ...step, state: "done" as const })),
         { id: `step-${Date.now()}-${steps.length}`, label, state: "active" },
@@ -514,6 +530,33 @@ function latestVariant(email: EmailDto | null | undefined) {
   return email?.variants[email.variants.length - 1] ?? null;
 }
 
+function applyAiMessageFeedback(
+  list: ChatMessage[],
+  messageId: string,
+  feedback: AiMessageFeedback | null,
+): ChatMessage[] {
+  return list.map((message) => {
+    if (message.role !== "assistant") return message;
+    if (message.id === messageId) return { ...message, feedback };
+
+    const versions = message.versions;
+    if (!versions?.some((version) => version.id === messageId)) {
+      return message;
+    }
+
+    const nextVersions = versions.map((version) =>
+      version.id === messageId ? { ...version, feedback } : version,
+    );
+    const selectedVersion = nextVersions[message.versionIndex ?? 0];
+    return {
+      ...message,
+      versions: nextVersions,
+      feedback:
+        selectedVersion?.id === messageId ? feedback : message.feedback,
+    };
+  });
+}
+
 function mapChatMessages(
   chat: EmailChatMessageDto[] | undefined,
   email: EmailDto | null | undefined,
@@ -571,9 +614,11 @@ function mapChatMessages(
         versions: siblings.map((sibling) => ({
           id: sibling.id,
           content: sibling.content,
+          feedback: sibling.feedback ?? null,
         })),
         versionIndex: selected,
         thinking: thinkingByText.get(siblings[selected].id),
+        feedback: siblings[selected].feedback ?? null,
       });
       continue;
     }
@@ -591,6 +636,8 @@ function mapChatMessages(
         message.role === "ASSISTANT"
           ? thinkingByText.get(message.id)
           : undefined,
+      feedback:
+        message.role === "ASSISTANT" ? (message.feedback ?? null) : undefined,
     });
   }
 
@@ -1208,6 +1255,52 @@ function openConnectPopup(
     }
     window.addEventListener("message", onMessage);
   });
+}
+
+function DislikeFeedbackModal({
+  open,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (comment: string) => void;
+}) {
+  const [comment, setComment] = useState("");
+
+  useEffect(() => {
+    if (open) setComment("");
+  }, [open]);
+
+  return (
+    <Modal
+      className="bg-madoo-bg"
+      description="Tell us what went wrong so we can improve future responses."
+      eyebrow="Feedback"
+      onClose={onClose}
+      open={open}
+      size="md"
+      title="Help us improve this response"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button onClick={onClose} variant="ghost">
+            Skip
+          </Button>
+          <Button onClick={() => onSubmit(comment.trim())} variant="primary">
+            Send feedback
+          </Button>
+        </div>
+      }
+    >
+      <Textarea
+        autoFocus
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="What would you have liked instead?"
+        rows={4}
+        value={comment}
+      />
+    </Modal>
+  );
 }
 
 function ExportProviderModal({
@@ -2000,21 +2093,29 @@ function ThinkingBlock({
 
 function AiMessage({
   children,
+  feedback,
   thinking,
   thinkingSeconds,
   thinkingActive,
   versions,
   versionIndex = 0,
+  onFeedback,
   onSelectVersion,
   onRegenerate,
   regenerating,
 }: {
   children: string;
+  feedback?: AiMessageFeedback | null;
   thinking?: string;
   thinkingSeconds?: number;
   thinkingActive?: boolean;
-  versions?: { id: string; content: string }[];
+  versions?: {
+    id: string;
+    content: string;
+    feedback?: AiMessageFeedback | null;
+  }[];
   versionIndex?: number;
+  onFeedback?: (feedback: AiMessageFeedback) => void;
   onSelectVersion?: (index: number) => void;
   onRegenerate?: () => void;
   regenerating?: boolean;
@@ -2023,6 +2124,7 @@ function AiMessage({
   const hasVersions = total > 1;
   const thinkingText = thinking ?? "";
   const showThinking = thinkingText.length > 0 && Boolean(thinkingActive);
+  const showActions = !showThinking;
 
   return (
     <div className="group mb-3.5 mr-auto rounded text-left">
@@ -2037,58 +2139,72 @@ function AiMessage({
         {children}
       </Streamdown>
 
-      <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-        {hasVersions ? (
-          <div className="mr-0.5 flex items-center text-xs text-madoo-ink-muted">
-            <Button
-              aria-label="Previous version"
-              className="h-6 w-6 rounded-md"
-              disabled={versionIndex <= 0}
-              onClick={() => onSelectVersion?.(versionIndex - 1)}
-              size="sm"
-              variant="icon"
-            >
-              <HugeiconsIcon
-                aria-hidden="true"
-                icon={ArrowLeft01Icon}
-                primaryColor="currentColor"
-                size={13}
-                strokeWidth={1.7}
+      {showActions ? (
+        <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+          {hasVersions ? (
+            <div className="mr-0.5 flex items-center text-xs text-madoo-ink-muted">
+              <Button
+                aria-label="Previous version"
+                className="h-6 w-6 rounded-md"
+                disabled={versionIndex <= 0}
+                onClick={() => onSelectVersion?.(versionIndex - 1)}
+                size="sm"
+                variant="icon"
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={ArrowLeft01Icon}
+                  primaryColor="currentColor"
+                  size={13}
+                  strokeWidth={1.7}
+                />
+              </Button>
+              <span className="min-w-8 text-center tabular-nums">
+                {versionIndex + 1}/{total}
+              </span>
+              <Button
+                aria-label="Next version"
+                className="h-6 w-6 rounded-md"
+                disabled={versionIndex >= total - 1}
+                onClick={() => onSelectVersion?.(versionIndex + 1)}
+                size="sm"
+                variant="icon"
+              >
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  className="rotate-180"
+                  icon={ArrowLeft01Icon}
+                  primaryColor="currentColor"
+                  size={13}
+                  strokeWidth={1.7}
+                />
+              </Button>
+            </div>
+          ) : null}
+          <CopyActionButton label="Copy response" text={children} />
+          {feedback ? null : (
+            <>
+              <ActionButton
+                icon={ThumbsUpIcon}
+                label="Like response"
+                onClick={() => onFeedback?.("LIKE")}
               />
-            </Button>
-            <span className="min-w-8 text-center tabular-nums">
-              {versionIndex + 1}/{total}
-            </span>
-            <Button
-              aria-label="Next version"
-              className="h-6 w-6 rounded-md"
-              disabled={versionIndex >= total - 1}
-              onClick={() => onSelectVersion?.(versionIndex + 1)}
-              size="sm"
-              variant="icon"
-            >
-              <HugeiconsIcon
-                aria-hidden="true"
-                className="rotate-180"
-                icon={ArrowLeft01Icon}
-                primaryColor="currentColor"
-                size={13}
-                strokeWidth={1.7}
+              <ActionButton
+                icon={ThumbsDownIcon}
+                label="Dislike response"
+                onClick={() => onFeedback?.("DISLIKE")}
               />
-            </Button>
-          </div>
-        ) : null}
-        <CopyActionButton label="Copy response" text={children} />
-        <ActionButton icon={ThumbsUpIcon} label="Like response" />
-        <ActionButton icon={ThumbsDownIcon} label="Dislike response" />
-        {onRegenerate ? (
-          <ActionButton
-            icon={RefreshIcon}
-            label="Regenerate response"
-            onClick={regenerating ? undefined : onRegenerate}
-          />
-        ) : null}
-      </div>
+            </>
+          )}
+          {onRegenerate ? (
+            <ActionButton
+              icon={RefreshIcon}
+              label="Regenerate response"
+              onClick={regenerating ? undefined : onRegenerate}
+            />
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2156,6 +2272,7 @@ export default function EmailTemplateProject() {
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [testingModalOpen, setTestingModalOpen] = useState(false);
+  const [dislikeTarget, setDislikeTarget] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [templateTheme, setTemplateTheme] = useState<TemplateTheme>("light");
   const [previewWidth, setPreviewWidth] = useState(defaultPreviewWidthVw);
@@ -2176,6 +2293,47 @@ export default function EmailTemplateProject() {
     queryKey: ["email-chat", currentEmailId],
     queryFn: () => fetchEmailChat(currentEmailId!),
     enabled: Boolean(currentEmailId),
+  });
+
+  const feedbackMutation = useMutation({
+    mutationFn: (input: {
+      messageId: string;
+      feedback: AiMessageFeedback | null;
+      comment?: string;
+    }) =>
+      setEmailChatMessageFeedback(currentEmailId!, input.messageId, {
+        feedback: input.feedback,
+        ...(input.comment !== undefined ? { comment: input.comment } : {}),
+      }),
+    onMutate: (input) => {
+      setMessages((current) =>
+        applyAiMessageFeedback(current, input.messageId, input.feedback),
+      );
+    },
+    onSuccess: (updated) => {
+      const nextFeedback = updated.feedback ?? null;
+      setMessages((current) =>
+        applyAiMessageFeedback(current, updated.id, nextFeedback),
+      );
+      queryClient.setQueryData<EmailChatMessageDto[] | undefined>(
+        ["email-chat", currentEmailId],
+        (current) =>
+          current?.map((message) =>
+            message.id === updated.id ? { ...message, ...updated } : message,
+          ),
+      );
+    },
+    onError: (_error, input) => {
+      void chatQuery.refetch();
+      setMessages((current) =>
+        applyAiMessageFeedback(current, input.messageId, null),
+      );
+      toast({
+        tone: "danger",
+        title: "Feedback not saved",
+        body: "Try again.",
+      });
+    },
   });
 
   const email = emailQuery.data;
@@ -2267,11 +2425,20 @@ export default function EmailTemplateProject() {
       // Append the live timeline; the user's message is already on screen.
       setMessages((current) => [...current, timeline]);
 
+      const showTimelineProgress = (label: string) => {
+        if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
+          thinkingFinishedAt = Date.now();
+        }
+        setMessages((current) =>
+          thinkingText || assistantText
+            ? upsertAssistant(appendTimelineStep(current, timelineId, label))
+            : appendTimelineStep(current, timelineId, label),
+        );
+      };
+
       const handleEvent = (event: StreamEmailEvent) => {
         if (event.type === "step") {
-          setMessages((current) =>
-            appendTimelineStep(current, timelineId, event.message),
-          );
+          showTimelineProgress(event.message);
           return;
         }
 
@@ -2315,16 +2482,12 @@ export default function EmailTemplateProject() {
         }
 
         if (event.type === "code-chunk") {
-          setMessages((current) =>
-            appendTimelineStep(current, timelineId, "Writing the email template…"),
-          );
+          showTimelineProgress("Writing the email template…");
           return;
         }
 
         if (event.type === "preview_url") {
-          setMessages((current) =>
-            appendTimelineStep(current, timelineId, "Preview image ready"),
-          );
+          showTimelineProgress("Preview image ready");
           return;
         }
 
@@ -2798,8 +2961,35 @@ export default function EmailTemplateProject() {
     if (message.role === "timeline") {
       return <TimelineMessage message={message} />;
     }
+    const feedbackVersion = message.versions?.[message.versionIndex ?? 0];
+    const feedbackMessageId = feedbackVersion?.id ?? message.id;
+    const feedback = feedbackVersion?.feedback ?? message.feedback ?? null;
     return (
       <AiMessage
+        feedback={feedback}
+        onFeedback={(nextFeedback) => {
+          if (!currentEmailId || feedbackMutation.isPending) return;
+          if (nextFeedback === "LIKE") {
+            feedbackMutation.mutate(
+              { messageId: feedbackMessageId, feedback: "LIKE" },
+              {
+                onSuccess: () =>
+                  toast({
+                    tone: "success",
+                    title: "Thanks for your feedback",
+                  }),
+              },
+            );
+            return;
+          }
+          // Dislike: persist immediately (hides the buttons) and open the
+          // modal asking the user what to improve.
+          feedbackMutation.mutate({
+            messageId: feedbackMessageId,
+            feedback: "DISLIKE",
+          });
+          setDislikeTarget(feedbackMessageId);
+        }}
         onRegenerate={
           message.id === lastAssistantId ? () => regenerate(message) : undefined
         }
@@ -2967,6 +3157,29 @@ export default function EmailTemplateProject() {
         onClose={() => setTestingModalOpen(false)}
         open={testingModalOpen}
         variantId={variant?.id ?? null}
+      />
+      <DislikeFeedbackModal
+        open={dislikeTarget !== null}
+        onClose={() => setDislikeTarget(null)}
+        onSubmit={(comment) => {
+          if (!dislikeTarget || !currentEmailId) return;
+          feedbackMutation.mutate(
+            {
+              messageId: dislikeTarget,
+              feedback: "DISLIKE",
+              comment,
+            },
+            {
+              onSuccess: () =>
+                toast({
+                  tone: "success",
+                  title: "Thanks for your feedback",
+                  body: "We'll review it to improve future responses.",
+                }),
+            },
+          );
+          setDislikeTarget(null);
+        }}
       />
     </main>
   );

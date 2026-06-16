@@ -60,7 +60,7 @@ function BillingSwitch({
         }
         onClick={() => onChange("yearly")}
       >
-        Pay yearly (Save 20%)
+        Pay yearly (Save 16%)
       </button>
     </div>
   );
@@ -185,7 +185,7 @@ function PlanCard({
 
 export function PricingPlans() {
   const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>("yearly");
+    useState<BillingInterval>("monthly");
 
   return (
     <div className="flex w-full flex-col gap-6 font-ibm-plex-sans text-madoo-text">

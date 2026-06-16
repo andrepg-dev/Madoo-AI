@@ -32,15 +32,15 @@ export type PricingPlan = {
   features: PricingFeature[];
 };
 
-/** Yearly billing charges this fraction of the monthly price (20% off). */
-export const PRICING_YEARLY_RATE = 0.8;
+/** Yearly billing charges this fraction of the monthly price (16% off). */
+export const PRICING_YEARLY_RATE = 0.84;
 
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: "basic",
     name: "Basic",
     description: "For solo creators building more templates and exports.",
-    monthlyPrice: 20,
+    monthlyPrice: 25,
     cta: "Try Basic",
     checkoutPlan: "STARTER",
     features: [
@@ -57,7 +57,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     id: "medium",
     name: "Medium",
     description: "Amazing for small teams and agencies.",
-    monthlyPrice: 45,
+    monthlyPrice: 50,
     cta: "Try Medium",
     featured: true,
     checkoutPlan: "GROWTH",
