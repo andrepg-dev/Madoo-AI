@@ -236,6 +236,45 @@ function assertStaticSubject(subject: string, variableSchema: VariableSchemaRoot
 }
 
 
+/** Transient Anthropic failures worth retrying: overloaded, 5xx, rate-limit,
+ *  connection drops/timeouts. */
+function isRetryableLlmError(error: unknown): boolean {
+  if (error instanceof Anthropic.APIConnectionError) return true;
+  if (error instanceof Anthropic.APIError) {
+    const status = error.status;
+    if (typeof status !== "number") return true;
+    return status === 408 || status === 409 || status === 429 || status >= 500;
+  }
+  return false;
+}
+
+/** Turn an LLM/SDK failure into a short, human message — never the raw JSON
+ *  error body, which otherwise lands verbatim in the chat. */
+function formatLlmError(error: unknown): string {
+  if (error instanceof Anthropic.APIError) {
+    const status = error.status;
+    if (status === 429) {
+      return "The AI service is rate-limited right now. Please wait a moment and try again.";
+    }
+    if (status === 529) {
+      return "The AI service is overloaded right now. Please try again shortly.";
+    }
+    if (typeof status === "number" && status >= 500) {
+      return "The AI service hit a temporary error. Please try again.";
+    }
+    if (typeof status === "number" && status >= 400) {
+      return "The AI request was rejected. Please tweak your message and try again.";
+    }
+    return "The AI service is unavailable right now. Please try again.";
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  if (!message || /^[[{]/.test(message.trim())) {
+    return "Something went wrong while generating. Please try again.";
+  }
+  return message;
+}
+
+
 @Injectable()
 export class GenerationService {
   private readonly anthropic: Anthropic | null;
@@ -255,7 +294,9 @@ export class GenerationService {
     this.model =
       this.config.get<string>("ANTHROPIC_MODEL") ??
       "claude-sonnet-4-20250514";
-    this.anthropic = key ? new Anthropic({ apiKey: key }) : null;
+    this.anthropic = key
+      ? new Anthropic({ apiKey: key, maxRetries: 3 })
+      : null;
   }
 
   /** Extended thinking (model-level). Off if `ANTHROPIC_EXTENDED_THINKING=false`. */
@@ -320,9 +361,8 @@ export class GenerationService {
           );
           subscriber.complete();
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
           subscriber.next({
-            data: JSON.stringify({ type: "error", message: msg }),
+            data: JSON.stringify({ type: "error", message: formatLlmError(e) }),
           } as MessageEvent);
           subscriber.complete();
         }
@@ -346,9 +386,8 @@ export class GenerationService {
           );
           subscriber.complete();
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
           subscriber.next({
-            data: JSON.stringify({ type: "error", message: msg }),
+            data: JSON.stringify({ type: "error", message: formatLlmError(e) }),
           } as MessageEvent);
           subscriber.complete();
         }
@@ -674,7 +713,7 @@ export class GenerationService {
       let turnMessages = [...modelMessages];
 
       for (let toolTurn = 0; toolTurn < 3; toolTurn += 1) {
-        response = await this.runStream({
+        response = await this.runStreamWithRetry({
           modelMessages: turnMessages,
           systemBlocks,
           emit,
@@ -988,6 +1027,52 @@ export class GenerationService {
         data: { status: "ERROR" },
       });
       throw e;
+    }
+  }
+
+  /**
+   * Run a model turn, retrying transient Anthropic errors (overloaded / 5xx /
+   * rate limit / connection drops). A restart is only attempted while nothing
+   * user-visible has streamed yet, so a retry can never duplicate assistant
+   * text, the subject, or the email code that already reached the client.
+   */
+  private async runStreamWithRetry(args: {
+    modelMessages: MessageParam[];
+    systemBlocks: MessageCreateParams["system"];
+    emit: (p: Record<string, unknown>) => void;
+  }): Promise<Awaited<ReturnType<typeof this.runStream>>> {
+    const maxAttempts = 3;
+    for (let attempt = 1; ; attempt += 1) {
+      let emittedVisible = false;
+      const guardedEmit = (payload: Record<string, unknown>) => {
+        const type = payload.type;
+        if (
+          type === "assistant-chunk" ||
+          type === "code-chunk" ||
+          type === "subject"
+        ) {
+          emittedVisible = true;
+        }
+        args.emit(payload);
+      };
+
+      try {
+        return await this.runStream({ ...args, emit: guardedEmit });
+      } catch (error) {
+        if (
+          attempt >= maxAttempts ||
+          emittedVisible ||
+          !isRetryableLlmError(error)
+        ) {
+          throw error;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `[GenerationService] Anthropic stream attempt ${attempt} failed (retryable): ${message}; retrying`,
+        );
+        args.emit({ type: "step", message: "Retrying the AI service…" });
+        await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+      }
     }
   }
 
