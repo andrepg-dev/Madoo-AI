@@ -2366,9 +2366,24 @@ export default function EmailTemplateProject() {
           (message.role === "timeline" || message.role === "error") &&
           (!currentEmailId || message.emailId === currentEmailId),
       );
-      return [...server, ...clientOnly].sort(
+      const merged = [...server, ...clientOnly].sort(
         (a, b) => (a.seq ?? 0) - (b.seq ?? 0),
       );
+      // Guard against a transient refetch that hasn't yet returned the opening
+      // user message (the email/chat queries can settle a beat after a fresh
+      // generation). Never let a userless rebuild wipe a conversation that
+      // already shows the user's message — otherwise the first bubble vanishes
+      // and the title collapses to "New conversation". Scoped to the active
+      // email so switching to another (possibly empty) project still resets.
+      if (!merged.some((message) => message.role === "user")) {
+        const keepsUserMessage = previous.some(
+          (message) =>
+            message.role === "user" &&
+            (!message.emailId || message.emailId === currentEmailId),
+        );
+        if (keepsUserMessage) return previous;
+      }
+      return merged;
     });
   }, [chatQuery.data, currentEmailId, email, isStreaming]);
 
