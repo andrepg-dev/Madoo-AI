@@ -413,6 +413,10 @@ type ChatMessage = {
   versions?: { id: string; content: string }[];
   /** Index of the currently shown sibling within `versions`. */
   versionIndex?: number;
+  /** Model reasoning shown in a collapsible block above the answer. */
+  thinking?: string;
+  /** How long the reasoning took (live only); drives "Thought for Ns". */
+  thinkingSeconds?: number;
   steps?: TimelineStep[];
   startedAt?: number;
   finishedAt?: number;
@@ -510,6 +514,21 @@ function mapChatMessages(
   email: EmailDto | null | undefined,
   selectedVersions: Record<string, number> = {},
 ): ChatMessage[] {
+  // Pair each assistant THINKING row with the answer that immediately follows
+  // it (same turn), so the reasoning can hang off its response message.
+  const thinkingByText = new Map<string, string>();
+  let pendingThinking: string | null = null;
+  for (const row of chat ?? []) {
+    if (row.role === "ASSISTANT" && row.kind === "THINKING") {
+      pendingThinking = row.content;
+    } else if (row.role === "ASSISTANT" && row.kind === "TEXT") {
+      if (pendingThinking) thinkingByText.set(row.id, pendingThinking);
+      pendingThinking = null;
+    } else {
+      pendingThinking = null;
+    }
+  }
+
   const rows = chat?.filter((message) => message.kind !== "THINKING") ?? [];
 
   // Collect assistant response-version siblings, oldest → newest (chat is asc).
@@ -549,6 +568,7 @@ function mapChatMessages(
           content: sibling.content,
         })),
         versionIndex: selected,
+        thinking: thinkingByText.get(siblings[selected].id),
       });
       continue;
     }
@@ -562,6 +582,10 @@ function mapChatMessages(
       content: message.content,
       seq: Date.parse(message.createdAt) || 0,
       emailId: email?.id,
+      thinking:
+        message.role === "ASSISTANT"
+          ? thinkingByText.get(message.id)
+          : undefined,
     });
   }
 
@@ -1926,8 +1950,37 @@ function HumanMessage({
   );
 }
 
+function ThinkingBlock({
+  text,
+  seconds,
+}: {
+  text: string;
+  seconds?: number;
+}) {
+  return (
+    <details className="group mb-2.5">
+      <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-madoo-ink-muted transition-colors hover:text-madoo-ink [&::-webkit-details-marker]:hidden">
+        <span>{seconds ? `Thought for ${seconds} seconds` : "Thought process"}</span>
+        <HugeiconsIcon
+          aria-hidden="true"
+          className="transition-transform group-open:rotate-180"
+          icon={ArrowDown01Icon}
+          primaryColor="currentColor"
+          size={14}
+          strokeWidth={1.7}
+        />
+      </summary>
+      <div className="mt-2 whitespace-pre-wrap border-l-2 border-madoo-border pl-3 text-xs leading-5 text-madoo-ink-muted">
+        {text}
+      </div>
+    </details>
+  );
+}
+
 function AiMessage({
   children,
+  thinking,
+  thinkingSeconds,
   versions,
   versionIndex = 0,
   onSelectVersion,
@@ -1935,6 +1988,8 @@ function AiMessage({
   regenerating,
 }: {
   children: string;
+  thinking?: string;
+  thinkingSeconds?: number;
   versions?: { id: string; content: string }[];
   versionIndex?: number;
   onSelectVersion?: (index: number) => void;
@@ -1946,6 +2001,9 @@ function AiMessage({
 
   return (
     <div className="rounded mr-auto text-left">
+      {thinking ? (
+        <ThinkingBlock seconds={thinkingSeconds} text={thinking} />
+      ) : null}
       <Streamdown className="ai-conversation-markdown font-figtree leading-6">
         {children}
       </Streamdown>
@@ -2150,6 +2208,28 @@ export default function EmailTemplateProject() {
       );
       const timelineId = timeline.id;
       let assistantText = "";
+      let thinkingText = "";
+      let thinkingStartedAt: number | null = null;
+      let thinkingFinishedAt: number | null = null;
+
+      const upsertAssistant = (current: ChatMessage[]) =>
+        upsertMessage(current, {
+          id: assistantId,
+          role: "assistant",
+          content: assistantText,
+          seq: Date.now(),
+          emailId,
+          thinking: thinkingText || undefined,
+          thinkingSeconds: thinkingStartedAt
+            ? Math.max(
+                1,
+                Math.round(
+                  ((thinkingFinishedAt ?? Date.now()) - thinkingStartedAt) /
+                    1000,
+                ),
+              )
+            : undefined,
+        });
 
       setIsStreaming(true);
       // Append the live timeline; the user's message is already on screen.
@@ -2163,17 +2243,27 @@ export default function EmailTemplateProject() {
           return;
         }
 
+        if (event.type === "thinking-chunk") {
+          thinkingText += event.value;
+          const firstChunk = thinkingStartedAt === null;
+          if (firstChunk) thinkingStartedAt = Date.now();
+          // Once reasoning starts, the "Thought for Ns" block is the indicator —
+          // drop the loading spinner above it.
+          setMessages((current) =>
+            upsertAssistant(
+              firstChunk ? finishTimeline(current, timelineId) : current,
+            ),
+          );
+          return;
+        }
+
         if (event.type === "assistant-chunk") {
           assistantText += event.value;
-          setMessages((current) =>
-            upsertMessage(current, {
-              id: assistantId,
-              role: "assistant",
-              content: assistantText,
-              seq: Date.now(),
-              emailId,
-            }),
-          );
+          // First visible answer token marks the end of the reasoning phase.
+          if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
+            thinkingFinishedAt = Date.now();
+          }
+          setMessages(upsertAssistant);
           return;
         }
 
@@ -2203,6 +2293,9 @@ export default function EmailTemplateProject() {
 
         if (event.type === "done") {
           playCompletionSound();
+          if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
+            thinkingFinishedAt = Date.now();
+          }
           if (event.compiledHtml) {
             setStreamedHtml(event.compiledHtml);
             setSidebarOpen(true);
@@ -2223,6 +2316,16 @@ export default function EmailTemplateProject() {
                 : `Generated email${event.subject ? `: ${event.subject}` : "."}`,
               seq: Date.now(),
               emailId,
+              thinking: thinkingText || undefined,
+              thinkingSeconds: thinkingStartedAt
+                ? Math.max(
+                    1,
+                    Math.round(
+                      ((thinkingFinishedAt ?? Date.now()) - thinkingStartedAt) /
+                        1000,
+                    ),
+                  )
+                : undefined,
             });
           });
           return;
@@ -2636,6 +2739,8 @@ export default function EmailTemplateProject() {
             : undefined
         }
         regenerating={isStreaming}
+        thinking={message.thinking}
+        thinkingSeconds={message.thinkingSeconds}
         versionIndex={message.versionIndex}
         versions={message.versions}
       >
@@ -2699,7 +2804,7 @@ export default function EmailTemplateProject() {
                     </Fragment>
                   ),
                 )}
-                <div className="flex min-h-[400px] flex-col gap-8">
+                <div className="flex min-h-100 flex-col gap-8">
                   {tailMessages.map((message) => (
                     <Fragment key={message.id}>
                       {renderMessage(message)}
