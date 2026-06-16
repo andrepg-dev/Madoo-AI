@@ -271,7 +271,7 @@ function ConversationTitleDropdown({
     <Dropdown>
       <DropdownTrigger asChild>
         <Button
-          className="h-8 max-w-[min(360px,calc(100vw-32px))] gap-1.5 px-2.5 py-0! text-[13px] !shadow-none hover:!shadow-none data-[state=open]:!shadow-none"
+          className="h-8 max-w-[min(360px,calc(100vw-32px))] gap-1.5 px-2.5 py-0! text-[13px] shadow-none! hover:shadow-none! data-[state=open]:shadow-none!"
           variant="ghost"
         >
           <Image
@@ -1554,6 +1554,17 @@ function EmailPreviewSidebar({
   const canEditVariables = Boolean(emailId && variant);
 
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  useEffect(() => {
+    if (expanded) {
+      setVariablesOpen(false);
+      return;
+    }
+
+    if (canEditVariables) {
+      setVariablesOpen(true);
+    }
+  }, [canEditVariables, expanded]);
 
   const syncIframeHeight = useCallback(() => {
     const iframe = iframeRef.current;
