@@ -2,8 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpException,
-  HttpStatus,
   Param,
   Post,
   Query,
@@ -82,14 +80,6 @@ export class ExportsController {
       variantId || undefined,
     );
     sendAttachment(res, filename, "application/pdf", buffer);
-  }
-
-  @Get(":id/export/amphtml")
-  amphtml(): never {
-    throw new HttpException(
-      "AMPHTML export is coming soon.",
-      HttpStatus.NOT_IMPLEMENTED,
-    );
   }
 
   @Get(":id/export/esp")

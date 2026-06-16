@@ -1066,11 +1066,6 @@ const applicationExportProviders: readonly ExportProvider[] = [
 
 const fileExportFormats: readonly ExportFileFormat[] = [
   {
-    name: "AMPHTML",
-    description: "AMP-compatible markup",
-    icon: SourceCodeIcon,
-  },
-  {
     name: "HTML",
     description: "Production email HTML",
     icon: SourceCodeIcon,
@@ -1498,17 +1493,6 @@ function ExportProviderModal({
 
           {tab === "file"
             ? fileExportFormats.map((format) => {
-              if (format.name === "AMPHTML") {
-                return (
-                  <ExportFileCard
-                    description="Coming soon"
-                    disabled
-                    icon={format.icon}
-                    key={format.name}
-                    name={format.name}
-                  />
-                );
-              }
               const onClick =
                 format.name === "HTML"
                   ? () => downloadFile("html")
