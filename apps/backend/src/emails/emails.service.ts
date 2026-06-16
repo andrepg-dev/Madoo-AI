@@ -158,6 +158,7 @@ export class EmailsService {
         role: row.role,
         kind: row.kind,
         content: row.content,
+        groupId: row.groupId,
         createdAt: row.createdAt.toISOString(),
       }),
     );

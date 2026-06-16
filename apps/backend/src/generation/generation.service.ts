@@ -21,7 +21,7 @@ import type {
   GenerationRunStatus,
 } from "@prisma/client";
 import { Observable } from "rxjs";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   buildRenderVariables,
   parseVariableSchemaJson,
@@ -236,6 +236,45 @@ function assertStaticSubject(subject: string, variableSchema: VariableSchemaRoot
 }
 
 
+/** Transient Anthropic failures worth retrying: overloaded, 5xx, rate-limit,
+ *  connection drops/timeouts. */
+function isRetryableLlmError(error: unknown): boolean {
+  if (error instanceof Anthropic.APIConnectionError) return true;
+  if (error instanceof Anthropic.APIError) {
+    const status = error.status;
+    if (typeof status !== "number") return true;
+    return status === 408 || status === 409 || status === 429 || status >= 500;
+  }
+  return false;
+}
+
+/** Turn an LLM/SDK failure into a short, human message — never the raw JSON
+ *  error body, which otherwise lands verbatim in the chat. */
+function formatLlmError(error: unknown): string {
+  if (error instanceof Anthropic.APIError) {
+    const status = error.status;
+    if (status === 429) {
+      return "The AI service is rate-limited right now. Please wait a moment and try again.";
+    }
+    if (status === 529) {
+      return "The AI service is overloaded right now. Please try again shortly.";
+    }
+    if (typeof status === "number" && status >= 500) {
+      return "The AI service hit a temporary error. Please try again.";
+    }
+    if (typeof status === "number" && status >= 400) {
+      return "The AI request was rejected. Please tweak your message and try again.";
+    }
+    return "The AI service is unavailable right now. Please try again.";
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  if (!message || /^[[{]/.test(message.trim())) {
+    return "Something went wrong while generating. Please try again.";
+  }
+  return message;
+}
+
+
 @Injectable()
 export class GenerationService {
   private readonly anthropic: Anthropic | null;
@@ -255,7 +294,9 @@ export class GenerationService {
     this.model =
       this.config.get<string>("ANTHROPIC_MODEL") ??
       "claude-sonnet-4-20250514";
-    this.anthropic = key ? new Anthropic({ apiKey: key }) : null;
+    this.anthropic = key
+      ? new Anthropic({ apiKey: key, maxRetries: 3 })
+      : null;
   }
 
   /** Extended thinking (model-level). Off if `ANTHROPIC_EXTENDED_THINKING=false`. */
@@ -267,14 +308,30 @@ export class GenerationService {
     return { type: "adaptive", display: "summarized" };
   }
 
-  private async loadRecentChatContext(emailId: string): Promise<string> {
+  private async loadRecentChatContext(
+    emailId: string,
+    upTo?: Date,
+  ): Promise<string> {
     const rows = await this.prisma.emailChatMessage.findMany({
-      where: { emailId },
+      where: {
+        emailId,
+        ...(upTo ? { createdAt: { lte: upTo } } : {}),
+      },
       orderBy: { createdAt: "desc" },
       take: CHAT_HISTORY_LIMIT,
     });
-    if (!rows.length) return "No previous chat context.";
-    return rows
+    // Collapse response-version groups to their latest sibling (rows are desc,
+    // so the first one seen per group is the newest) — older regenerations must
+    // not leak back into the model's context.
+    const seenGroups = new Set<string>();
+    const deduped = rows.filter((row) => {
+      if (!row.groupId) return true;
+      if (seenGroups.has(row.groupId)) return false;
+      seenGroups.add(row.groupId);
+      return true;
+    });
+    if (!deduped.length) return "No previous chat context.";
+    return deduped
       .reverse()
       .map((row) => {
         const role = row.role.toLowerCase();
@@ -291,6 +348,7 @@ export class GenerationService {
     role: EmailChatRole;
     kind: EmailChatKind;
     content: string;
+    groupId?: string;
   }): Promise<void> {
     const content = args.content.trim();
     if (!content) return;
@@ -301,6 +359,7 @@ export class GenerationService {
         role: args.role,
         kind: args.kind,
         content,
+        groupId: args.groupId ?? null,
       },
     });
   }
@@ -320,9 +379,8 @@ export class GenerationService {
           );
           subscriber.complete();
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
           subscriber.next({
-            data: JSON.stringify({ type: "error", message: msg }),
+            data: JSON.stringify({ type: "error", message: formatLlmError(e) }),
           } as MessageEvent);
           subscriber.complete();
         }
@@ -346,14 +404,94 @@ export class GenerationService {
           );
           subscriber.complete();
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
           subscriber.next({
-            data: JSON.stringify({ type: "error", message: msg }),
+            data: JSON.stringify({ type: "error", message: formatLlmError(e) }),
           } as MessageEvent);
           subscriber.complete();
         }
       })();
     });
+  }
+
+  regenerateEmailStream(
+    emailId: string,
+    workspaceId: string,
+  ): Observable<MessageEvent> {
+    return new Observable<MessageEvent>((subscriber) => {
+      void (async () => {
+        try {
+          subscriber.next({
+            data: JSON.stringify({
+              type: "step",
+              message: "Regenerating response...",
+            }),
+          } as MessageEvent);
+          await this.regenerate(emailId, workspaceId, (payload) =>
+            subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+          );
+          subscriber.complete();
+        } catch (e) {
+          subscriber.next({
+            data: JSON.stringify({ type: "error", message: formatLlmError(e) }),
+          } as MessageEvent);
+          subscriber.complete();
+        }
+      })();
+    });
+  }
+
+  /**
+   * Re-run the latest turn's instruction, appending a new assistant response as
+   * a sibling of the previous one (same `groupId`) so the UI can offer version
+   * navigation. The response being regenerated is excluded from the model's
+   * context so the new attempt is independent.
+   */
+  async regenerate(
+    emailId: string,
+    workspaceId: string,
+    emit: (p: Record<string, unknown>) => void,
+  ): Promise<void> {
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+
+    const rows = await this.prisma.emailChatMessage.findMany({
+      where: { emailId },
+      orderBy: { createdAt: "asc" },
+    });
+    const userMessages = rows.filter((row) => row.role === "USER");
+    const lastUser = userMessages[userMessages.length - 1];
+    if (!lastUser) {
+      throw new BadRequestException("Nothing to regenerate yet.");
+    }
+
+    // Assistant rows after the last user message are the turn being regenerated.
+    // Group them so the existing + new responses become navigable siblings.
+    const turnAssistantRows = rows.filter(
+      (row) => row.role === "ASSISTANT" && row.createdAt > lastUser.createdAt,
+    );
+    let groupId = turnAssistantRows.find((row) => row.groupId)?.groupId ?? null;
+    if (!groupId) {
+      groupId = randomUUID();
+      if (turnAssistantRows.length) {
+        await this.prisma.emailChatMessage.updateMany({
+          where: { id: { in: turnAssistantRows.map((row) => row.id) } },
+          data: { groupId },
+        });
+      }
+    }
+
+    const isFirstTurn =
+      userMessages.length === 1 && rows[0]?.id === lastUser.id;
+    if (isFirstTurn) {
+      await this.runInitial(emailId, workspaceId, emit, groupId);
+    } else {
+      await this.runEdit(
+        emailId,
+        workspaceId,
+        { instruction: lastUser.content },
+        emit,
+        { groupId, skipUserMessage: true, contextUpTo: lastUser.createdAt },
+      );
+    }
   }
 
   /** Fire-and-forget generation used by PendingPrompt.consume() flow. */
@@ -426,6 +564,7 @@ export class GenerationService {
     emailId: string,
     workspaceId: string,
     emit: (p: Record<string, unknown>) => void,
+    groupId?: string,
   ): Promise<void> {
     await this.billing.assertCanGenerate(workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
@@ -467,6 +606,7 @@ export class GenerationService {
       role: "ASSISTANT",
       kind: "THINKING",
       content: result.thinkingText,
+      groupId,
     });
     // Always persist a conversational reply. With the emit_email tool the model
     // often returns an empty text block; without this fallback the streamed
@@ -481,6 +621,7 @@ export class GenerationService {
         (result.applied
           ? "I drafted your email — open the preview on the right to review it, then tell me what you'd like to adjust."
           : "I added some guidance above. Ask me for a concrete draft whenever you're ready."),
+      groupId,
     });
   }
 
@@ -489,6 +630,7 @@ export class GenerationService {
     workspaceId: string,
     body: { instruction: string; baseVariantId?: string },
     emit: (p: Record<string, unknown>) => void,
+    opts?: { groupId?: string; skipUserMessage?: boolean; contextUpTo?: Date },
   ): Promise<void> {
     await this.assertEmailInWorkspace(emailId, workspaceId);
     const ctx = await this.loadGenerationContext(emailId, workspaceId);
@@ -526,7 +668,10 @@ export class GenerationService {
     });
 
     const instruction = body.instruction.trim();
-    const recentChat = await this.loadRecentChatContext(emailId);
+    const recentChat = await this.loadRecentChatContext(
+      emailId,
+      opts?.contextUpTo,
+    );
     const codeContext = buildCodeContextSnippet(snapshot.componentCode, CODE_CONTEXT_LIMIT);
 
     const editPrompt = [
@@ -546,13 +691,15 @@ export class GenerationService {
       codeContext,
     ].join("\n");
 
-    await this.appendChatMessage({
-      workspaceId,
-      emailId,
-      role: "USER",
-      kind: "TEXT",
-      content: instruction,
-    });
+    if (!opts?.skipUserMessage) {
+      await this.appendChatMessage({
+        workspaceId,
+        emailId,
+        role: "USER",
+        kind: "TEXT",
+        content: instruction,
+      });
+    }
 
     const result = await this.executeAnthropicTurn({
       emailId,
@@ -585,6 +732,7 @@ export class GenerationService {
       role: "ASSISTANT",
       kind: "THINKING",
       content: result.thinkingText,
+      groupId: opts?.groupId,
     });
     await this.appendChatMessage({
       workspaceId,
@@ -596,6 +744,7 @@ export class GenerationService {
         (result.applied
           ? "Done — I updated the email. Check the preview and tell me the next change."
           : "I couldn't turn that into an edit. Try rephrasing what you'd like changed."),
+      groupId: opts?.groupId,
     });
   }
 
@@ -674,7 +823,7 @@ export class GenerationService {
       let turnMessages = [...modelMessages];
 
       for (let toolTurn = 0; toolTurn < 3; toolTurn += 1) {
-        response = await this.runStream({
+        response = await this.runStreamWithRetry({
           modelMessages: turnMessages,
           systemBlocks,
           emit,
@@ -988,6 +1137,52 @@ export class GenerationService {
         data: { status: "ERROR" },
       });
       throw e;
+    }
+  }
+
+  /**
+   * Run a model turn, retrying transient Anthropic errors (overloaded / 5xx /
+   * rate limit / connection drops). A restart is only attempted while nothing
+   * user-visible has streamed yet, so a retry can never duplicate assistant
+   * text, the subject, or the email code that already reached the client.
+   */
+  private async runStreamWithRetry(args: {
+    modelMessages: MessageParam[];
+    systemBlocks: MessageCreateParams["system"];
+    emit: (p: Record<string, unknown>) => void;
+  }): Promise<Awaited<ReturnType<typeof this.runStream>>> {
+    const maxAttempts = 3;
+    for (let attempt = 1; ; attempt += 1) {
+      let emittedVisible = false;
+      const guardedEmit = (payload: Record<string, unknown>) => {
+        const type = payload.type;
+        if (
+          type === "assistant-chunk" ||
+          type === "code-chunk" ||
+          type === "subject"
+        ) {
+          emittedVisible = true;
+        }
+        args.emit(payload);
+      };
+
+      try {
+        return await this.runStream({ ...args, emit: guardedEmit });
+      } catch (error) {
+        if (
+          attempt >= maxAttempts ||
+          emittedVisible ||
+          !isRetryableLlmError(error)
+        ) {
+          throw error;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `[GenerationService] Anthropic stream attempt ${attempt} failed (retryable): ${message}; retrying`,
+        );
+        args.emit({ type: "step", message: "Retrying the AI service…" });
+        await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+      }
     }
   }
 

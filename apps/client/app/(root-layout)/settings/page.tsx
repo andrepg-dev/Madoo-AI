@@ -187,7 +187,7 @@ function SettingsNavLink({
       className={cx(
         "flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left font-madoo-sans no-underline transition-[background,color,box-shadow]",
         active
-          ? "bg-madoo-surface text-madoo-ink shadow-madoo-border"
+          ? "bg-madoo-surface text-madoo-ink bg-white shadow-madoo-border"
           : "text-madoo-ink-soft hover:bg-madoo-surface-2 hover:text-madoo-ink",
       )}
     >
@@ -268,7 +268,7 @@ function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-[20px]! bg-madoo-surface! p-5!">
+    <Card className="rounded-[20px]! p-5!">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold leading-none text-madoo-ink">
@@ -1158,8 +1158,8 @@ export default function SettingsPage() {
   }, [activeWorkspace, queryClient, setWorkspaceId, workspaceId]);
 
   return (
-    <div className="grid min-h-full grid-cols-[280px_260px_minmax(0,1fr)] bg-(--madoo-page) font-madoo-sans text-madoo-ink max-xl:grid-cols-[250px_minmax(0,1fr)] max-lg:grid-cols-1">
-      <aside className="bg-(--madoo-page) p-4 shadow-[inset_-0.5px_0_0_rgb(var(--rule-rgb)/0.18)] max-lg:shadow-(--shadow-border-bottom-soft)">
+    <div className="grid min-h-full grid-cols-[280px_260px_minmax(0,1fr)] font-madoo-sans text-madoo-ink max-xl:grid-cols-[250px_minmax(0,1fr)] max-lg:grid-cols-1">
+      <aside className="p-4 shadow-[inset_-0.5px_0_0_rgb(var(--rule-rgb)/0.18)] max-lg:shadow-(--shadow-border-bottom-soft)">
         <div className="space-y-5">
           <div>
             <div className="mb-2 px-3 text-(length:--font-size-xs) font-medium uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
@@ -1188,7 +1188,7 @@ export default function SettingsPage() {
         </div>
       </aside>
 
-      <aside className="bg-(--madoo-page) p-4 shadow-[inset_-0.5px_0_0_rgb(var(--rule-rgb)/0.18)] max-xl:hidden">
+      <aside className="p-4 max-xl:hidden">
         <div className="mb-4 flex items-center gap-3">
           <Avatar
             name={activePrimary.label}

@@ -15,6 +15,7 @@ import {
   Home01Icon,
   Image01Icon,
   InboxIcon,
+  Chat01Icon,
   LockIcon,
   Logout01Icon,
   MoreHorizontalIcon,
@@ -59,6 +60,7 @@ export type IconName =
   | "x"
   | "sliders"
   | "inbox"
+  | "message"
   | "bell"
   | "logOut"
   | "barChart"
@@ -91,6 +93,7 @@ const ICONS: Record<IconName, IconSvgElement> = {
   x: Cancel01Icon,
   sliders: SlidersHorizontalIcon,
   inbox: InboxIcon,
+  message: Chat01Icon,
   bell: Notification01Icon,
   logOut: Logout01Icon,
   barChart: BarChartIcon,

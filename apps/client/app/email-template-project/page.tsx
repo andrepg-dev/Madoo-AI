@@ -1,5 +1,12 @@
 "use client";
 
+import { fetchBillingOverview } from "@/actions/billing";
+import {
+  createGmailDraft,
+  createOutlookDraft,
+  fetchConnections,
+  getConnectionAuthorizeUrl,
+} from "@/actions/connections";
 import {
   createEmail,
   fetchEmail,
@@ -8,22 +15,10 @@ import {
   truncateEmailChat,
   updateEmailShare,
 } from "@/actions/emails";
-import { fetchBillingOverview } from "@/actions/billing";
-import { fetchWorkspaces } from "@/actions/workspaces";
-import {
-  createGmailDraft,
-  createOutlookDraft,
-  fetchConnections,
-  getConnectionAuthorizeUrl,
-} from "@/actions/connections";
 import { consumePendingPrompt } from "@/actions/prompts";
-import {
-  AUTOMATION_INSTRUCTIONS,
-  ESP_INSTRUCTIONS,
-  ESP_NAME_TO_PROVIDER,
-} from "@/lib/export-instructions";
-import { ClientPromptBox } from "@/components/home/ClientPromptBox";
+import { fetchWorkspaces } from "@/actions/workspaces";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
+import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import { PreviewOverlay } from "@/components/project/preview/PreviewOverlay";
 import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
 import {
@@ -36,6 +31,12 @@ import {
   consumeEmailSseStream,
   type StreamEmailEvent,
 } from "@/lib/email-stream";
+import {
+  AUTOMATION_INSTRUCTIONS,
+  ESP_INSTRUCTIONS,
+  ESP_NAME_TO_PROVIDER,
+} from "@/lib/export-instructions";
+import { highlightMergeTags } from "@/lib/highlight-merge-tags";
 import { playCompletionSound } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -60,15 +61,15 @@ import {
   RefreshIcon,
   Settings01Icon,
   Share08Icon,
-  SparklesIcon,
   SourceCodeIcon,
+  SparklesIcon,
   SquareLock02Icon,
   StarIcon,
-  TestTube02Icon,
-  Tick02Icon,
   Sun01Icon,
+  TestTube02Icon,
   ThumbsDownIcon,
   ThumbsUpIcon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
@@ -97,13 +98,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  type CSSProperties,
-  type PointerEvent,
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
+  type PointerEvent,
 } from "react";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
@@ -171,7 +173,7 @@ function CopyActionButton({
       <HugeiconsIcon
         aria-hidden="true"
         className={cn(
-          copied && "animate-madoo-checkbox-control-in text-emerald-600",
+          copied && "animate-madoo-checkbox-control-in",
         )}
         icon={copied ? Tick02Icon : Copy01Icon}
         key={copied ? "copied" : "copy"}
@@ -269,7 +271,7 @@ function ConversationTitleDropdown({
     <Dropdown>
       <DropdownTrigger asChild>
         <Button
-          className="h-8 max-w-[min(360px,calc(100vw-32px))] gap-1.5 px-2.5 py-0! text-[13px]"
+          className="h-8 max-w-[min(360px,calc(100vw-32px))] gap-1.5 px-2.5 py-0! text-[13px] shadow-none! hover:shadow-none! data-[state=open]:shadow-none!"
           variant="ghost"
         >
           <Image
@@ -289,7 +291,10 @@ function ConversationTitleDropdown({
           </div>
         </Button>
       </DropdownTrigger>
-      <DropdownContent align="start" className="w-72 gap-1 p-1.5!">
+      <DropdownContent
+        align="start"
+        className="w-72 gap-1 overflow-hidden p-1.5!"
+      >
         <DropdownItem
           asChild
           className="justify-start! px-2! py-1.5! text-[13px]!"
@@ -405,6 +410,18 @@ type ChatMessage = {
   emailId?: string;
   /** Object URLs for images attached to a user message (display only). */
   images?: string[];
+  /** Assistant response-version group (regenerations of the same turn). */
+  groupId?: string;
+  /** All sibling responses in the group, oldest → newest. */
+  versions?: { id: string; content: string }[];
+  /** Index of the currently shown sibling within `versions`. */
+  versionIndex?: number;
+  /** Model reasoning shown in a collapsible block above the answer. */
+  thinking?: string;
+  /** How long the reasoning took (live only); drives "Thought for Ns". */
+  thinkingSeconds?: number;
+  /** True while reasoning is still streaming; drives the live label. */
+  thinkingActive?: boolean;
   steps?: TimelineStep[];
   startedAt?: number;
   finishedAt?: number;
@@ -497,81 +514,99 @@ function latestVariant(email: EmailDto | null | undefined) {
   return email?.variants[email.variants.length - 1] ?? null;
 }
 
-const MERGE_TAG_PATTERN = /\{\{[^}]+\}\}/;
-const MERGE_TAG_SPLIT = /(\{\{[^}]+\}\})/g;
-const MERGE_TAG_STYLE =
-  "color:#2f6fea;background:rgba(47,111,234,0.12);border-radius:3px;padding:0 3px;font-weight:600;";
-
-/**
- * Wrap `{{variable}}` merge tags (dynamic variables) in colored spans so they
- * stand out in the preview. Preview-only — only touches body text nodes, never
- * attributes or the exported HTML.
- */
-function highlightMergeTags(html: string | null): string | null {
-  if (!html || typeof window === "undefined" || !html.includes("{{")) {
-    return html;
-  }
-
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-  const targets: Text[] = [];
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (node.nodeValue && MERGE_TAG_PATTERN.test(node.nodeValue)) {
-      targets.push(node as Text);
-    }
-  }
-
-  for (const textNode of targets) {
-    const fragment = doc.createDocumentFragment();
-    for (const part of textNode.nodeValue!.split(MERGE_TAG_SPLIT)) {
-      if (!part) continue;
-      if (MERGE_TAG_PATTERN.test(part)) {
-        const span = doc.createElement("span");
-        span.setAttribute("style", MERGE_TAG_STYLE);
-        span.textContent = part;
-        fragment.appendChild(span);
-      } else {
-        fragment.appendChild(doc.createTextNode(part));
-      }
-    }
-    textNode.parentNode?.replaceChild(fragment, textNode);
-  }
-
-  return `<!DOCTYPE html>${doc.documentElement.outerHTML}`;
-}
-
 function mapChatMessages(
   chat: EmailChatMessageDto[] | undefined,
   email: EmailDto | null | undefined,
+  selectedVersions: Record<string, number> = {},
 ): ChatMessage[] {
-  const visibleChat: ChatMessage[] =
-    chat
-      ?.filter((message) => message.kind !== "THINKING")
-      .map((message) => ({
-        id: message.id,
-        role: (message.role === "USER"
-          ? "user"
-          : message.kind === "STATUS"
-            ? "status"
-            : "assistant") as ChatMessage["role"],
-        content: message.content,
-        seq: Date.parse(message.createdAt) || 0,
+  // Pair each assistant THINKING row with the answer that immediately follows
+  // it (same turn), so the reasoning can hang off its response message.
+  const thinkingByText = new Map<string, string>();
+  let pendingThinking: string | null = null;
+  for (const row of chat ?? []) {
+    if (row.role === "ASSISTANT" && row.kind === "THINKING") {
+      pendingThinking = row.content;
+    } else if (row.role === "ASSISTANT" && row.kind === "TEXT") {
+      if (pendingThinking) thinkingByText.set(row.id, pendingThinking);
+      pendingThinking = null;
+    } else {
+      pendingThinking = null;
+    }
+  }
+
+  const rows = chat?.filter((message) => message.kind !== "THINKING") ?? [];
+
+  // Collect assistant response-version siblings, oldest → newest (chat is asc).
+  const groups = new Map<string, EmailChatMessageDto[]>();
+  for (const row of rows) {
+    if (row.role === "ASSISTANT" && row.groupId) {
+      const siblings = groups.get(row.groupId) ?? [];
+      siblings.push(row);
+      groups.set(row.groupId, siblings);
+    }
+  }
+
+  const emittedGroups = new Set<string>();
+  const visibleChat: ChatMessage[] = [];
+  for (const message of rows) {
+    if (message.role === "ASSISTANT" && message.groupId) {
+      // Emit a grouped response once, at the position of its first sibling.
+      if (emittedGroups.has(message.groupId)) continue;
+      emittedGroups.add(message.groupId);
+      const siblings = groups.get(message.groupId) ?? [message];
+      const lastIndex = siblings.length - 1;
+      const selected = Math.min(
+        Math.max(selectedVersions[message.groupId] ?? lastIndex, 0),
+        lastIndex,
+      );
+      visibleChat.push({
+        id: `group-${message.groupId}`,
+        role: "assistant",
+        content: siblings[selected].content,
+        // Anchor the position to the first sibling so switching versions never
+        // reorders the message.
+        seq: Date.parse(siblings[0].createdAt) || 0,
         emailId: email?.id,
-      })) ?? [];
+        groupId: message.groupId,
+        versions: siblings.map((sibling) => ({
+          id: sibling.id,
+          content: sibling.content,
+        })),
+        versionIndex: selected,
+        thinking: thinkingByText.get(siblings[selected].id),
+      });
+      continue;
+    }
+    visibleChat.push({
+      id: message.id,
+      role: (message.role === "USER"
+        ? "user"
+        : message.kind === "STATUS"
+          ? "status"
+          : "assistant") as ChatMessage["role"],
+      content: message.content,
+      seq: Date.parse(message.createdAt) || 0,
+      emailId: email?.id,
+      thinking:
+        message.role === "ASSISTANT"
+          ? thinkingByText.get(message.id)
+          : undefined,
+    });
+  }
 
   // Always lead with the user's brief, even before the chat rows have loaded.
   const messages: ChatMessage[] =
     email && !visibleChat.some((message) => message.role === "user")
       ? [
-          {
-            id: `${email.id}-prompt`,
-            role: "user",
-            content: email.prompt,
-            seq: Date.parse(email.createdAt) || 0,
-            emailId: email.id,
-          },
-          ...visibleChat,
-        ]
+        {
+          id: `${email.id}-prompt`,
+          role: "user",
+          content: email.prompt,
+          seq: Date.parse(email.createdAt) || 0,
+          emailId: email.id,
+        },
+        ...visibleChat,
+      ]
       : visibleChat;
 
   // While generating (e.g. after a reload, with no live SSE), keep a visible
@@ -1357,46 +1392,46 @@ function ExportProviderModal({
 
           {tab === "application"
             ? applicationExportProviders.map((provider) => (
-                <ExportProviderCard
-                  badge={provider.badge}
-                  busy={busyKey === provider.name}
-                  iconSrc={provider.iconSrc}
-                  key={provider.name}
-                  name={provider.name}
-                  onClick={() => handleApplication(provider.name)}
-                />
-              ))
+              <ExportProviderCard
+                badge={provider.badge}
+                busy={busyKey === provider.name}
+                iconSrc={provider.iconSrc}
+                key={provider.name}
+                name={provider.name}
+                onClick={() => handleApplication(provider.name)}
+              />
+            ))
             : null}
 
           {tab === "file"
             ? fileExportFormats.map((format) => {
-                if (format.name === "AMPHTML") {
-                  return (
-                    <ExportFileCard
-                      description="Coming soon"
-                      disabled
-                      icon={format.icon}
-                      key={format.name}
-                      name={format.name}
-                    />
-                  );
-                }
-                const onClick =
-                  format.name === "HTML"
-                    ? () => downloadFile("html")
-                    : format.name === "Image"
-                      ? () => downloadFile("image", "format=png")
-                      : () => downloadFile("pdf");
+              if (format.name === "AMPHTML") {
                 return (
                   <ExportFileCard
-                    description={format.description}
+                    description="Coming soon"
+                    disabled
                     icon={format.icon}
                     key={format.name}
                     name={format.name}
-                    onClick={onClick}
                   />
                 );
-              })
+              }
+              const onClick =
+                format.name === "HTML"
+                  ? () => downloadFile("html")
+                  : format.name === "Image"
+                    ? () => downloadFile("image", "format=png")
+                    : () => downloadFile("pdf");
+              return (
+                <ExportFileCard
+                  description={format.description}
+                  icon={format.icon}
+                  key={format.name}
+                  name={format.name}
+                  onClick={onClick}
+                />
+              );
+            })
             : null}
         </div>
       </div>
@@ -1520,6 +1555,17 @@ function EmailPreviewSidebar({
 
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
+  useEffect(() => {
+    if (expanded) {
+      setVariablesOpen(false);
+      return;
+    }
+
+    if (canEditVariables) {
+      setVariablesOpen(true);
+    }
+  }, [canEditVariables, expanded]);
+
   const syncIframeHeight = useCallback(() => {
     const iframe = iframeRef.current;
     const documentElement = iframe?.contentDocument?.documentElement;
@@ -1592,7 +1638,9 @@ function EmailPreviewSidebar({
         expanded ? "absolute inset-y-0 right-0 z-20" : "relative",
         isResizing
           ? "transition-[opacity,transform]"
-          : "transition-[width,opacity,transform] duration-300",
+          : expanded ? "" : "",
+            // ? "transition-[opacity,transform] duration-150"
+            // : "transition-[width,opacity,transform] duration-300",
         open ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0",
       )}
       style={{
@@ -1825,6 +1873,7 @@ function HumanMessage({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(children);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const text = children.trim();
 
   const autoGrow = (element: HTMLTextAreaElement) => {
     element.style.height = "auto";
@@ -1890,7 +1939,7 @@ function HumanMessage({
   }
 
   return (
-    <div className="ml-auto">
+    <div className="group ml-auto flex w-full max-w-xl flex-col items-end">
       {images && images.length > 0 ? (
         <div className="mb-1.5 flex max-w-xl flex-wrap justify-end gap-2">
           {images.map((url) => (
@@ -1904,44 +1953,141 @@ function HumanMessage({
         </div>
       ) : null}
 
-      <pre className="max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
-        {children}
-      </pre>
+      <span className="ml-2.5 max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2.5 font-figtree leading-relaxed shadow-madoo-border">
+        {text}
+      </span>
 
-      <div className="flex gap-1 my-1.5 mt-3 max-w-min ml-auto">
+      <div className="my-1.5 flex max-w-min gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         <ActionButton
           icon={Edit02Icon}
           label="Edit message"
           onClick={disabled ? undefined : startEditing}
         />
-        <CopyActionButton label="Copy message" text={children} />
+        <CopyActionButton label="Copy message" text={text} />
       </div>
     </div>
   );
 }
 
-function AiMessage({
-  children,
-  onOpenPreview,
+function ThinkingBlock({
+  text,
+  seconds,
+  active,
 }: {
-  children: string;
-  onOpenPreview?: () => void;
+  text: string;
+  seconds?: number;
+  active?: boolean;
 }) {
   return (
-    <div className="rounded mr-auto text-left">
+    <details className="group mb-2.5" open>
+      <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-madoo-ink-muted transition-colors hover:text-madoo-ink [&::-webkit-details-marker]:hidden">
+        <span>Thought process</span>
+        <HugeiconsIcon
+          aria-hidden="true"
+          className="transition-transform group-open:rotate-180"
+          icon={ArrowDown01Icon}
+          primaryColor="currentColor"
+          size={14}
+          strokeWidth={1.7}
+        />
+      </summary>
+      <div className="mt-2 whitespace-pre-wrap border-l-2 border-madoo-border pl-3 text-xs leading-5 text-madoo-ink-muted">
+        {text}
+      </div>
+    </details>
+  );
+}
+
+function AiMessage({
+  children,
+  thinking,
+  thinkingSeconds,
+  thinkingActive,
+  versions,
+  versionIndex = 0,
+  onSelectVersion,
+  onRegenerate,
+  regenerating,
+}: {
+  children: string;
+  thinking?: string;
+  thinkingSeconds?: number;
+  thinkingActive?: boolean;
+  versions?: { id: string; content: string }[];
+  versionIndex?: number;
+  onSelectVersion?: (index: number) => void;
+  onRegenerate?: () => void;
+  regenerating?: boolean;
+}) {
+  const total = versions?.length ?? 0;
+  const hasVersions = total > 1;
+  const thinkingText = thinking ?? "";
+  const showThinking = thinkingText.length > 0 && Boolean(thinkingActive);
+
+  return (
+    <div className="group mb-3.5 mr-auto rounded text-left">
+      {showThinking ? (
+        <ThinkingBlock
+          active={thinkingActive}
+          seconds={thinkingSeconds}
+          text={thinkingText}
+        />
+      ) : null}
       <Streamdown className="ai-conversation-markdown font-figtree leading-6">
         {children}
       </Streamdown>
 
-      <div className="flex gap-1 mt-1.5">
+      <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+        {hasVersions ? (
+          <div className="mr-0.5 flex items-center text-xs text-madoo-ink-muted">
+            <Button
+              aria-label="Previous version"
+              className="h-6 w-6 rounded-md"
+              disabled={versionIndex <= 0}
+              onClick={() => onSelectVersion?.(versionIndex - 1)}
+              size="sm"
+              variant="icon"
+            >
+              <HugeiconsIcon
+                aria-hidden="true"
+                icon={ArrowLeft01Icon}
+                primaryColor="currentColor"
+                size={13}
+                strokeWidth={1.7}
+              />
+            </Button>
+            <span className="min-w-8 text-center tabular-nums">
+              {versionIndex + 1}/{total}
+            </span>
+            <Button
+              aria-label="Next version"
+              className="h-6 w-6 rounded-md"
+              disabled={versionIndex >= total - 1}
+              onClick={() => onSelectVersion?.(versionIndex + 1)}
+              size="sm"
+              variant="icon"
+            >
+              <HugeiconsIcon
+                aria-hidden="true"
+                className="rotate-180"
+                icon={ArrowLeft01Icon}
+                primaryColor="currentColor"
+                size={13}
+                strokeWidth={1.7}
+              />
+            </Button>
+          </div>
+        ) : null}
         <CopyActionButton label="Copy response" text={children} />
         <ActionButton icon={ThumbsUpIcon} label="Like response" />
         <ActionButton icon={ThumbsDownIcon} label="Dislike response" />
-        <ActionButton
-          icon={RefreshIcon}
-          label="Regenerate response"
-          onClick={onOpenPreview}
-        />
+        {onRegenerate ? (
+          <ActionButton
+            icon={RefreshIcon}
+            label="Regenerate response"
+            onClick={regenerating ? undefined : onRegenerate}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -1964,107 +2110,27 @@ function ErrorMessage({ children }: { children: string }) {
 }
 
 /**
- * Live, then permanent, record of the generation steps. Expanded while working,
- * collapses to "Worked for Ns" when done but stays in the conversation.
+ * Minimal live loader while a turn is generating: a small spinner, nothing
+ * else. Leaves no "Worked for Ns" record behind — once the turn finishes it
+ * renders nothing, so the response stands on its own.
  */
 function TimelineMessage({ message }: { message: ChatMessage }) {
-  const steps = message.steps ?? [];
   const finished = Boolean(message.finishedAt);
-  const [expanded, setExpanded] = useState(true);
 
-  useEffect(() => {
-    if (finished) setExpanded(false);
-  }, [finished]);
-
-  const elapsedSeconds =
-    message.finishedAt && message.startedAt
-      ? Math.max(1, Math.round((message.finishedAt - message.startedAt) / 1000))
-      : null;
-  const activeLabel =
-    steps.find((step) => step.state === "active")?.label ??
-    steps[steps.length - 1]?.label ??
-    "Working…";
+  if (finished) return null;
 
   return (
-    <div className="mr-auto w-full max-w-md">
-      <button
-        aria-expanded={expanded}
-        className="flex w-full items-center gap-2.5 rounded-xl bg-madoo-surface-2 px-3 py-2 text-left shadow-madoo-border transition hover:bg-madoo-surface"
-        onClick={() => setExpanded((value) => !value)}
-        type="button"
-      >
-        {finished ? (
-          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-madoo-ink text-white">
-            <HugeiconsIcon
-              aria-hidden="true"
-              icon={Tick02Icon}
-              primaryColor="currentColor"
-              size={12}
-              strokeWidth={2}
-            />
-          </span>
-        ) : (
-          <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-madoo-border border-t-madoo-ink" />
-        )}
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-madoo-ink">
-          {finished
-            ? `Worked for ${elapsedSeconds ?? 1}s`
-            : activeLabel}
-        </span>
-        <HugeiconsIcon
-          aria-hidden="true"
-          className={cn(
-            "shrink-0 text-madoo-ink-muted transition-transform",
-            expanded && "rotate-180",
-          )}
-          icon={ArrowDown01Icon}
-          primaryColor="currentColor"
-          size={15}
-          strokeWidth={1.7}
-        />
-      </button>
-
-      {expanded && steps.length ? (
-        <ol className="mt-2 grid pl-2">
-          {steps.map((step, index) => {
-            const isActive = step.state === "active" && !finished;
-            const isLast = index === steps.length - 1;
-            return (
-              <li className="flex gap-2.5" key={step.id}>
-                <span className="flex flex-col items-center">
-                  <span
-                    className={cn(
-                      "mt-1 size-2.5 shrink-0 rounded-full",
-                      isActive
-                        ? "bg-madoo-ink ring-4 ring-madoo-ink/10"
-                        : "bg-madoo-ink/60",
-                    )}
-                  />
-                  {!isLast ? (
-                    <span className="my-0.5 w-px flex-1 bg-madoo-border" />
-                  ) : null}
-                </span>
-                <span
-                  className={cn(
-                    "pb-2.5 text-xs",
-                    isActive
-                      ? "font-medium text-madoo-ink"
-                      : "text-madoo-ink-muted",
-                  )}
-                >
-                  {step.label}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      ) : null}
+    <div className="mr-auto">
+      <span className="block size-4 animate-spin rounded-full border-2 border-madoo-border border-t-madoo-ink" />
     </div>
   );
 }
 
 export default function EmailTemplateProject() {
   const messagesRef = useRef<HTMLDivElement>(null);
+  // The just-sent user message — scrolled to the top of the chat on send.
+  const latestUserRef = useRef<HTMLDivElement>(null);
+  const pendingUserScrollRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -2083,6 +2149,10 @@ export default function EmailTemplateProject() {
     string | null
   >(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  // Which response version is shown per regenerated group (groupId → index).
+  const [selectedVersions, setSelectedVersions] = useState<
+    Record<string, number>
+  >({});
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [testingModalOpen, setTestingModalOpen] = useState(false);
@@ -2095,6 +2165,7 @@ export default function EmailTemplateProject() {
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [previewOverlayOpen, setPreviewOverlayOpen] = useState(false);
   const processedStartupRef = useRef<string | null>(null);
+  const autoScrollEmailRef = useRef<string | null>(null);
 
   const emailQuery = useQuery({
     queryKey: ["email", currentEmailId],
@@ -2152,17 +2223,45 @@ export default function EmailTemplateProject() {
   const startStream = useCallback(
     async (
       emailId: string,
-      mode: "generate" | "edit",
+      mode: "generate" | "edit" | "regenerate",
       instruction?: string,
       baseVariantId?: string,
     ) => {
       const assistantId = `${mode}-${Date.now()}-assistant`;
       const timeline = createTimelineMessage(
         emailId,
-        mode === "generate" ? "Starting generation…" : "Applying your edits…",
+        mode === "generate"
+          ? "Starting generation…"
+          : mode === "regenerate"
+            ? "Regenerating…"
+            : "Applying your edits…",
       );
       const timelineId = timeline.id;
       let assistantText = "";
+      let thinkingText = "";
+      let thinkingStartedAt: number | null = null;
+      let thinkingFinishedAt: number | null = null;
+
+      const upsertAssistant = (current: ChatMessage[]) =>
+        upsertMessage(current, {
+          id: assistantId,
+          role: "assistant",
+          content: assistantText,
+          seq: Date.now(),
+          emailId,
+          thinking: thinkingText || undefined,
+          thinkingSeconds: thinkingStartedAt
+            ? Math.max(
+              1,
+              Math.round(
+                ((thinkingFinishedAt ?? Date.now()) - thinkingStartedAt) /
+                1000,
+              ),
+            )
+            : undefined,
+          thinkingActive:
+            thinkingStartedAt !== null && thinkingFinishedAt === null,
+        });
 
       setIsStreaming(true);
       // Append the live timeline; the user's message is already on screen.
@@ -2176,16 +2275,31 @@ export default function EmailTemplateProject() {
           return;
         }
 
-        if (event.type === "assistant-chunk") {
-          assistantText += event.value;
+        if (event.type === "thinking-chunk") {
+          thinkingText += event.value;
+          const firstChunk = thinkingStartedAt === null;
+          if (firstChunk) thinkingStartedAt = Date.now();
+          // Once reasoning starts, the "Thought for Ns" block is the indicator —
+          // drop the loading spinner above it.
           setMessages((current) =>
-            upsertMessage(current, {
-              id: assistantId,
-              role: "assistant",
-              content: assistantText,
-              seq: Date.now(),
-              emailId,
-            }),
+            upsertAssistant(
+              firstChunk ? finishTimeline(current, timelineId) : current,
+            ),
+          );
+          return;
+        }
+
+        if (event.type === "assistant-chunk") {
+          const firstChunk = assistantText.length === 0;
+          assistantText += event.value;
+          // First visible answer token marks the end of the reasoning phase.
+          if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
+            thinkingFinishedAt = Date.now();
+          }
+          setMessages((current) =>
+            upsertAssistant(
+              firstChunk ? finishTimeline(current, timelineId) : current,
+            ),
           );
           return;
         }
@@ -2216,6 +2330,9 @@ export default function EmailTemplateProject() {
 
         if (event.type === "done") {
           playCompletionSound();
+          if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
+            thinkingFinishedAt = Date.now();
+          }
           if (event.compiledHtml) {
             setStreamedHtml(event.compiledHtml);
             setSidebarOpen(true);
@@ -2236,6 +2353,16 @@ export default function EmailTemplateProject() {
                 : `Generated email${event.subject ? `: ${event.subject}` : "."}`,
               seq: Date.now(),
               emailId,
+              thinking: thinkingText || undefined,
+              thinkingSeconds: thinkingStartedAt
+                ? Math.max(
+                  1,
+                  Math.round(
+                    ((thinkingFinishedAt ?? Date.now()) - thinkingStartedAt) /
+                    1000,
+                  ),
+                )
+                : undefined,
             });
           });
           return;
@@ -2261,9 +2388,9 @@ export default function EmailTemplateProject() {
           undefined,
           mode === "edit"
             ? JSON.stringify({
-                instruction: instruction ?? "",
-                ...(baseVariantId ? { baseVariantId } : {}),
-              })
+              instruction: instruction ?? "",
+              ...(baseVariantId ? { baseVariantId } : {}),
+            })
             : undefined,
         );
         await invalidateEmailState(emailId);
@@ -2304,6 +2431,9 @@ export default function EmailTemplateProject() {
           images: imageUrls.length > 0 ? imageUrls : undefined,
         },
       ]);
+      // Pin the new message to the top of the chat (its reserved response area
+      // below gives it the room to get there).
+      pendingUserScrollRef.current = true;
 
       if (currentEmailId) {
         await startStream(currentEmailId, "edit", input.prompt, variant?.id);
@@ -2360,6 +2490,23 @@ export default function EmailTemplateProject() {
     [currentEmailId, isStreaming, submitChatPrompt],
   );
 
+  // Re-run the latest turn, keeping the previous answer as a navigable version.
+  const regenerate = useCallback((message: ChatMessage) => {
+    if (isStreaming || !currentEmailId) return;
+    if (message.groupId) {
+      setSelectedVersions((current) => {
+        const { [message.groupId!]: _removed, ...rest } = current;
+        return rest;
+      });
+    }
+    setMessages((current) => current.filter((item) => item.id !== message.id));
+    void startStream(currentEmailId, "regenerate");
+  }, [currentEmailId, isStreaming, startStream]);
+
+  const selectVersion = useCallback((groupId: string, index: number) => {
+    setSelectedVersions((current) => ({ ...current, [groupId]: index }));
+  }, []);
+
   const updateScrollState = useCallback(() => {
     const messages = messagesRef.current;
 
@@ -2398,9 +2545,35 @@ export default function EmailTemplateProject() {
   }, [currentEmailId]);
 
   useEffect(() => {
+    autoScrollEmailRef.current = currentEmailId;
+  }, [currentEmailId]);
+
+  useEffect(() => {
+    if (!currentEmailId || !messages.length) return;
+    const hasCurrentEmailMessages = messages.some(
+      (message) => message.emailId === currentEmailId,
+    );
+    if (!hasCurrentEmailMessages) return;
+    if (autoScrollEmailRef.current !== currentEmailId) return;
+    if (!messagesRef.current) return;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (autoScrollEmailRef.current !== currentEmailId) return;
+        messagesRef.current?.scrollTo({
+          top: messagesRef.current.scrollHeight,
+          behavior: "auto",
+        });
+        updateScrollState();
+        autoScrollEmailRef.current = null;
+      });
+    });
+  }, [currentEmailId, messages, updateScrollState]);
+
+  useEffect(() => {
     if (isStreaming) return;
     setMessages((previous) => {
-      const server = mapChatMessages(chatQuery.data, email);
+      const server = mapChatMessages(chatQuery.data, email, selectedVersions);
       // Preserve client-only rows (the live/finished timeline and stream errors)
       // for the active email so they aren't wiped by the server refetch.
       const clientOnly = previous.filter(
@@ -2408,11 +2581,26 @@ export default function EmailTemplateProject() {
           (message.role === "timeline" || message.role === "error") &&
           (!currentEmailId || message.emailId === currentEmailId),
       );
-      return [...server, ...clientOnly].sort(
+      const merged = [...server, ...clientOnly].sort(
         (a, b) => (a.seq ?? 0) - (b.seq ?? 0),
       );
+      // Guard against a transient refetch that hasn't yet returned the opening
+      // user message (the email/chat queries can settle a beat after a fresh
+      // generation). Never let a userless rebuild wipe a conversation that
+      // already shows the user's message — otherwise the first bubble vanishes
+      // and the title collapses to "New conversation". Scoped to the active
+      // email so switching to another (possibly empty) project still resets.
+      if (!merged.some((message) => message.role === "user")) {
+        const keepsUserMessage = previous.some(
+          (message) =>
+            message.role === "user" &&
+            (!message.emailId || message.emailId === currentEmailId),
+        );
+        if (keepsUserMessage) return previous;
+      }
+      return merged;
     });
-  }, [chatQuery.data, currentEmailId, email, isStreaming]);
+  }, [chatQuery.data, currentEmailId, email, isStreaming, selectedVersions]);
 
   useEffect(() => {
     if (hasPreview) {
@@ -2522,6 +2710,19 @@ export default function EmailTemplateProject() {
     });
   };
 
+  // After a send, snap the new user message to the top of the chat. Runs
+  // only on send (flag set in submitChatPrompt), never on load or project swap.
+  useEffect(() => {
+    if (!pendingUserScrollRef.current) return;
+    pendingUserScrollRef.current = false;
+    requestAnimationFrame(() => {
+      latestUserRef.current?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+    });
+  }, [messages]);
+
   const updatePreviewWidth = (width: number) => {
     setPreviewExpanded(false);
     setPreviewWidth(width);
@@ -2566,14 +2767,74 @@ export default function EmailTemplateProject() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }, [previewSrcDoc, toast]);
 
+  const lastUserIndex = messages.reduce(
+    (last, message, index) => (message.role === "user" ? index : last),
+    -1,
+  );
+  // Only the most recent assistant response can be regenerated (it re-runs the
+  // latest turn), mirroring the ChatGPT affordance.
+  const lastAssistantId = messages.reduce<string | null>(
+    (last, message) => (message.role === "assistant" ? message.id : last),
+    null,
+  );
+  const renderMessage = (message: ChatMessage) => {
+    if (message.role === "user") {
+      return (
+        <HumanMessage
+          disabled={isStreaming}
+          images={message.images}
+          onEdit={(text) => void editMessage(message, text)}
+        >
+          {message.content}
+        </HumanMessage>
+      );
+    }
+    if (message.role === "error") {
+      return <ErrorMessage>{message.content}</ErrorMessage>;
+    }
+    if (message.role === "status") {
+      return <StatusMessage>{message.content}</StatusMessage>;
+    }
+    if (message.role === "timeline") {
+      return <TimelineMessage message={message} />;
+    }
+    return (
+      <AiMessage
+        onRegenerate={
+          message.id === lastAssistantId ? () => regenerate(message) : undefined
+        }
+        onSelectVersion={
+          message.groupId
+            ? (index) => selectVersion(message.groupId!, index)
+            : undefined
+        }
+        regenerating={isStreaming}
+        thinking={message.thinking}
+        thinkingActive={message.thinkingActive}
+        thinkingSeconds={message.thinkingSeconds}
+        versionIndex={message.versionIndex}
+        versions={message.versions}
+      >
+        {message.content}
+      </AiMessage>
+    );
+  };
+  // Everything up to and including the latest user message renders normally;
+  // the response to that message lives in a reserved min-height area so the
+  // user message can be scrolled to the top of the viewport on send.
+  const headMessages =
+    lastUserIndex === -1 ? [] : messages.slice(0, lastUserIndex + 1);
+  const tailMessages =
+    lastUserIndex === -1 ? messages : messages.slice(lastUserIndex + 1);
+
   return (
     <main className="relative h-screen overflow-hidden bg-white">
       <header
         className={cn(
           "fixed left-3 top-0 z-30 flex h-11 w-fit items-center bg-white transition-[opacity,transform]",
           hasPreview &&
-            previewExpanded &&
-            "pointer-events-none -translate-y-3 opacity-0",
+          previewExpanded &&
+          "pointer-events-none -translate-y-3 opacity-0",
         )}
       >
         <ConversationTitleDropdown
@@ -2594,54 +2855,33 @@ export default function EmailTemplateProject() {
           {/* messages */}
           <div
             ref={messagesRef}
-            className="madoo-chat-scrollbar min-h-0 flex-1 overflow-y-auto pr-4 text-sm font-figtree pb-48"
+            className="madoo-chat-scrollbar min-h-0 flex-1 overflow-y-auto pr-4 text-sm font-figtree pb-16"
             onScroll={updateScrollState}
           >
             <div className="mx-auto w-full max-w-2xl px-4">
-              <div className="mt-8 flex flex-col gap-8">
-                {messages.map((message) => {
-                  if (message.role === "user") {
-                    return (
-                      <HumanMessage
-                        disabled={isStreaming}
-                        key={message.id}
-                        images={message.images}
-                        onEdit={(text) => void editMessage(message, text)}
-                      >
-                        {message.content}
-                      </HumanMessage>
-                    );
-                  }
-                  if (message.role === "error") {
-                    return (
-                      <ErrorMessage key={message.id}>
-                        {message.content}
-                      </ErrorMessage>
-                    );
-                  }
-                  if (message.role === "status") {
-                    return (
-                      <StatusMessage key={message.id}>
-                        {message.content}
-                      </StatusMessage>
-                    );
-                  }
-                  if (message.role === "timeline") {
-                    return (
-                      <TimelineMessage key={message.id} message={message} />
-                    );
-                  }
-                  return (
-                    <AiMessage
+              <div className="mt-8 flex flex-col">
+                {headMessages.map((message, index) =>
+                  index === lastUserIndex ? (
+                    <div
+                      className="flex scroll-mt-6 flex-col"
                       key={message.id}
-                      onOpenPreview={() => {
-                        if (hasPreview) setSidebarOpen(true);
-                      }}
+                      ref={latestUserRef}
                     >
-                      {message.content}
-                    </AiMessage>
-                  );
-                })}
+                      {renderMessage(message)}
+                    </div>
+                  ) : (
+                    <Fragment key={message.id}>
+                      {renderMessage(message)}
+                    </Fragment>
+                  ),
+                )}
+                <div className="flex min-h-100 flex-col gap-8">
+                  {tailMessages.map((message) => (
+                    <Fragment key={message.id}>
+                      {renderMessage(message)}
+                    </Fragment>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

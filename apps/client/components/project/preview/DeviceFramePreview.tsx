@@ -58,7 +58,7 @@ export function DeviceFramePreview({
 
       <div className="madoo-preview-scrollbar flex min-h-0 flex-1 justify-center">
         {device === "desktop" ? (
-          <div className="flex h-full w-full max-w-[1180px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgb(0_0_0/0.45)]">
+          <div className="flex h-full w-full max-w-295 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgb(0_0_0/0.45)]">
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-black/5 bg-[#f3f4f6] px-4">
               <span className="flex items-center gap-1.5">
                 <span className="size-3 rounded-full bg-[#ff5f57]" />
@@ -78,10 +78,10 @@ export function DeviceFramePreview({
           </div>
         ) : (
           <div className="flex h-full items-center py-2">
-            <div className="relative flex h-[760px] w-[390px] shrink-0 flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)]">
+            <div className="relative flex h-190 w-97.5 shrink-0 flex-col overflow-hidden rounded-[2.75rem] border-10 border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)]">
               <span className="absolute left-1/2 top-2 z-10 h-6 w-32 -translate-x-1/2 rounded-full bg-[#111317]" />
               <iframe
-                className="h-full w-full rounded-[2rem] border-0 bg-white"
+                className="h-full w-full rounded-4xl border-0 bg-white"
                 sandbox=""
                 srcDoc={srcDoc}
                 title="Phone email preview"

@@ -382,6 +382,8 @@ export const EmailChatMessageDtoSchema = z.object({
   role: z.enum(["USER", "ASSISTANT", "SYSTEM"]),
   kind: z.enum(["TEXT", "THINKING", "STATUS"]),
   content: z.string(),
+  /** Shared by assistant responses that are regenerations of the same turn. */
+  groupId: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
 });
 
