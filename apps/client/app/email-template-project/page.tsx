@@ -1976,8 +1976,6 @@ function ThinkingBlock({
   seconds?: number;
   active?: boolean;
 }) {
-  if (!active) return null;
-
   return (
     <details className="group mb-2.5" open>
       <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-madoo-ink-muted transition-colors hover:text-madoo-ink [&::-webkit-details-marker]:hidden">
@@ -2021,14 +2019,16 @@ function AiMessage({
 }) {
   const total = versions?.length ?? 0;
   const hasVersions = total > 1;
+  const thinkingText = thinking ?? "";
+  const showThinking = thinkingText.length > 0 && Boolean(thinkingActive);
 
   return (
     <div className="group mb-3.5 mr-auto rounded text-left">
-      {thinking ? (
+      {showThinking ? (
         <ThinkingBlock
           active={thinkingActive}
           seconds={thinkingSeconds}
-          text={thinking}
+          text={thinkingText}
         />
       ) : null}
       <Streamdown className="ai-conversation-markdown font-figtree leading-6">
@@ -2129,7 +2129,6 @@ export default function EmailTemplateProject() {
   // The just-sent user message — scrolled to the top of the chat on send.
   const latestUserRef = useRef<HTMLDivElement>(null);
   const pendingUserScrollRef = useRef(false);
-  const initialBottomScrollEmailRef = useRef<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -2164,6 +2163,7 @@ export default function EmailTemplateProject() {
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [previewOverlayOpen, setPreviewOverlayOpen] = useState(false);
   const processedStartupRef = useRef<string | null>(null);
+  const autoScrollEmailRef = useRef<string | null>(null);
 
   const emailQuery = useQuery({
     queryKey: ["email", currentEmailId],
@@ -2288,12 +2288,17 @@ export default function EmailTemplateProject() {
         }
 
         if (event.type === "assistant-chunk") {
+          const firstChunk = assistantText.length === 0;
           assistantText += event.value;
           // First visible answer token marks the end of the reasoning phase.
           if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
             thinkingFinishedAt = Date.now();
           }
-          setMessages(upsertAssistant);
+          setMessages((current) =>
+            upsertAssistant(
+              firstChunk ? finishTimeline(current, timelineId) : current,
+            ),
+          );
           return;
         }
 
@@ -2484,8 +2489,15 @@ export default function EmailTemplateProject() {
   );
 
   // Re-run the latest turn, keeping the previous answer as a navigable version.
-  const regenerate = useCallback(() => {
+  const regenerate = useCallback((message: ChatMessage) => {
     if (isStreaming || !currentEmailId) return;
+    if (message.groupId) {
+      setSelectedVersions((current) => {
+        const { [message.groupId!]: _removed, ...rest } = current;
+        return rest;
+      });
+    }
+    setMessages((current) => current.filter((item) => item.id !== message.id));
     void startStream(currentEmailId, "regenerate");
   }, [currentEmailId, isStreaming, startStream]);
 
@@ -2531,19 +2543,30 @@ export default function EmailTemplateProject() {
   }, [currentEmailId]);
 
   useEffect(() => {
+    autoScrollEmailRef.current = currentEmailId;
+  }, [currentEmailId]);
+
+  useEffect(() => {
     if (!currentEmailId || !messages.length) return;
-    if (initialBottomScrollEmailRef.current === currentEmailId) return;
+    const hasCurrentEmailMessages = messages.some(
+      (message) => message.emailId === currentEmailId,
+    );
+    if (!hasCurrentEmailMessages) return;
+    if (autoScrollEmailRef.current !== currentEmailId) return;
     if (!messagesRef.current) return;
 
-    initialBottomScrollEmailRef.current = currentEmailId;
     requestAnimationFrame(() => {
-      messagesRef.current?.scrollTo({
-        top: messagesRef.current.scrollHeight,
-        behavior: "auto",
+      requestAnimationFrame(() => {
+        if (autoScrollEmailRef.current !== currentEmailId) return;
+        messagesRef.current?.scrollTo({
+          top: messagesRef.current.scrollHeight,
+          behavior: "auto",
+        });
+        updateScrollState();
+        autoScrollEmailRef.current = null;
       });
-      updateScrollState();
     });
-  }, [currentEmailId, messages.length, updateScrollState]);
+  }, [currentEmailId, messages, updateScrollState]);
 
   useEffect(() => {
     if (isStreaming) return;
@@ -2776,7 +2799,7 @@ export default function EmailTemplateProject() {
     return (
       <AiMessage
         onRegenerate={
-          message.id === lastAssistantId ? regenerate : undefined
+          message.id === lastAssistantId ? () => regenerate(message) : undefined
         }
         onSelectVersion={
           message.groupId
