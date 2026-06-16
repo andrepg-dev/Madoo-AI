@@ -352,6 +352,7 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
             onKeyDown={handleKeyDown}
             placeholder="Search..."
             ref={inputRef}
+            autoFocus
             role="combobox"
             type="text"
             value={query}

@@ -720,7 +720,9 @@ export function Sidebar() {
             {user ? (
               <>
                 <DropdownLink href="/settings">Profile</DropdownLink>
-                <DropdownLink href="/settings">Settings</DropdownLink>
+                <DropdownLink href="/settings?area=workspace&section=overview">
+                  Settings
+                </DropdownLink>
                 <DropdownItem
                   className="justify-start! text-madoo-danger"
                   disabled={signOutMutation.isPending}

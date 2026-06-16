@@ -347,7 +347,7 @@ function ConversationTitleDropdown({
           asChild
           className="justify-start! px-2! py-1! text-[13px]!"
         >
-          <Link href="/settings">
+          <Link href="/settings?area=workspace&section=overview">
             <span className="flex items-center gap-2.5">
               <HeaderMenuIcon icon={Settings01Icon} />
               Settings

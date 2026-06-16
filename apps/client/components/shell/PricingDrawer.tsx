@@ -49,7 +49,7 @@ const pricingFaqs = [
   {
     question: "What if I do not find my export provider?",
     answer:
-      "Report it inside the platform with the add provider button. If we add it, we give you 150 AI credits.",
+      "Report it inside the platform with the add provider button.",
   },
 ];
 
