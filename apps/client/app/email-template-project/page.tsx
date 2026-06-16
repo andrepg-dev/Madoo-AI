@@ -1961,8 +1961,10 @@ function ThinkingBlock({
   seconds?: number;
   active?: boolean;
 }) {
+  if (!active) return null;
+
   return (
-    <details className="group mb-2.5" open={active}>
+    <details className="group mb-2.5" open>
       <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-madoo-ink-muted transition-colors hover:text-madoo-ink [&::-webkit-details-marker]:hidden">
         <span>Thought process</span>
         <HugeiconsIcon
@@ -2112,6 +2114,7 @@ export default function EmailTemplateProject() {
   // The just-sent user message — scrolled to the top of the chat on send.
   const latestUserRef = useRef<HTMLDivElement>(null);
   const pendingUserScrollRef = useRef(false);
+  const initialBottomScrollEmailRef = useRef<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -2511,6 +2514,21 @@ export default function EmailTemplateProject() {
     setStreamedSubject(null);
     setStreamedConversationTitle(null);
   }, [currentEmailId]);
+
+  useEffect(() => {
+    if (!currentEmailId || !messages.length) return;
+    if (initialBottomScrollEmailRef.current === currentEmailId) return;
+    if (!messagesRef.current) return;
+
+    initialBottomScrollEmailRef.current = currentEmailId;
+    requestAnimationFrame(() => {
+      messagesRef.current?.scrollTo({
+        top: messagesRef.current.scrollHeight,
+        behavior: "auto",
+      });
+      updateScrollState();
+    });
+  }, [currentEmailId, messages.length, updateScrollState]);
 
   useEffect(() => {
     if (isStreaming) return;
