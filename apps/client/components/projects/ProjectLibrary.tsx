@@ -167,7 +167,7 @@ function ProjectPreview({ email }: { email: EmailDto }) {
           src={previewUrl}
         />
       ) : (
-        <Icon name="image" size={30} className="text-[#d8d3c7]" />
+        <Icon name="message" size={30} className="text-[#d8d3c7]" />
       )}
       <span
         className={cx(

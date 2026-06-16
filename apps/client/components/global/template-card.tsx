@@ -52,7 +52,7 @@ export default function TemplateCard({
               src={previewUrl}
             />
           ) : (
-            <Icon name="image" size={32} className="text-[#d8d3c7]" />
+            <Icon name="message" size={32} className="text-[#d8d3c7]" />
           )}
           {badge ? (
             <span className="absolute left-2 top-2 rounded-md bg-white/90 px-2 py-1 text-[11px] font-medium leading-none text-madoo-ink shadow-madoo-border backdrop-blur">

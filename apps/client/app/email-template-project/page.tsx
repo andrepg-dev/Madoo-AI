@@ -173,7 +173,7 @@ function CopyActionButton({
       <HugeiconsIcon
         aria-hidden="true"
         className={cn(
-          copied && "animate-madoo-checkbox-control-in text-emerald-600",
+          copied && "animate-madoo-checkbox-control-in",
         )}
         icon={copied ? Tick02Icon : Copy01Icon}
         key={copied ? "copied" : "copy"}
@@ -293,7 +293,7 @@ function ConversationTitleDropdown({
       </DropdownTrigger>
       <DropdownContent
         align="start"
-        className="w-72 gap-1 p-1.5! !shadow-none"
+        className="w-72 gap-1 overflow-hidden p-1.5!"
       >
         <DropdownItem
           asChild
@@ -1860,6 +1860,7 @@ function HumanMessage({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(children);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const text = children.trim();
 
   const autoGrow = (element: HTMLTextAreaElement) => {
     element.style.height = "auto";
@@ -1925,7 +1926,7 @@ function HumanMessage({
   }
 
   return (
-    <div className="ml-auto">
+    <div className="group ml-auto flex w-full max-w-xl flex-col items-end">
       {images && images.length > 0 ? (
         <div className="mb-1.5 flex max-w-xl flex-wrap justify-end gap-2">
           {images.map((url) => (
@@ -1939,17 +1940,17 @@ function HumanMessage({
         </div>
       ) : null}
 
-      <pre className="max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2 font-figtree shadow-madoo-border">
-        {children}
-      </pre>
+      <span className="ml-2.5 max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2.5 font-figtree leading-relaxed shadow-madoo-border">
+        {text}
+      </span>
 
-      <div className="flex gap-1 my-1.5 mt-1 max-w-min ml-auto">
+      <div className="my-1.5 mt-3 flex max-w-min gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         <ActionButton
           icon={Edit02Icon}
           label="Edit message"
           onClick={disabled ? undefined : startEditing}
         />
-        <CopyActionButton label="Copy message" text={children} />
+        <CopyActionButton label="Copy message" text={text} />
       </div>
     </div>
   );
@@ -2011,7 +2012,7 @@ function AiMessage({
   const hasVersions = total > 1;
 
   return (
-    <div className="rounded mr-auto text-left">
+    <div className="group mb-3.5 mr-auto rounded text-left">
       {thinking ? (
         <ThinkingBlock
           active={thinkingActive}
@@ -2023,7 +2024,7 @@ function AiMessage({
         {children}
       </Streamdown>
 
-      <div className="mt-1.5 flex items-center gap-1">
+      <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         {hasVersions ? (
           <div className="mr-0.5 flex items-center text-xs text-madoo-ink-muted">
             <Button
