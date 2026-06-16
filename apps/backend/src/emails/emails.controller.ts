@@ -209,4 +209,13 @@ export class EmailsController {
     const dto = EditEmailSchema.parse(body);
     return this.generation.editEmailStream(id, req.workspace.id, dto);
   }
+
+  @Post(":id/regenerate")
+  @Sse()
+  regenerate(
+    @Req() req: WorkspaceScopedRequest,
+    @Param("id") id: string,
+  ): Observable<MessageEvent> {
+    return this.generation.regenerateEmailStream(id, req.workspace.id);
+  }
 }

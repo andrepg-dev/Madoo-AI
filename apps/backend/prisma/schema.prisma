@@ -251,6 +251,10 @@ model EmailChatMessage {
   kind        EmailChatKind @default(TEXT)
   content     String        @db.Text
 
+  // Response-version group. Assistant rows produced by regenerating the same
+  // turn share a groupId so the UI can offer ‹x/y› version navigation.
+  groupId String?
+
   createdAt DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -258,6 +262,7 @@ model EmailChatMessage {
 
   @@index([emailId, createdAt])
   @@index([workspaceId, emailId, role])
+  @@index([emailId, groupId])
 }
 
 model EmailVfsSnapshot {
