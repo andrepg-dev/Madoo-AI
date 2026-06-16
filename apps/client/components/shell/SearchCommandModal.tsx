@@ -310,7 +310,7 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
   return (
     <div
       aria-hidden={!open}
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgb(var(--ink-shadow-rgb)/0.14)] px-4 py-4 backdrop-blur-[1px] will-change-[opacity,backdrop-filter] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-modal-overlay-out data-[state=open]:animate-madoo-modal-overlay-in motion-reduce:animate-none"
+      className="fixed inset-0 z-120 flex items-center justify-center bg-[rgb(var(--ink-shadow-rgb)/0.14)] px-4 py-4 backdrop-blur-[1px] will-change-[opacity,backdrop-filter] data-[state=closed]:pointer-events-none data-[state=closed]:animate-madoo-modal-overlay-out data-[state=open]:animate-madoo-modal-overlay-in motion-reduce:animate-none"
       data-state={open ? "open" : "closed"}
       onClick={handleOverlayClick}
       role="presentation"
@@ -331,7 +331,7 @@ export function SearchCommandModal({ open, onClose }: SearchCommandModalProps) {
         <div
           className={cx(
             "flex h-full w-full min-w-0 flex-col",
-            previewItem ? "sm:w-[440px] sm:shrink-0" : "sm:w-full",
+            previewItem ? "sm:w-110 sm:shrink-0" : "sm:w-full",
           )}
         >
         <div className="flex h-10.5 shrink-0 animate-madoo-modal-content-in items-center gap-2 px-4 max-sm:h-10.5 max-sm:px-3 motion-reduce:animate-none">

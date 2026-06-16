@@ -844,7 +844,7 @@ export default function HomePage({
               width={2508}
               height={2508}
               aria-hidden="true"
-              className="madoo-hero-float-email pointer-events-none absolute right-[max(3rem,calc(50%-42rem))] top-[15%] z-0 hidden h-auto w-[13.5rem] select-none xl:block 2xl:w-[17.5rem]"
+              className="madoo-hero-float-email pointer-events-none absolute right-[max(3rem,calc(50%-42rem))] top-[15%] z-0 hidden h-auto w-54 select-none xl:block 2xl:w-70"
               priority
             />
 
@@ -854,7 +854,7 @@ export default function HomePage({
               width={3068}
               height={2050}
               aria-hidden="true"
-              className="madoo-hero-float-browser pointer-events-none absolute bottom-[40%] left-[max(2.5rem,calc(50%-48rem))] z-0 hidden h-auto w-[21.5rem] select-none xl:block 2xl:w-[28.5rem]"
+              className="madoo-hero-float-browser pointer-events-none absolute bottom-[40%] left-[max(2.5rem,calc(50%-48rem))] z-0 hidden h-auto w-86 select-none xl:block 2xl:w-114"
               priority
             />
 
@@ -872,7 +872,7 @@ export default function HomePage({
               </h4>
             </div>
 
-            <div className="relative z-[60] flex flex-col gap-2">
+            <div className="relative z-60 flex flex-col gap-2">
               <div className="madoo-paper-border min-w-175 overflow-visible rounded-3xl bg-white">
                 <AttachmentPreviewList
                   attachments={attachments}
@@ -1068,7 +1068,7 @@ export default function HomePage({
                     {copy.value.clients.map((client) => (
                       <div
                         key={client}
-                        className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-3"
+                        className="rounded-lg border border-white/10 bg-white/6 px-3 py-3"
                       >
                         <div className="mb-3 h-1.5 w-8 rounded-full bg-[#7dd3fc]" />
                         <p className="text-xs font-medium text-white">
@@ -1081,7 +1081,7 @@ export default function HomePage({
                     ))}
                   </div>
 
-                  <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.06] p-4">
+                  <div className="mt-6 rounded-lg border border-white/10 bg-white/6 p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       {copy.value.flow.map((step, index) => (
                         <div key={step} className="flex items-center gap-2">
@@ -1100,7 +1100,7 @@ export default function HomePage({
                   </div>
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_1.1fr]">
-                    <div className="rounded-lg border border-white/10 bg-white/[0.06] p-4">
+                    <div className="rounded-lg border border-white/10 bg-white/6 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
                         {copy.value.brandTitle}
                       </p>
@@ -1125,7 +1125,7 @@ export default function HomePage({
                       </div>
                     </div>
 
-                    <div className="rounded-lg border border-white/10 bg-white/[0.06] p-4">
+                    <div className="rounded-lg border border-white/10 bg-white/6 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
                         {copy.value.integrationsTitle}
                       </p>
