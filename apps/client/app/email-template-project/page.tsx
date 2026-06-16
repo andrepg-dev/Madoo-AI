@@ -271,7 +271,7 @@ function ConversationTitleDropdown({
     <Dropdown>
       <DropdownTrigger asChild>
         <Button
-          className="h-8 max-w-[min(360px,calc(100vw-32px))] gap-1.5 px-2.5 py-0! text-[13px]"
+          className="h-8 max-w-[min(360px,calc(100vw-32px))] gap-1.5 px-2.5 py-0! text-[13px] !shadow-none hover:!shadow-none data-[state=open]:!shadow-none"
           variant="ghost"
         >
           <Image
@@ -291,7 +291,10 @@ function ConversationTitleDropdown({
           </div>
         </Button>
       </DropdownTrigger>
-      <DropdownContent align="start" className="w-72 gap-1 p-1.5!">
+      <DropdownContent
+        align="start"
+        className="w-72 gap-1 p-1.5! !shadow-none"
+      >
         <DropdownItem
           asChild
           className="justify-start! px-2! py-1.5! text-[13px]!"
@@ -1940,7 +1943,7 @@ function HumanMessage({
         {children}
       </pre>
 
-      <div className="flex gap-1 my-1.5 mt-3 max-w-min ml-auto">
+      <div className="flex gap-1 my-1.5 mt-1 max-w-min ml-auto">
         <ActionButton
           icon={Edit02Icon}
           label="Edit message"
@@ -2819,7 +2822,7 @@ export default function EmailTemplateProject() {
             onScroll={updateScrollState}
           >
             <div className="mx-auto w-full max-w-2xl px-4">
-              <div className="mt-8 flex flex-col gap-8">
+              <div className="mt-8 flex flex-col">
                 {headMessages.map((message, index) =>
                   index === lastUserIndex ? (
                     <div
