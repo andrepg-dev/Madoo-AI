@@ -149,7 +149,6 @@ function emailToSearchItem(email: EmailDto): SearchItem {
   return {
     id: `email-${email.id}`,
     label: getEmailTitle(email),
-    description: email.prompt,
     href: `/email-template-project?id=${encodeURIComponent(email.id)}`,
     group: "Recent projects",
     // Row shows a clean icon; the screenshot is only used in the hover preview.

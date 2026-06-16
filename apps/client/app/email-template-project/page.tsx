@@ -100,6 +100,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
   type PointerEvent,
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -406,6 +407,12 @@ type ChatMessage = {
   emailId?: string;
   /** Object URLs for images attached to a user message (display only). */
   images?: string[];
+  /** Assistant response-version group (regenerations of the same turn). */
+  groupId?: string;
+  /** All sibling responses in the group, oldest → newest. */
+  versions?: { id: string; content: string }[];
+  /** Index of the currently shown sibling within `versions`. */
+  versionIndex?: number;
   steps?: TimelineStep[];
   startedAt?: number;
   finishedAt?: number;
@@ -501,21 +508,62 @@ function latestVariant(email: EmailDto | null | undefined) {
 function mapChatMessages(
   chat: EmailChatMessageDto[] | undefined,
   email: EmailDto | null | undefined,
+  selectedVersions: Record<string, number> = {},
 ): ChatMessage[] {
-  const visibleChat: ChatMessage[] =
-    chat
-      ?.filter((message) => message.kind !== "THINKING")
-      .map((message) => ({
-        id: message.id,
-        role: (message.role === "USER"
-          ? "user"
-          : message.kind === "STATUS"
-            ? "status"
-            : "assistant") as ChatMessage["role"],
-        content: message.content,
-        seq: Date.parse(message.createdAt) || 0,
+  const rows = chat?.filter((message) => message.kind !== "THINKING") ?? [];
+
+  // Collect assistant response-version siblings, oldest → newest (chat is asc).
+  const groups = new Map<string, EmailChatMessageDto[]>();
+  for (const row of rows) {
+    if (row.role === "ASSISTANT" && row.groupId) {
+      const siblings = groups.get(row.groupId) ?? [];
+      siblings.push(row);
+      groups.set(row.groupId, siblings);
+    }
+  }
+
+  const emittedGroups = new Set<string>();
+  const visibleChat: ChatMessage[] = [];
+  for (const message of rows) {
+    if (message.role === "ASSISTANT" && message.groupId) {
+      // Emit a grouped response once, at the position of its first sibling.
+      if (emittedGroups.has(message.groupId)) continue;
+      emittedGroups.add(message.groupId);
+      const siblings = groups.get(message.groupId) ?? [message];
+      const lastIndex = siblings.length - 1;
+      const selected = Math.min(
+        Math.max(selectedVersions[message.groupId] ?? lastIndex, 0),
+        lastIndex,
+      );
+      visibleChat.push({
+        id: `group-${message.groupId}`,
+        role: "assistant",
+        content: siblings[selected].content,
+        // Anchor the position to the first sibling so switching versions never
+        // reorders the message.
+        seq: Date.parse(siblings[0].createdAt) || 0,
         emailId: email?.id,
-      })) ?? [];
+        groupId: message.groupId,
+        versions: siblings.map((sibling) => ({
+          id: sibling.id,
+          content: sibling.content,
+        })),
+        versionIndex: selected,
+      });
+      continue;
+    }
+    visibleChat.push({
+      id: message.id,
+      role: (message.role === "USER"
+        ? "user"
+        : message.kind === "STATUS"
+          ? "status"
+          : "assistant") as ChatMessage["role"],
+      content: message.content,
+      seq: Date.parse(message.createdAt) || 0,
+      emailId: email?.id,
+    });
+  }
 
   // Always lead with the user's brief, even before the chat rows have loaded.
   const messages: ChatMessage[] =
@@ -1880,26 +1928,79 @@ function HumanMessage({
 
 function AiMessage({
   children,
-  onOpenPreview,
+  versions,
+  versionIndex = 0,
+  onSelectVersion,
+  onRegenerate,
+  regenerating,
 }: {
   children: string;
-  onOpenPreview?: () => void;
+  versions?: { id: string; content: string }[];
+  versionIndex?: number;
+  onSelectVersion?: (index: number) => void;
+  onRegenerate?: () => void;
+  regenerating?: boolean;
 }) {
+  const total = versions?.length ?? 0;
+  const hasVersions = total > 1;
+
   return (
     <div className="rounded mr-auto text-left">
       <Streamdown className="ai-conversation-markdown font-figtree leading-6">
         {children}
       </Streamdown>
 
-      <div className="flex gap-1 mt-1.5">
+      <div className="mt-1.5 flex items-center gap-1">
+        {hasVersions ? (
+          <div className="mr-0.5 flex items-center text-xs text-madoo-ink-muted">
+            <Button
+              aria-label="Previous version"
+              className="h-6 w-6 rounded-md"
+              disabled={versionIndex <= 0}
+              onClick={() => onSelectVersion?.(versionIndex - 1)}
+              size="sm"
+              variant="icon"
+            >
+              <HugeiconsIcon
+                aria-hidden="true"
+                icon={ArrowLeft01Icon}
+                primaryColor="currentColor"
+                size={13}
+                strokeWidth={1.7}
+              />
+            </Button>
+            <span className="min-w-8 text-center tabular-nums">
+              {versionIndex + 1}/{total}
+            </span>
+            <Button
+              aria-label="Next version"
+              className="h-6 w-6 rounded-md"
+              disabled={versionIndex >= total - 1}
+              onClick={() => onSelectVersion?.(versionIndex + 1)}
+              size="sm"
+              variant="icon"
+            >
+              <HugeiconsIcon
+                aria-hidden="true"
+                className="rotate-180"
+                icon={ArrowLeft01Icon}
+                primaryColor="currentColor"
+                size={13}
+                strokeWidth={1.7}
+              />
+            </Button>
+          </div>
+        ) : null}
         <CopyActionButton label="Copy response" text={children} />
         <ActionButton icon={ThumbsUpIcon} label="Like response" />
         <ActionButton icon={ThumbsDownIcon} label="Dislike response" />
-        <ActionButton
-          icon={RefreshIcon}
-          label="Regenerate response"
-          onClick={onOpenPreview}
-        />
+        {onRegenerate ? (
+          <ActionButton
+            icon={RefreshIcon}
+            label="Regenerate response"
+            onClick={regenerating ? undefined : onRegenerate}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -1922,107 +2023,27 @@ function ErrorMessage({ children }: { children: string }) {
 }
 
 /**
- * Live, then permanent, record of the generation steps. Expanded while working,
- * collapses to "Worked for Ns" when done but stays in the conversation.
+ * Minimal live loader while a turn is generating: a small spinner, nothing
+ * else. Leaves no "Worked for Ns" record behind — once the turn finishes it
+ * renders nothing, so the response stands on its own.
  */
 function TimelineMessage({ message }: { message: ChatMessage }) {
-  const steps = message.steps ?? [];
   const finished = Boolean(message.finishedAt);
-  const [expanded, setExpanded] = useState(true);
 
-  useEffect(() => {
-    if (finished) setExpanded(false);
-  }, [finished]);
-
-  const elapsedSeconds =
-    message.finishedAt && message.startedAt
-      ? Math.max(1, Math.round((message.finishedAt - message.startedAt) / 1000))
-      : null;
-  const activeLabel =
-    steps.find((step) => step.state === "active")?.label ??
-    steps[steps.length - 1]?.label ??
-    "Working…";
+  if (finished) return null;
 
   return (
-    <div className="mr-auto w-full max-w-md">
-      <button
-        aria-expanded={expanded}
-        className="flex w-full items-center gap-2.5 rounded-xl bg-madoo-surface-2 px-3 py-2 text-left shadow-madoo-border transition hover:bg-madoo-surface"
-        onClick={() => setExpanded((value) => !value)}
-        type="button"
-      >
-        {finished ? (
-          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-madoo-ink text-white">
-            <HugeiconsIcon
-              aria-hidden="true"
-              icon={Tick02Icon}
-              primaryColor="currentColor"
-              size={12}
-              strokeWidth={2}
-            />
-          </span>
-        ) : (
-          <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-madoo-border border-t-madoo-ink" />
-        )}
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-madoo-ink">
-          {finished
-            ? `Worked for ${elapsedSeconds ?? 1}s`
-            : activeLabel}
-        </span>
-        <HugeiconsIcon
-          aria-hidden="true"
-          className={cn(
-            "shrink-0 text-madoo-ink-muted transition-transform",
-            expanded && "rotate-180",
-          )}
-          icon={ArrowDown01Icon}
-          primaryColor="currentColor"
-          size={15}
-          strokeWidth={1.7}
-        />
-      </button>
-
-      {expanded && steps.length ? (
-        <ol className="mt-2 grid pl-2">
-          {steps.map((step, index) => {
-            const isActive = step.state === "active" && !finished;
-            const isLast = index === steps.length - 1;
-            return (
-              <li className="flex gap-2.5" key={step.id}>
-                <span className="flex flex-col items-center">
-                  <span
-                    className={cn(
-                      "mt-1 size-2.5 shrink-0 rounded-full",
-                      isActive
-                        ? "bg-madoo-ink ring-4 ring-madoo-ink/10"
-                        : "bg-madoo-ink/60",
-                    )}
-                  />
-                  {!isLast ? (
-                    <span className="my-0.5 w-px flex-1 bg-madoo-border" />
-                  ) : null}
-                </span>
-                <span
-                  className={cn(
-                    "pb-2.5 text-xs",
-                    isActive
-                      ? "font-medium text-madoo-ink"
-                      : "text-madoo-ink-muted",
-                  )}
-                >
-                  {step.label}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      ) : null}
+    <div className="mr-auto">
+      <span className="block size-4 animate-spin rounded-full border-2 border-madoo-border border-t-madoo-ink" />
     </div>
   );
 }
 
 export default function EmailTemplateProject() {
   const messagesRef = useRef<HTMLDivElement>(null);
+  // The just-sent user message — scrolled to the top of the chat on send.
+  const latestUserRef = useRef<HTMLDivElement>(null);
+  const pendingUserScrollRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -2041,6 +2062,10 @@ export default function EmailTemplateProject() {
     string | null
   >(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  // Which response version is shown per regenerated group (groupId → index).
+  const [selectedVersions, setSelectedVersions] = useState<
+    Record<string, number>
+  >({});
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [testingModalOpen, setTestingModalOpen] = useState(false);
@@ -2110,14 +2135,18 @@ export default function EmailTemplateProject() {
   const startStream = useCallback(
     async (
       emailId: string,
-      mode: "generate" | "edit",
+      mode: "generate" | "edit" | "regenerate",
       instruction?: string,
       baseVariantId?: string,
     ) => {
       const assistantId = `${mode}-${Date.now()}-assistant`;
       const timeline = createTimelineMessage(
         emailId,
-        mode === "generate" ? "Starting generation…" : "Applying your edits…",
+        mode === "generate"
+          ? "Starting generation…"
+          : mode === "regenerate"
+            ? "Regenerating…"
+            : "Applying your edits…",
       );
       const timelineId = timeline.id;
       let assistantText = "";
@@ -2262,6 +2291,9 @@ export default function EmailTemplateProject() {
           images: imageUrls.length > 0 ? imageUrls : undefined,
         },
       ]);
+      // Pin the new message to the top of the chat (its reserved response area
+      // below gives it the room to get there).
+      pendingUserScrollRef.current = true;
 
       if (currentEmailId) {
         await startStream(currentEmailId, "edit", input.prompt, variant?.id);
@@ -2318,6 +2350,16 @@ export default function EmailTemplateProject() {
     [currentEmailId, isStreaming, submitChatPrompt],
   );
 
+  // Re-run the latest turn, keeping the previous answer as a navigable version.
+  const regenerate = useCallback(() => {
+    if (isStreaming || !currentEmailId) return;
+    void startStream(currentEmailId, "regenerate");
+  }, [currentEmailId, isStreaming, startStream]);
+
+  const selectVersion = useCallback((groupId: string, index: number) => {
+    setSelectedVersions((current) => ({ ...current, [groupId]: index }));
+  }, []);
+
   const updateScrollState = useCallback(() => {
     const messages = messagesRef.current;
 
@@ -2358,7 +2400,7 @@ export default function EmailTemplateProject() {
   useEffect(() => {
     if (isStreaming) return;
     setMessages((previous) => {
-      const server = mapChatMessages(chatQuery.data, email);
+      const server = mapChatMessages(chatQuery.data, email, selectedVersions);
       // Preserve client-only rows (the live/finished timeline and stream errors)
       // for the active email so they aren't wiped by the server refetch.
       const clientOnly = previous.filter(
@@ -2385,7 +2427,7 @@ export default function EmailTemplateProject() {
       }
       return merged;
     });
-  }, [chatQuery.data, currentEmailId, email, isStreaming]);
+  }, [chatQuery.data, currentEmailId, email, isStreaming, selectedVersions]);
 
   useEffect(() => {
     if (hasPreview) {
@@ -2495,6 +2537,19 @@ export default function EmailTemplateProject() {
     });
   };
 
+  // After a send, snap the new user message to the top of the chat. Runs
+  // only on send (flag set in submitChatPrompt), never on load or project swap.
+  useEffect(() => {
+    if (!pendingUserScrollRef.current) return;
+    pendingUserScrollRef.current = false;
+    requestAnimationFrame(() => {
+      latestUserRef.current?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+    });
+  }, [messages]);
+
   const updatePreviewWidth = (width: number) => {
     setPreviewExpanded(false);
     setPreviewWidth(width);
@@ -2539,6 +2594,63 @@ export default function EmailTemplateProject() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }, [previewSrcDoc, toast]);
 
+  const lastUserIndex = messages.reduce(
+    (last, message, index) => (message.role === "user" ? index : last),
+    -1,
+  );
+  // Only the most recent assistant response can be regenerated (it re-runs the
+  // latest turn), mirroring the ChatGPT affordance.
+  const lastAssistantId = messages.reduce<string | null>(
+    (last, message) => (message.role === "assistant" ? message.id : last),
+    null,
+  );
+  const renderMessage = (message: ChatMessage) => {
+    if (message.role === "user") {
+      return (
+        <HumanMessage
+          disabled={isStreaming}
+          images={message.images}
+          onEdit={(text) => void editMessage(message, text)}
+        >
+          {message.content}
+        </HumanMessage>
+      );
+    }
+    if (message.role === "error") {
+      return <ErrorMessage>{message.content}</ErrorMessage>;
+    }
+    if (message.role === "status") {
+      return <StatusMessage>{message.content}</StatusMessage>;
+    }
+    if (message.role === "timeline") {
+      return <TimelineMessage message={message} />;
+    }
+    return (
+      <AiMessage
+        onRegenerate={
+          message.id === lastAssistantId ? regenerate : undefined
+        }
+        onSelectVersion={
+          message.groupId
+            ? (index) => selectVersion(message.groupId!, index)
+            : undefined
+        }
+        regenerating={isStreaming}
+        versionIndex={message.versionIndex}
+        versions={message.versions}
+      >
+        {message.content}
+      </AiMessage>
+    );
+  };
+  // Everything up to and including the latest user message renders normally;
+  // the response to that message lives in a reserved min-height area so the
+  // user message can be scrolled to the top of the viewport on send.
+  const headMessages =
+    lastUserIndex === -1 ? [] : messages.slice(0, lastUserIndex + 1);
+  const tailMessages =
+    lastUserIndex === -1 ? messages : messages.slice(lastUserIndex + 1);
+
   return (
     <main className="relative h-screen overflow-hidden bg-white">
       <header
@@ -2567,54 +2679,33 @@ export default function EmailTemplateProject() {
           {/* messages */}
           <div
             ref={messagesRef}
-            className="madoo-chat-scrollbar min-h-0 flex-1 overflow-y-auto pr-4 text-sm font-figtree pb-48"
+            className="madoo-chat-scrollbar min-h-0 flex-1 overflow-y-auto pr-4 text-sm font-figtree pb-16"
             onScroll={updateScrollState}
           >
             <div className="mx-auto w-full max-w-2xl px-4">
               <div className="mt-8 flex flex-col gap-8">
-                {messages.map((message) => {
-                  if (message.role === "user") {
-                    return (
-                      <HumanMessage
-                        disabled={isStreaming}
-                        key={message.id}
-                        images={message.images}
-                        onEdit={(text) => void editMessage(message, text)}
-                      >
-                        {message.content}
-                      </HumanMessage>
-                    );
-                  }
-                  if (message.role === "error") {
-                    return (
-                      <ErrorMessage key={message.id}>
-                        {message.content}
-                      </ErrorMessage>
-                    );
-                  }
-                  if (message.role === "status") {
-                    return (
-                      <StatusMessage key={message.id}>
-                        {message.content}
-                      </StatusMessage>
-                    );
-                  }
-                  if (message.role === "timeline") {
-                    return (
-                      <TimelineMessage key={message.id} message={message} />
-                    );
-                  }
-                  return (
-                    <AiMessage
+                {headMessages.map((message, index) =>
+                  index === lastUserIndex ? (
+                    <div
+                      className="flex scroll-mt-6 flex-col"
                       key={message.id}
-                      onOpenPreview={() => {
-                        if (hasPreview) setSidebarOpen(true);
-                      }}
+                      ref={latestUserRef}
                     >
-                      {message.content}
-                    </AiMessage>
-                  );
-                })}
+                      {renderMessage(message)}
+                    </div>
+                  ) : (
+                    <Fragment key={message.id}>
+                      {renderMessage(message)}
+                    </Fragment>
+                  ),
+                )}
+                <div className="flex min-h-[400px] flex-col gap-8">
+                  {tailMessages.map((message) => (
+                    <Fragment key={message.id}>
+                      {renderMessage(message)}
+                    </Fragment>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
