@@ -1638,7 +1638,9 @@ function EmailPreviewSidebar({
         expanded ? "absolute inset-y-0 right-0 z-20" : "relative",
         isResizing
           ? "transition-[opacity,transform]"
-          : "transition-[width,opacity,transform] duration-300",
+          : expanded ? "" : "",
+            // ? "transition-[opacity,transform] duration-150"
+            // : "transition-[width,opacity,transform] duration-300",
         open ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0",
       )}
       style={{
