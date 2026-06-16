@@ -382,12 +382,23 @@ export const EmailChatMessageDtoSchema = z.object({
   role: z.enum(["USER", "ASSISTANT", "SYSTEM"]),
   kind: z.enum(["TEXT", "THINKING", "STATUS"]),
   content: z.string(),
+  feedback: z.enum(["LIKE", "DISLIKE"]).nullable().optional(),
+  feedbackComment: z.string().nullable().optional(),
   /** Shared by assistant responses that are regenerations of the same turn. */
   groupId: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
 });
 
 export type EmailChatMessageDto = z.infer<typeof EmailChatMessageDtoSchema>;
+
+export const SetEmailChatMessageFeedbackSchema = z.object({
+  feedback: z.enum(["LIKE", "DISLIKE"]).nullable(),
+  comment: z.string().trim().max(2000).nullable().optional(),
+});
+
+export type SetEmailChatMessageFeedbackInput = z.infer<
+  typeof SetEmailChatMessageFeedbackSchema
+>;
 
 export const EditEmailSchema = z.object({
   instruction: z.string().min(1),

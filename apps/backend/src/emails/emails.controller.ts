@@ -28,6 +28,7 @@ import {
   CreateEmailSchema,
   EditEmailSchema,
   RenameEmailSchema,
+  SetEmailChatMessageFeedbackSchema,
   SetEmailStarredSchema,
   TruncateEmailChatSchema,
   TransferEmailSchema,
@@ -106,6 +107,24 @@ export class EmailsController {
   ) {
     const dto = TruncateEmailChatSchema.parse(body);
     return this.emails.truncateChatMessages(id, req.workspace.id, user.sub, dto);
+  }
+
+  @Patch(":id/chat/:messageId/feedback")
+  setChatMessageFeedback(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Param("messageId") messageId: string,
+    @Body() body: unknown,
+  ) {
+    const dto = SetEmailChatMessageFeedbackSchema.parse(body);
+    return this.emails.setChatMessageFeedback(
+      id,
+      messageId,
+      req.workspace.id,
+      user.sub,
+      dto,
+    );
   }
 
   @Delete(":id")

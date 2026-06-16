@@ -24,6 +24,7 @@ import {
   type EmailVariantDto,
   type PublicEmailDto,
   type RenameEmailInput,
+  type SetEmailChatMessageFeedbackInput,
   type SetEmailStarredInput,
   type TransferEmailInput,
   type TruncateEmailChatInput,
@@ -158,6 +159,8 @@ export class EmailsService {
         role: row.role,
         kind: row.kind,
         content: row.content,
+        feedback: row.feedback,
+        feedbackComment: row.feedbackComment,
         groupId: row.groupId,
         createdAt: row.createdAt.toISOString(),
       }),
@@ -204,6 +207,52 @@ export class EmailsService {
       where: { emailId, workspaceId, createdAt: { gte: new Date(dto.from) } },
     });
     return { ok: true, deleted: count };
+  }
+
+  async setChatMessageFeedback(
+    emailId: string,
+    messageId: string,
+    workspaceId: string,
+    userId: string,
+    dto: SetEmailChatMessageFeedbackInput,
+  ): Promise<EmailChatMessageDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    const existing = await this.prisma.emailChatMessage.findFirst({
+      where: {
+        id: messageId,
+        emailId,
+        workspaceId,
+        role: "ASSISTANT",
+        kind: "TEXT",
+      },
+      select: { id: true },
+    });
+    if (!existing) throw new NotFoundException("Assistant message not found.");
+
+    const updated = await this.prisma.emailChatMessage.update({
+      where: { id: messageId },
+      data: {
+        feedback: dto.feedback,
+        // Clear the comment when feedback is removed; otherwise only update it
+        // when a comment value was explicitly provided.
+        ...(dto.feedback === null
+          ? { feedbackComment: null }
+          : dto.comment !== undefined
+            ? { feedbackComment: dto.comment || null }
+            : {}),
+      },
+    });
+    return EmailChatMessageDtoSchema.parse({
+      id: updated.id,
+      role: updated.role,
+      kind: updated.kind,
+      content: updated.content,
+      feedback: updated.feedback,
+      feedbackComment: updated.feedbackComment,
+      groupId: updated.groupId,
+      createdAt: updated.createdAt.toISOString(),
+    });
   }
 
   async remove(

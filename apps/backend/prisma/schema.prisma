@@ -157,6 +157,11 @@ enum EmailChatKind {
   STATUS
 }
 
+enum EmailChatFeedback {
+  LIKE
+  DISLIKE
+}
+
 model Email {
   id          String      @id @default(cuid())
   workspaceId String
@@ -250,6 +255,8 @@ model EmailChatMessage {
   role        EmailChatRole
   kind        EmailChatKind @default(TEXT)
   content     String        @db.Text
+  feedback    EmailChatFeedback?
+  feedbackComment String? @db.Text
 
   // Response-version group. Assistant rows produced by regenerating the same
   // turn share a groupId so the UI can offer ‹x/y› version navigation.
