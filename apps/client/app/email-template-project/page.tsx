@@ -1,5 +1,12 @@
 "use client";
 
+import { fetchBillingOverview } from "@/actions/billing";
+import {
+  createGmailDraft,
+  createOutlookDraft,
+  fetchConnections,
+  getConnectionAuthorizeUrl,
+} from "@/actions/connections";
 import {
   createEmail,
   fetchEmail,
@@ -8,22 +15,10 @@ import {
   truncateEmailChat,
   updateEmailShare,
 } from "@/actions/emails";
-import { fetchBillingOverview } from "@/actions/billing";
-import { fetchWorkspaces } from "@/actions/workspaces";
-import {
-  createGmailDraft,
-  createOutlookDraft,
-  fetchConnections,
-  getConnectionAuthorizeUrl,
-} from "@/actions/connections";
 import { consumePendingPrompt } from "@/actions/prompts";
-import {
-  AUTOMATION_INSTRUCTIONS,
-  ESP_INSTRUCTIONS,
-  ESP_NAME_TO_PROVIDER,
-} from "@/lib/export-instructions";
-import { ClientPromptBox } from "@/components/home/ClientPromptBox";
+import { fetchWorkspaces } from "@/actions/workspaces";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
+import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import { PreviewOverlay } from "@/components/project/preview/PreviewOverlay";
 import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
 import {
@@ -36,6 +31,11 @@ import {
   consumeEmailSseStream,
   type StreamEmailEvent,
 } from "@/lib/email-stream";
+import {
+  AUTOMATION_INSTRUCTIONS,
+  ESP_INSTRUCTIONS,
+  ESP_NAME_TO_PROVIDER,
+} from "@/lib/export-instructions";
 import { highlightMergeTags } from "@/lib/highlight-merge-tags";
 import { playCompletionSound } from "@/lib/storage";
 import { cn } from "@/lib/utils";
@@ -61,15 +61,15 @@ import {
   RefreshIcon,
   Settings01Icon,
   Share08Icon,
-  SparklesIcon,
   SourceCodeIcon,
+  SparklesIcon,
   SquareLock02Icon,
   StarIcon,
-  TestTube02Icon,
-  Tick02Icon,
   Sun01Icon,
+  TestTube02Icon,
   ThumbsDownIcon,
   ThumbsUpIcon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
@@ -98,14 +98,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  type CSSProperties,
-  type PointerEvent,
   Fragment,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
+  type PointerEvent,
 } from "react";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
@@ -417,6 +417,8 @@ type ChatMessage = {
   thinking?: string;
   /** How long the reasoning took (live only); drives "Thought for Ns". */
   thinkingSeconds?: number;
+  /** True while reasoning is still streaming; drives the live label. */
+  thinkingActive?: boolean;
   steps?: TimelineStep[];
   startedAt?: number;
   finishedAt?: number;
@@ -593,15 +595,15 @@ function mapChatMessages(
   const messages: ChatMessage[] =
     email && !visibleChat.some((message) => message.role === "user")
       ? [
-          {
-            id: `${email.id}-prompt`,
-            role: "user",
-            content: email.prompt,
-            seq: Date.parse(email.createdAt) || 0,
-            emailId: email.id,
-          },
-          ...visibleChat,
-        ]
+        {
+          id: `${email.id}-prompt`,
+          role: "user",
+          content: email.prompt,
+          seq: Date.parse(email.createdAt) || 0,
+          emailId: email.id,
+        },
+        ...visibleChat,
+      ]
       : visibleChat;
 
   // While generating (e.g. after a reload, with no live SSE), keep a visible
@@ -1387,46 +1389,46 @@ function ExportProviderModal({
 
           {tab === "application"
             ? applicationExportProviders.map((provider) => (
-                <ExportProviderCard
-                  badge={provider.badge}
-                  busy={busyKey === provider.name}
-                  iconSrc={provider.iconSrc}
-                  key={provider.name}
-                  name={provider.name}
-                  onClick={() => handleApplication(provider.name)}
-                />
-              ))
+              <ExportProviderCard
+                badge={provider.badge}
+                busy={busyKey === provider.name}
+                iconSrc={provider.iconSrc}
+                key={provider.name}
+                name={provider.name}
+                onClick={() => handleApplication(provider.name)}
+              />
+            ))
             : null}
 
           {tab === "file"
             ? fileExportFormats.map((format) => {
-                if (format.name === "AMPHTML") {
-                  return (
-                    <ExportFileCard
-                      description="Coming soon"
-                      disabled
-                      icon={format.icon}
-                      key={format.name}
-                      name={format.name}
-                    />
-                  );
-                }
-                const onClick =
-                  format.name === "HTML"
-                    ? () => downloadFile("html")
-                    : format.name === "Image"
-                      ? () => downloadFile("image", "format=png")
-                      : () => downloadFile("pdf");
+              if (format.name === "AMPHTML") {
                 return (
                   <ExportFileCard
-                    description={format.description}
+                    description="Coming soon"
+                    disabled
                     icon={format.icon}
                     key={format.name}
                     name={format.name}
-                    onClick={onClick}
                   />
                 );
-              })
+              }
+              const onClick =
+                format.name === "HTML"
+                  ? () => downloadFile("html")
+                  : format.name === "Image"
+                    ? () => downloadFile("image", "format=png")
+                    : () => downloadFile("pdf");
+              return (
+                <ExportFileCard
+                  description={format.description}
+                  icon={format.icon}
+                  key={format.name}
+                  name={format.name}
+                  onClick={onClick}
+                />
+              );
+            })
             : null}
         </div>
       </div>
@@ -1953,14 +1955,16 @@ function HumanMessage({
 function ThinkingBlock({
   text,
   seconds,
+  active,
 }: {
   text: string;
   seconds?: number;
+  active?: boolean;
 }) {
   return (
-    <details className="group mb-2.5">
+    <details className="group mb-2.5" open={active}>
       <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-madoo-ink-muted transition-colors hover:text-madoo-ink [&::-webkit-details-marker]:hidden">
-        <span>{seconds ? `Thought for ${seconds} seconds` : "Thought process"}</span>
+        <span>Thought process</span>
         <HugeiconsIcon
           aria-hidden="true"
           className="transition-transform group-open:rotate-180"
@@ -1981,6 +1985,7 @@ function AiMessage({
   children,
   thinking,
   thinkingSeconds,
+  thinkingActive,
   versions,
   versionIndex = 0,
   onSelectVersion,
@@ -1990,6 +1995,7 @@ function AiMessage({
   children: string;
   thinking?: string;
   thinkingSeconds?: number;
+  thinkingActive?: boolean;
   versions?: { id: string; content: string }[];
   versionIndex?: number;
   onSelectVersion?: (index: number) => void;
@@ -2002,7 +2008,11 @@ function AiMessage({
   return (
     <div className="rounded mr-auto text-left">
       {thinking ? (
-        <ThinkingBlock seconds={thinkingSeconds} text={thinking} />
+        <ThinkingBlock
+          active={thinkingActive}
+          seconds={thinkingSeconds}
+          text={thinking}
+        />
       ) : null}
       <Streamdown className="ai-conversation-markdown font-figtree leading-6">
         {children}
@@ -2222,13 +2232,15 @@ export default function EmailTemplateProject() {
           thinking: thinkingText || undefined,
           thinkingSeconds: thinkingStartedAt
             ? Math.max(
-                1,
-                Math.round(
-                  ((thinkingFinishedAt ?? Date.now()) - thinkingStartedAt) /
-                    1000,
-                ),
-              )
+              1,
+              Math.round(
+                ((thinkingFinishedAt ?? Date.now()) - thinkingStartedAt) /
+                1000,
+              ),
+            )
             : undefined,
+          thinkingActive:
+            thinkingStartedAt !== null && thinkingFinishedAt === null,
         });
 
       setIsStreaming(true);
@@ -2319,12 +2331,12 @@ export default function EmailTemplateProject() {
               thinking: thinkingText || undefined,
               thinkingSeconds: thinkingStartedAt
                 ? Math.max(
-                    1,
-                    Math.round(
-                      ((thinkingFinishedAt ?? Date.now()) - thinkingStartedAt) /
-                        1000,
-                    ),
-                  )
+                  1,
+                  Math.round(
+                    ((thinkingFinishedAt ?? Date.now()) - thinkingStartedAt) /
+                    1000,
+                  ),
+                )
                 : undefined,
             });
           });
@@ -2351,9 +2363,9 @@ export default function EmailTemplateProject() {
           undefined,
           mode === "edit"
             ? JSON.stringify({
-                instruction: instruction ?? "",
-                ...(baseVariantId ? { baseVariantId } : {}),
-              })
+              instruction: instruction ?? "",
+              ...(baseVariantId ? { baseVariantId } : {}),
+            })
             : undefined,
         );
         await invalidateEmailState(emailId);
@@ -2740,6 +2752,7 @@ export default function EmailTemplateProject() {
         }
         regenerating={isStreaming}
         thinking={message.thinking}
+        thinkingActive={message.thinkingActive}
         thinkingSeconds={message.thinkingSeconds}
         versionIndex={message.versionIndex}
         versions={message.versions}
@@ -2762,8 +2775,8 @@ export default function EmailTemplateProject() {
         className={cn(
           "fixed left-3 top-0 z-30 flex h-11 w-fit items-center bg-white transition-[opacity,transform]",
           hasPreview &&
-            previewExpanded &&
-            "pointer-events-none -translate-y-3 opacity-0",
+          previewExpanded &&
+          "pointer-events-none -translate-y-3 opacity-0",
         )}
       >
         <ConversationTitleDropdown
