@@ -1,5 +1,3 @@
-/** Crafted React Email JSX sources for gallery template seeds (all 12). */
-
 export const SEED_TEMPLATE_SLUGS = [
   "launch",
   "newsletter",
