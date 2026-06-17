@@ -8,6 +8,7 @@ import { ConfigService } from "@nestjs/config";
 import type { MessageEvent } from "@nestjs/common";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
+  ContentBlockParam,
   Message,
   MessageCreateParams,
   MessageParam,
@@ -112,7 +113,7 @@ const INSPECT_WEBSITE_BRAND_TOOL: Tool = {
 const STATIC_INSTRUCTION = [
   "You are Madoo's transactional HTML email generator, powered by 'HTML Coditor'.",
   "Output MUST call tool emit_email once when finished only when the user request include some email modification.",
-  "componentCode must be valid TSX. Import React with `import * as React from 'react'` and import components from '@react-email/components': Html, Head, Preview, Body, Container, Section, Row, Column, Text, Button, Hr, Img, Link.",
+  "componentCode must be valid TSX with a single default-exported component. Do NOT write any import statements — React and all email components are already available in scope. The components you may use as JSX tags are: Html, Head, Preview, Body, Container, Section, Row, Column, Text, Button, Hr, Img, Link. Just use them directly, e.g. <Body>…</Body>.",
   "Style every component with inline `style` objects (email-safe), exactly like the reference templates. Do not rely on Tailwind classes, external CSS, flexbox, grid, position, or float — email clients ignore them.",
   "EMAIL STRUCTURE (required for every email): wrap everything in <Html lang> with <Head /> and a one-line <Preview> inbox preheader, then <Body> (page background color) > <Container> centered at maxWidth 600 (use 560-600). Put a white content surface on the inner Sections.",
   "Inside the Container, stack clear <Section>s in this order: (1) brand header (logo <Img> or brand name), (2) hero — a small uppercase eyebrow <Text>, a large headline <Text>, and a supporting paragraph <Text>, (3) a primary <Button> CTA with href, (4) optional supporting content using <Row>/<Column> for columns or stacked cards, (5) a <Hr> divider, (6) a footer <Section> with a context line and an Unsubscribe <Link>.",
@@ -123,6 +124,7 @@ const STATIC_INSTRUCTION = [
   "Set borderRadius: 0 on every element by default — Container, Sections, cards, Buttons, Images, and dividers. Sharp 90-degree corners are the house style. Use a non-zero border-radius ONLY when the user explicitly asks for rounded/soft corners, or for an element that must be round (e.g. a circular avatar). When in doubt, keep it 0.",
   "Do not use emojis anywhere — not in the subject, headings, body, buttons, eyebrow, or footer. Use real words, and an <Img> when a visual is needed. Include an emoji only if the user explicitly asks for one.",
   "For a brand logo or hero image, render an <Img> bound to an image variable (role=image, scope=static) with a sensible placeholder image URL default, so the user can upload their own image in Madoo. Don't fake a logo with text/emoji when a real image fits.",
+  "IMAGE ATTACHMENTS: The user may attach images, which you can SEE directly (vision). Each attached image also has a public hosted URL listed in the message text. When the email needs a visual that matches an attached image (logo, hero, product shot, banner, screenshot), use that exact URL as the <Img src> default — do NOT invent a placeholder URL and do NOT describe the image as text. Look at the attached image to choose alt text, layout, colors, and where it fits. If an attached image is clearly a logo, place it in the header; a product/hero shot belongs in the hero section.",
   "Even for 'simple' briefs keep the full skeleton (header, hero, CTA, footer with unsubscribe). Simple means less copy and fewer sections — not missing structure.",
   "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl} with scope=static (the same destination for everyone). The footer unsubscribe link uses href={unsubscribeUrl} with scope=dynamic (role=url) so the sending platform can inject the real opt-out URL. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",
@@ -143,17 +145,25 @@ const STATIC_INSTRUCTION = [
   "Subject line (emit_email.subject) must be normal marketing or transactional copy for the recipient. Never base it on environment variables, .env files, API keys, secrets, or other developer/deployment configuration topics—even if the user brief drifts there.",
   "When the user provides a website URL or asks to match a brand/site, call inspect_website_brand before emit_email.",
   "Use inspect_website_brand results for visual direction, copy tone, brand colors, fonts, CTA language, logo URL, and image URLs.",
-  "Never ask for or expect image bytes, base64, screenshots, or vision input. You only receive compact text metadata and asset URLs.",
+  "When no image is attached for a needed visual, fall back to an image variable with a sensible placeholder URL default as described above.",
   "If brand inspection fails or returns partial context, continue with the available context and do not invent exact brand claims.",
   "CRITICAL: Do not never explain to the user how your internally work."
 ].join("\n");
 
+/** Drop import lines so the few-shot examples match the "no imports" rule —
+ *  the runtime injects React and all email components globally. */
+function stripImports(code: string): string {
+  return code
+    .replace(/^\s*import[^\n]*\n/gm, "")
+    .replace(/^\s+/, "");
+}
+
 const FEW_SHOT_TEXT = [
-  "Reference templates (few-shot style and structure):",
-  `Launch:\n${SEED_TEMPLATES.launch.componentCode}`,
-  `Newsletter:\n${SEED_TEMPLATES.newsletter.componentCode}`,
-  `Sale:\n${SEED_TEMPLATES.sale.componentCode}`,
-  `Welcome:\n${SEED_TEMPLATES.welcome.componentCode}`,
+  "Reference templates (few-shot style and structure). Note: no import statements — use the components directly:",
+  `Launch:\n${stripImports(SEED_TEMPLATES.launch.componentCode)}`,
+  `Newsletter:\n${stripImports(SEED_TEMPLATES.newsletter.componentCode)}`,
+  `Sale:\n${stripImports(SEED_TEMPLATES.sale.componentCode)}`,
+  `Welcome:\n${stripImports(SEED_TEMPLATES.welcome.componentCode)}`,
 ].join("\n\n");
 
 const CHAT_HISTORY_LIMIT = 8;
@@ -198,6 +208,41 @@ function buildCodeContextSnippet(code: string, maxChars: number): string {
 
 function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const MAX_ATTACHED_IMAGES = 8;
+
+/**
+ * Build the user message content for a model turn. With attached images, returns
+ * a content-block array: each image as a vision block (URL source) plus a text
+ * block that restates the prompt and lists the hosted URLs so the model can wire
+ * them straight into <Img src>. With no images, returns the plain text string.
+ */
+function buildUserMessageContent(
+  text: string,
+  imageUrls?: string[],
+): MessageParam["content"] {
+  const urls = (imageUrls ?? []).slice(0, MAX_ATTACHED_IMAGES);
+  if (urls.length === 0) return text;
+
+  const imageBlocks: ContentBlockParam[] = urls.map((url) => ({
+    type: "image",
+    source: { type: "url", url },
+  }));
+
+  const urlList = urls.map((url, index) => `${index + 1}. ${url}`).join("\n");
+  const textBlock: ContentBlockParam = {
+    type: "text",
+    text: [
+      text,
+      "",
+      `Attached images (${urls.length}). You can see them above. Their public hosted URLs, in the same order, are:`,
+      urlList,
+      "When the email needs a matching visual, use the exact URL as the <Img src>; do not invent placeholder image URLs for these.",
+    ].join("\n"),
+  };
+
+  return [...imageBlocks, textBlock];
 }
 
 function sanitizeGeneratedVariableSchema(schema: VariableSchemaRoot): VariableSchemaRoot {
@@ -367,6 +412,7 @@ export class GenerationService {
   generateEmailStream(
     emailId: string,
     workspaceId: string,
+    body?: { imageUrls?: string[] },
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
       void (async () => {
@@ -374,8 +420,13 @@ export class GenerationService {
           subscriber.next({
             data: JSON.stringify({ type: "step", message: "Preparing generation..." }),
           } as MessageEvent);
-          await this.runInitial(emailId, workspaceId, (payload) =>
-            subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+          await this.runInitial(
+            emailId,
+            workspaceId,
+            (payload) =>
+              subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+            undefined,
+            body?.imageUrls,
           );
           subscriber.complete();
         } catch (e) {
@@ -391,7 +442,7 @@ export class GenerationService {
   editEmailStream(
     emailId: string,
     workspaceId: string,
-    body: { instruction: string; baseVariantId?: string },
+    body: { instruction: string; baseVariantId?: string; imageUrls?: string[] },
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
       void (async () => {
@@ -565,6 +616,7 @@ export class GenerationService {
     workspaceId: string,
     emit: (p: Record<string, unknown>) => void,
     groupId?: string,
+    imageUrls?: string[],
   ): Promise<void> {
     await this.billing.assertCanGenerate(workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
@@ -589,7 +641,7 @@ export class GenerationService {
       modelMessages: [
         {
           role: "user",
-          content: userPrompt,
+          content: buildUserMessageContent(userPrompt, imageUrls),
         },
       ],
       titleContext: {
@@ -628,7 +680,7 @@ export class GenerationService {
   private async runEdit(
     emailId: string,
     workspaceId: string,
-    body: { instruction: string; baseVariantId?: string },
+    body: { instruction: string; baseVariantId?: string; imageUrls?: string[] },
     emit: (p: Record<string, unknown>) => void,
     opts?: { groupId?: string; skipUserMessage?: boolean; contextUpTo?: Date },
   ): Promise<void> {
@@ -708,7 +760,7 @@ export class GenerationService {
       modelMessages: [
         {
           role: "user",
-          content: editPrompt,
+          content: buildUserMessageContent(editPrompt, body.imageUrls),
         },
       ],
       fullCodeForRetry: snapshot.componentCode,

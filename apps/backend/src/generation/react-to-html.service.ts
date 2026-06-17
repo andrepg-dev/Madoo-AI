@@ -84,12 +84,11 @@ export class ReactToHtmlService {
 
     type ModuleShape = { exports: { default?: React.ComponentType<Record<string, unknown>> } };
     const module: ModuleShape = { exports: {} };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const reactEmail = require("@react-email/components") as Record<string, unknown>;
     const sandboxRequire = (id: string) => {
       if (id === "react") return React;
-      if (id === "@react-email/components") {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require("@react-email/components") as Record<string, unknown>;
-      }
+      if (id === "@react-email/components") return reactEmail;
       throw new Error(`Module not allowed: ${id}`);
     };
 
@@ -99,6 +98,11 @@ export class ReactToHtmlService {
       React,
       require: sandboxRequire,
       console: { error: console.error, warn: console.warn },
+      // Email components are pre-injected as globals so generated code can use
+      // <Body>, <Container>, <Text>, … without importing anything. The require
+      // resolver above stays for backward compatibility with older variants
+      // and seed templates that still ship explicit imports.
+      ...reactEmail,
     });
 
     try {
