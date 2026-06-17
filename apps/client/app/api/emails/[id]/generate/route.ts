@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
@@ -17,13 +17,16 @@ export async function POST(
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const bodyText = await req.text();
   const upstream = await fetch(`${API_URL}/emails/${id}/generate`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       ...(workspaceId ? { [WORKSPACE_HEADER]: workspaceId } : {}),
       Accept: "text/event-stream",
+      "Content-Type": "application/json",
     },
+    body: bodyText || "{}",
   });
 
   return new Response(upstream.body, {
