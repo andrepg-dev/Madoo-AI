@@ -821,7 +821,7 @@ export default function HomePage({
       />
 
       <main lang={locale} className="relative min-h-screen w-full">
-        <div className="relative z-50 bg-madoo-page px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
+        <div className="relative z-50 px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
           <div className="relative isolate mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-9 overflow-visible rounded-2xl pt-36 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-65 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
             <video
               src="/background-video.mp4"
@@ -873,12 +873,12 @@ export default function HomePage({
             </div>
 
             <div className="relative z-60 flex flex-col gap-2">
+              <AttachmentPreviewList
+                attachments={attachments}
+                className="px-1"
+                onRemove={removeAttachment}
+              />
               <div className="madoo-paper-border min-w-175 overflow-visible rounded-3xl bg-white">
-                <AttachmentPreviewList
-                  attachments={attachments}
-                  className="px-5 pb-1 pt-5"
-                  onRemove={removeAttachment}
-                />
                 <textarea
                   ref={promptTextareaRef}
                   value={prompt}
@@ -1261,14 +1261,15 @@ export default function HomePage({
               {copy.cta.title}
             </h2>
 
-            <div className="madoo-paper-border mt-9 w-full max-w-xl overflow-visible rounded-3xl bg-white text-left">
+            <div className="mt-9 flex w-full max-w-xl flex-col gap-2">
               <AttachmentPreviewList
                 attachments={attachments}
-                className="px-5 pb-1 pt-5"
+                className="px-1"
                 onRemove={removeAttachment}
               />
-              <textarea
-                ref={ctaPromptTextareaRef}
+              <div className="madoo-paper-border w-full overflow-visible rounded-3xl bg-white text-left">
+                <textarea
+                  ref={ctaPromptTextareaRef}
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 onKeyDown={onPromptKeyDown}
@@ -1309,6 +1310,7 @@ export default function HomePage({
                   </button>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </section>

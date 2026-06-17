@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** File export formats served as downloadable attachments. */
-export const ExportFileFormatSchema = z.enum(["html", "png", "jpeg", "pdf", "amphtml"]);
+export const ExportFileFormatSchema = z.enum(["html", "png", "jpeg", "pdf"]);
 export type ExportFileFormat = z.infer<typeof ExportFileFormatSchema>;
 
 /** Image raster formats accepted by the image export route. */

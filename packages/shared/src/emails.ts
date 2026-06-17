@@ -282,6 +282,10 @@ export const SavedTemplateDtoSchema = z.object({
 
 export type SavedTemplateDto = z.infer<typeof SavedTemplateDtoSchema>;
 
+/** Public S3 URLs of user-attached images, passed to the AI for vision and
+ *  reuse as <Img src> inside the generated email. */
+export const EmailImageUrlsSchema = z.array(z.string().url()).max(8).optional();
+
 export const CreateEmailSchema = z.object({
   prompt: z.string().min(1),
   tone: z.string().optional(),
@@ -291,6 +295,13 @@ export const CreateEmailSchema = z.object({
   /** Resolves to workspace Template row when templateId is omitted */
   templateSlug: TemplateSlugSchema.optional(),
 });
+
+/** Body for POST /emails/:id/generate — optional image attachments. */
+export const GenerateEmailSchema = z.object({
+  imageUrls: EmailImageUrlsSchema,
+});
+
+export type GenerateEmailInput = z.infer<typeof GenerateEmailSchema>;
 
 export type CreateEmailInput = z.infer<typeof CreateEmailSchema>;
 
@@ -404,6 +415,8 @@ export const EditEmailSchema = z.object({
   instruction: z.string().min(1),
   /** Optional: pin edits to a variant's React code as baseline */
   baseVariantId: z.string().optional(),
+  /** Public S3 URLs of images attached to this edit turn (vision + reuse). */
+  imageUrls: EmailImageUrlsSchema,
 });
 
 export type EditEmailInput = z.infer<typeof EditEmailSchema>;

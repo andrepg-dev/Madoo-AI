@@ -27,6 +27,7 @@ import {
   CreateEmailFromTemplateSchema,
   CreateEmailSchema,
   EditEmailSchema,
+  GenerateEmailSchema,
   RenameEmailSchema,
   SetEmailChatMessageFeedbackSchema,
   SetEmailStarredSchema,
@@ -214,8 +215,10 @@ export class EmailsController {
   generate(
     @Req() req: WorkspaceScopedRequest,
     @Param("id") id: string,
+    @Body() body: unknown,
   ): Observable<MessageEvent> {
-    return this.generation.generateEmailStream(id, req.workspace.id);
+    const dto = GenerateEmailSchema.parse(body ?? {});
+    return this.generation.generateEmailStream(id, req.workspace.id, dto);
   }
 
   @Post(":id/edit")
