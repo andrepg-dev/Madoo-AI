@@ -14,6 +14,8 @@ import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import { PreviewOverlay } from "@/components/project/preview/PreviewOverlay";
 import { TestingModal } from "@/components/project/testing/TestingModal";
 import { PricingDrawer } from "@/components/shell/PricingDrawer";
+import { useChatScroll } from "@/hooks/use-chat-scroll";
+import { usePreviewLayout } from "@/hooks/use-preview-layout";
 import { AiMessage } from "@/components/project/editor/AiMessage";
 import { ConversationTitleDropdown } from "@/components/project/editor/ConversationTitleDropdown";
 import { DislikeFeedbackModal } from "@/components/project/editor/DislikeFeedbackModal";
@@ -23,7 +25,6 @@ import { ExportProviderModal } from "@/components/project/editor/ExportProviderM
 import { HumanMessage } from "@/components/project/editor/HumanMessage";
 import { StatusMessage } from "@/components/project/editor/StatusMessage";
 import { TimelineMessage } from "@/components/project/editor/TimelineMessage";
-import { defaultPreviewWidthVw } from "@/components/project/editor/constants";
 import {
   appendTimelineStep,
   applyAiMessageFeedback,
@@ -37,8 +38,6 @@ import {
 import type {
   AiMessageFeedback,
   ChatMessage,
-  PreviewMode,
-  TemplateTheme,
 } from "@/components/project/editor/types";
 import {
   consumeEmailSseStream,
@@ -65,10 +64,6 @@ import {
 import "streamdown/styles.css";
 
 export default function EmailTemplateProject() {
-  const messagesRef = useRef<HTMLDivElement>(null);
-  // The just-sent user message — scrolled to the top of the chat on send.
-  const latestUserRef = useRef<HTMLDivElement>(null);
-  const pendingUserScrollRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -91,20 +86,33 @@ export default function EmailTemplateProject() {
   const [selectedVersions, setSelectedVersions] = useState<
     Record<string, number>
   >({});
-  const [canScrollDown, setCanScrollDown] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [testingModalOpen, setTestingModalOpen] = useState(false);
   const [dislikeTarget, setDislikeTarget] = useState<string | null>(null);
-  const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
-  const [templateTheme, setTemplateTheme] = useState<TemplateTheme>("light");
-  const [previewWidth, setPreviewWidth] = useState(defaultPreviewWidthVw);
-  const [previewWidthBeforeExpand, setPreviewWidthBeforeExpand] = useState(
-    defaultPreviewWidthVw,
-  );
-  const [previewExpanded, setPreviewExpanded] = useState(false);
-  const [previewOverlayOpen, setPreviewOverlayOpen] = useState(false);
   const processedStartupRef = useRef<string | null>(null);
-  const autoScrollEmailRef = useRef<string | null>(null);
+
+  const {
+    messagesRef,
+    latestUserRef,
+    canScrollDown,
+    updateScrollState,
+    scrollToBottom,
+    requestUserScroll,
+  } = useChatScroll(currentEmailId, messages);
+
+  const {
+    mode: previewMode,
+    setMode: setPreviewMode,
+    theme: templateTheme,
+    setTheme: setTemplateTheme,
+    width: previewWidth,
+    setWidth: updatePreviewWidth,
+    expanded: previewExpanded,
+    toggleExpanded: togglePreviewExpanded,
+    collapse: collapsePreview,
+    overlayOpen: previewOverlayOpen,
+    setOverlayOpen: setPreviewOverlayOpen,
+  } = usePreviewLayout();
 
   const emailQuery = useQuery({
     queryKey: ["email", currentEmailId],
@@ -424,7 +432,7 @@ export default function EmailTemplateProject() {
       ]);
       // Pin the new message to the top of the chat (its reserved response area
       // below gives it the room to get there).
-      pendingUserScrollRef.current = true;
+      requestUserScroll();
 
       // Upload attachments to S3 so the AI can see them and reuse their URLs as
       // <Img src> inside the email. Best-effort: a failed upload still streams.
@@ -523,26 +531,6 @@ export default function EmailTemplateProject() {
     setSelectedVersions((current) => ({ ...current, [groupId]: index }));
   }, []);
 
-  const updateScrollState = useCallback(() => {
-    const messages = messagesRef.current;
-
-    if (!messages) return;
-
-    setCanScrollDown(
-      messages.scrollTop + messages.clientHeight < messages.scrollHeight - 24,
-    );
-  }, []);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(updateScrollState);
-    window.addEventListener("resize", updateScrollState);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("resize", updateScrollState);
-    };
-  }, [updateScrollState]);
-
   useEffect(() => {
     if (!currentEmailId || email?.status !== "GENERATING" || isStreaming) {
       return;
@@ -559,32 +547,6 @@ export default function EmailTemplateProject() {
     setStreamedSubject(null);
     setStreamedConversationTitle(null);
   }, [currentEmailId]);
-
-  useEffect(() => {
-    autoScrollEmailRef.current = currentEmailId;
-  }, [currentEmailId]);
-
-  useEffect(() => {
-    if (!currentEmailId || !messages.length) return;
-    const hasCurrentEmailMessages = messages.some(
-      (message) => message.emailId === currentEmailId,
-    );
-    if (!hasCurrentEmailMessages) return;
-    if (autoScrollEmailRef.current !== currentEmailId) return;
-    if (!messagesRef.current) return;
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (autoScrollEmailRef.current !== currentEmailId) return;
-        messagesRef.current?.scrollTo({
-          top: messagesRef.current.scrollHeight,
-          behavior: "auto",
-        });
-        updateScrollState();
-        autoScrollEmailRef.current = null;
-      });
-    });
-  }, [currentEmailId, messages, updateScrollState]);
 
   useEffect(() => {
     if (isStreaming) return;
@@ -624,8 +586,8 @@ export default function EmailTemplateProject() {
       return;
     }
     setSidebarOpen(false);
-    setPreviewExpanded(false);
-  }, [hasPreview, setSidebarOpen]);
+    collapsePreview();
+  }, [hasPreview, setSidebarOpen, collapsePreview]);
 
   useEffect(() => {
     if (!startupKey || processedStartupRef.current === startupKey) return;
@@ -718,42 +680,6 @@ export default function EmailTemplateProject() {
     startStream,
     startupKey,
   ]);
-
-  const scrollToBottom = () => {
-    messagesRef.current?.scrollTo({
-      top: messagesRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  };
-
-  // After a send, snap the new user message to the top of the chat. Runs
-  // only on send (flag set in submitChatPrompt), never on load or project swap.
-  useEffect(() => {
-    if (!pendingUserScrollRef.current) return;
-    pendingUserScrollRef.current = false;
-    requestAnimationFrame(() => {
-      latestUserRef.current?.scrollIntoView({
-        behavior: "auto",
-        block: "start",
-      });
-    });
-  }, [messages]);
-
-  const updatePreviewWidth = (width: number) => {
-    setPreviewExpanded(false);
-    setPreviewWidth(width);
-  };
-
-  const togglePreviewExpanded = () => {
-    if (previewExpanded) {
-      setPreviewWidth(previewWidthBeforeExpand);
-      setPreviewExpanded(false);
-      return;
-    }
-
-    setPreviewWidthBeforeExpand(previewWidth);
-    setPreviewExpanded(true);
-  };
 
   const openStandalonePreview = useCallback(() => {
     if (!previewSrcDoc) {
