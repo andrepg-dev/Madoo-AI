@@ -57,52 +57,100 @@ type SettingsArea = "account" | "workspace" | "support";
 type AccountSection = "profile" | "billing" | "sound";
 type WorkspaceSection = "overview" | "avatar" | "members" | "danger";
 
-type PrimaryNavItem = {
+type NavIcon =
+  | "user"
+  | "barChart"
+  | "bell"
+  | "settings"
+  | "image"
+  | "copy"
+  | "lock"
+  | "message";
+
+type NavItem = {
   area: SettingsArea;
+  section?: AccountSection | WorkspaceSection;
   label: string;
   description: string;
-  icon: "user" | "grid" | "bell";
+  icon: NavIcon;
 };
 
-type SecondaryNavItem = {
-  value: AccountSection | WorkspaceSection;
-  label: string;
-  icon: "user" | "lock" | "bell" | "settings" | "image" | "copy" | "barChart";
-};
+type NavGroup = { label: string; items: NavItem[] };
 
-const primaryNav: PrimaryNavItem[] = [
+const navGroups: NavGroup[] = [
   {
-    area: "account",
-    label: "User settings",
-    description: "Profile and product preferences",
-    icon: "user",
+    label: "Account",
+    items: [
+      {
+        area: "account",
+        section: "profile",
+        label: "Profile",
+        description: "Your display name, avatar, and account email.",
+        icon: "user",
+      },
+      {
+        area: "account",
+        section: "billing",
+        label: "Billing & usage",
+        description: "Your plan, AI credits, limits, and invoices.",
+        icon: "barChart",
+      },
+      {
+        area: "account",
+        section: "sound",
+        label: "Completion sound",
+        description: "The sound Madoo plays when a generation finishes.",
+        icon: "bell",
+      },
+    ],
   },
   {
-    area: "workspace",
-    label: "Workspace settings",
-    description: "Name, avatar, members, danger zone",
-    icon: "grid",
+    label: "Workspace",
+    items: [
+      {
+        area: "workspace",
+        section: "overview",
+        label: "General",
+        description: "Rename this workspace and edit its URL slug.",
+        icon: "settings",
+      },
+      {
+        area: "workspace",
+        section: "avatar",
+        label: "Avatar",
+        description: "The workspace image shown across navigation.",
+        icon: "image",
+      },
+      {
+        area: "workspace",
+        section: "members",
+        label: "Members",
+        description: "Teammates, roles, and pending invites.",
+        icon: "copy",
+      },
+      {
+        area: "workspace",
+        section: "danger",
+        label: "Danger zone",
+        description: "Leave or permanently delete this workspace.",
+        icon: "lock",
+      },
+    ],
   },
   {
-    area: "support",
     label: "Support",
-    description: "Get help from the Madoo team",
-    icon: "bell",
+    items: [
+      {
+        area: "support",
+        label: "Contact support",
+        description: "Get help from the Madoo team.",
+        icon: "message",
+      },
+    ],
   },
 ];
 
-const accountNav: SecondaryNavItem[] = [
-  { value: "profile", label: "Profile", icon: "user" },
-  { value: "billing", label: "Billing & usage", icon: "barChart" },
-  { value: "sound", label: "Complete sound", icon: "bell" },
-];
-
-const workspaceNav: SecondaryNavItem[] = [
-  { value: "overview", label: "Workspace name", icon: "settings" },
-  { value: "avatar", label: "Avatar", icon: "image" },
-  { value: "members", label: "Membership", icon: "copy" },
-  { value: "danger", label: "Danger zone", icon: "lock" },
-];
+const navItems: NavItem[] = navGroups.flatMap((group) => group.items);
 
 const supportCategoryOptions = [
   { value: "WORKSPACE", label: "Workspace" },
@@ -170,17 +218,15 @@ function canAdmin(role: Role | undefined) {
   return role === "OWNER" || role === "ADMIN";
 }
 
-function SettingsNavLink({
+function SettingsNavRow({
   active,
   icon,
   label,
-  description,
   href,
 }: {
   active: boolean;
-  icon: PrimaryNavItem["icon"];
+  icon: NavIcon;
   label: string;
-  description?: string;
   href: string;
 }) {
   return (
@@ -188,51 +234,16 @@ function SettingsNavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cx(
-        "flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left font-madoo-sans no-underline transition-[background,color,box-shadow]",
-        active
-          ? "bg-madoo-surface text-madoo-ink bg-white shadow-madoo-border"
-          : "text-madoo-ink-soft hover:bg-madoo-surface-2 hover:text-madoo-ink",
-      )}
-    >
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-madoo-bg-2 shadow-madoo-border">
-        <Icon name={icon} size={15} />
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-(length:--font-size-base) font-medium leading-none">
-          {label}
-        </span>
-        {description ? (
-          <span className="mt-1 block truncate text-(length:--font-size-xs) leading-none text-madoo-ink-muted">
-            {description}
-          </span>
-        ) : null}
-      </span>
-    </Link>
-  );
-}
-
-function SecondaryNavLink({
-  active,
-  item,
-  href,
-}: {
-  active: boolean;
-  item: SecondaryNavItem;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={cx(
-        "flex h-9 w-full cursor-pointer items-center gap-2 rounded-lg border-0 px-2.5 font-madoo-sans text-(length:--font-size-base) no-underline transition-[background,color,box-shadow]",
+        "flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 px-2.5 font-madoo-sans text-(length:--font-size-base) no-underline transition-[background,color,box-shadow]",
         active
           ? "bg-madoo-surface text-madoo-ink shadow-madoo-border"
           : "bg-transparent text-madoo-ink-muted hover:bg-madoo-surface-2 hover:text-madoo-ink",
       )}
     >
-      <Icon name={item.icon} size={14} />
-      <span className="truncate">{item.label}</span>
+      <span className={cx(active ? "text-madoo-accent-deep" : "text-madoo-ink-muted")}>
+        <Icon name={icon} size={15} />
+      </span>
+      <span className="truncate">{label}</span>
     </Link>
   );
 }
@@ -1062,9 +1073,24 @@ function SupportPanel({
   return (
     <SettingsCard
       title="Contact support"
-      description="Send account, workspace, billing, generation, or export context to support."
+      description="Tell us what's going on — pick a category and we'll route it to the right place."
     >
-      <div className="grid max-w-2xl gap-4">
+      <div className="grid gap-4">
+        {ticketId ? (
+          <div className="flex items-start gap-2.5 rounded-lg bg-madoo-bg-2 p-3.5 shadow-madoo-border">
+            <span className="mt-0.5 text-madoo-accent-deep" aria-hidden="true">
+              <Icon name="check" size={16} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
+                Request sent
+              </p>
+              <p className="mt-1.5 text-(length:--font-size-sm) leading-snug text-madoo-ink-muted">
+                Ticket {ticketId} — we usually reply within 1–2 business days.
+              </p>
+            </div>
+          </div>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
             label="Contact email"
@@ -1094,32 +1120,31 @@ function SupportPanel({
           value={message}
           onChange={(event) => setMessage(event.currentTarget.value)}
         />
-        {ticketId ? (
-          <p className="text-(length:--font-size-sm) text-madoo-ink-muted">
-            Ticket submitted: {ticketId}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-(length:--font-size-xs) text-madoo-ink-muted">
+            We usually reply within 1–2 business days.
           </p>
-        ) : null}
-        <Button
-          size="md"
-          className="w-max"
-          disabled={
-            supportMutation.isPending ||
-            !contactEmail.trim() ||
-            subject.trim().length < 3 ||
-            message.trim().length < 10
-          }
-          onClick={() =>
-            supportMutation.mutate({
-              contactEmail: contactEmail.trim(),
-              category,
-              subject: subject.trim(),
-              message: message.trim(),
-              workspaceId: activeWorkspace?.id,
-            })
-          }
-        >
-          Send request
-        </Button>
+          <Button
+            size="md"
+            disabled={
+              supportMutation.isPending ||
+              !contactEmail.trim() ||
+              subject.trim().length < 3 ||
+              message.trim().length < 10
+            }
+            onClick={() =>
+              supportMutation.mutate({
+                contactEmail: contactEmail.trim(),
+                category,
+                subject: subject.trim(),
+                message: message.trim(),
+                workspaceId: activeWorkspace?.id,
+              })
+            }
+          >
+            {supportMutation.isPending ? "Sending…" : "Send request"}
+          </Button>
+        </div>
       </div>
     </SettingsCard>
   );
@@ -1141,16 +1166,18 @@ export default function SettingsPage() {
     area === "workspace" && isWorkspaceSection(sectionParam)
       ? sectionParam
       : "overview";
-  const activePrimary =
-    primaryNav.find((item) => item.area === area) ?? primaryNav[0];
-  const secondaryNav =
-    area === "account" ? accountNav : area === "workspace" ? workspaceNav : [];
-  const activeSecondary =
+  const currentSection: AccountSection | WorkspaceSection | undefined =
     area === "account"
       ? accountSection
       : area === "workspace"
         ? workspaceSection
-        : "";
+        : undefined;
+  const activeItem =
+    navItems.find(
+      (item) => item.area === area && item.section === currentSection,
+    ) ?? navItems[0];
+  const activeGroup =
+    navGroups.find((group) => group.items.includes(activeItem)) ?? navGroups[0];
 
   const { data: workspaces = [] } = useQuery({
     queryKey: ["workspaces"],
@@ -1174,101 +1201,38 @@ export default function SettingsPage() {
   }, [activeWorkspace, queryClient, setWorkspaceId, workspaceId]);
 
   return (
-    <div className="grid min-h-full grid-cols-[280px_260px_minmax(0,1fr)] font-madoo-sans text-madoo-ink max-xl:grid-cols-[250px_minmax(0,1fr)] max-lg:grid-cols-1">
+    <div className="grid min-h-full grid-cols-[264px_minmax(0,1fr)] font-madoo-sans text-madoo-ink max-lg:grid-cols-1">
       <aside className="p-4 shadow-[inset_-0.5px_0_0_rgb(var(--rule-rgb)/0.18)] max-lg:shadow-(--shadow-border-bottom-soft)">
-        <div className="space-y-5">
-          <div>
-            <div className="mb-2 px-3 text-(length:--font-size-xs) font-medium uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
-              Settings
-            </div>
-            <div className="grid gap-1.5">
-              {primaryNav.map((item) => (
-                <SettingsNavLink
-                  key={item.area}
-                  active={area === item.area}
+        <div className="mb-4 px-2.5 text-(length:--font-size-xs) font-semibold uppercase leading-none tracking-[0.08em] text-madoo-ink-muted">
+          Settings
+        </div>
+        <nav className="grid gap-5">
+          {navGroups.map((group) => (
+            <div key={group.label} className="grid gap-1">
+              <div className="px-2.5 pb-0.5 text-[11px] font-semibold uppercase leading-none tracking-[0.07em] text-madoo-ink-muted/70">
+                {group.label}
+              </div>
+              {group.items.map((item) => (
+                <SettingsNavRow
+                  key={`${item.area}-${item.section ?? "root"}`}
+                  active={item === activeItem}
                   icon={item.icon}
                   label={item.label}
-                  description={item.description}
-                  href={getSettingsHref(
-                    item.area,
-                    item.area === "account"
-                      ? "profile"
-                      : item.area === "workspace"
-                        ? "overview"
-                        : undefined,
-                  )}
+                  href={getSettingsHref(item.area, item.section)}
                 />
               ))}
             </div>
-          </div>
-        </div>
-      </aside>
-
-      <aside className="p-4 max-xl:hidden">
-        <div className="mb-4 flex items-center gap-3">
-          <Avatar
-            name={activePrimary.label}
-            size="md"
-            tone={area === "account" ? "ink" : "accent"}
-          />
-          <div className="min-w-0">
-            <p className="truncate text-(length:--font-size-base) font-medium leading-none">
-              {activePrimary.label}
-            </p>
-            <p className="mt-1 truncate text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
-              {activePrimary.description}
-            </p>
-          </div>
-        </div>
-        {secondaryNav.length ? (
-          <div className="grid gap-1.5">
-            {secondaryNav.map((item) => (
-              <SecondaryNavLink
-                key={item.value}
-                active={activeSecondary === item.value}
-                item={item}
-                href={getSettingsHref(area, item.value)}
-              />
-            ))}
-          </div>
-        ) : null}
+          ))}
+        </nav>
       </aside>
 
       <main className="min-w-0 overflow-auto">
-        <div className="mx-auto grid w-full max-w-5xl gap-5 px-6 py-8 max-lg:px-4">
+        <div className="mx-auto grid w-full max-w-3xl gap-6 px-6 py-8 max-lg:px-4">
           <SectionHeader
-            eyebrow={
-              area === "account"
-                ? "Account"
-                : area === "workspace"
-                  ? "Workspace"
-                  : "Support"
-            }
-            title={activePrimary.label}
-            description={activePrimary.description}
+            eyebrow={activeGroup.label}
+            title={activeItem.label}
+            description={activeItem.description}
           />
-
-          {secondaryNav.length ? (
-            <div className="hidden max-xl:flex max-w-full gap-1 overflow-x-auto rounded-full bg-madoo-surface-2/35 p-1 shadow-madoo-border">
-              {secondaryNav.map((item) => (
-                <Link
-                  key={item.value}
-                  href={getSettingsHref(area, item.value)}
-                  aria-current={
-                    activeSecondary === item.value ? "page" : undefined
-                  }
-                  className={cx(
-                    "whitespace-nowrap rounded-full px-3 py-1.5 font-madoo-sans text-[12.5px] font-medium no-underline transition-colors",
-                    activeSecondary === item.value
-                      ? "bg-madoo-surface text-madoo-ink shadow-madoo-border"
-                      : "text-madoo-ink-muted hover:text-madoo-ink",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          ) : null}
 
           {area === "support" ? (
             <SupportPanel activeWorkspace={activeWorkspace} />
