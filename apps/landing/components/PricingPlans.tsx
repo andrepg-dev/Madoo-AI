@@ -66,17 +66,26 @@ function BillingSwitch({
   );
 }
 
-function FeatureText({ value, label, emphasized }: PricingFeature) {
-  if (!value) {
-    return <span>{label}</span>;
-  }
-
+function ComingSoonTag() {
   return (
-    <span>
-      <strong className={emphasized ? "font-bold" : "font-normal"}>
-        {value}
-      </strong>{" "}
+    <span className="ml-1.5 whitespace-nowrap rounded-full bg-madoo-muted/10 px-1.5 py-0.5 align-middle text-[10px] font-medium uppercase tracking-[0.04em] text-madoo-muted">
+      Coming soon
+    </span>
+  );
+}
+
+function FeatureText({ value, label, emphasized, comingSoon }: PricingFeature) {
+  return (
+    <span className={comingSoon ? "text-madoo-muted" : undefined}>
+      {value ? (
+        <>
+          <strong className={emphasized ? "font-bold" : "font-normal"}>
+            {value}
+          </strong>{" "}
+        </>
+      ) : null}
       {label}
+      {comingSoon ? <ComingSoonTag /> : null}
     </span>
   );
 }
@@ -185,7 +194,7 @@ function PlanCard({
 
 export function PricingPlans() {
   const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>("monthly");
+    useState<BillingInterval>("yearly");
 
   return (
     <div className="flex w-full flex-col gap-6 font-ibm-plex-sans text-madoo-text">
