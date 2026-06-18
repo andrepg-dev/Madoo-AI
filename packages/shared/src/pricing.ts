@@ -28,7 +28,7 @@ export type PricingPlan = {
   cta: string;
   featured?: boolean;
   /** Stripe-backed billing plan used when this card triggers checkout. */
-  checkoutPlan: "STARTER" | "GROWTH";
+  checkoutPlan: "STARTER" | "GROWTH" | "PRO";
   features: PricingFeature[];
 };
 
@@ -47,8 +47,8 @@ export const PRICING_PLANS: PricingPlan[] = [
       { value: "100", label: "monthly credits", emphasized: true },
       { value: "50", label: "stored templates", emphasized: true },
       { value: "2", label: "members", emphasized: true },
+      { value: "5", label: "workspaces", emphasized: true },
       { value: "50", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],
@@ -65,8 +65,8 @@ export const PRICING_PLANS: PricingPlan[] = [
       { value: "250", label: "monthly credits", emphasized: true },
       { value: "150", label: "stored templates", emphasized: true },
       { value: "3", label: "members", emphasized: true },
+      { value: "15", label: "workspaces", emphasized: true },
       { value: "100", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],
@@ -77,13 +77,13 @@ export const PRICING_PLANS: PricingPlan[] = [
     description: "For agencies that need more storage and volume.",
     monthlyPrice: 95,
     cta: "Try Pro",
-    checkoutPlan: "GROWTH",
+    checkoutPlan: "PRO",
     features: [
       { value: "550", label: "monthly credits", emphasized: true },
       { value: "300", label: "stored templates", emphasized: true },
       { value: "5", label: "members", emphasized: true },
+      { value: "Unlimited", label: "workspaces", emphasized: true },
       { value: "300", label: "test emails a day", emphasized: true },
-      { label: "Access to any model" },
       { label: "Export to any provider of your choice" },
       { label: "Sharing preview template links" },
     ],

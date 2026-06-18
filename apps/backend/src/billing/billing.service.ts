@@ -17,6 +17,13 @@ import type { BillingSubscription, Plan as PrismaPlan } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 import { StripeService } from "./stripe.service";
+import {
+  addUtcDays,
+  addUtcMonths,
+  buildCreditUsage,
+  currentPeriodStart,
+  startOfUtcDay,
+} from "./credit-window";
 import type {
   StripeCheckoutSession,
   StripeEvent,
@@ -28,7 +35,11 @@ import type {
 const PLAN_TO_PRICE_ENV: Record<Exclude<Plan, "FREE">, Record<"MONTHLY" | "ANNUAL", string>> = {
   STARTER: { MONTHLY: "STRIPE_PRICE_STARTER", ANNUAL: "STRIPE_PRICE_STARTER_ANNUAL" },
   GROWTH: { MONTHLY: "STRIPE_PRICE_GROWTH", ANNUAL: "STRIPE_PRICE_GROWTH_ANNUAL" },
+  PRO: { MONTHLY: "STRIPE_PRICE_PRO", ANNUAL: "STRIPE_PRICE_PRO_ANNUAL" },
 };
+
+/** Default free-trial length when STRIPE_TRIAL_PERIOD_DAYS is unset. */
+const DEFAULT_TRIAL_PERIOD_DAYS = 7;
 
 @Injectable()
 export class BillingService {
@@ -56,6 +67,16 @@ export class BillingService {
     });
   }
 
+  /** Configured free-trial length in days (0 disables the trial). */
+  private trialPeriodDays(): number {
+    const raw = this.config.get<string>("STRIPE_TRIAL_PERIOD_DAYS");
+    if (raw === undefined) return DEFAULT_TRIAL_PERIOD_DAYS;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed >= 0
+      ? parsed
+      : DEFAULT_TRIAL_PERIOD_DAYS;
+  }
+
   async getOverview(
     workspaceId: string,
     userId: string,
@@ -66,18 +87,14 @@ export class BillingService {
     const limits = PLAN_LIMITS[plan];
 
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const periodStart = currentPeriodStart(subscription.creditsAnchor, now);
+    const periodEnd = addUtcMonths(periodStart, 1);
+    const dayStart = startOfUtcDay(now);
+    const nextDay = addUtcDays(dayStart, 1);
 
-    const [generationsUsed] = await Promise.all([
-      this.prisma.emailGenerationRun.count({
-        where: {
-          workspaceId,
-          kind: "INITIAL",
-          status: { not: "FAILED" },
-          createdAt: { gte: startOfMonth },
-        },
-      }),
+    const [monthlyUsed, dailyUsed] = await Promise.all([
+      this.countCreditsUsed(workspaceId, periodStart),
+      this.countCreditsUsed(workspaceId, dayStart),
     ]);
 
     return {
@@ -87,40 +104,72 @@ export class BillingService {
         currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? null,
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         hasStripeCustomer: Boolean(subscription.stripeCustomerId),
+        trialEndsAt: subscription.trialEndsAt?.toISOString() ?? null,
       },
       usage: {
-        aiGenerations: {
-          used: generationsUsed,
-          limit: limits.aiGenerations,
-          resetsAt: startOfNextMonth.toISOString(),
-        },
+        aiGenerations: buildCreditUsage(
+          monthlyUsed,
+          limits.aiGenerations,
+          periodEnd,
+        ),
+        dailyAiGenerations: buildCreditUsage(
+          dailyUsed,
+          limits.dailyAiGenerations,
+          nextDay,
+        ),
       },
-      limits: { aiGenerations: limits.aiGenerations },
+      limits: {
+        aiGenerations: limits.aiGenerations,
+        dailyAiGenerations: limits.dailyAiGenerations,
+      },
     };
   }
 
   async assertCanGenerate(workspaceId: string): Promise<void> {
     const subscription = await this.ensureSubscription(workspaceId);
     const plan = subscription.plan as Plan;
-    const limit = PLAN_LIMITS[plan].aiGenerations;
-    if (limit === -1) return;
-
+    const limits = PLAN_LIMITS[plan];
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const used = await this.prisma.emailGenerationRun.count({
+
+    // Daily cap (free tier: 5 credits/day, resets at 00:00 UTC).
+    if (limits.dailyAiGenerations !== -1) {
+      const dayStart = startOfUtcDay(now);
+      const usedToday = await this.countCreditsUsed(workspaceId, dayStart);
+      if (usedToday >= limits.dailyAiGenerations) {
+        throw new ForbiddenException(
+          `Daily AI credit limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limits.dailyAiGenerations} credits per day (used ${usedToday}). Resets at 00:00 UTC.`,
+        );
+      }
+    }
+
+    // Monthly cap (rolling window from the credits anchor; resets on upgrade).
+    if (limits.aiGenerations !== -1) {
+      const periodStart = currentPeriodStart(subscription.creditsAnchor, now);
+      const usedThisPeriod = await this.countCreditsUsed(
+        workspaceId,
+        periodStart,
+      );
+      if (usedThisPeriod >= limits.aiGenerations) {
+        throw new ForbiddenException(
+          `Monthly AI credit limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limits.aiGenerations} credits per month (used ${usedThisPeriod}). Upgrade to generate more.`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Counts consumed AI credits since `since`. Every non-failed generation run —
+   * an initial draft (INITIAL) or a chat/template edit (EDIT) — costs one credit.
+   */
+  private countCreditsUsed(workspaceId: string, since: Date): Promise<number> {
+    return this.prisma.emailGenerationRun.count({
       where: {
         workspaceId,
-        kind: "INITIAL",
+        kind: { in: ["INITIAL", "EDIT"] },
         status: { not: "FAILED" },
-        createdAt: { gte: startOfMonth },
+        createdAt: { gte: since },
       },
     });
-
-    if (used >= limit) {
-      throw new ForbiddenException(
-        `AI generation limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limit} generations per month (used ${used}). Upgrade to generate more.`,
-      );
-    }
   }
 
   /**
@@ -157,6 +206,16 @@ export class BillingService {
     const appUrl =
       this.config.get<string>("APP_URL") ?? "http://localhost:3000";
 
+    // Grant the free trial only to workspaces that have never started one and
+    // never had a Stripe subscription, so cancel-and-resubscribe can't farm
+    // repeated trials. Stripe still collects a card up front and auto-charges
+    // when the trial ends.
+    const trialDays = this.trialPeriodDays();
+    const grantTrial =
+      trialDays > 0 &&
+      !subscription.hasUsedTrial &&
+      !subscription.stripeSubscriptionId;
+
     const session = (await this.stripe.getClient().checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
@@ -171,6 +230,7 @@ export class BillingService {
       metadata: { workspaceId, plan: targetPlan, interval },
       subscription_data: {
         metadata: { workspaceId, plan: targetPlan, interval },
+        ...(grantTrial ? { trial_period_days: trialDays } : {}),
       },
       allow_promotion_codes: true,
     })) as unknown as StripeCheckoutSession;
@@ -279,13 +339,14 @@ export class BillingService {
     const customerId =
       typeof sub.customer === "string" ? sub.customer : sub.customer.id;
     const fromMetadataPlan = parsePlanFromMetadata(sub.metadata?.plan);
-    const fromPricePlan = parsePlanFromPrice(
-      sub,
-      this.config.get<string>("STRIPE_PRICE_STARTER"),
-      this.config.get<string>("STRIPE_PRICE_GROWTH"),
-      this.config.get<string>("STRIPE_PRICE_STARTER_ANNUAL"),
-      this.config.get<string>("STRIPE_PRICE_GROWTH_ANNUAL"),
-    );
+    const fromPricePlan = parsePlanFromPrice(sub, {
+      starter: this.config.get<string>("STRIPE_PRICE_STARTER"),
+      growth: this.config.get<string>("STRIPE_PRICE_GROWTH"),
+      pro: this.config.get<string>("STRIPE_PRICE_PRO"),
+      starterAnnual: this.config.get<string>("STRIPE_PRICE_STARTER_ANNUAL"),
+      growthAnnual: this.config.get<string>("STRIPE_PRICE_GROWTH_ANNUAL"),
+      proAnnual: this.config.get<string>("STRIPE_PRICE_PRO_ANNUAL"),
+    });
     const plan: Plan =
       sub.status === "canceled" || sub.status === "incomplete_expired"
         ? "FREE"
@@ -316,6 +377,13 @@ export class BillingService {
     }
 
     const periodEndSeconds = extractPeriodEnd(sub);
+    const trialEnd =
+      typeof sub.trial_end === "number"
+        ? new Date(sub.trial_end * 1000)
+        : null;
+    // Reset the AI-credit window the moment the plan changes (up or down) so
+    // credits refresh immediately on upgrade.
+    const planChanged = target.plan !== (plan as PrismaPlan);
     await this.prisma.billingSubscription.update({
       where: { id: target.id },
       data: {
@@ -327,6 +395,11 @@ export class BillingService {
           ? new Date(periodEndSeconds * 1000)
           : null,
         cancelAtPeriodEnd: sub.cancel_at_period_end,
+        trialEndsAt: trialEnd,
+        // Once a trial exists on a Stripe subscription, latch the flag so a
+        // future resubscribe doesn't hand out a second free trial.
+        ...(trialEnd ? { hasUsedTrial: true } : {}),
+        ...(planChanged ? { creditsAnchor: new Date() } : {}),
       },
     });
   }
@@ -347,25 +420,35 @@ function extractPeriodEnd(sub: StripeSubscription): number | null {
 }
 
 function parsePlanFromMetadata(value: string | undefined): Plan | null {
-  if (value === "STARTER" || value === "GROWTH" || value === "FREE") {
+  if (
+    value === "STARTER" ||
+    value === "GROWTH" ||
+    value === "PRO" ||
+    value === "FREE"
+  ) {
     return value;
   }
   return null;
 }
 
+type PriceEnvIds = {
+  starter: string | undefined;
+  growth: string | undefined;
+  pro: string | undefined;
+  starterAnnual: string | undefined;
+  growthAnnual: string | undefined;
+  proAnnual: string | undefined;
+};
+
 function parsePlanFromPrice(
   sub: StripeSubscription,
-  starter: string | undefined,
-  growth: string | undefined,
-  starterAnnual?: string | undefined,
-  growthAnnual?: string | undefined,
+  ids: PriceEnvIds,
 ): Plan | null {
   for (const item of sub.items.data) {
     const id = item.price.id;
-    if (starter && id === starter) return "STARTER";
-    if (growth && id === growth) return "GROWTH";
-    if (starterAnnual && id === starterAnnual) return "STARTER";
-    if (growthAnnual && id === growthAnnual) return "GROWTH";
+    if (id && (id === ids.starter || id === ids.starterAnnual)) return "STARTER";
+    if (id && (id === ids.growth || id === ids.growthAnnual)) return "GROWTH";
+    if (id && (id === ids.pro || id === ids.proAnnual)) return "PRO";
   }
   return null;
 }
