@@ -409,17 +409,6 @@ export function BillingPanel() {
             value={features.exportFormats.join(", ")}
           />
           <AllowanceRow
-            label="Export to any provider"
-            value={
-              features.exportProviders === "coming_soon"
-                ? "Coming soon"
-                : features.exportProviders === "available"
-                  ? "Included"
-                  : "Not included"
-            }
-            muted={features.exportProviders !== "available"}
-          />
-          <AllowanceRow
             label="Share preview template links"
             value={features.sharePreviewLinks ? "Included" : "Not included"}
             muted={!features.sharePreviewLinks}
