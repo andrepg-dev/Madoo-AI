@@ -301,7 +301,7 @@ export function Sidebar() {
     enabled: Boolean(user && workspaceIdIsValid),
   });
 
-  const usage = billingOverview?.usage.aiGenerations;
+  const usage = billingOverview?.usage.dailyAiGenerations;
   const usageLimit = usage?.limit ?? 0;
   const creditsLeft =
     usageLimit === -1 ? null : Math.max(usageLimit - (usage?.used ?? 0), 0);
@@ -317,10 +317,9 @@ export function Sidebar() {
       ? "Unlimited"
       : `${creditsLeft ?? 0} left`;
   const currentPlan = billingOverview?.subscription.plan ?? "FREE";
-  // No free tier — the entry plan is a 7-day trial.
   const planLabel =
     currentPlan === "FREE"
-      ? "Trial"
+      ? "Free plan"
       : `${PLAN_DISPLAY_NAMES[currentPlan]} plan`;
 
   const switchWorkspaceMutation = useMutation({
@@ -521,15 +520,15 @@ export function Sidebar() {
           <Card surface="secondary" className="grid gap-2 p-2.5!">
             <div className="flex items-center justify-between gap-2">
               <span className="text-(length:--font-size-base) font-normal">
-                Credits
+                Daily credits
               </span>
               <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
                 {creditsText}
               </span>
             </div>
-            <ProgressBar value={creditsPct} tone="ink" label="Credits left" />
+            <ProgressBar value={creditsPct} tone="ink" label="Daily credits left" />
             <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
-              Credits reset {formatResetDate(usage?.resetsAt)}
+              Resets {formatResetDate(usage?.resetsAt)}
             </span>
           </Card>
 
@@ -723,10 +722,8 @@ export function Sidebar() {
             <DropdownDivider />
             {user ? (
               <>
-                <DropdownLink href="/settings">Profile</DropdownLink>
-                <DropdownLink href="/settings?area=workspace&section=overview">
-                  Settings
-                </DropdownLink>
+                <DropdownLink href="/settings/profile">Profile</DropdownLink>
+                <DropdownLink href="/settings/general">Settings</DropdownLink>
                 <DropdownItem
                   className="justify-start! text-madoo-danger"
                   disabled={signOutMutation.isPending}
