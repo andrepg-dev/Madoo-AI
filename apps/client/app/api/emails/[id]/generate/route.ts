@@ -1,8 +1,20 @@
 import { AUTH_COOKIE, WORKSPACE_COOKIE } from "@/lib/cookies";
 import { API_URL } from "@/lib/env";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { WORKSPACE_HEADER } from "@madoo/shared";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+
+function getDistinctIdFromToken(token: string): string | null {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8"),
+    ) as Record<string, unknown>;
+    return (payload.sub as string) ?? (payload.id as string) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(
   req: NextRequest,
@@ -15,6 +27,19 @@ export async function POST(
 
   if (!token) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const distinctId = getDistinctIdFromToken(token);
+  if (distinctId) {
+    const phClient = getPostHogClient();
+    phClient.capture({
+      distinctId,
+      event: "server_email_generated",
+      properties: {
+        email_id: id,
+        workspace_id: workspaceId ?? undefined,
+      },
+    });
   }
 
   const bodyText = await req.text();

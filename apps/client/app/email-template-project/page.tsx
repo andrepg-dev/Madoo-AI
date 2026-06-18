@@ -62,6 +62,7 @@ import {
   useState,
 } from "react";
 import "streamdown/styles.css";
+import posthog from "posthog-js";
 
 export default function EmailTemplateProject() {
   const router = useRouter();
@@ -136,6 +137,13 @@ export default function EmailTemplateProject() {
         ...(input.comment !== undefined ? { comment: input.comment } : {}),
       }),
     onMutate: (input) => {
+      if (input.feedback) {
+        posthog.capture("email_feedback_submitted", {
+          email_id: currentEmailId,
+          message_id: input.messageId,
+          feedback: input.feedback,
+        });
+      }
       setMessages((current) =>
         applyAiMessageFeedback(current, input.messageId, input.feedback),
       );
@@ -452,6 +460,10 @@ export default function EmailTemplateProject() {
       };
 
       if (currentEmailId) {
+        posthog.capture("email_edit_submitted", {
+          email_id: currentEmailId,
+          has_images: (input.images?.length ?? 0) > 0,
+        });
         const uploaded = await uploadImages(currentEmailId);
         await startStream(
           currentEmailId,
@@ -470,11 +482,19 @@ export default function EmailTemplateProject() {
           length: input.length,
           audience: input.audience,
         });
+        posthog.capture("email_generation_started", {
+          email_id: created.id,
+          has_tone: Boolean(input.tone),
+          has_length: Boolean(input.length),
+          has_audience: Boolean(input.audience),
+          has_images: (input.images?.length ?? 0) > 0,
+        });
         setCurrentEmailId(created.id);
         router.replace(`/email-template-project?id=${created.id}`);
         const uploaded = await uploadImages(created.id);
         await startStream(created.id, "generate", undefined, undefined, uploaded);
       } catch (error) {
+        posthog.captureException(error);
         setMessages((current) => [
           ...current,
           {
@@ -517,6 +537,7 @@ export default function EmailTemplateProject() {
   // Re-run the latest turn, keeping the previous answer as a navigable version.
   const regenerate = useCallback((message: ChatMessage) => {
     if (isStreaming || !currentEmailId) return;
+    posthog.capture("email_regenerated", { email_id: currentEmailId });
     if (message.groupId) {
       setSelectedVersions((current) => {
         const { [message.groupId!]: _removed, ...rest } = current;

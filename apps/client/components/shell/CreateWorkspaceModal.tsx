@@ -6,6 +6,7 @@ import { Button, Input, Modal, useToast } from "@madoo/design-system";
 import type { MyWorkspace } from "@madoo/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import posthog from "posthog-js";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -31,6 +32,7 @@ export function CreateWorkspaceModal({
       return workspace;
     },
     onSuccess: async (workspace) => {
+      posthog.capture("workspace_created", { workspace_id: workspace.id });
       setWorkspaceId(workspace.id);
       queryClient.setQueryData<MyWorkspace[]>(
         ["workspaces"],
