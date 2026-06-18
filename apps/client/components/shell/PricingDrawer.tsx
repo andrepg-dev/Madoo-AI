@@ -28,6 +28,7 @@ import {
 } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
+import posthog from "posthog-js";
 
 type PaidPlan = Exclude<Plan, "FREE">;
 
@@ -123,15 +124,22 @@ function BillingSwitch({
   );
 }
 
-function FeatureText({ value, label, emphasized }: PricingFeature) {
-  if (!value) return <span>{label}</span>;
-
+function FeatureText({ value, label, emphasized, comingSoon }: PricingFeature) {
   return (
-    <span>
-      <strong className={emphasized ? "font-semibold" : "font-normal"}>
-        {value}
-      </strong>{" "}
+    <span className={comingSoon ? "text-madoo-ink-muted" : undefined}>
+      {value ? (
+        <>
+          <strong className={emphasized ? "font-semibold" : "font-normal"}>
+            {value}
+          </strong>{" "}
+        </>
+      ) : null}
       {label}
+      {comingSoon ? (
+        <span className="ml-1.5 whitespace-nowrap rounded-full bg-madoo-surface-2 px-1.5 py-0.5 align-middle text-[10px] font-medium uppercase tracking-[0.04em] text-madoo-ink-muted">
+          Coming soon
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -327,6 +335,12 @@ export function PricingDrawer({
       return;
     }
 
+    posthog.capture("checkout_started", {
+      plan: plan.checkoutPlan,
+      plan_name: plan.name,
+      billing_interval: billingInterval,
+      current_plan: currentPlan,
+    });
     checkoutMutation.mutate({
       plan: plan.checkoutPlan,
       interval: billingInterval,
@@ -334,6 +348,7 @@ export function PricingDrawer({
   };
 
   const onManageBilling = () => {
+    posthog.capture("billing_portal_opened", { current_plan: currentPlan });
     portalMutation.mutate(undefined, {
       onSettled: () => {
         void queryClient.invalidateQueries({

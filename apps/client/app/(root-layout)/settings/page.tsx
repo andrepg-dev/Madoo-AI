@@ -1,6 +1,7 @@
 "use client";
 
 import { getMe, updateMe, uploadAvatar } from "@/actions/auth";
+import { BillingPanel } from "@/components/settings/BillingPanel";
 import { createSupportTicket } from "@/actions/support";
 import {
   createWorkspaceInvite,
@@ -50,9 +51,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import posthog from "posthog-js";
 
 type SettingsArea = "account" | "workspace" | "support";
-type AccountSection = "profile" | "sound";
+type AccountSection = "profile" | "billing" | "sound";
 type WorkspaceSection = "overview" | "avatar" | "members" | "danger";
 
 type PrimaryNavItem = {
@@ -65,7 +67,7 @@ type PrimaryNavItem = {
 type SecondaryNavItem = {
   value: AccountSection | WorkspaceSection;
   label: string;
-  icon: "user" | "lock" | "bell" | "settings" | "image" | "copy";
+  icon: "user" | "lock" | "bell" | "settings" | "image" | "copy" | "barChart";
 };
 
 const primaryNav: PrimaryNavItem[] = [
@@ -91,6 +93,7 @@ const primaryNav: PrimaryNavItem[] = [
 
 const accountNav: SecondaryNavItem[] = [
   { value: "profile", label: "Profile", icon: "user" },
+  { value: "billing", label: "Billing & usage", icon: "barChart" },
   { value: "sound", label: "Complete sound", icon: "bell" },
 ];
 
@@ -135,7 +138,7 @@ function isSettingsArea(value: string | null): value is SettingsArea {
 }
 
 function isAccountSection(value: string | null): value is AccountSection {
-  return value === "profile" || value === "sound";
+  return value === "profile" || value === "billing" || value === "sound";
 }
 
 function isWorkspaceSection(value: string | null): value is WorkspaceSection {
@@ -337,6 +340,10 @@ function AccountPanel({ section }: { section: AccountSection }) {
       });
     },
   });
+
+  if (section === "billing") {
+    return <BillingPanel />;
+  }
 
   if (section === "sound") {
     const saveSound = (next: SoundPref) => {
@@ -561,6 +568,11 @@ function WorkspacePanel({
   const createInviteMutation = useMutation({
     mutationFn: createWorkspaceInvite,
     onSuccess: async (invite) => {
+      posthog.capture("workspace_invite_created", {
+        workspace_id: activeWorkspace?.id,
+        invite_role: invite.role,
+        has_email: Boolean(invite.email),
+      });
       setLatestInviteUrl(invite.inviteUrl);
       setInviteEmail("");
       await queryClient.invalidateQueries({
@@ -1029,6 +1041,10 @@ function SupportPanel({
   const supportMutation = useMutation({
     mutationFn: createSupportTicket,
     onSuccess: (ticket) => {
+      posthog.capture("support_ticket_submitted", {
+        ticket_id: ticket.id,
+        category,
+      });
       setTicketId(ticket.id);
       setSubject("");
       setMessage("");

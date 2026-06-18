@@ -8,6 +8,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import {
   PLAN_DISPLAY_NAMES,
+  PLAN_FEATURES,
   PLAN_LIMITS,
   type BillingOverviewDto,
   type Plan,
@@ -16,7 +17,15 @@ import {
 import type { BillingSubscription, Plan as PrismaPlan } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
+import { SEED_TEMPLATE_SLUGS } from "../templates/seed-templates";
 import { StripeService } from "./stripe.service";
+import {
+  addUtcDays,
+  addUtcMonths,
+  buildCreditUsage,
+  currentPeriodStart,
+  startOfUtcDay,
+} from "./credit-window";
 import type {
   StripeCheckoutSession,
   StripeEvent,
@@ -26,9 +35,13 @@ import type {
 } from "./stripe-types";
 
 const PLAN_TO_PRICE_ENV: Record<Exclude<Plan, "FREE">, Record<"MONTHLY" | "ANNUAL", string>> = {
-  STARTER: { MONTHLY: "STRIPE_PRICE_STARTER", ANNUAL: "STRIPE_PRICE_STARTER_ANNUAL" },
-  GROWTH: { MONTHLY: "STRIPE_PRICE_GROWTH", ANNUAL: "STRIPE_PRICE_GROWTH_ANNUAL" },
+  STARTER: { MONTHLY: "STRIPE_PRICE_BASIC", ANNUAL: "STRIPE_PRICE_BASIC_ANNUAL" },
+  GROWTH: { MONTHLY: "STRIPE_PRICE_MEDIUM", ANNUAL: "STRIPE_PRICE_MEDIUM_ANNUAL" },
+  PRO: { MONTHLY: "STRIPE_PRICE_PRO", ANNUAL: "STRIPE_PRICE_PRO_ANNUAL" },
 };
+
+/** Default free-trial length when STRIPE_TRIAL_PERIOD_DAYS is unset. */
+const DEFAULT_TRIAL_PERIOD_DAYS = 7;
 
 @Injectable()
 export class BillingService {
@@ -56,6 +69,16 @@ export class BillingService {
     });
   }
 
+  /** Configured free-trial length in days (0 disables the trial). */
+  private trialPeriodDays(): number {
+    const raw = this.config.get<string>("STRIPE_TRIAL_PERIOD_DAYS");
+    if (raw === undefined) return DEFAULT_TRIAL_PERIOD_DAYS;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed >= 0
+      ? parsed
+      : DEFAULT_TRIAL_PERIOD_DAYS;
+  }
+
   async getOverview(
     workspaceId: string,
     userId: string,
@@ -66,19 +89,21 @@ export class BillingService {
     const limits = PLAN_LIMITS[plan];
 
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const periodStart = currentPeriodStart(subscription.creditsAnchor, now);
+    const periodEnd = addUtcMonths(periodStart, 1);
+    const dayStart = startOfUtcDay(now);
+    const nextDay = addUtcDays(dayStart, 1);
 
-    const [generationsUsed] = await Promise.all([
-      this.prisma.emailGenerationRun.count({
-        where: {
-          workspaceId,
-          kind: "INITIAL",
-          status: { not: "FAILED" },
-          createdAt: { gte: startOfMonth },
-        },
+    const [monthlyUsed, dailyUsed, templatesUsed] = await Promise.all([
+      this.countCreditsUsed(workspaceId, periodStart),
+      this.countCreditsUsed(workspaceId, dayStart),
+      this.prisma.template.count({
+        where: { workspaceId, slug: { notIn: [...SEED_TEMPLATE_SLUGS] } },
       }),
     ]);
+
+    const remaining = (used: number, limit: number) =>
+      limit === -1 ? -1 : Math.max(0, limit - used);
 
     return {
       subscription: {
@@ -87,40 +112,75 @@ export class BillingService {
         currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? null,
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         hasStripeCustomer: Boolean(subscription.stripeCustomerId),
+        trialEndsAt: subscription.trialEndsAt?.toISOString() ?? null,
       },
       usage: {
-        aiGenerations: {
-          used: generationsUsed,
-          limit: limits.aiGenerations,
-          resetsAt: startOfNextMonth.toISOString(),
+        aiGenerations: buildCreditUsage(
+          monthlyUsed,
+          limits.aiGenerations,
+          periodEnd,
+        ),
+        dailyAiGenerations: buildCreditUsage(
+          dailyUsed,
+          limits.dailyAiGenerations,
+          nextDay,
+        ),
+        storedTemplates: {
+          used: templatesUsed,
+          limit: limits.storedTemplates,
+          remaining: remaining(templatesUsed, limits.storedTemplates),
         },
       },
-      limits: { aiGenerations: limits.aiGenerations },
+      limits: { ...limits },
+      features: PLAN_FEATURES[plan],
     };
   }
 
   async assertCanGenerate(workspaceId: string): Promise<void> {
     const subscription = await this.ensureSubscription(workspaceId);
     const plan = subscription.plan as Plan;
-    const limit = PLAN_LIMITS[plan].aiGenerations;
-    if (limit === -1) return;
-
+    const limits = PLAN_LIMITS[plan];
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const used = await this.prisma.emailGenerationRun.count({
+
+    // Daily cap (free tier: 5 credits/day, resets at 00:00 UTC).
+    if (limits.dailyAiGenerations !== -1) {
+      const dayStart = startOfUtcDay(now);
+      const usedToday = await this.countCreditsUsed(workspaceId, dayStart);
+      if (usedToday >= limits.dailyAiGenerations) {
+        throw new ForbiddenException(
+          `Daily AI credit limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limits.dailyAiGenerations} credits per day (used ${usedToday}). Resets at 00:00 UTC.`,
+        );
+      }
+    }
+
+    // Monthly cap (rolling window from the credits anchor; resets on upgrade).
+    if (limits.aiGenerations !== -1) {
+      const periodStart = currentPeriodStart(subscription.creditsAnchor, now);
+      const usedThisPeriod = await this.countCreditsUsed(
+        workspaceId,
+        periodStart,
+      );
+      if (usedThisPeriod >= limits.aiGenerations) {
+        throw new ForbiddenException(
+          `Monthly AI credit limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limits.aiGenerations} credits per month (used ${usedThisPeriod}). Upgrade to generate more.`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Counts consumed AI credits since `since`. Every non-failed generation run —
+   * an initial draft (INITIAL) or a chat/template edit (EDIT) — costs one credit.
+   */
+  private countCreditsUsed(workspaceId: string, since: Date): Promise<number> {
+    return this.prisma.emailGenerationRun.count({
       where: {
         workspaceId,
-        kind: "INITIAL",
+        kind: { in: ["INITIAL", "EDIT"] },
         status: { not: "FAILED" },
-        createdAt: { gte: startOfMonth },
+        createdAt: { gte: since },
       },
     });
-
-    if (used >= limit) {
-      throw new ForbiddenException(
-        `AI generation limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limit} generations per month (used ${used}). Upgrade to generate more.`,
-      );
-    }
   }
 
   /**
@@ -157,6 +217,16 @@ export class BillingService {
     const appUrl =
       this.config.get<string>("APP_URL") ?? "http://localhost:3000";
 
+    // Grant the free trial only to workspaces that have never started one and
+    // never had a Stripe subscription, so cancel-and-resubscribe can't farm
+    // repeated trials. Stripe still collects a card up front and auto-charges
+    // when the trial ends.
+    const trialDays = this.trialPeriodDays();
+    const grantTrial =
+      trialDays > 0 &&
+      !subscription.hasUsedTrial &&
+      !subscription.stripeSubscriptionId;
+
     const session = (await this.stripe.getClient().checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
@@ -171,6 +241,7 @@ export class BillingService {
       metadata: { workspaceId, plan: targetPlan, interval },
       subscription_data: {
         metadata: { workspaceId, plan: targetPlan, interval },
+        ...(grantTrial ? { trial_period_days: trialDays } : {}),
       },
       allow_promotion_codes: true,
     })) as unknown as StripeCheckoutSession;
@@ -206,6 +277,53 @@ export class BillingService {
         return_url: `${appUrl}/settings/billing`,
       });
     return { url: session.url };
+  }
+
+  /**
+   * Cancels (or resumes) the workspace's subscription at the end of the current
+   * paid period. The user keeps paid access until then, after which Stripe's
+   * `customer.subscription.deleted` webhook drops the plan back to FREE.
+   */
+  async setCancellation(
+    workspaceId: string,
+    userId: string,
+    cancelAtPeriodEnd: boolean,
+  ): Promise<{ cancelAtPeriodEnd: boolean; currentPeriodEnd: string | null }> {
+    await this.workspaces.assertOwner(userId, workspaceId);
+    if (!this.stripe.isEnabled()) {
+      throw new ServiceUnavailableException(
+        "Billing is not configured on this server.",
+      );
+    }
+    const subscription = await this.ensureSubscription(workspaceId);
+    if (!subscription.stripeSubscriptionId) {
+      throw new BadRequestException(
+        "No active paid subscription to update.",
+      );
+    }
+
+    const updated = (await this.stripe
+      .getClient()
+      .subscriptions.update(subscription.stripeSubscriptionId, {
+        cancel_at_period_end: cancelAtPeriodEnd,
+      })) as unknown as StripeSubscription;
+
+    // Optimistically mirror the change; the subscription.updated webhook will
+    // reconcile the authoritative state right after.
+    const periodEndSeconds = extractPeriodEnd(updated);
+    const row = await this.prisma.billingSubscription.update({
+      where: { id: subscription.id },
+      data: {
+        cancelAtPeriodEnd,
+        currentPeriodEnd: periodEndSeconds
+          ? new Date(periodEndSeconds * 1000)
+          : subscription.currentPeriodEnd,
+      },
+    });
+    return {
+      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+      currentPeriodEnd: row.currentPeriodEnd?.toISOString() ?? null,
+    };
   }
 
   /**
@@ -279,13 +397,14 @@ export class BillingService {
     const customerId =
       typeof sub.customer === "string" ? sub.customer : sub.customer.id;
     const fromMetadataPlan = parsePlanFromMetadata(sub.metadata?.plan);
-    const fromPricePlan = parsePlanFromPrice(
-      sub,
-      this.config.get<string>("STRIPE_PRICE_STARTER"),
-      this.config.get<string>("STRIPE_PRICE_GROWTH"),
-      this.config.get<string>("STRIPE_PRICE_STARTER_ANNUAL"),
-      this.config.get<string>("STRIPE_PRICE_GROWTH_ANNUAL"),
-    );
+    const fromPricePlan = parsePlanFromPrice(sub, {
+      starter: this.config.get<string>("STRIPE_PRICE_BASIC"),
+      growth: this.config.get<string>("STRIPE_PRICE_MEDIUM"),
+      pro: this.config.get<string>("STRIPE_PRICE_PRO"),
+      starterAnnual: this.config.get<string>("STRIPE_PRICE_BASIC_ANNUAL"),
+      growthAnnual: this.config.get<string>("STRIPE_PRICE_MEDIUM_ANNUAL"),
+      proAnnual: this.config.get<string>("STRIPE_PRICE_PRO_ANNUAL"),
+    });
     const plan: Plan =
       sub.status === "canceled" || sub.status === "incomplete_expired"
         ? "FREE"
@@ -316,6 +435,13 @@ export class BillingService {
     }
 
     const periodEndSeconds = extractPeriodEnd(sub);
+    const trialEnd =
+      typeof sub.trial_end === "number"
+        ? new Date(sub.trial_end * 1000)
+        : null;
+    // Reset the AI-credit window the moment the plan changes (up or down) so
+    // credits refresh immediately on upgrade.
+    const planChanged = target.plan !== (plan as PrismaPlan);
     await this.prisma.billingSubscription.update({
       where: { id: target.id },
       data: {
@@ -327,6 +453,11 @@ export class BillingService {
           ? new Date(periodEndSeconds * 1000)
           : null,
         cancelAtPeriodEnd: sub.cancel_at_period_end,
+        trialEndsAt: trialEnd,
+        // Once a trial exists on a Stripe subscription, latch the flag so a
+        // future resubscribe doesn't hand out a second free trial.
+        ...(trialEnd ? { hasUsedTrial: true } : {}),
+        ...(planChanged ? { creditsAnchor: new Date() } : {}),
       },
     });
   }
@@ -347,25 +478,35 @@ function extractPeriodEnd(sub: StripeSubscription): number | null {
 }
 
 function parsePlanFromMetadata(value: string | undefined): Plan | null {
-  if (value === "STARTER" || value === "GROWTH" || value === "FREE") {
+  if (
+    value === "STARTER" ||
+    value === "GROWTH" ||
+    value === "PRO" ||
+    value === "FREE"
+  ) {
     return value;
   }
   return null;
 }
 
+type PriceEnvIds = {
+  starter: string | undefined;
+  growth: string | undefined;
+  pro: string | undefined;
+  starterAnnual: string | undefined;
+  growthAnnual: string | undefined;
+  proAnnual: string | undefined;
+};
+
 function parsePlanFromPrice(
   sub: StripeSubscription,
-  starter: string | undefined,
-  growth: string | undefined,
-  starterAnnual?: string | undefined,
-  growthAnnual?: string | undefined,
+  ids: PriceEnvIds,
 ): Plan | null {
   for (const item of sub.items.data) {
     const id = item.price.id;
-    if (starter && id === starter) return "STARTER";
-    if (growth && id === growth) return "GROWTH";
-    if (starterAnnual && id === starterAnnual) return "STARTER";
-    if (growthAnnual && id === growthAnnual) return "GROWTH";
+    if (id && (id === ids.starter || id === ids.starterAnnual)) return "STARTER";
+    if (id && (id === ids.growth || id === ids.growthAnnual)) return "GROWTH";
+    if (id && (id === ids.pro || id === ids.proAnnual)) return "PRO";
   }
   return null;
 }

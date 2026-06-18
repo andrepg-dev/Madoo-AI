@@ -1,9 +1,12 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import {
+  PLAN_DISPLAY_NAMES,
+  PLAN_LIMITS,
   TemplateDtoSchema,
   buildRenderVariables,
   extractVariableSchemaFromComponent,
   parseVariableSchemaJson,
+  type Plan,
   type TemplateDto,
   type TemplateSeedPreviewDto,
   type TemplateSlug,
@@ -91,6 +94,8 @@ export class TemplatesService {
     if (!variant)
       throw new NotFoundException("Variant not found in workspace.");
 
+    await this.assertCanStoreTemplate(workspaceId);
+
     const base = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
@@ -110,6 +115,26 @@ export class TemplatesService {
       select: { id: true, name: true, slug: true },
     });
     return template;
+  }
+
+  /** Blocks saving a template once the workspace plan's storedTemplates cap is hit. */
+  private async assertCanStoreTemplate(workspaceId: string): Promise<void> {
+    const sub = await this.prisma.billingSubscription.findUnique({
+      where: { workspaceId },
+      select: { plan: true },
+    });
+    const plan = (sub?.plan as Plan) ?? "FREE";
+    const limit = PLAN_LIMITS[plan].storedTemplates;
+    if (limit === -1) return;
+    // Seed/starter templates are system-provided and don't count toward the cap.
+    const count = await this.prisma.template.count({
+      where: { workspaceId, slug: { notIn: [...SEED_TEMPLATE_SLUGS] } },
+    });
+    if (count >= limit) {
+      throw new ForbiddenException(
+        `Template limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan stores ${limit} templates (using ${count}). Upgrade to store more.`,
+      );
+    }
   }
 
   async listForWorkspace(workspaceId: string): Promise<TemplateDto[]> {

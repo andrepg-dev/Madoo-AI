@@ -45,4 +45,20 @@ export class BillingController {
   ) {
     return this.billing.createPortalSession(workspace.id, current.sub);
   }
+
+  @Post("cancel")
+  cancelSubscription(
+    @CurrentWorkspace() workspace: WorkspaceContext,
+    @CurrentUser() current: { sub: string },
+  ) {
+    return this.billing.setCancellation(workspace.id, current.sub, true);
+  }
+
+  @Post("resume")
+  resumeSubscription(
+    @CurrentWorkspace() workspace: WorkspaceContext,
+    @CurrentUser() current: { sub: string },
+  ) {
+    return this.billing.setCancellation(workspace.id, current.sub, false);
+  }
 }

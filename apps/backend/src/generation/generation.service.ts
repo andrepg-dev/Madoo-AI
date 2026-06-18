@@ -684,6 +684,8 @@ export class GenerationService {
     emit: (p: Record<string, unknown>) => void,
     opts?: { groupId?: string; skipUserMessage?: boolean; contextUpTo?: Date },
   ): Promise<void> {
+    // Each edit/chat message consumes one AI credit, same as an initial generation.
+    await this.billing.assertCanGenerate(workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     const ctx = await this.loadGenerationContext(emailId, workspaceId);
 

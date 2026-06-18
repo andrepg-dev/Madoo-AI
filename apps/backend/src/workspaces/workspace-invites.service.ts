@@ -7,8 +7,13 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomBytes } from "crypto";
-import { CreateWorkspaceInviteInputSchema } from "@madoo/shared";
-import type { Role } from "@prisma/client";
+import {
+  CreateWorkspaceInviteInputSchema,
+  PLAN_DISPLAY_NAMES,
+  PLAN_LIMITS,
+  type Plan,
+} from "@madoo/shared";
+import type { Prisma, Role } from "@prisma/client";
 import { MailService } from "../mail/mail.service";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -36,6 +41,8 @@ export class WorkspaceInvitesService {
     const input = CreateWorkspaceInviteInputSchema.parse(params.body);
     const email = input.email?.toLowerCase();
     const role = input.role as Role;
+
+    await this.assertSeatAvailable(params.workspaceId, { countPending: true });
 
     if (email) {
       const existingUser = await this.prisma.user.findUnique({
@@ -141,6 +148,15 @@ export class WorkspaceInvitesService {
         },
       });
 
+      // Final seat guard at the point a membership is actually created (covers
+      // link invites accepted by many people). Existing members re-accepting pass.
+      if (!existing) {
+        await this.assertSeatAvailable(invite.workspaceId, {
+          countPending: false,
+          tx,
+        });
+      }
+
       const membership =
         existing ??
         (await tx.membership.create({
@@ -162,6 +178,46 @@ export class WorkspaceInvitesService {
 
       return { workspace: invite.workspace, membership };
     });
+  }
+
+  /**
+   * Guards the workspace member seat cap (owner + plan `members` allowance).
+   * `countPending` also reserves seats for outstanding unaccepted invites.
+   */
+  private async assertSeatAvailable(
+    workspaceId: string,
+    opts: { countPending: boolean; tx?: Prisma.TransactionClient },
+  ): Promise<void> {
+    const db = opts.tx ?? this.prisma;
+    const sub = await db.billingSubscription.findUnique({
+      where: { workspaceId },
+      select: { plan: true },
+    });
+    const plan = (sub?.plan as Plan) ?? "FREE";
+    const limit = PLAN_LIMITS[plan].members;
+    if (limit === -1) return;
+    const allowed = 1 + limit; // owner + invited members
+    const [members, pending] = await Promise.all([
+      db.membership.count({ where: { workspaceId } }),
+      opts.countPending
+        ? db.workspaceInvite.count({
+            where: {
+              workspaceId,
+              acceptedAt: null,
+              expiresAt: { gt: new Date() },
+            },
+          })
+        : Promise.resolve(0),
+    ]);
+    if (members + pending >= allowed) {
+      const allowance =
+        limit === 0
+          ? "no additional members"
+          : `${limit} member${limit === 1 ? "" : "s"}`;
+      throw new ForbiddenException(
+        `Member limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${allowance} beyond the owner. Upgrade to invite more.`,
+      );
+    }
   }
 
   buildInviteUrl(token: string): string {

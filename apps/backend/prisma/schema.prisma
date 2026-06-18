@@ -448,6 +448,7 @@ enum Plan {
   FREE
   STARTER
   GROWTH
+  PRO
 }
 
 enum SubscriptionStatus {
@@ -468,6 +469,12 @@ model BillingSubscription {
   status               SubscriptionStatus @default(ACTIVE)
   currentPeriodEnd     DateTime?
   cancelAtPeriodEnd    Boolean            @default(false)
+  trialEndsAt          DateTime?
+  hasUsedTrial         Boolean            @default(false)
+  // Anchor for the rolling monthly AI-credit window. Reset to now() whenever the
+  // plan changes (upgrade/downgrade) so credits refresh immediately; otherwise
+  // the window rolls forward one month at a time from this date.
+  creditsAnchor        DateTime           @default(now())
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 

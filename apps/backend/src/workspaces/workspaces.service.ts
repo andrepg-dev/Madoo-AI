@@ -68,7 +68,12 @@ export class WorkspacesService {
       }),
     ]);
 
-    const PLAN_RANK: Record<string, number> = { FREE: 0, STARTER: 1, GROWTH: 2 };
+    const PLAN_RANK: Record<string, number> = {
+      FREE: 0,
+      STARTER: 1,
+      GROWTH: 2,
+      PRO: 3,
+    };
     const bestPlan = subs
       .map((s) => s.plan as string)
       .reduce(
