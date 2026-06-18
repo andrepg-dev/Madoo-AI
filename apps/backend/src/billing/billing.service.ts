@@ -8,6 +8,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import {
   PLAN_DISPLAY_NAMES,
+  PLAN_FEATURES,
   PLAN_LIMITS,
   type BillingOverviewDto,
   type Plan,
@@ -16,6 +17,7 @@ import {
 import type { BillingSubscription, Plan as PrismaPlan } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
+import { SEED_TEMPLATE_SLUGS } from "../templates/seed-templates";
 import { StripeService } from "./stripe.service";
 import {
   addUtcDays,
@@ -33,8 +35,8 @@ import type {
 } from "./stripe-types";
 
 const PLAN_TO_PRICE_ENV: Record<Exclude<Plan, "FREE">, Record<"MONTHLY" | "ANNUAL", string>> = {
-  STARTER: { MONTHLY: "STRIPE_PRICE_STARTER", ANNUAL: "STRIPE_PRICE_STARTER_ANNUAL" },
-  GROWTH: { MONTHLY: "STRIPE_PRICE_GROWTH", ANNUAL: "STRIPE_PRICE_GROWTH_ANNUAL" },
+  STARTER: { MONTHLY: "STRIPE_PRICE_BASIC", ANNUAL: "STRIPE_PRICE_BASIC_ANNUAL" },
+  GROWTH: { MONTHLY: "STRIPE_PRICE_MEDIUM", ANNUAL: "STRIPE_PRICE_MEDIUM_ANNUAL" },
   PRO: { MONTHLY: "STRIPE_PRICE_PRO", ANNUAL: "STRIPE_PRICE_PRO_ANNUAL" },
 };
 
@@ -92,10 +94,16 @@ export class BillingService {
     const dayStart = startOfUtcDay(now);
     const nextDay = addUtcDays(dayStart, 1);
 
-    const [monthlyUsed, dailyUsed] = await Promise.all([
+    const [monthlyUsed, dailyUsed, templatesUsed] = await Promise.all([
       this.countCreditsUsed(workspaceId, periodStart),
       this.countCreditsUsed(workspaceId, dayStart),
+      this.prisma.template.count({
+        where: { workspaceId, slug: { notIn: [...SEED_TEMPLATE_SLUGS] } },
+      }),
     ]);
+
+    const remaining = (used: number, limit: number) =>
+      limit === -1 ? -1 : Math.max(0, limit - used);
 
     return {
       subscription: {
@@ -117,11 +125,14 @@ export class BillingService {
           limits.dailyAiGenerations,
           nextDay,
         ),
+        storedTemplates: {
+          used: templatesUsed,
+          limit: limits.storedTemplates,
+          remaining: remaining(templatesUsed, limits.storedTemplates),
+        },
       },
-      limits: {
-        aiGenerations: limits.aiGenerations,
-        dailyAiGenerations: limits.dailyAiGenerations,
-      },
+      limits: { ...limits },
+      features: PLAN_FEATURES[plan],
     };
   }
 
@@ -269,6 +280,53 @@ export class BillingService {
   }
 
   /**
+   * Cancels (or resumes) the workspace's subscription at the end of the current
+   * paid period. The user keeps paid access until then, after which Stripe's
+   * `customer.subscription.deleted` webhook drops the plan back to FREE.
+   */
+  async setCancellation(
+    workspaceId: string,
+    userId: string,
+    cancelAtPeriodEnd: boolean,
+  ): Promise<{ cancelAtPeriodEnd: boolean; currentPeriodEnd: string | null }> {
+    await this.workspaces.assertOwner(userId, workspaceId);
+    if (!this.stripe.isEnabled()) {
+      throw new ServiceUnavailableException(
+        "Billing is not configured on this server.",
+      );
+    }
+    const subscription = await this.ensureSubscription(workspaceId);
+    if (!subscription.stripeSubscriptionId) {
+      throw new BadRequestException(
+        "No active paid subscription to update.",
+      );
+    }
+
+    const updated = (await this.stripe
+      .getClient()
+      .subscriptions.update(subscription.stripeSubscriptionId, {
+        cancel_at_period_end: cancelAtPeriodEnd,
+      })) as unknown as StripeSubscription;
+
+    // Optimistically mirror the change; the subscription.updated webhook will
+    // reconcile the authoritative state right after.
+    const periodEndSeconds = extractPeriodEnd(updated);
+    const row = await this.prisma.billingSubscription.update({
+      where: { id: subscription.id },
+      data: {
+        cancelAtPeriodEnd,
+        currentPeriodEnd: periodEndSeconds
+          ? new Date(periodEndSeconds * 1000)
+          : subscription.currentPeriodEnd,
+      },
+    });
+    return {
+      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+      currentPeriodEnd: row.currentPeriodEnd?.toISOString() ?? null,
+    };
+  }
+
+  /**
    * Webhook reducer: maps Stripe events to BillingSubscription state.
    * Idempotent — Stripe re-delivers events on transient failures.
    */
@@ -340,11 +398,11 @@ export class BillingService {
       typeof sub.customer === "string" ? sub.customer : sub.customer.id;
     const fromMetadataPlan = parsePlanFromMetadata(sub.metadata?.plan);
     const fromPricePlan = parsePlanFromPrice(sub, {
-      starter: this.config.get<string>("STRIPE_PRICE_STARTER"),
-      growth: this.config.get<string>("STRIPE_PRICE_GROWTH"),
+      starter: this.config.get<string>("STRIPE_PRICE_BASIC"),
+      growth: this.config.get<string>("STRIPE_PRICE_MEDIUM"),
       pro: this.config.get<string>("STRIPE_PRICE_PRO"),
-      starterAnnual: this.config.get<string>("STRIPE_PRICE_STARTER_ANNUAL"),
-      growthAnnual: this.config.get<string>("STRIPE_PRICE_GROWTH_ANNUAL"),
+      starterAnnual: this.config.get<string>("STRIPE_PRICE_BASIC_ANNUAL"),
+      growthAnnual: this.config.get<string>("STRIPE_PRICE_MEDIUM_ANNUAL"),
       proAnnual: this.config.get<string>("STRIPE_PRICE_PRO_ANNUAL"),
     });
     const plan: Plan =

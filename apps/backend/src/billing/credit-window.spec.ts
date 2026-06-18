@@ -76,25 +76,37 @@ test("buildCreditUsage reports -1 remaining for unlimited", () => {
   assert.equal(buildCreditUsage(120, -1, resets).remaining, -1);
 });
 
-test("PLAN_LIMITS match the agreed daily/monthly caps", () => {
+test("PLAN_LIMITS match the agreed per-feature caps", () => {
   assert.deepEqual(PLAN_LIMITS.FREE, {
     aiGenerations: 30,
     dailyAiGenerations: 5,
-    workspaces: 1,
+    storedTemplates: 10,
+    members: 0,
+    workspaces: 0,
+    testEmailsPerDay: 10,
   });
   assert.deepEqual(PLAN_LIMITS.STARTER, {
     aiGenerations: 100,
     dailyAiGenerations: 15,
+    storedTemplates: 50,
+    members: 2,
     workspaces: 5,
+    testEmailsPerDay: 50,
   });
   assert.deepEqual(PLAN_LIMITS.GROWTH, {
     aiGenerations: 250,
     dailyAiGenerations: 25,
+    storedTemplates: 150,
+    members: 3,
     workspaces: 15,
+    testEmailsPerDay: 100,
   });
   assert.deepEqual(PLAN_LIMITS.PRO, {
     aiGenerations: 550,
     dailyAiGenerations: 50,
+    storedTemplates: 300,
+    members: 5,
     workspaces: -1,
+    testEmailsPerDay: 300,
   });
 });
