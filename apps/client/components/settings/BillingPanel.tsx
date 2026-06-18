@@ -329,7 +329,7 @@ export function BillingPanel() {
         </div>
 
         {isPaid ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-madoo-surface-2 pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-4 shadow-[inset_0_0.5px_0_rgb(var(--rule-rgb)/0.18)]">
             <p className="text-(length:--font-size-sm) text-madoo-ink-muted">
               {subscription.cancelAtPeriodEnd
                 ? "Your plan is set to cancel. Resume to keep it active."
@@ -384,7 +384,7 @@ export function BillingPanel() {
         title="What's included"
         description="Allowances on your current plan."
       >
-        <ul className="divide-y divide-madoo-surface-2">
+        <ul className="grid [&>li]:shadow-[inset_0_-0.5px_0_rgb(var(--rule-rgb)/0.16)] [&>li:last-child]:shadow-none">
           <AllowanceRow
             label="Team members (besides you)"
             value={formatAllowance(limits.members)}
