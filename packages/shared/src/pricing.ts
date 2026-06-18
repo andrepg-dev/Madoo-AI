@@ -17,6 +17,8 @@ export type PricingFeature = {
   /** Optional leading value rendered bold, e.g. "100" in "100 monthly credits". */
   value?: string;
   emphasized?: boolean;
+  /** Renders a muted "Coming soon" tag and dims the row. */
+  comingSoon?: boolean;
 };
 
 export type PricingPlan = {
@@ -49,7 +51,8 @@ export const PRICING_PLANS: PricingPlan[] = [
       { value: "2", label: "members", emphasized: true },
       { value: "5", label: "workspaces", emphasized: true },
       { value: "50", label: "test emails a day", emphasized: true },
-      { label: "Export to any provider of your choice" },
+      { label: "Export to HTML, JPEG, PDF" },
+      { label: "Export to any provider of your choice", comingSoon: true },
       { label: "Sharing preview template links" },
     ],
   },
@@ -67,7 +70,8 @@ export const PRICING_PLANS: PricingPlan[] = [
       { value: "3", label: "members", emphasized: true },
       { value: "15", label: "workspaces", emphasized: true },
       { value: "100", label: "test emails a day", emphasized: true },
-      { label: "Export to any provider of your choice" },
+      { label: "Export to HTML, JPEG, PDF" },
+      { label: "Export to any provider of your choice", comingSoon: true },
       { label: "Sharing preview template links" },
     ],
   },
@@ -84,7 +88,8 @@ export const PRICING_PLANS: PricingPlan[] = [
       { value: "5", label: "members", emphasized: true },
       { value: "Unlimited", label: "workspaces", emphasized: true },
       { value: "300", label: "test emails a day", emphasized: true },
-      { label: "Export to any provider of your choice" },
+      { label: "Export to HTML, JPEG, PDF" },
+      { label: "Export to any provider of your choice", comingSoon: true },
       { label: "Sharing preview template links" },
     ],
   },
