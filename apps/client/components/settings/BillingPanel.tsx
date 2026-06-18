@@ -7,7 +7,15 @@ import {
   resumeSubscription,
 } from "@/actions/billing";
 import { useClientStore } from "@/stores/client-store";
-import { Badge, Button, Card, Icon, cx, useToast } from "@madoo/design-system";
+import {
+  Badge,
+  Button,
+  Card,
+  Icon,
+  ProgressBar,
+  cx,
+  useToast,
+} from "@madoo/design-system";
 import {
   PLAN_DISPLAY_NAMES,
   type CreditUsageDto,
@@ -64,6 +72,18 @@ function formatDate(value: string | null | undefined) {
   }
 }
 
+function formatResetDate(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return null;
+  }
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
@@ -101,57 +121,41 @@ function PanelCard({
 
 function UsageMeter({
   title,
-  hint,
   usage,
   resetLabel,
 }: {
   title: string;
-  hint?: string;
   usage: CreditUsageDto | ResourceUsageDto;
   resetLabel?: string | null;
 }) {
-  const unlimited = usage.limit === -1;
+  const unlimited = usage.limit === -1 || usage.remaining === -1;
+  const remaining = unlimited ? null : Math.max(0, usage.remaining);
   const pct =
-    unlimited || usage.limit === 0
-      ? 0
-      : Math.min(100, Math.round((usage.used / usage.limit) * 100));
-  const nearLimit = !unlimited && pct >= 90;
+    unlimited
+      ? 100
+      : usage.limit > 0 && remaining !== null
+        ? Math.min(100, Math.round((remaining / usage.limit) * 100))
+        : 0;
+  const remainingText = unlimited
+    ? "Unlimited"
+    : `${formatNumber(remaining ?? 0)} left`;
 
   return (
-    <div className="grid gap-2 rounded-xl bg-madoo-bg-2 p-4 shadow-madoo-border">
+    <div className="grid gap-3 rounded-xl bg-madoo-bg-2 p-4 shadow-madoo-border">
       <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
-            {title}
-          </p>
-          {hint ? (
-            <p className="mt-1 text-(length:--font-size-xs) leading-none text-madoo-ink-muted">
-              {hint}
-            </p>
-          ) : null}
-        </div>
-        <p className="whitespace-nowrap text-(length:--font-size-sm) font-medium text-madoo-ink">
-          {formatNumber(usage.used)}
-          <span className="text-madoo-ink-muted"> / {formatLimit(usage.limit)}</span>
+        <p className="min-w-0 text-(length:--font-size-base) font-normal leading-none text-madoo-ink">
+          {title}
+        </p>
+        <p className="whitespace-nowrap text-(length:--font-size-sm) text-madoo-ink-muted">
+          {remainingText}
         </p>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-madoo-surface-2">
-        <div
-          className={cx(
-            "h-full rounded-full transition-[width]",
-            nearLimit ? "bg-madoo-danger" : "bg-madoo-accent-deep",
-          )}
-          style={{ width: unlimited ? "100%" : `${pct}%` }}
-        />
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-(length:--font-size-xs) text-madoo-ink-muted">
-        <span>
-          {unlimited
-            ? "Unlimited on your plan"
-            : `${formatNumber(Math.max(0, usage.remaining))} remaining`}
+      <ProgressBar value={pct} tone="ink" label={`${title} left`} />
+      {resetLabel ? (
+        <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+          {resetLabel}
         </span>
-        {resetLabel ? <span>{resetLabel}</span> : null}
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -270,6 +274,8 @@ export function BillingPanel() {
   const periodEnd = formatDate(subscription.currentPeriodEnd);
   const isPaid = subscription.plan !== "FREE";
   const cancelBusy = cancelMutation.isPending || resumeMutation.isPending;
+  const dailyReset = formatResetDate(usage.dailyAiGenerations.resetsAt);
+  const monthlyReset = formatResetDate(usage.aiGenerations.resetsAt);
 
   const planLine =
     subscription.status === "TRIALING" && trialEnds
@@ -323,7 +329,7 @@ export function BillingPanel() {
         </div>
 
         {isPaid ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-madoo-surface-2 pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-4 shadow-[inset_0_0.5px_0_rgb(var(--rule-rgb)/0.18)]">
             <p className="text-(length:--font-size-sm) text-madoo-ink-muted">
               {subscription.cancelAtPeriodEnd
                 ? "Your plan is set to cancel. Resume to keep it active."
@@ -354,32 +360,21 @@ export function BillingPanel() {
 
       <PanelCard
         title="Usage"
-        description="Credits are consumed by each AI message — drafts and chat edits alike."
+        description="Credits left on your current plan."
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <UsageMeter
-            title="AI credits today"
-            hint="Resets every day at 00:00 UTC"
+            title="Daily credits"
             usage={usage.dailyAiGenerations}
-            resetLabel={
-              formatDate(usage.dailyAiGenerations.resetsAt)
-                ? `Resets ${formatDate(usage.dailyAiGenerations.resetsAt)}`
-                : null
-            }
+            resetLabel={dailyReset ? `Resets ${dailyReset}` : null}
           />
           <UsageMeter
-            title="AI credits this month"
-            hint="Resets when your plan renews"
+            title="Monthly credits"
             usage={usage.aiGenerations}
-            resetLabel={
-              formatDate(usage.aiGenerations.resetsAt)
-                ? `Resets ${formatDate(usage.aiGenerations.resetsAt)}`
-                : null
-            }
+            resetLabel={monthlyReset ? `Resets ${monthlyReset}` : null}
           />
           <UsageMeter
             title="Stored templates"
-            hint="Starter templates don't count"
             usage={usage.storedTemplates}
           />
         </div>
@@ -389,7 +384,7 @@ export function BillingPanel() {
         title="What's included"
         description="Allowances on your current plan."
       >
-        <ul className="divide-y divide-madoo-surface-2">
+        <ul className="grid [&>li]:shadow-[inset_0_-0.5px_0_rgb(var(--rule-rgb)/0.16)] [&>li:last-child]:shadow-none">
           <AllowanceRow
             label="Team members (besides you)"
             value={formatAllowance(limits.members)}

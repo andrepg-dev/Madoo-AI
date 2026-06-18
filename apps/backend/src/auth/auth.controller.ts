@@ -1,5 +1,4 @@
 import {
-  AppleLoginInputSchema,
   GithubLoginInputSchema,
   GoogleLoginInputSchema,
   PasswordLoginInputSchema,
@@ -72,16 +71,6 @@ export class AuthController {
   ) {
     const input = GithubLoginInputSchema.parse(body);
     return this.withSessionCookie(res, await this.auth.loginWithGithub(input));
-  }
-
-  @Post("apple")
-  @HttpCode(HttpStatus.OK)
-  async apple(
-    @Body() body: unknown,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const input = AppleLoginInputSchema.parse(body);
-    return this.withSessionCookie(res, await this.auth.loginWithApple(input));
   }
 
   @Post("logout")

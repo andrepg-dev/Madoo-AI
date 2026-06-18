@@ -10,6 +10,7 @@ import type { ExportTab } from "./types";
 import { ExportFileCard } from "./ExportFileCard";
 import { ExportProviderCard } from "./ExportProviderCard";
 import { ExportTabButton } from "./ExportTabButton";
+import posthog from "posthog-js";
 
 export function ExportProviderModal({
   emailId,
@@ -54,6 +55,11 @@ export function ExportProviderModal({
   const downloadFile = (kind: string, extraQuery = "") => {
     const id = requireEmail();
     if (!id) return;
+    posthog.capture("email_exported", {
+      email_id: id,
+      export_type: "file",
+      file_kind: kind,
+    });
     triggerDownload(
       `/api/export/emails/${id}/export/${kind}?${extraQuery}${variantQuery}`.replace(
         "?&",
@@ -67,6 +73,12 @@ export function ExportProviderModal({
     if (!provider) return;
     const id = requireEmail();
     if (!id) return;
+    posthog.capture("email_exported", {
+      email_id: id,
+      export_type: "esp",
+      provider,
+      provider_name: displayName,
+    });
     triggerDownload(
       `/api/export/emails/${id}/export/esp?provider=${provider}${variantQuery}`,
     );
@@ -123,6 +135,12 @@ export function ExportProviderModal({
         provider === "gmail"
           ? await createGmailDraft(id, variantId ?? undefined)
           : await createOutlookDraft(id, variantId ?? undefined);
+      posthog.capture("email_exported", {
+        email_id: id,
+        export_type: "draft",
+        provider,
+        provider_name: displayName,
+      });
       window.open(result.openUrl, "_blank", "noopener");
       toast({
         tone: "success",
@@ -130,6 +148,7 @@ export function ExportProviderModal({
         body: "Opened your drafts in a new tab to review and send.",
       });
     } catch (error) {
+      posthog.captureException(error);
       toast({
         tone: "danger",
         title: `${displayName} export failed`,

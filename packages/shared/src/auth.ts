@@ -37,13 +37,6 @@ export const GithubLoginInputSchema = z.object({
 });
 export type GithubLoginInput = z.infer<typeof GithubLoginInputSchema>;
 
-export const AppleLoginInputSchema = z.object({
-  idToken: z.string().min(1),
-  name: z.string().min(1).max(120).optional(),
-  ...PendingPromptFields,
-});
-export type AppleLoginInput = z.infer<typeof AppleLoginInputSchema>;
-
 export const AuthSessionResponseSchema = z.object({
   token: z.string().min(1),
   user: UserSchema,

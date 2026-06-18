@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  createEmailFromTemplate,
-  fetchEmails,
-  setEmailStarred,
-} from "@/actions/emails";
+import { fetchEmails, setEmailStarred } from "@/actions/emails";
 import {
   fetchCommunityTemplate,
   fetchCommunityTemplates,
@@ -16,12 +12,6 @@ import {
   type CommunityTemplateDto,
   type ShareEmailToCommunityInput,
 } from "@/actions/community-templates";
-import {
-  fetchTemplates,
-  previewSeedTemplate,
-  type TemplateDto,
-  type TemplateSlug,
-} from "@/actions/templates";
 import EmailPreviewFrame from "@/components/global/email-preview-frame";
 import TemplateCard from "@/components/global/template-card";
 import { useAuthStore } from "@/stores/auth-store";
@@ -41,7 +31,6 @@ import {
   useToast,
 } from "@madoo/design-system";
 import {
-  TemplateSlugSchema,
   type EmailDto,
   type VariableSchemaRoot,
   type VariableSpec,
@@ -50,12 +39,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-type ProjectTab = "projects" | "templates" | "community";
-type SeedTemplateDto = TemplateDto & { slug: TemplateSlug };
+type ProjectTab = "projects" | "community";
 
 const projectTabs = [
   { value: "projects", label: "My emails" },
-  { value: "templates", label: "Madoo templates" },
   { value: "community", label: "Community" },
 ];
 
@@ -98,12 +85,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-function toSeedTemplate(template: TemplateDto): SeedTemplateDto | null {
-  const parsed = TemplateSlugSchema.safeParse(template.slug);
-  if (!parsed.success) return null;
-  return { ...template, slug: parsed.data };
-}
-
 function cloneSchema(schema: VariableSchemaRoot): VariableSchemaRoot {
   return {
     variables: schema.variables.map((variable) => ({ ...variable })),
@@ -127,8 +108,6 @@ export function ProjectShowCase() {
   const user = useAuthStore((state) => state.user);
   const [activeProjectTab, setActiveProjectTab] =
     useState<ProjectTab>("projects");
-  const [selectedTemplate, setSelectedTemplate] =
-    useState<SeedTemplateDto | null>(null);
   const [shareTarget, setShareTarget] = useState<EmailDto | null>(null);
   const [privateTarget, setPrivateTarget] =
     useState<CommunityTemplateDto | null>(null);
@@ -141,12 +120,6 @@ export function ProjectShowCase() {
     enabled: Boolean(user),
   });
 
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
-    queryKey: ["templates"],
-    queryFn: fetchTemplates,
-    enabled: Boolean(user),
-  });
-
   const {
     data: communityTemplates = [],
     isLoading: communityTemplatesLoading,
@@ -155,15 +128,6 @@ export function ProjectShowCase() {
     queryFn: fetchCommunityTemplates,
     enabled: Boolean(user),
   });
-
-  const seedTemplates = useMemo(
-    () =>
-      templates
-        .map(toSeedTemplate)
-        .filter((template): template is SeedTemplateDto => Boolean(template))
-        .slice(0, 12),
-    [templates],
-  );
 
   const recentEmails = useMemo(
     () =>
@@ -184,43 +148,10 @@ export function ProjectShowCase() {
     [communityTemplates, selectedCommunityTemplateId],
   );
 
-  const previewQuery = useQuery({
-    queryKey: ["template-preview", selectedTemplate?.slug],
-    queryFn: () => previewSeedTemplate(selectedTemplate!.slug),
-    enabled: Boolean(selectedTemplate),
-  });
-
   const communityDetailQuery = useQuery({
     queryKey: ["community-template", selectedCommunityTemplateId],
     queryFn: () => fetchCommunityTemplate(selectedCommunityTemplateId!),
     enabled: Boolean(selectedCommunityTemplateId),
-  });
-
-  const createTemplateMutation = useMutation({
-    mutationFn: (template: SeedTemplateDto) =>
-      createEmailFromTemplate({
-        templateSlug: template.slug,
-        prompt:
-          template.description ||
-          `Create an email from the ${template.name} template.`,
-        tone: "Professional",
-        length: "Medium",
-      }),
-    onSuccess: async (email) => {
-      setSelectedTemplate(null);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["emails"] }),
-        queryClient.invalidateQueries({ queryKey: ["billing-overview"] }),
-      ]);
-      router.push(`/email-template-project?id=${encodeURIComponent(email.id)}`);
-    },
-    onError: (error) => {
-      toast({
-        tone: "danger",
-        title: "Template creation failed",
-        body: getErrorMessage(error, "Try again."),
-      });
-    },
   });
 
   const emailStarMutation = useMutation({
@@ -334,25 +265,17 @@ export function ProjectShowCase() {
   });
 
   const loading =
-    activeProjectTab === "projects"
-      ? emailsLoading
-      : activeProjectTab === "templates"
-        ? templatesLoading
-        : communityTemplatesLoading;
+    activeProjectTab === "projects" ? emailsLoading : communityTemplatesLoading;
 
   const activeCount =
     activeProjectTab === "projects"
       ? recentEmails.length
-      : activeProjectTab === "templates"
-        ? seedTemplates.length
-        : communityTemplates.length;
+      : communityTemplates.length;
 
   const emptyCopy =
     activeProjectTab === "projects"
       ? "No emails yet"
-      : activeProjectTab === "templates"
-        ? "No templates yet"
-        : "No community templates yet";
+      : "No community templates yet";
 
   return (
     <div className="relative z-10 w-full px-6 py-6">
@@ -418,18 +341,6 @@ export function ProjectShowCase() {
                 ))
               : null}
 
-            {activeProjectTab === "templates"
-              ? seedTemplates.map((template) => (
-                  <TemplateCard
-                    badge={template.category ?? undefined}
-                    key={template.slug}
-                    onClick={() => setSelectedTemplate(template)}
-                    subtitle={template.description ?? "Seed template"}
-                    title={template.name}
-                  />
-                ))
-              : null}
-
             {activeProjectTab === "community"
               ? communityTemplates.map((template) => (
                   <TemplateCard
@@ -479,59 +390,6 @@ export function ProjectShowCase() {
           </div>
         )}
       </Card>
-
-      <Modal
-        footer={
-          <>
-            <Button
-              onClick={() => setSelectedTemplate(null)}
-              size="sm"
-              variant="ghost"
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={!selectedTemplate || createTemplateMutation.isPending}
-              onClick={() =>
-                selectedTemplate
-                  ? createTemplateMutation.mutate(selectedTemplate)
-                  : undefined
-              }
-              size="sm"
-              variant="primary"
-            >
-              {createTemplateMutation.isPending ? "Creating" : "Use template"}
-            </Button>
-          </>
-        }
-        onClose={() => setSelectedTemplate(null)}
-        open={Boolean(selectedTemplate)}
-        size="xl"
-        title={selectedTemplate?.name}
-      >
-        <div
-          className={cx(
-            "overflow-hidden rounded-lg bg-white shadow-madoo-border",
-            previewQuery.isLoading && "grid min-h-105 place-items-center",
-          )}
-        >
-          {previewQuery.isLoading ? (
-            <span className="text-sm text-madoo-ink-muted">
-              Loading preview
-            </span>
-          ) : previewQuery.data?.compiledHtml ? (
-            <EmailPreviewFrame
-              className="h-130"
-              html={previewQuery.data.compiledHtml}
-              title={`${selectedTemplate?.name ?? "Template"} preview`}
-            />
-          ) : (
-            <div className="grid min-h-80 place-items-center text-sm text-madoo-ink-muted">
-              Preview unavailable
-            </div>
-          )}
-        </div>
-      </Modal>
 
       <ShareToCommunityModal
         email={shareTarget}

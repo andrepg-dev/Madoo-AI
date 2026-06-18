@@ -11,5 +11,3 @@ export const GOOGLE_CLIENT_ID =
   "1045426416197-caerjkkajfie6j7789fi72trr35pltop.apps.googleusercontent.com";
 
 export const GITHUB_CLIENT_ID = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID ?? "";
-
-export const APPLE_CLIENT_ID = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID ?? "";

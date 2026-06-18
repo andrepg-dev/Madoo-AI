@@ -73,7 +73,7 @@ export default function Page() {
             ))}
           </div>
 
-          Connect your email templates with your providers
+          Export your crafted email templates with your providers
         </div>
 
         <h3 className="z-50 text-3xl text-black text-center">

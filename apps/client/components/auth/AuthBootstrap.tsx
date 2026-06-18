@@ -6,6 +6,7 @@ import { useClientStore } from "@/stores/client-store";
 import { readCookie, WORKSPACE_COOKIE } from "@/lib/cookies";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
+import posthog from "posthog-js";
 
 export function AuthBootstrap() {
   const setUser = useAuthStore((s) => s.setUser);
@@ -23,6 +24,12 @@ export function AuthBootstrap() {
     if (user) {
       const stored = readCookie(WORKSPACE_COOKIE);
       if (stored) setWorkspaceId(stored);
+      posthog.identify(user.id, {
+        email: user.email,
+        name: user.name ?? undefined,
+      });
+    } else {
+      posthog.reset();
     }
   }, [user, isFetched, setUser, setWorkspaceId]);
 

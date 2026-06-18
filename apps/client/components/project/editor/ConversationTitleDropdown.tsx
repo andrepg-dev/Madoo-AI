@@ -54,7 +54,7 @@ export function ConversationTitleDropdown({
     enabled: Boolean(user && workspaceId),
   });
 
-  const usage = billingOverview?.usage.aiGenerations;
+  const usage = billingOverview?.usage.dailyAiGenerations;
   const usageLimit = usage?.limit ?? 0;
   const creditsLeft =
     usageLimit === -1 ? null : Math.max(usageLimit - (usage?.used ?? 0), 0);
@@ -112,7 +112,7 @@ export function ConversationTitleDropdown({
         <DropdownDivider />
 
         <DropdownItem asChild className="justify-start! gap-2 px-2! py-1.5!">
-          <Link href="/settings">
+          <Link href="/settings/profile">
             <Avatar
               name={user?.name ?? user?.email ?? "User"}
               src={user?.avatarUrl ?? undefined}
@@ -132,15 +132,15 @@ export function ConversationTitleDropdown({
         <Card surface="secondary" className="grid gap-1.5 p-2!">
           <div className="flex items-center justify-between gap-2">
             <span className="text-(length:--font-size-base) font-normal">
-              Credits
+              Daily credits
             </span>
             <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
               {creditsText}
             </span>
           </div>
-          <ProgressBar value={creditsPct} tone="ink" label="Credits left" />
+          <ProgressBar value={creditsPct} tone="ink" label="Daily credits left" />
           <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
-            Credits reset {formatCreditReset(usage?.resetsAt)}
+            Resets {formatCreditReset(usage?.resetsAt)}
           </span>
         </Card>
 
@@ -150,7 +150,7 @@ export function ConversationTitleDropdown({
           asChild
           className="justify-start! px-2! py-1! text-[13px]!"
         >
-          <Link href="/settings?area=workspace&section=overview">
+          <Link href="/settings/general">
             <span className="flex items-center gap-2.5">
               <HeaderMenuIcon icon={Settings01Icon} />
               Settings
@@ -185,7 +185,7 @@ export function ConversationTitleDropdown({
           asChild
           className="justify-start! px-2! py-1! text-[13px]!"
         >
-          <Link href="/settings?area=support">
+          <Link href="/settings/support">
             <span className="flex items-center gap-2.5">
               <HeaderMenuIcon icon={HelpCircleIcon} />
               Help

@@ -117,14 +117,10 @@ export function DropdownTrigger({
 }: DropdownTriggerProps) {
   const { open, setOpen } = useDropdown();
 
-  const triggerProps = {
+  const sharedTriggerProps = {
     "aria-haspopup": "menu" as const,
     "aria-expanded": open,
     "data-state": open ? "open" : "closed",
-    className: cx(
-      "inline-flex cursor-pointer items-center justify-center rounded-lg border-0 bg-(--surface) text-(--ink) shadow-madoo-border transition-[background,color,box-shadow] duration-(--duration-fast) ease-out hover:bg-(--surface-2) hover:shadow-(--shadow-border-rule-hover) data-[state=open]:bg-(--surface-2) data-[state=open]:shadow-(--shadow-border-rule-hover)",
-      className,
-    ),
     onClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
       onClick?.(event);
       if (!event.defaultPrevented) setOpen(!open);
@@ -136,10 +132,10 @@ export function DropdownTrigger({
     if (!isValidElement(child)) return null;
 
     return cloneElement(child as ReactElement<Record<string, unknown>>, {
-      ...triggerProps,
+      ...sharedTriggerProps,
       ...rest,
       className: cx(
-        triggerProps.className,
+        className,
         (child.props as { className?: string }).className,
       ),
     });
@@ -148,11 +144,11 @@ export function DropdownTrigger({
   return (
     <button
       type="button"
-      className={triggerProps.className}
-      onClick={triggerProps.onClick}
-      aria-haspopup="menu"
-      aria-expanded={open}
-      data-state={open ? "open" : "closed"}
+      className={cx(
+        "inline-flex cursor-pointer items-center justify-center rounded-lg border-0 bg-(--surface) text-(--ink) shadow-madoo-border transition-[background,color,box-shadow] duration-(--duration-fast) ease-out hover:bg-(--surface-2) hover:shadow-(--shadow-border-rule-hover) data-[state=open]:bg-(--surface-2) data-[state=open]:shadow-(--shadow-border-rule-hover)",
+        className,
+      )}
+      {...sharedTriggerProps}
       {...rest}
     >
       {children}

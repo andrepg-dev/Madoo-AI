@@ -8,6 +8,7 @@ import { Avatar, Button, Card, Icon, useToast } from "@madoo/design-system";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import posthog from "posthog-js";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -49,6 +50,9 @@ export default function InvitePage() {
   const acceptMutation = useMutation({
     mutationFn: acceptInvite,
     onSuccess: async (result) => {
+      posthog.capture("workspace_invite_accepted", {
+        workspace_id: result.workspace.id,
+      });
       setWorkspaceId(result.workspace.id);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
