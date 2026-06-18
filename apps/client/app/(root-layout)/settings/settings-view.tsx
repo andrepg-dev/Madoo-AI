@@ -260,24 +260,28 @@ function SettingsCard({
   description,
   children,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   children: React.ReactNode;
 }) {
   return (
     <Card className="rounded-[20px]! p-5!">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold leading-none text-madoo-ink">
-            {title}
-          </h2>
-          {description ? (
-            <p className="mt-2 text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
-              {description}
-            </p>
-          ) : null}
+      {title || description ? (
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            {title ? (
+              <h2 className="text-lg font-semibold leading-none text-madoo-ink">
+                {title}
+              </h2>
+            ) : null}
+            {description ? (
+              <p className="mt-2 text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
+                {description}
+              </p>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
       {children}
     </Card>
   );
@@ -346,10 +350,7 @@ function AccountPanel({ section }: { section: AccountSection }) {
     };
 
     return (
-      <SettingsCard
-        title="Completion sound"
-        description="Choose how Madoo notifies you when generation completes."
-      >
+      <SettingsCard>
         <div className="grid gap-4">
           <SegmentedControl
             aria-label="Completion sound"
@@ -384,10 +385,7 @@ function AccountPanel({ section }: { section: AccountSection }) {
   }
 
   return (
-    <SettingsCard
-      title="User profile"
-      description="Change display name and account avatar."
-    >
+    <SettingsCard>
       <div className="grid max-w-xl gap-4">
         <div className="flex items-center gap-3">
           <Avatar
@@ -660,10 +658,7 @@ function WorkspacePanel({
 
   if (section === "avatar") {
     return (
-      <SettingsCard
-        title="Workspace avatar"
-        description="Set identity shown in navigation."
-      >
+      <SettingsCard>
         <div className="flex flex-wrap items-center gap-4">
           <Avatar
             name={activeWorkspace.name}
@@ -709,10 +704,7 @@ function WorkspacePanel({
 
     return (
       <div className="grid gap-4">
-        <SettingsCard
-          title="Members"
-          description="Manage workspace access and roles."
-        >
+        <SettingsCard>
           <div className="grid gap-2">
             {membersQuery.isLoading ? (
               <p className="text-(length:--font-size-base) text-madoo-ink-muted">
@@ -847,10 +839,7 @@ function WorkspacePanel({
 
   if (section === "danger") {
     return (
-      <SettingsCard
-        title="Danger zone"
-        description="Permanent workspace actions with backend ownership checks."
-      >
+      <SettingsCard>
         <div className="grid gap-4">
           <div className="rounded-lg bg-madoo-bg-2 p-4 shadow-madoo-border">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -911,10 +900,7 @@ function WorkspacePanel({
   }
 
   return (
-    <SettingsCard
-      title="Workspace name"
-      description="Rename active workspace and edit its URL slug."
-    >
+    <SettingsCard>
       <div className="grid max-w-xl gap-4">
         <Input
           label="Workspace name"
@@ -1054,10 +1040,7 @@ function SupportPanel({
   });
 
   return (
-    <SettingsCard
-      title="Contact support"
-      description="Tell us what's going on — pick a category and we'll route it to the right place."
-    >
+    <SettingsCard description="Tell us what's going on — pick a category and we'll route it to the right place.">
       <div className="grid gap-4">
         {ticketId ? (
           <div className="flex items-start gap-2.5 rounded-lg bg-madoo-bg-2 p-3.5 shadow-madoo-border">
