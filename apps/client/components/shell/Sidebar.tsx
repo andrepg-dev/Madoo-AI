@@ -677,8 +677,8 @@ export function Sidebar() {
 
       <div
         className={cx(
-          "flex w-full gap-1.5 justify-between",
-          collapsed && "grid",
+          "w-full gap-1.5",
+          collapsed ? "grid justify-items-center" : "flex justify-between",
         )}
       >
         <Dropdown>
@@ -699,7 +699,11 @@ export function Sidebar() {
               className="w-max shadow-none! hover:shadow-none! data-[state=open]:shadow-none!"
             />
           </DropdownTrigger>
-          <DropdownContent side="top" className="w-56 p-2!">
+          <DropdownContent
+            side={collapsed ? "right" : "top"}
+            align={collapsed ? "end" : "start"}
+            className="w-56 p-2!"
+          >
             <div className="flex items-center gap-2.5 p-1.5">
               <Avatar
                 name={user?.name ?? user?.email ?? "User"}
