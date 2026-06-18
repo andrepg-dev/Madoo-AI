@@ -8,6 +8,7 @@
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
     "lint": "echo \"backend lint placeholder\"",
+    "test": "node --require ts-node/register/transpile-only --test src/billing/credit-window.spec.ts",
     "clean": "rm -rf dist .turbo",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
