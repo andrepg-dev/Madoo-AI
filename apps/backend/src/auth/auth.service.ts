@@ -1,6 +1,5 @@
 import {
   AuthSessionResponseSchema,
-  type AppleLoginInput,
   type AuthSessionResponse,
   type GithubLoginInput,
   type PasswordLoginInput,
@@ -17,7 +16,6 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import type { User } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { PrismaService } from "../prisma/prisma.service";
 import { toUserDto } from "../users/dto/user.dto";
 import { toMyWorkspaceDto } from "../workspaces/dto/workspace.dto";
@@ -33,10 +31,6 @@ type PendingPromptInput = {
   pendingLength?: string;
   pendingAudience?: string;
 };
-
-const APPLE_JWKS = createRemoteJWKSet(
-  new URL("https://appleid.apple.com/auth/keys"),
-);
 
 @Injectable()
 export class AuthService {
@@ -211,48 +205,6 @@ export class AuthService {
     return this.issueSession(user, dto);
   }
 
-  async loginWithApple(dto: AppleLoginInput): Promise<AuthResult> {
-    const clientId = this.config.get<string>("APPLE_CLIENT_ID");
-    if (!clientId) {
-      throw new ServiceUnavailableException(
-        "Apple login is not configured (APPLE_CLIENT_ID).",
-      );
-    }
-
-    let payload: {
-      sub?: string;
-      email?: string;
-      email_verified?: string | boolean;
-    };
-    try {
-      const verified = await jwtVerify(dto.idToken, APPLE_JWKS, {
-        issuer: "https://appleid.apple.com",
-        audience: clientId,
-      });
-      payload = verified.payload as typeof payload;
-    } catch {
-      throw new UnauthorizedException("Invalid Apple identity token.");
-    }
-
-    if (!payload.sub || !payload.email) {
-      throw new UnauthorizedException(
-        "Apple token is missing required claims.",
-      );
-    }
-
-    const user = await this.upsertOauthUser({
-      provider: "APPLE",
-      providerAccountId: payload.sub,
-      email: payload.email.toLowerCase(),
-      emailVerified:
-        payload.email_verified === true || payload.email_verified === "true",
-      name: dto.name ?? null,
-      avatarUrl: null,
-    });
-
-    return this.issueSession(user, dto);
-  }
-
   async issueSession(
     user: User,
     pending?: PendingPromptInput,
@@ -312,7 +264,7 @@ export class AuthService {
   }
 
   private async upsertOauthUser(input: {
-    provider: "GITHUB" | "APPLE";
+    provider: "GITHUB";
     providerAccountId: string;
     email: string;
     emailVerified: boolean;
@@ -376,7 +328,7 @@ export class AuthService {
 
   private async linkAuthAccount(
     userId: string,
-    provider: "GOOGLE" | "GITHUB" | "APPLE",
+    provider: "GOOGLE" | "GITHUB",
     providerAccountId: string,
     email: string | null,
   ): Promise<void> {

@@ -8,7 +8,7 @@ import { API_URL } from "@/lib/env";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
-type Provider = "google" | "register" | "login" | "apple";
+type Provider = "google" | "register" | "login";
 
 type AuthSessionPayload = {
   token: string;
@@ -28,14 +28,12 @@ type PendingFields = {
 type AuthPayload =
   | ({ idToken: string } & PendingFields)
   | ({ email: string; password: string; name?: string } & PendingFields)
-  | ({ email: string; password: string } & PendingFields)
-  | ({ idToken: string; name?: string } & PendingFields);
+  | ({ email: string; password: string } & PendingFields);
 
 const PROVIDERS: Record<Provider, string> = {
   google: "/auth/google",
   register: "/auth/register",
   login: "/auth/login",
-  apple: "/auth/apple",
 };
 
 function optionalString(value: unknown): string | undefined {
@@ -58,17 +56,6 @@ function parsePayload(provider: Provider, raw: unknown): AuthPayload | null {
   if (provider === "google") {
     const idToken = optionalString(input.idToken);
     return idToken ? { idToken, ...pendingFields(input) } : null;
-  }
-
-  if (provider === "apple") {
-    const idToken = optionalString(input.idToken);
-    return idToken
-      ? {
-          idToken,
-          name: optionalString(input.name),
-          ...pendingFields(input),
-        }
-      : null;
   }
 
   const email = optionalString(input.email);
