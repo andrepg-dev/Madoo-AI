@@ -55,6 +55,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Fragment,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -64,7 +65,7 @@ import {
 import "streamdown/styles.css";
 import posthog from "posthog-js";
 
-export default function EmailTemplateProject() {
+function EmailTemplateProjectInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -982,5 +983,13 @@ export default function EmailTemplateProject() {
         }}
       />
     </main>
+  );
+}
+
+export default function EmailTemplateProject() {
+  return (
+    <Suspense fallback={null}>
+      <EmailTemplateProjectInner />
+    </Suspense>
   );
 }

@@ -3,7 +3,7 @@
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
 import { ProjectShowCase } from "@/components/home/project-show-case";
 import { useAuthStore } from "@/stores/auth-store";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const emailProviders = [
   {
@@ -28,9 +28,23 @@ const emailProviders = [
   },
 ];
 
+const headlineMessages = [
+  "Let's craft something",
+  "Draft something sharp",
+  "Shape your next email",
+  "Turn ideas into campaigns",
+  "Build a better launch",
+  "Write something worth opening",
+  "Make your message click",
+  "Start with one clear idea",
+] as const;
+
 export default function Page() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const user = useAuthStore((state) => state.user);
+  const [headlineMessage, setHeadlineMessage] = useState<
+    (typeof headlineMessages)[number]
+  >(headlineMessages[0]);
   const firstName =
     user?.name?.trim().split(/\s+/)[0] || user?.email?.split("@")[0] || "";
 
@@ -38,6 +52,11 @@ export default function Page() {
     const video = videoRef.current;
     if (!video) return;
     video.playbackRate = 0.4;
+  }, []);
+
+  useEffect(() => {
+    const nextIndex = Math.floor(Math.random() * headlineMessages.length);
+    setHeadlineMessage(headlineMessages[nextIndex]);
   }, []);
 
   return (
@@ -77,9 +96,7 @@ export default function Page() {
         </div>
 
         <h3 className="z-50 text-3xl text-black text-center">
-          {firstName
-            ? `Let's craft something, ${firstName}`
-            : "Let's craft something"}
+          {firstName ? `${headlineMessage}, ${firstName}` : headlineMessage}
         </h3>
         <div className="self-center">
           <ClientPromptBox />
