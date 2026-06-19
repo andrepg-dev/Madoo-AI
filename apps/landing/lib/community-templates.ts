@@ -1,4 +1,4 @@
-import { VariableSchemaRootSchema } from "@madoo/shared";
+import { VariableSchemaRootSchema, type VariableSchemaRoot } from "@madoo/shared";
 import { API_URL } from "./env";
 
 export type LandingCommunityTemplate = {
@@ -9,6 +9,7 @@ export type LandingCommunityTemplate = {
   previewUrl: string | null;
   authorName: string | null;
   variableCount: number;
+  variables: VariableSchemaRoot["variables"];
 };
 
 const COMMUNITY_TEMPLATES_URL = `${API_URL.replace(/\/$/, "")}/public/community-templates`;
@@ -37,6 +38,7 @@ function toLandingTemplate(raw: unknown): LandingCommunityTemplate | null {
     previewUrl: nullableString(template.previewUrl),
     authorName: nullableString(template.authorName),
     variableCount: variableSchema.data.variables.length,
+    variables: variableSchema.data.variables,
   };
 }
 

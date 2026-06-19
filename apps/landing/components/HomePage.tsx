@@ -20,11 +20,16 @@ import {
   cx,
 } from "@madoo/design-system";
 import { CLIENT_APP_URL } from "@/lib/env";
+import { useDictation } from "@/lib/use-dictation";
 import type { LandingCommunityTemplate } from "@/lib/community-templates";
+import type { VariableSchemaRoot } from "@madoo/shared";
 import Image from "next/image";
 import type { ChangeEvent, KeyboardEvent, SVGAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
 import AuthDialog from "./AuthDialog";
+import TemplatePreviewDialog, {
+  type TemplatePreviewData,
+} from "./TemplatePreviewDialog";
 import { LandingHeader } from "./LandingHeader";
 
 const exportProviders = [
@@ -219,7 +224,36 @@ type TemplateShowcaseCard = {
   authorName?: string | null;
   category?: string | null;
   variableCount?: number;
+  variables?: VariableSchemaRoot["variables"];
 };
+
+const TEMPLATE_ROLE_LABELS: Record<string, string> = {
+  text: "Text",
+  url: "URL",
+  image: "Image",
+  date: "Date",
+};
+
+const WORKSPACE_COOKIE = "madoo.workspace.id";
+
+/**
+ * The auth + workspace cookies are shared across `.madooai.com`, and the
+ * workspace cookie is readable from JS — its presence is a good-enough signal
+ * that the visitor is already signed in, so we can send them straight to the
+ * app to use a template instead of forcing the login dialog.
+ */
+function isLikelySignedIn(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie
+    .split(";")
+    .some((part) => part.trim().startsWith(`${WORKSPACE_COOKIE}=`));
+}
+
+function clientUseTemplateUrl(id: string): string {
+  const url = new URL("/use-template", CLIENT_APP_URL);
+  url.searchParams.set("id", id);
+  return url.toString();
+}
 
 function getRequestedMasonryColumnCount(maxColumns: number) {
   if (window.matchMedia("(min-width: 1280px)").matches) return maxColumns;
@@ -389,6 +423,10 @@ const localeCopy = {
       hover: "Template Details",
       by: "By",
       variables: "variables",
+      noVariables: "No variables.",
+      use: "Use template",
+      using: "Opening…",
+      close: "Close",
       communityFallbackDescription: "Community template.",
       cards: [
         {
@@ -537,6 +575,10 @@ const localeCopy = {
       hover: "Detalles",
       by: "Por",
       variables: "variables",
+      noVariables: "Sin variables.",
+      use: "Usar plantilla",
+      using: "Abriendo…",
+      close: "Cerrar",
       communityFallbackDescription: "Plantilla de la comunidad.",
       cards: [
         {
@@ -775,6 +817,7 @@ export default function HomePage({
       authorName: template.authorName,
       category: template.category,
       variableCount: template.variableCount,
+      variables: template.variables,
       isCommunityTemplate: true,
     }),
   );
@@ -808,6 +851,10 @@ export default function HomePage({
   >({});
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [previewTemplate, setPreviewTemplate] =
+    useState<TemplatePreviewData | null>(null);
+  const [usingTemplate, setUsingTemplate] = useState(false);
+  const dictation = useDictation({ value: prompt, onChange: setPrompt });
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const ctaPromptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
@@ -839,6 +886,32 @@ export default function HomePage({
   const openAuthDialog = () => setAuthDialogOpen(true);
   const closeAuthDialog = () => setAuthDialogOpen(false);
 
+  const openTemplatePreview = (template: TemplateShowcaseCard) =>
+    setPreviewTemplate(template);
+
+  // View is always free. "Use" needs an account: signed-in visitors go straight
+  // to the app (which owns the session), otherwise we open the login dialog and
+  // resume into the app once they authenticate. Decorative sample cards (no id)
+  // just funnel to sign-up.
+  const handleUseTemplate = (template: TemplatePreviewData) => {
+    if (!template.id) {
+      setPreviewTemplate(null);
+      openAuthDialog();
+      return;
+    }
+
+    const target = clientUseTemplateUrl(template.id);
+    if (isLikelySignedIn()) {
+      setUsingTemplate(true);
+      window.location.assign(target);
+      return;
+    }
+
+    setNextUrl(target);
+    setPreviewTemplate(null);
+    setAuthDialogOpen(true);
+  };
+
   const addFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const next = Array.from(files).map((file) => ({
@@ -865,12 +938,14 @@ export default function HomePage({
 
   const openImagePicker = () => imageInputRef.current?.click();
   const openFilePicker = () => fileInputRef.current?.click();
-  const onTemplateCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      openAuthDialog();
-    }
-  };
+  const onTemplateCardKeyDown =
+    (template: TemplateShowcaseCard) =>
+    (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openTemplatePreview(template);
+      }
+    };
 
   const renderTemplateCard = (
     template: TemplateShowcaseCard,
@@ -880,8 +955,8 @@ export default function HomePage({
       key={template.id ?? template.name}
       role="button"
       tabIndex={0}
-      onClick={openAuthDialog}
-      onKeyDown={onTemplateCardKeyDown}
+      onClick={() => openTemplatePreview(template)}
+      onKeyDown={onTemplateCardKeyDown(template)}
       className="group w-full min-w-0 cursor-pointer outline-none"
     >
       <TemplatePreviewImage
@@ -978,6 +1053,22 @@ export default function HomePage({
         tone={selectedTone}
         length={selectedLength}
         nextUrl={nextUrl}
+      />
+
+      <TemplatePreviewDialog
+        template={previewTemplate}
+        isUsing={usingTemplate}
+        onClose={() => setPreviewTemplate(null)}
+        onUse={handleUseTemplate}
+        copy={{
+          close: copy.templates.close,
+          by: copy.templates.by,
+          variables: copy.templates.variables,
+          noVariables: copy.templates.noVariables,
+          use: copy.templates.use,
+          using: copy.templates.using,
+          roleLabels: TEMPLATE_ROLE_LABELS,
+        }}
       />
 
       <input
@@ -1097,7 +1188,13 @@ export default function HomePage({
                   <div className="flex shrink-0 items-center justify-end gap-2">
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#101114] transition-[background,color] duration-(--duration-fast) ease-out hover:bg-[rgb(var(--rule-rgb)/0.06)]"
+                      onClick={dictation.toggle}
+                      aria-pressed={dictation.isListening}
+                      className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-[background,color] duration-(--duration-fast) ease-out ${
+                        dictation.isListening
+                          ? "bg-red-500/10 text-red-600"
+                          : "text-[#101114] hover:bg-[rgb(var(--rule-rgb)/0.06)]"
+                      }`}
                       aria-label={copy.hero.microphone}
                     >
                       <HugeiconsIcon
@@ -1427,7 +1524,13 @@ export default function HomePage({
                   <div className="flex items-center justify-end gap-2">
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#101114] transition-[background,color] duration-(--duration-fast) ease-out hover:bg-[rgb(var(--rule-rgb)/0.06)]"
+                      onClick={dictation.toggle}
+                      aria-pressed={dictation.isListening}
+                      className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-[background,color] duration-(--duration-fast) ease-out ${
+                        dictation.isListening
+                          ? "bg-red-500/10 text-red-600"
+                          : "text-[#101114] hover:bg-[rgb(var(--rule-rgb)/0.06)]"
+                      }`}
                       aria-label={copy.hero.microphone}
                     >
                       <HugeiconsIcon
