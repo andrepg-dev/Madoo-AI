@@ -9,7 +9,13 @@ type CookieOptions = {
   secure?: boolean;
   path?: string;
   maxAge?: number;
+  domain?: string;
 };
+
+// Shared across landing (madooai.com) and the app (my.madooai.com) so the
+// session survives the cross-subdomain redirect. Host-only in dev (localhost).
+export const COOKIE_DOMAIN =
+  process.env.NODE_ENV === "production" ? ".madooai.com" : undefined;
 
 export const AUTH_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
@@ -17,6 +23,7 @@ export const AUTH_COOKIE_OPTIONS: CookieOptions = {
   secure: process.env.NODE_ENV === "production",
   path: "/",
   maxAge: ONE_YEAR_SECONDS,
+  domain: COOKIE_DOMAIN,
 };
 
 export const WORKSPACE_COOKIE_OPTIONS: CookieOptions = {
@@ -25,6 +32,7 @@ export const WORKSPACE_COOKIE_OPTIONS: CookieOptions = {
   secure: process.env.NODE_ENV === "production",
   path: "/",
   maxAge: ONE_YEAR_SECONDS,
+  domain: COOKIE_DOMAIN,
 };
 
 function getCookieValue(name: string): string | null {
@@ -43,10 +51,11 @@ export function readCookie(name: string): string | null {
 
 export function writeCookie(name: string, value: string | null) {
   if (typeof document === "undefined") return;
+  const domainAttr = COOKIE_DOMAIN ? `; Domain=${COOKIE_DOMAIN}` : "";
   if (!value) {
-    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax${domainAttr}`;
     return;
   }
   const encoded = encodeURIComponent(value);
-  document.cookie = `${name}=${encoded}; Path=/; Max-Age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
+  document.cookie = `${name}=${encoded}; Path=/; Max-Age=${ONE_YEAR_SECONDS}; SameSite=Lax${domainAttr}`;
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE } from "@/lib/cookies";
+import { AUTH_COOKIE, COOKIE_DOMAIN } from "@/lib/cookies";
 
 const PUBLIC_PREFIXES = ["/invite", "/share"] as const;
 
@@ -45,7 +45,7 @@ export async function middleware(req: NextRequest) {
   redirect.searchParams.set("next", next.toString());
 
   const response = NextResponse.redirect(redirect);
-  response.cookies.delete(AUTH_COOKIE);
+  response.cookies.delete({ name: AUTH_COOKIE, domain: COOKIE_DOMAIN, path: "/" });
   return response;
 }
 
