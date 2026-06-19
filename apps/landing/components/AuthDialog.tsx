@@ -410,13 +410,27 @@ export default function AuthDialog({
         </div>
 
         <div className="grid gap-3">
-          {authProviders.map((provider) => (
+          {authProviders.map((provider) =>
             provider.name === "Google" ? (
+              // The Google Identity button can't be styled to match our palette
+              // or radius, so we render our own button and overlay the real GSI
+              // button (transparent) on top to capture the click. Keeps the
+              // sign-in behavior while making both providers visually identical.
               <div
                 key={provider.name}
-                className={isSubmitting ? "pointer-events-none opacity-70" : ""}
+                className={`group relative ${isSubmitting ? "pointer-events-none opacity-70" : ""}`}
               >
-                <div ref={googleButtonRef} className="min-h-8 w-full" />
+                <div
+                  aria-hidden="true"
+                  className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-madoo-paper text-sm text-madoo-ink shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition group-hover:bg-madoo-neutral-50 group-hover:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.28)]"
+                >
+                  <span className="text-madoo-ink">{provider.icon}</span>
+                  {copy.continueWith} {provider.name}
+                </div>
+                <div
+                  ref={googleButtonRef}
+                  className="absolute inset-0 z-10 overflow-hidden opacity-0 [color-scheme:light] [&>div]:!h-full [&>div]:!w-full"
+                />
               </div>
             ) : (
               <button
@@ -429,8 +443,8 @@ export default function AuthDialog({
                 <span className="text-madoo-ink">{provider.icon}</span>
                 {copy.continueWith} {provider.name}
               </button>
-            )
-          ))}
+            ),
+          )}
         </div>
 
         <div className="my-5 flex items-center gap-3 text-xs text-zinc-900">
