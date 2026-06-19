@@ -174,7 +174,8 @@ const memberRoleOptions = [
 
 /** URL segment for a nav item, e.g. /settings/profile, /settings/general. */
 function slugOf(item: NavItem): string {
-  if (item.area === "workspace" && item.section === "overview") return "general";
+  if (item.area === "workspace" && item.section === "overview")
+    return "general";
   return item.section ?? item.area;
 }
 
@@ -216,7 +217,7 @@ function SettingsNavRow({
       className={cx(
         "inline-flex h-8 min-h-8 w-full cursor-pointer select-none items-center justify-start gap-2.5 overflow-hidden rounded-lg border-0 px-2.5 py-0 font-madoo-sans text-(length:--font-size-base) leading-none no-underline transition-[background,color,box-shadow] duration-(--duration-base) ease-out",
         active
-          ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)] font-normal text-madoo-accent-deep shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)] hover:text-madoo-accent-deep"
+          ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)] font-normal text-madoo-accent-deep shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)] hover:text-madoo-accent-deep"
           : "bg-transparent font-normal text-madoo-ink-soft hover:bg-[rgb(var(--rule-rgb)/0.08)] hover:text-madoo-ink",
       )}
     >
@@ -751,7 +752,9 @@ function WorkspacePanel({
                 options={inviteRoleOptions}
                 disabled={!admin}
                 onChange={(event) =>
-                  setInviteRole(event.currentTarget.value as WorkspaceInviteRole)
+                  setInviteRole(
+                    event.currentTarget.value as WorkspaceInviteRole,
+                  )
                 }
               />
               <div className="flex items-end">
@@ -876,7 +879,9 @@ function WorkspacePanel({
                 <Input
                   label="Workspace slug"
                   value={deleteConfirm}
-                  onChange={(event) => setDeleteConfirm(event.currentTarget.value)}
+                  onChange={(event) =>
+                    setDeleteConfirm(event.currentTarget.value)
+                  }
                 />
                 <Button
                   size="md"
@@ -1052,7 +1057,8 @@ function SupportPanel({
                 Request sent
               </p>
               <p className="mt-1.5 text-(length:--font-size-sm) leading-snug text-madoo-ink-muted">
-                Ticket {ticketId} — we usually reply in the same day you talk to us.
+                Ticket {ticketId} — we usually reply in the same day you talk to
+                us.
               </p>
             </div>
           </div>
@@ -1126,7 +1132,9 @@ export function SettingsView({ section: slug }: { section: string }) {
   const accountSection: AccountSection =
     area === "account" ? (activeItem.section as AccountSection) : "profile";
   const workspaceSection: WorkspaceSection =
-    area === "workspace" ? (activeItem.section as WorkspaceSection) : "overview";
+    area === "workspace"
+      ? (activeItem.section as WorkspaceSection)
+      : "overview";
   const activeGroup =
     navGroups.find((group) => group.items.includes(activeItem)) ?? navGroups[0];
 

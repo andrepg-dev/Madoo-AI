@@ -183,7 +183,7 @@ function SidebarNavButton({
   const className = cx(
     "inline-flex h-8 min-h-8 w-full cursor-pointer select-none items-center overflow-hidden rounded-lg border-0 py-0 font-madoo-sans text-(length:--font-size-base) leading-none no-underline transition-[width,padding,background,color,box-shadow,opacity] duration-(--duration-base) ease-out",
     active
-      ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)] font-normal text-madoo-accent-deep shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_14%,white)] hover:text-madoo-accent-deep"
+      ? "bg-[color-mix(in_srgb,var(--accent)_10%,white)] font-normal text-madoo-accent-deep shadow-[inset_0_0_0_0.5px_color-mix(in_srgb,var(--accent)_18%,transparent)] hover:text-madoo-accent-deep"
       : "bg-transparent font-normal text-madoo-ink-soft hover:bg-[rgb(var(--rule-rgb)/0.08)] hover:text-madoo-ink",
     "justify-start gap-2.5 px-2.5",
   );
@@ -709,6 +709,9 @@ export function Sidebar() {
             {user ? (
               <>
                 <DropdownLink href="/settings/profile">Profile</DropdownLink>
+                <DropdownLink href="/settings/billing">
+                  Billing & usage
+                </DropdownLink>
                 <DropdownLink href="/settings/general">Settings</DropdownLink>
                 <DropdownItem
                   className="justify-start! text-madoo-danger"

@@ -386,7 +386,7 @@ export function ProjectShowCase() {
             ) : null}
           </>
         ) : (
-          <div className="grid min-h-60 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
+          <div className="grid min-h-90 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
             <div className="grid justify-items-center gap-2">
               <span className="grid size-10 place-items-center rounded-lg bg-madoo-bg-2 text-madoo-ink-muted">
                 <Icon

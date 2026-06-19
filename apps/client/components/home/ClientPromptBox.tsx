@@ -476,7 +476,7 @@ export function ClientPromptBox({
                 aria-haspopup="menu"
                 aria-expanded={attachMenuOpen}
                 className={cn(
-                  "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]",
+                  "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[rgb(var(--rule-rgb)/0.06)]",
                   isChatVariant ? "h-7 w-7" : "h-8 w-8",
                 )}
                 aria-label="Add attachment"
@@ -489,7 +489,7 @@ export function ClientPromptBox({
                 />
               </button>
 
-              <DropdownContent side="top" align="start" className="min-w-44">
+              <DropdownContent side="bottom" align="start" className="min-w-44">
                 <DropdownItem onSelect={() => imageInputRef.current?.click()}>
                   <span>Upload image</span>
                   <HugeiconsIcon
@@ -516,7 +516,7 @@ export function ClientPromptBox({
             <button
               type="button"
               className={cn(
-                "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]",
+                "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[rgb(var(--rule-rgb)/0.06)]",
                 isChatVariant ? "h-7 w-7" : "h-8 w-8",
               )}
               aria-label="Use microphone"

@@ -1156,7 +1156,7 @@ export default function HomePage({
                       key={feature.title}
                       className="madoo-paper-border madoo-paper-border-hover group min-h-47.5 rounded-lg bg-white p-5 transition"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f3faff] text-[#071b38] transition group-hover:bg-[#e7f0ff]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f3faff] text-[#071b38] transition group-hover:bg-[rgb(var(--rule-rgb)/0.06)]">
                         <HugeiconsIcon
                           icon={Icon}
                           size={20}
