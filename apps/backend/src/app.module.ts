@@ -16,6 +16,7 @@ import { PromptsModule } from "./prompts/prompts.module";
 import { SupportModule } from "./support/support.module";
 import { TemplatesModule } from "./templates/templates.module";
 import { TestingModule } from "./testing/testing.module";
+import { TranscriptionModule } from "./transcription/transcription.module";
 import { UsersModule } from "./users/users.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
 
@@ -70,6 +71,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     CommunityTemplatesModule,
     SupportModule,
     TestingModule,
+    TranscriptionModule,
     InvitesModule,
     ConnectionsModule,
     ExportsModule,
