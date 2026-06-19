@@ -412,7 +412,7 @@ export class GenerationService {
   generateEmailStream(
     emailId: string,
     workspaceId: string,
-    body?: { imageUrls?: string[] },
+    body?: { prompt?: string; imageUrls?: string[] },
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
       void (async () => {
@@ -427,6 +427,7 @@ export class GenerationService {
               subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
             undefined,
             body?.imageUrls,
+            body?.prompt,
           );
           subscriber.complete();
         } catch (e) {
@@ -617,9 +618,28 @@ export class GenerationService {
     emit: (p: Record<string, unknown>) => void,
     groupId?: string,
     imageUrls?: string[],
+    promptOverride?: string,
   ): Promise<void> {
     await this.billing.assertCanGenerate(workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
+    const replacementPrompt = promptOverride?.trim();
+    if (replacementPrompt) {
+      await this.prisma.$transaction([
+        this.prisma.email.update({
+          where: { id: emailId },
+          data: { prompt: replacementPrompt },
+        }),
+        this.prisma.emailChatMessage.create({
+          data: {
+            workspaceId,
+            emailId,
+            role: "USER",
+            kind: "TEXT",
+            content: replacementPrompt,
+          },
+        }),
+      ]);
+    }
     const ctx = await this.loadGenerationContext(emailId, workspaceId);
 
     const userPrompt = [
@@ -628,7 +648,7 @@ export class GenerationService {
       ctx.length ? `Length preference: ${ctx.length}` : "",
       ctx.audience ? `Audience: ${ctx.audience}` : "",
       ctx.template?.componentCode
-        ? `Starter HTML Coditor reference template (do not copy verbatim; adapt):\n${ctx.template.componentCode.slice(0, 12000)}`
+        ? `Reference HTML Coditor template (do not copy verbatim; adapt):\n${ctx.template.componentCode.slice(0, 12000)}`
         : "",
     ]
       .filter(Boolean)
