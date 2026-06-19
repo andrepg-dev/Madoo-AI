@@ -1,24 +1,41 @@
 import { fetchPublicEmail } from "@/actions/emails";
 import { DeviceFramePreview } from "@/components/project/preview/DeviceFramePreview";
 import type { PublicEmailDto } from "@madoo/shared";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { cache } from "react";
 
 export const dynamic = "force-dynamic";
 
-async function loadPublicEmail(publicId: string): Promise<PublicEmailDto | null> {
+const loadPublicEmail = cache(async function loadPublicEmail(
+  publicId: string,
+): Promise<PublicEmailDto | null> {
   try {
     return await fetchPublicEmail(publicId);
   } catch {
     return null;
   }
+});
+
+type SharedEmailPageProps = {
+  params: Promise<{ publicId: string }>;
+};
+
+export async function generateMetadata({
+  params,
+}: SharedEmailPageProps): Promise<Metadata> {
+  const { publicId } = await params;
+  const email = await loadPublicEmail(publicId);
+
+  return {
+    title: email?.title ?? email?.subject ?? "Shared Email",
+  };
 }
 
 export default async function SharedEmailPage({
   params,
-}: {
-  params: Promise<{ publicId: string }>;
-}) {
+}: SharedEmailPageProps) {
   const { publicId } = await params;
   const email = await loadPublicEmail(publicId);
 
