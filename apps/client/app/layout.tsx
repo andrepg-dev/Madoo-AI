@@ -40,7 +40,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Madoo Client",
+  title: {
+    default: "Madoo AI",
+    template: "Madoo AI | %s",
+  },
   description: "Madoo AI client platform for email generation workflows.",
   robots: {
     index: false,
