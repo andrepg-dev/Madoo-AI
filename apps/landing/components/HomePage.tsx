@@ -147,15 +147,60 @@ const workflowSteps = [
   },
 ];
 
-const templateMasonryPreviewClasses = [
-  "aspect-[4/5]",
-  "aspect-[5/7]",
-  "aspect-[3/4]",
-  "aspect-[7/10]",
-  "aspect-[2/3]",
-] as const;
 const templateMasonryWeights = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
+// Tile heights (height / width) used before the preview image loads; mirrors
+// `templateMasonryWeights` so the masonry stays balanced while images stream in.
+const templateDefaultHeightRatios = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
+// Once the real preview loads we size the tile to its true aspect ratio so a
+// long email reads as a long card instead of being cropped into a short box.
+const TEMPLATE_MIN_HEIGHT_RATIO = 0.6;
+const TEMPLATE_MAX_HEIGHT_RATIO = 2.3;
 const minimumLandingTemplateCards = 5;
+
+function clampTemplateHeightRatio(ratio: number): number {
+  return Math.min(
+    TEMPLATE_MAX_HEIGHT_RATIO,
+    Math.max(TEMPLATE_MIN_HEIGHT_RATIO, ratio),
+  );
+}
+
+/**
+ * Preview image whose tile grows to the screenshot's real aspect ratio, so long
+ * email templates render as tall cards instead of being squeezed flat.
+ */
+function TemplatePreviewImage({
+  src,
+  alt,
+  defaultHeightRatio,
+}: {
+  src: string;
+  alt: string;
+  defaultHeightRatio: number;
+}) {
+  const [heightRatio, setHeightRatio] = useState(defaultHeightRatio);
+
+  return (
+    <div
+      className="relative flex min-h-0 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40"
+      style={{ aspectRatio: 1 / heightRatio }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className="h-full w-full object-cover object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
+        loading="lazy"
+        onLoad={(event) => {
+          const { naturalWidth, naturalHeight } = event.currentTarget;
+          if (naturalWidth > 0 && naturalHeight > 0) {
+            setHeightRatio(
+              clampTemplateHeightRatio(naturalHeight / naturalWidth),
+            );
+          }
+        }}
+      />
+    </div>
+  );
+}
 
 type Locale = "en" | "es";
 
@@ -839,21 +884,15 @@ export default function HomePage({
       onKeyDown={onTemplateCardKeyDown}
       className="group w-full min-w-0 cursor-pointer outline-none"
     >
-      <div
-        className={cx(
-          "relative flex min-h-0 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40 sm:min-h-64",
-          templateMasonryPreviewClasses[
-            index % templateMasonryPreviewClasses.length
-          ],
-        )}
-      >
-        <img
-          src={template.imageSrc ?? "/templates/news-letter.png"}
-          alt={`${template.name} ${copy.templates.previewAlt}`}
-          className="h-full w-full object-cover object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
-          loading="lazy"
-        />
-      </div>
+      <TemplatePreviewImage
+        src={template.imageSrc ?? "/templates/news-letter.png"}
+        alt={`${template.name} ${copy.templates.previewAlt}`}
+        defaultHeightRatio={
+          templateDefaultHeightRatios[
+            index % templateDefaultHeightRatios.length
+          ]
+        }
+      />
 
       <div className="mt-2.5 font-ibm-plex-sans">
         <div className="min-w-0">
