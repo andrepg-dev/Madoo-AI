@@ -1,41 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE } from "@/lib/cookies";
 
-const PROTECTED_PREFIXES = [
-  "/dashboard",
-  "/settings",
-  "/email-template-project",
-];
+const PUBLIC_PREFIXES = ["/invite", "/share"] as const;
 
 const LANDING_URL =
   process.env.NEXT_PUBLIC_LANDING_URL ?? "http://localhost:3001";
 
+const API_URL =
+  process.env.API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:4000/api/v1";
+
 const CLIENT_APP_URL =
   process.env.NEXT_PUBLIC_CLIENT_APP_URL ?? "http://localhost:3003";
 
-export function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
-
-  const isProtected = PROTECTED_PREFIXES.some(
+function isPublicPath(pathname: string) {
+  return PUBLIC_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
-  if (!isProtected) return NextResponse.next();
+}
+
+async function isTokenValid(token: string) {
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function middleware(req: NextRequest) {
+  const { pathname, search } = req.nextUrl;
+
+  if (isPublicPath(pathname)) return NextResponse.next();
 
   const token = req.cookies.get(AUTH_COOKIE)?.value;
-  if (token) return NextResponse.next();
+  if (token && (await isTokenValid(token))) return NextResponse.next();
 
   const redirect = new URL(LANDING_URL);
   const next = new URL(`${pathname}${search}`, CLIENT_APP_URL);
   redirect.searchParams.set("next", next.toString());
-  return NextResponse.redirect(redirect);
+
+  const response = NextResponse.redirect(redirect);
+  response.cookies.delete(AUTH_COOKIE);
+  return response;
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/settings/:path*",
-    "/settings",
-    "/email-template-project/:path*",
-    "/email-template-project",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

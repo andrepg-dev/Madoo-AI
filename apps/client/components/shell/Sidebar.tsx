@@ -3,7 +3,6 @@
 import { fetchBillingOverview } from "@/actions/billing";
 import { getMeOrNull, logoutAction } from "@/actions/auth";
 import { fetchWorkspaces, setActiveWorkspace } from "@/actions/workspaces";
-import { redirectToLandingAuth } from "@/lib/auth-redirect";
 import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
 import {
@@ -176,9 +175,7 @@ function SidebarNavButton({
           )}
         >
           <Kbd className="h-4.5! w-4.5! text-[9.5px]!">⌘</Kbd>
-          <Kbd className="h-4.5! w-4.5! text-[9.5px]!">
-            {item.shortcut}
-          </Kbd>
+          <Kbd className="h-4.5! w-4.5! text-[9.5px]!">{item.shortcut}</Kbd>
         </span>
       ) : null}
     </>
@@ -365,10 +362,6 @@ export function Sidebar() {
     return pathname?.startsWith(href);
   };
 
-  const handleSignIn = () => {
-    redirectToLandingAuth(pathname ?? "/dashboard/projects");
-  };
-
   useEffect(() => {
     if (!user || workspaces.length === 0 || workspaceIdIsValid) return;
     const nextWorkspaceId = workspaces[0]?.id;
@@ -526,7 +519,11 @@ export function Sidebar() {
                 {creditsText}
               </span>
             </div>
-            <ProgressBar value={creditsPct} tone="ink" label="Daily credits left" />
+            <ProgressBar
+              value={creditsPct}
+              tone="ink"
+              label="Daily credits left"
+            />
             <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
               Resets {formatResetDate(usage?.resetsAt)}
             </span>
@@ -561,7 +558,7 @@ export function Sidebar() {
               })
             ) : (
               <span className="px-1 py-2 text-(length:--font-size-sm) text-madoo-ink-muted">
-                {user ? "No workspaces found" : "Sign in to sync workspaces"}
+                {user ? "No workspaces found" : "Loading workspaces"}
               </span>
             )}
           </div>
@@ -577,18 +574,7 @@ export function Sidebar() {
               <AppIcon icon={Add01Icon} size={14} />
               Create workspace
             </DropdownItem>
-          ) : (
-            <DropdownItem
-              className="justify-start! text-(length:--font-size-base)! font-normal! shadow-madoo-border"
-              onSelect={() => {
-                setWorkspaceOpen(false);
-                handleSignIn();
-              }}
-            >
-              <AppIcon icon={UserIcon} size={14} />
-              Sign in
-            </DropdownItem>
-          )}
+          ) : null}
         </DropdownContent>
       </Dropdown>
 
@@ -687,7 +673,7 @@ export function Sidebar() {
               block
               leftIcon={
                 <Avatar
-                  name={user?.name ?? user?.email ?? "User"}
+                  name={user?.name ?? user?.email ?? "Account"}
                   src={user?.avatarUrl ?? undefined}
                   size="xs"
                   circle
@@ -705,17 +691,17 @@ export function Sidebar() {
           >
             <div className="flex items-center gap-2.5 p-1.5">
               <Avatar
-                name={user?.name ?? user?.email ?? "User"}
+                name={user?.name ?? user?.email ?? "Account"}
                 src={user?.avatarUrl ?? undefined}
                 size="sm"
                 circle
               />
               <span className="grid min-w-0 gap-0.5">
                 <span className="truncate text-(length:--font-size-base) leading-none">
-                  {user?.name ?? "Guest"}
+                  {user?.name ?? "Account"}
                 </span>
                 <span className="truncate text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
-                  {user?.email ?? "Not signed in"}
+                  {user?.email ?? "Checking session"}
                 </span>
               </span>
             </div>
@@ -733,8 +719,8 @@ export function Sidebar() {
                 </DropdownItem>
               </>
             ) : (
-              <DropdownItem className="justify-start!" onSelect={handleSignIn}>
-                Sign in
+              <DropdownItem className="justify-start!" disabled>
+                Session unavailable
               </DropdownItem>
             )}
           </DropdownContent>

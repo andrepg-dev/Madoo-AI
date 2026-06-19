@@ -8,6 +8,7 @@ import {
   transferEmail,
 } from "@/actions/emails";
 import { fetchWorkspaces } from "@/actions/workspaces";
+import { MasonryGrid } from "@/components/global/masonry-grid";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   Button,
@@ -74,9 +75,21 @@ const statusClasses: Record<EmailDto["status"], string> = {
 };
 
 const compactMenuItemClass = "justify-start! px-2! py-1.5! text-[13px]!";
+const masonryPreviewClasses = [
+  "aspect-[4/5]",
+  "aspect-[5/7]",
+  "aspect-[3/4]",
+  "aspect-[7/10]",
+  "aspect-[2/3]",
+] as const;
+const masonryPreviewWeights = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
 
 function latestVariant(email: EmailDto): EmailVariantDto | null {
   return email.variants[email.variants.length - 1] ?? null;
+}
+
+function getProjectMasonryWeight(_email: EmailDto, index: number): number {
+  return masonryPreviewWeights[index % masonryPreviewWeights.length];
 }
 
 function projectTitle(email: EmailDto): string {
@@ -154,11 +167,24 @@ function useFilteredEmails(
   }, [emails, query, sortMode, status, starredOnly]);
 }
 
-function ProjectPreview({ email }: { email: EmailDto }) {
+function ProjectPreview({
+  email,
+  masonryIndex,
+}: {
+  email: EmailDto;
+  masonryIndex: number;
+}) {
   const previewUrl = latestVariant(email)?.previewUrl;
+  const previewClass =
+    masonryPreviewClasses[masonryIndex % masonryPreviewClasses.length];
 
   return (
-    <div className="relative flex aspect-4/5 min-h-52 w-full items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]">
+    <div
+      className={cx(
+        "relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]",
+        previewClass,
+      )}
+    >
       {previewUrl ? (
         <img
           alt=""
@@ -188,6 +214,7 @@ function ProjectPreview({ email }: { email: EmailDto }) {
 
 function ProjectGridCard({
   email,
+  masonryIndex,
   onDelete,
   onRename,
   onOpen,
@@ -195,6 +222,7 @@ function ProjectGridCard({
   onTransfer,
 }: {
   email: EmailDto;
+  masonryIndex: number;
   onDelete: (email: EmailDto) => void;
   onRename: (email: EmailDto) => void;
   onOpen: (email: EmailDto) => void;
@@ -204,14 +232,14 @@ function ProjectGridCard({
   const title = projectTitle(email);
 
   return (
-    <article className="grid min-w-0 gap-2 rounded-lg bg-white p-3 shadow-madoo-border">
+    <article className="w-full min-w-0 rounded-lg bg-white p-3 shadow-madoo-border">
       <button
         aria-label={`Open ${title}`}
         className="group min-w-0 cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-none"
         onClick={() => onOpen(email)}
         type="button"
       >
-        <ProjectPreview email={email} />
+        <ProjectPreview email={email} masonryIndex={masonryIndex} />
       </button>
       <div className="mt-1 flex min-w-0 items-center justify-between gap-3">
         <button
@@ -319,7 +347,10 @@ function ProjectActionsMenu({
           <Icon name="moreHorizontal" size={14} />
         </Button>
       </DropdownTrigger>
-      <DropdownContent align="end" className="w-50 gap-0.5 overflow-hidden p-1!">
+      <DropdownContent
+        align="end"
+        className="w-50 gap-0.5 overflow-hidden p-1!"
+      >
         <DropdownItem
           className={compactMenuItemClass}
           onSelect={() => onToggleStar(email)}
@@ -413,8 +444,9 @@ export function ProjectLibrary({
   const deleteMutation = useMutation({
     mutationFn: deleteEmail,
     onSuccess: (_result, emailId) => {
-      queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
-        current?.filter((email) => email.id !== emailId) ?? [],
+      queryClient.setQueryData<EmailDto[]>(
+        ["emails"],
+        (current) => current?.filter((email) => email.id !== emailId) ?? [],
       );
       setActionDialog(null);
       toast({ tone: "success", title: "Project deleted" });
@@ -431,10 +463,12 @@ export function ProjectLibrary({
     mutationFn: ({ email, title }: { email: EmailDto; title: string }) =>
       renameEmail(email.id, { title }),
     onSuccess: (updatedEmail) => {
-      queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
-        current?.map((email) =>
-          email.id === updatedEmail.id ? updatedEmail : email,
-        ) ?? [],
+      queryClient.setQueryData<EmailDto[]>(
+        ["emails"],
+        (current) =>
+          current?.map((email) =>
+            email.id === updatedEmail.id ? updatedEmail : email,
+          ) ?? [],
       );
       setActionDialog(null);
       toast({ tone: "success", title: "Project renamed" });
@@ -456,8 +490,10 @@ export function ProjectLibrary({
       targetWorkspaceId: string;
     }) => transferEmail(email.id, { targetWorkspaceId }),
     onSuccess: (updatedEmail) => {
-      queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
-        current?.filter((email) => email.id !== updatedEmail.id) ?? [],
+      queryClient.setQueryData<EmailDto[]>(
+        ["emails"],
+        (current) =>
+          current?.filter((email) => email.id !== updatedEmail.id) ?? [],
       );
       setActionDialog(null);
       toast({ tone: "success", title: "Project transferred" });
@@ -475,10 +511,12 @@ export function ProjectLibrary({
     mutationFn: ({ email, starred }: { email: EmailDto; starred: boolean }) =>
       setEmailStarred(email.id, starred),
     onSuccess: (updatedEmail) => {
-      queryClient.setQueryData<EmailDto[]>(["emails"], (current) =>
-        current?.map((email) =>
-          email.id === updatedEmail.id ? updatedEmail : email,
-        ) ?? [],
+      queryClient.setQueryData<EmailDto[]>(
+        ["emails"],
+        (current) =>
+          current?.map((email) =>
+            email.id === updatedEmail.id ? updatedEmail : email,
+          ) ?? [],
       );
       toast({
         tone: "success",
@@ -541,7 +579,11 @@ export function ProjectLibrary({
   };
 
   const submitTransfer = () => {
-    if (!actionDialog || actionDialog.type !== "transfer" || !transferWorkspaceId) {
+    if (
+      !actionDialog ||
+      actionDialog.type !== "transfer" ||
+      !transferWorkspaceId
+    ) {
       return;
     }
     transferMutation.mutate({
@@ -559,112 +601,116 @@ export function ProjectLibrary({
     <>
       <div className="min-h-full bg-(--madoo-page) px-6 py-6 text-madoo-ink max-sm:px-4 max-sm:py-4">
         <div className="mx-auto max-w-395">
-        <header className="mb-5 flex items-center justify-between gap-4">
-          <h1 className="m-0 text-[24px] font-semibold leading-none tracking-normal text-[#202124]">
-            {title}
-          </h1>
-        </header>
+          <header className="mb-5 flex items-center justify-between gap-4">
+            <h1 className="m-0 text-[24px] font-semibold leading-none tracking-normal text-[#202124]">
+              {title}
+            </h1>
+          </header>
 
-        <div className="grid grid-cols-[minmax(220px,1fr)_minmax(132px,160px)_minmax(132px,160px)_auto] items-center gap-2 max-[940px]:grid-cols-2 max-sm:grid-cols-1">
-          <Input
-            className="h-9! rounded-[9px]!"
-            inputSize="md"
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search projects..."
-            startAdornment={<Icon name="search" size={15} />}
-            value={query}
-          />
-          <Select
-            label="Sort projects"
-            onChange={(value) => setSortMode(value as SortMode)}
-            options={sortOptions}
-            size="sm"
-            value={sortMode}
-            variant="default"
-          />
-          <Select
-            label="Filter by status"
-            onChange={(value) => setStatus(value as StatusFilter)}
-            options={statusOptions}
-            size="sm"
-            value={status}
-            variant="default"
-          />
-          <div className="flex items-center justify-end max-sm:justify-end">
-            <GroupButtons
-              aria-label="Project view"
-              items={[
-                {
-                  value: "grid",
-                  label: "Grid view",
-                  icon: <Icon key="grid-view-icon" name="grid" size={16} />,
-                },
-                {
-                  value: "list",
-                  label: "List view",
-                  icon: <Icon key="list-view-icon" name="folder" size={15} />,
-                },
-              ]}
-              onChange={(value) => setViewMode(value as ViewMode)}
-              size="sm"
-              value={viewMode}
+          <div className="grid grid-cols-[minmax(220px,1fr)_minmax(132px,160px)_minmax(132px,160px)_auto] items-center gap-2 max-[940px]:grid-cols-2 max-sm:grid-cols-1">
+            <Input
+              className="h-9! rounded-[9px]!"
+              inputSize="md"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search projects..."
+              startAdornment={<Icon name="search" size={15} />}
+              value={query}
             />
+            <Select
+              label="Sort projects"
+              onChange={(value) => setSortMode(value as SortMode)}
+              options={sortOptions}
+              size="sm"
+              value={sortMode}
+              variant="default"
+            />
+            <Select
+              label="Filter by status"
+              onChange={(value) => setStatus(value as StatusFilter)}
+              options={statusOptions}
+              size="sm"
+              value={status}
+              variant="default"
+            />
+            <div className="flex items-center justify-end max-sm:justify-end">
+              <GroupButtons
+                aria-label="Project view"
+                items={[
+                  {
+                    value: "grid",
+                    label: "Grid view",
+                    icon: <Icon key="grid-view-icon" name="grid" size={16} />,
+                  },
+                  {
+                    value: "list",
+                    label: "List view",
+                    icon: <Icon key="list-view-icon" name="folder" size={15} />,
+                  },
+                ]}
+                onChange={(value) => setViewMode(value as ViewMode)}
+                size="sm"
+                value={viewMode}
+              />
+            </div>
           </div>
-        </div>
 
-        <section className="mt-5">
-          {isLoading ? (
-            <div className="grid min-h-65 place-items-center rounded-lg bg-white p-6 text-sm text-madoo-ink-muted shadow-madoo-border">
-              Loading projects
-            </div>
-          ) : filteredEmails.length ? (
-            viewMode === "grid" ? (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-                {filteredEmails.map((email) => (
-                  <ProjectGridCard
-                    email={email}
-                    key={email.id}
-                    onDelete={deleteProject}
-                    onOpen={openEmail}
-                    onRename={renameProject}
-                    onToggleStar={toggleStar}
-                    onTransfer={transferProject}
-                  />
-                ))}
+          <section className="mt-5">
+            {isLoading ? (
+              <div className="grid min-h-65 place-items-center rounded-lg bg-white p-6 text-sm text-madoo-ink-muted shadow-madoo-border">
+                Loading projects
               </div>
+            ) : filteredEmails.length ? (
+              viewMode === "grid" ? (
+                <MasonryGrid
+                  getWeight={getProjectMasonryWeight}
+                  items={filteredEmails}
+                  maxColumns={5}
+                  renderItem={(email, index) => (
+                    <ProjectGridCard
+                      email={email}
+                      key={email.id}
+                      masonryIndex={index}
+                      onDelete={deleteProject}
+                      onOpen={openEmail}
+                      onRename={renameProject}
+                      onToggleStar={toggleStar}
+                      onTransfer={transferProject}
+                    />
+                  )}
+                />
+              ) : (
+                <div className="rounded-lg bg-white shadow-madoo-border">
+                  {filteredEmails.map((email) => (
+                    <ProjectListRow
+                      email={email}
+                      key={email.id}
+                      onDelete={deleteProject}
+                      onOpen={openEmail}
+                      onRename={renameProject}
+                      onToggleStar={toggleStar}
+                      onTransfer={transferProject}
+                    />
+                  ))}
+                </div>
+              )
             ) : (
-              <div className="rounded-lg bg-white shadow-madoo-border">
-                {filteredEmails.map((email) => (
-                  <ProjectListRow
-                    email={email}
-                    key={email.id}
-                    onDelete={deleteProject}
-                    onOpen={openEmail}
-                    onRename={renameProject}
-                    onToggleStar={toggleStar}
-                    onTransfer={transferProject}
-                  />
-                ))}
+              <div className="grid min-h-65 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
+                <div className="grid justify-items-center gap-2">
+                  <span className="grid size-10 place-items-center rounded-lg bg-madoo-bg-2 text-madoo-ink-muted">
+                    <Icon name="folder" size={20} />
+                  </span>
+                  <h3 className="m-0 text-[15px] font-medium text-madoo-ink">
+                    {query || status !== "ANY" ? "No matches" : emptyTitle}
+                  </h3>
+                  <p className="m-0 max-w-sm text-[13px] leading-5 text-madoo-ink-muted">
+                    {query || status !== "ANY"
+                      ? "Try another search or status."
+                      : "Created emails will appear here."}
+                  </p>
+                </div>
               </div>
-            )
-          ) : (
-            <div className="grid min-h-65 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
-              <div className="grid justify-items-center gap-2">
-                <span className="grid size-10 place-items-center rounded-lg bg-madoo-bg-2 text-madoo-ink-muted">
-                  <Icon name="folder" size={20} />
-                </span>
-                <h3 className="m-0 text-[15px] font-medium text-madoo-ink">
-                  {query || status !== "ANY" ? "No matches" : emptyTitle}
-                </h3>
-                <p className="m-0 max-w-sm text-[13px] leading-5 text-madoo-ink-muted">
-                  {query || status !== "ANY"
-                    ? "Try another search or status."
-                    : "Created emails will appear here."}
-                </p>
-              </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
         </div>
       </div>
       <Modal
@@ -711,7 +757,9 @@ export function ProjectLibrary({
               Cancel
             </Button>
             <Button
-              disabled={!selectedTransferWorkspace || transferMutation.isPending}
+              disabled={
+                !selectedTransferWorkspace || transferMutation.isPending
+              }
               onClick={submitTransfer}
               variant="primary"
             >
@@ -737,7 +785,8 @@ export function ProjectLibrary({
             />
             {selectedTransferWorkspace ? (
               <p className="m-0 text-[13px] leading-5 text-madoo-ink-muted">
-                This project will disappear from the current workspace after transfer.
+                This project will disappear from the current workspace after
+                transfer.
               </p>
             ) : null}
           </div>

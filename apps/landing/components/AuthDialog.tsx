@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  CLIENT_APP_URL,
-  GITHUB_CLIENT_ID,
-  GOOGLE_CLIENT_ID,
-} from "@/lib/env";
+import { CLIENT_APP_URL, GITHUB_CLIENT_ID, GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -127,7 +123,7 @@ function clientUrl(path: string) {
 }
 
 function safeClientRedirect(nextUrl: string | null | undefined) {
-  const fallback = clientUrl("/dashboard/projects");
+  const fallback = clientUrl("/");
   if (!nextUrl) return fallback;
 
   try {

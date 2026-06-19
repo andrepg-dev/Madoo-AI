@@ -49,8 +49,7 @@ const pricingFaqs = [
   },
   {
     question: "What if I do not find my export provider?",
-    answer:
-      "Report it inside the platform with the add provider button.",
+    answer: "Report it inside the platform with the add provider button.",
   },
 ];
 
@@ -288,9 +287,7 @@ export function PricingDrawer({
         tone: "danger",
         title: "Checkout failed",
         body:
-          error instanceof Error
-            ? error.message
-            : "Could not start checkout.",
+          error instanceof Error ? error.message : "Could not start checkout.",
       });
     },
   });
@@ -330,7 +327,7 @@ export function PricingDrawer({
       toast({
         tone: "danger",
         title: "Workspace required",
-        body: "Sign in and select a workspace before checkout.",
+        body: "Session unavailable. Reload and try again.",
       });
       return;
     }

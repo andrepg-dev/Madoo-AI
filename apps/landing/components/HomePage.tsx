@@ -91,11 +91,6 @@ const providerLogoSwatches = [
 
 const templateCards = [
   {
-    name: "Create your own",
-    description: "Start with a blank email template.",
-    isCreateCard: true,
-  },
-  {
     name: "Big news: We've been backed by Y Combinator 🚀",
     description: "Bold startup funding announcement.",
     date: "5/25/2026, 3:46:32 PM",
@@ -152,6 +147,16 @@ const workflowSteps = [
   },
 ];
 
+const templateMasonryPreviewClasses = [
+  "aspect-[4/5]",
+  "aspect-[5/7]",
+  "aspect-[3/4]",
+  "aspect-[7/10]",
+  "aspect-[2/3]",
+] as const;
+const templateMasonryWeights = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
+const minimumLandingTemplateCards = 5;
+
 type Locale = "en" | "es";
 
 type HomePageProps = {
@@ -170,6 +175,77 @@ type TemplateShowcaseCard = {
   category?: string | null;
   variableCount?: number;
 };
+
+function getRequestedMasonryColumnCount(maxColumns: number) {
+  if (window.matchMedia("(min-width: 1280px)").matches) return maxColumns;
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    return Math.min(maxColumns, 3);
+  }
+  return 0;
+}
+
+function useResponsiveMasonryColumnCount(
+  itemCount: number,
+  maxColumns: number,
+) {
+  const [columnCount, setColumnCount] = useState(0);
+
+  useEffect(() => {
+    const queries = [
+      window.matchMedia("(min-width: 1280px)"),
+      window.matchMedia("(min-width: 1024px)"),
+    ];
+
+    const updateColumnCount = () => {
+      const requested = getRequestedMasonryColumnCount(maxColumns);
+      if (requested === 0) {
+        setColumnCount(0);
+        return;
+      }
+
+      setColumnCount(
+        Math.max(1, Math.min(itemCount || 1, maxColumns, requested)),
+      );
+    };
+
+    updateColumnCount();
+    queries.forEach((query) =>
+      query.addEventListener("change", updateColumnCount),
+    );
+
+    return () => {
+      queries.forEach((query) =>
+        query.removeEventListener("change", updateColumnCount),
+      );
+    };
+  }, [itemCount, maxColumns]);
+
+  return columnCount;
+}
+
+function buildTemplateMasonryColumns(
+  templates: TemplateShowcaseCard[],
+  columnCount: number,
+) {
+  const columns = Array.from(
+    { length: Math.max(1, Math.min(columnCount, templates.length || 1)) },
+    () => ({
+      entries: [] as Array<{ index: number; template: TemplateShowcaseCard }>,
+      weight: 0,
+    }),
+  );
+
+  templates.forEach((template, index) => {
+    const target = columns.reduce((shortest, column) =>
+      column.weight < shortest.weight ? column : shortest,
+    );
+    target.entries.push({ index, template });
+    target.weight +=
+      templateMasonryWeights[index % templateMasonryWeights.length];
+  });
+
+  return columns;
+}
 
 const localeCopy = {
   en: {
@@ -270,10 +346,6 @@ const localeCopy = {
       variables: "variables",
       communityFallbackDescription: "Community template.",
       cards: [
-        {
-          name: "Create your own",
-          description: "Start with a blank email template.",
-        },
         {
           name: "Big news: We've been backed by Y Combinator 🚀",
           description: "Bold startup funding announcement.",
@@ -422,10 +494,6 @@ const localeCopy = {
       variables: "variables",
       communityFallbackDescription: "Plantilla de la comunidad.",
       cards: [
-        {
-          name: "Crea la tuya",
-          description: "Empieza con una plantilla en blanco.",
-        },
         {
           name: "Gran noticia: Y Combinator nos respaldó 🚀",
           description: "Anuncio potente de inversión startup.",
@@ -657,7 +725,7 @@ export default function HomePage({
         copy.templates.communityFallbackDescription,
       imageSrc:
         template.previewUrl ??
-        templateCards[(index % (templateCards.length - 1)) + 1]?.imageSrc ??
+        templateCards[index % templateCards.length]?.imageSrc ??
         "/templates/news-letter.png",
       authorName: template.authorName,
       category: template.category,
@@ -665,15 +733,30 @@ export default function HomePage({
       isCommunityTemplate: true,
     }),
   );
-  const createTemplateCard = localizedFallbackTemplateCards[0] ?? {
-    name: copy.templates.cards[0].name,
-    description: copy.templates.cards[0].description,
-    isCreateCard: true,
-  };
   const localizedTemplateCards: TemplateShowcaseCard[] =
     communityTemplateCards.length > 0
-      ? [createTemplateCard, ...communityTemplateCards]
+      ? [
+          ...communityTemplateCards,
+          ...localizedFallbackTemplateCards.slice(
+            0,
+            Math.max(
+              0,
+              minimumLandingTemplateCards - communityTemplateCards.length,
+            ),
+          ),
+        ]
       : localizedFallbackTemplateCards;
+  const templateMasonryColumnCount = useResponsiveMasonryColumnCount(
+    localizedTemplateCards.length,
+    5,
+  );
+  const templateMasonryColumns =
+    templateMasonryColumnCount > 0
+      ? buildTemplateMasonryColumns(
+          localizedTemplateCards,
+          templateMasonryColumnCount,
+        )
+      : [];
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
@@ -743,6 +826,61 @@ export default function HomePage({
       openAuthDialog();
     }
   };
+
+  const renderTemplateCard = (
+    template: TemplateShowcaseCard,
+    index: number,
+  ) => (
+    <article
+      key={template.id ?? template.name}
+      role="button"
+      tabIndex={0}
+      onClick={openAuthDialog}
+      onKeyDown={onTemplateCardKeyDown}
+      className="group w-full min-w-0 cursor-pointer outline-none"
+    >
+      <div
+        className={cx(
+          "relative flex min-h-0 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40 sm:min-h-64",
+          templateMasonryPreviewClasses[
+            index % templateMasonryPreviewClasses.length
+          ],
+        )}
+      >
+        <img
+          src={template.imageSrc ?? "/templates/news-letter.png"}
+          alt={`${template.name} ${copy.templates.previewAlt}`}
+          className="h-full w-full object-cover object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
+          loading="lazy"
+        />
+      </div>
+
+      <div className="mt-2.5 font-ibm-plex-sans">
+        <div className="min-w-0">
+          <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium leading-[1.2] text-[#101114]">
+            {template.name}
+          </h3>
+          <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-4 text-[#6f6961]">
+            {template.description}
+          </p>
+          {template.isCommunityTemplate ? (
+            <div className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] leading-4 text-[#8a8178]">
+              <span className="truncate">
+                {template.authorName
+                  ? `${copy.templates.by} ${template.authorName}`
+                  : (template.category ?? copy.nav.community)}
+              </span>
+              {(template.variableCount ?? 0) > 0 ? (
+                <span className="shrink-0">
+                  {template.variableCount} {copy.templates.variables}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  );
 
   const onPromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
@@ -920,7 +1058,7 @@ export default function HomePage({
                   <div className="flex shrink-0 items-center justify-end gap-2">
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#101114] transition-[background,color] duration-(--duration-fast) ease-out hover:bg-[rgb(var(--rule-rgb)/0.06)]"
                       aria-label={copy.hero.microphone}
                     >
                       <HugeiconsIcon
@@ -1180,65 +1318,29 @@ export default function HomePage({
               </div>
             </div>
 
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {localizedTemplateCards.map((template) => (
-                <article
-                  key={template.id ?? template.name}
-                  role="button"
-                  tabIndex={0}
-                  onClick={openAuthDialog}
-                  onKeyDown={onTemplateCardKeyDown}
-                  className="group min-w-0 cursor-pointer outline-none"
-                >
-                  {template.isCreateCard ? (
-                    <div className="relative flex aspect-[4/5] min-h-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40 sm:min-h-64">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f3faff] text-[#071b38] shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.18)]">
-                        <HugeiconsIcon
-                          icon={Add01Icon}
-                          size={22}
-                          strokeWidth={1.5}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative flex aspect-[4/5] min-h-0 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40 sm:min-h-64">
-                      <img
-                        src={template.imageSrc ?? "/templates/news-letter.png"}
-                        alt={`${template.name} ${copy.templates.previewAlt}`}
-                        className="h-full w-full object-cover object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-
-                  <div className="mt-2.5 font-ibm-plex-sans">
-                    <div className="min-w-0">
-                      <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium leading-[1.2] text-[#101114]">
-                        {template.name}
-                      </h3>
-                      <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-4 text-[#6f6961]">
-                        {template.description}
-                      </p>
-                      {template.isCommunityTemplate ? (
-                        <div className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] leading-4 text-[#8a8178]">
-                          <span className="truncate">
-                            {template.authorName
-                              ? `${copy.templates.by} ${template.authorName}`
-                              : (template.category ?? copy.nav.community)}
-                          </span>
-                          {(template.variableCount ?? 0) > 0 ? (
-                            <span className="shrink-0">
-                              {template.variableCount}{" "}
-                              {copy.templates.variables}
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
+            {templateMasonryColumnCount === 0 ? (
+              <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                {localizedTemplateCards.map(renderTemplateCard)}
+              </div>
+            ) : (
+              <div
+                className="mt-10 grid gap-4"
+                style={{
+                  gridTemplateColumns: `repeat(${templateMasonryColumns.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {templateMasonryColumns.map((column, columnIndex) => (
+                  <div
+                    key={columnIndex}
+                    className="flex min-w-0 flex-col gap-4"
+                  >
+                    {column.entries.map(({ index, template }) =>
+                      renderTemplateCard(template, index),
+                    )}
                   </div>
-                </article>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -1286,7 +1388,7 @@ export default function HomePage({
                   <div className="flex items-center justify-end gap-2">
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#101114] transition-[background,color] duration-(--duration-fast) ease-out hover:bg-[rgb(var(--rule-rgb)/0.06)]"
                       aria-label={copy.hero.microphone}
                     >
                       <HugeiconsIcon
@@ -1346,7 +1448,8 @@ function AttachMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={label}
-        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+        data-state={open ? "open" : "closed"}
+        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#101114] transition-[background,color] duration-(--duration-fast) ease-out hover:bg-[rgb(var(--rule-rgb)/0.06)] data-[state=open]:bg-[rgb(var(--rule-rgb)/0.06)]"
       >
         <HugeiconsIcon
           icon={Add01Icon}
@@ -1359,7 +1462,7 @@ function AttachMenu({
       <DropdownContent
         side="bottom"
         align="start"
-        className="min-w-48 rounded-lg p-1"
+        className="min-w-48 rounded-lg p-1.5 shadow-madoo-border!"
       >
         <AttachMenuItem
           icon={Image01Icon}
@@ -1388,7 +1491,7 @@ function AttachMenuItem({
   return (
     <DropdownItem
       onSelect={onSelect}
-      className="rounded-md px-2.5 py-1.5 text-[13px] text-[#101114] hover:bg-madoo-blue-500! hover:text-white! focus-visible:bg-madoo-blue-500! focus-visible:text-white!"
+      className="rounded-lg px-2.5 py-[7px] text-sm text-[#101114] hover:bg-(--surface-2)! focus-visible:bg-(--surface-2)!"
     >
       <span className="flex items-center gap-2">
         <HugeiconsIcon
