@@ -77,6 +77,19 @@ export const PLAN_DISPLAY_NAMES: Record<Plan, string> = {
   PRO: "Pro",
 };
 
+export type PaidPlan = Exclude<Plan, "FREE">;
+
+export const NEXT_UPGRADE_PLAN: Record<Plan, PaidPlan | null> = {
+  FREE: "BASIC",
+  BASIC: "MEDIUM",
+  MEDIUM: null,
+  PRO: null,
+};
+
+export function getRecommendedUpgradePlan(plan: Plan): PaidPlan | null {
+  return NEXT_UPGRADE_PLAN[plan];
+}
+
 export const BillingSubscriptionSchema = z.object({
   plan: PlanSchema,
   status: SubscriptionStatusSchema,

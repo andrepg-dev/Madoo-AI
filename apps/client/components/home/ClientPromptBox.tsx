@@ -23,6 +23,7 @@ import {
   DropdownItem,
   useToast,
 } from "@madoo/design-system";
+import { PLAN_DISPLAY_NAMES, getRecommendedUpgradePlan } from "@madoo/shared";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -216,6 +217,11 @@ export function ClientPromptBox({
     enabled: Boolean(user),
   });
   const aiUsage = billingOverview?.usage.aiGenerations;
+  const currentPlan = billingOverview?.subscription.plan ?? "FREE";
+  const recommendedUpgradePlan = getRecommendedUpgradePlan(currentPlan);
+  const upgradeCtaLabel = recommendedUpgradePlan
+    ? `Upgrade to ${PLAN_DISPLAY_NAMES[recommendedUpgradePlan]}`
+    : null;
   const outOfCredits = Boolean(
     aiUsage && aiUsage.limit !== -1 && aiUsage.used >= aiUsage.limit,
   );
@@ -594,15 +600,22 @@ export function ClientPromptBox({
             aria-hidden="true"
           />
           <p className="min-w-0 flex-1">
-            <span className="font-medium">Out of credits.</span>{" "}
-            <button
-              type="button"
-              onClick={() => setPricingOpen(true)}
-              className="cursor-pointer font-medium underline underline-offset-2 transition hover:opacity-70"
-            >
-              Upgrade plan
-            </button>{" "}
-            to keep generating.
+            <span className="font-medium">Out of credits.</span>
+            {upgradeCtaLabel ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  onClick={() => setPricingOpen(true)}
+                  className="cursor-pointer font-medium underline underline-offset-2 transition hover:opacity-70"
+                >
+                  {upgradeCtaLabel}
+                </button>{" "}
+                to keep generating.
+              </>
+            ) : (
+              " You reached your plan credits."
+            )}
           </p>
           <Button
             type="button"

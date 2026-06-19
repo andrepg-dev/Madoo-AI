@@ -37,7 +37,7 @@ import {
   cx,
   useToast,
 } from "@madoo/design-system";
-import { PLAN_DISPLAY_NAMES } from "@madoo/shared";
+import { PLAN_DISPLAY_NAMES, getRecommendedUpgradePlan } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
@@ -318,6 +318,10 @@ export function Sidebar() {
     currentPlan === "FREE"
       ? "Free plan"
       : `${PLAN_DISPLAY_NAMES[currentPlan]} plan`;
+  const recommendedUpgradePlan = getRecommendedUpgradePlan(currentPlan);
+  const upgradeCtaLabel = recommendedUpgradePlan
+    ? `Upgrade to ${PLAN_DISPLAY_NAMES[recommendedUpgradePlan]}`
+    : null;
 
   const switchWorkspaceMutation = useMutation({
     mutationFn: setActiveWorkspace,
@@ -626,23 +630,25 @@ export function Sidebar() {
 
       {!collapsed ? (
         <div className="grid gap-2">
-          <div>
-            <Button
-              aria-label="Upgrade to Pro"
-              block
-              leftIcon={
-                <span className="grid size-5 place-items-center rounded-sm bg-white/18">
-                  <AppIcon icon={Crown02Icon} size={15} />
-                </span>
-              }
-              size="sm"
-              variant="accent"
-              onClick={() => setPricingOpen(true)}
-              className="h-10! min-h-10! justify-center! rounded-lg! bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))]! text-(length:--font-size-sm)! font-medium! shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.28),var(--shadow-border-accent)]! hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent-deep)_88%,white),var(--accent-deep))]!"
-            >
-              <span className="truncate">Upgrade to Pro</span>
-            </Button>
-          </div>
+          {upgradeCtaLabel ? (
+            <div>
+              <Button
+                aria-label={upgradeCtaLabel}
+                block
+                leftIcon={
+                  <span className="grid size-5 place-items-center rounded-sm bg-white/18">
+                    <AppIcon icon={Crown02Icon} size={15} />
+                  </span>
+                }
+                size="sm"
+                variant="accent"
+                onClick={() => setPricingOpen(true)}
+                className="h-10! min-h-10! justify-center! rounded-lg! bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))]! text-(length:--font-size-sm)! font-medium! shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.28),var(--shadow-border-accent)]! hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent-deep)_88%,white),var(--accent-deep))]!"
+              >
+                <span className="truncate">{upgradeCtaLabel}</span>
+              </Button>
+            </div>
+          ) : null}
 
           <div className="madoo-paper-border flex min-h-17 items-center justify-between gap-3 rounded-xl bg-madoo-bg-2/50 px-3.5 py-3">
             <span className="grid min-w-0 flex-1 gap-1">
