@@ -266,8 +266,9 @@ TRACKING_HOST=https://t.madooai.com   # opcional, separar pixel/click
 # Fase 5
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-STRIPE_PRICE_STARTER=price_xxx
-STRIPE_PRICE_GROWTH=price_xxx
+STRIPE_PRICE_BASIC=price_xxx
+STRIPE_PRICE_MEDIUM=price_xxx
+STRIPE_PRICE_PRO=price_xxx
 SENTRY_DSN=
 ```
 
@@ -667,4 +668,3 @@ para v2. La data model ya lo soporta.
    completa termina.
 4. Si una decisión de la sección 2 cambia, **actualizar este archivo
   en el mismo PR** que la cambia. No dejar drift.
-

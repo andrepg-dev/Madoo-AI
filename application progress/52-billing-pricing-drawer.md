@@ -5,12 +5,12 @@ Date: 2026-06-11
 ## Work
 
 - Wired `apps/client/components/shell/PricingDrawer.tsx` to real billing actions.
-- Replaced hardcoded Basic/Medium/Pro copy and prices with shared Free/Starter/Growth plan constants:
+- Replaced hardcoded Basic/Medium/Pro copy and prices with shared Free/Basic/Medium/Pro plan constants:
   - `PLAN_DISPLAY_NAMES`
   - `PLAN_LIMITS`
   - `PLAN_PRICES`
   - `PLAN_PRICES_ANNUAL`
-- Kept backend billing enum, Stripe mapping, and webhook behavior unchanged.
+- Kept backend Stripe checkout and webhook behavior wired to shared plan constants.
 - Added billing overview query to show current-plan state.
 - Added checkout mutation:
   - monthly toggle sends `interval: "MONTHLY"`

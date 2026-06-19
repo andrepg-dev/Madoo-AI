@@ -19,38 +19,39 @@ import { Suspense, useEffect, useState } from "react";
 
 type PaidPlan = Exclude<Plan, "FREE">;
 
-const PLAN_FEATURES: Record<Plan | "SCALE", { label: string; included: boolean; header?: boolean }[]> = {
+const PLAN_FEATURES: Record<Plan, { label: string; included: boolean; header?: boolean }[]> = {
   FREE: [
-    { label: "1 workspace", included: true },
-    { label: "5 AI generations / month", included: true },
-    { label: "Template export", included: true },
-    { label: "Full template library", included: false },
-    { label: "Priority support", included: false },
+    { label: "30 AI credits / month", included: true },
+    { label: "5 AI credits / day", included: true },
+    { label: "10 stored templates", included: true },
+    { label: "10 test emails / day", included: true },
+    { label: "Team members", included: false },
+    { label: "Extra workspaces", included: false },
   ],
-  STARTER: [
-    { label: "Up to 5 workspaces", included: true },
-    { label: "100 AI generations / month", included: true },
-    { label: "Template export", included: true },
-    { label: "Full template library", included: true },
-    { label: "Variable defaults", included: true },
-    { label: "Priority support", included: false },
+  BASIC: [
+    { label: "100 AI credits / month", included: true },
+    { label: "15 AI credits / day", included: true },
+    { label: "50 stored templates", included: true },
+    { label: "2 team members", included: true },
+    { label: "5 workspaces", included: true },
+    { label: "50 test emails / day", included: true },
   ],
-  GROWTH: [
+  MEDIUM: [
+    { label: "250 AI credits / month", included: true },
+    { label: "25 AI credits / day", included: true },
+    { label: "150 stored templates", included: true },
+    { label: "3 team members", included: true },
+    { label: "15 workspaces", included: true },
+    { label: "100 test emails / day", included: true },
+  ],
+  PRO: [
+    { label: "Everything in Medium, plus:", included: true, header: true },
+    { label: "550 AI credits / month", included: true },
+    { label: "50 AI credits / day", included: true },
+    { label: "300 stored templates", included: true },
+    { label: "5 team members", included: true },
     { label: "Unlimited workspaces", included: true },
-    { label: "Unlimited AI generations", included: true },
-    { label: "Premium template gallery", included: true },
-    { label: "Template export", included: true },
-    { label: "Variable defaults", included: true },
-    { label: "Priority support (4h response)", included: true },
-  ],
-  SCALE: [
-    { label: "Everything in Growth, plus:", included: true, header: true },
-    { label: "Custom AI fine-tuned to your brand", included: true },
-    { label: "Multi-workspace & team roles", included: true },
-    { label: "SSO (Google, Okta, SAML)", included: true },
-    { label: "API access", included: true },
-    { label: "Dedicated success manager", included: true },
-    { label: "99.9% SLA + onboarding call", included: true },
+    { label: "300 test emails / day", included: true },
   ],
 };
 
@@ -186,37 +187,35 @@ function BillingPageContent() {
         : null;
 
   const plans: Array<{
-    id: Plan | "SCALE";
+    id: Plan;
     name: string;
     tagline: string;
     highlight: boolean;
     badge?: string;
     cta: string;
-    scaleOnly?: boolean;
   }> = [
       { id: "FREE", name: "Free", tagline: "Try it without a card.", highlight: false, cta: "Get started" },
       {
-        id: "STARTER",
-        name: "Starter",
+        id: "BASIC",
+        name: "Basic",
         tagline: "For founders shipping their first launches.",
         highlight: false,
-        cta: "Upgrade to Starter",
+        cta: "Upgrade to Basic",
       },
       {
-        id: "GROWTH",
-        name: "Growth",
+        id: "MEDIUM",
+        name: "Medium",
         tagline: "When templates become core workflow.",
         highlight: true,
         badge: "Most popular",
-        cta: "Upgrade to Growth",
+        cta: "Upgrade to Medium",
       },
       {
-        id: "SCALE",
-        name: "Scale",
+        id: "PRO",
+        name: "Pro",
         tagline: "Big workspaces, custom AI, deeper support.",
         highlight: false,
-        cta: "Talk to sales",
-        scaleOnly: true,
+        cta: "Upgrade to Pro",
       },
     ];
 
@@ -444,19 +443,14 @@ function BillingPageContent() {
           {plans.map((plan) => {
             const isCurrent = plan.id === currentPlan;
             const isHighlight = plan.highlight;
-            const isScale = plan.scaleOnly;
             const monthlyPrice =
               plan.id === "FREE"
                 ? 0
-                : plan.id === "SCALE"
-                  ? 199
-                  : PLAN_PRICES[plan.id as Plan];
+                : PLAN_PRICES[plan.id];
             const annualPrice =
               plan.id === "FREE"
                 ? 0
-                : plan.id === "SCALE"
-                  ? 159
-                  : PLAN_PRICES_ANNUAL[plan.id as Plan];
+                : PLAN_PRICES_ANNUAL[plan.id];
             const displayPrice = billing === "ANNUAL" ? annualPrice : monthlyPrice;
             const features = PLAN_FEATURES[plan.id];
 
@@ -563,29 +557,6 @@ function BillingPageContent() {
                   >
                     Current plan
                   </div>
-                ) : isScale ? (
-                  <a
-                    href="mailto:sales@madoo.ai"
-                    style={{
-                      marginTop: 14,
-                      padding: "10px 14px",
-                      borderRadius: 9,
-                      border: "none",
-                      background: "var(--ink)",
-                      color: "var(--bg)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 6,
-                      textDecoration: "none",
-                    }}
-                  >
-                    Talk to sales <Icon name="arrow" size={12} />
-                  </a>
                 ) : plan.id === "FREE" ? (
                   <div
                     style={{

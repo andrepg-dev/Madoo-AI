@@ -2,8 +2,8 @@ import { IsIn, IsOptional, IsString } from "class-validator";
 
 export class CreateCheckoutSessionDto {
   @IsString()
-  @IsIn(["STARTER", "GROWTH", "PRO"])
-  plan!: "STARTER" | "GROWTH" | "PRO";
+  @IsIn(["BASIC", "MEDIUM", "PRO"])
+  plan!: "BASIC" | "MEDIUM" | "PRO";
 
   @IsOptional()
   @IsString()

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const PlanSchema = z.enum(["FREE", "STARTER", "GROWTH", "PRO"]);
+export const PlanSchema = z.enum(["FREE", "BASIC", "MEDIUM", "PRO"]);
 export type Plan = z.infer<typeof PlanSchema>;
 
 export const SubscriptionStatusSchema = z.enum([
@@ -26,8 +26,8 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   // Each plan: daily credits reset at 00:00 UTC, capped at a monthly total.
   // members = teammates invitable beyond the owner; workspaces = total owned.
   FREE:    { aiGenerations: 30,  dailyAiGenerations: 5,  storedTemplates: 10,  members: 0, workspaces: 0,  testEmailsPerDay: 10  },
-  STARTER: { aiGenerations: 100, dailyAiGenerations: 15, storedTemplates: 50,  members: 2, workspaces: 5,  testEmailsPerDay: 50  },
-  GROWTH:  { aiGenerations: 250, dailyAiGenerations: 25, storedTemplates: 150, members: 3, workspaces: 15, testEmailsPerDay: 100 },
+  BASIC:   { aiGenerations: 100, dailyAiGenerations: 15, storedTemplates: 50,  members: 2, workspaces: 5,  testEmailsPerDay: 50  },
+  MEDIUM:  { aiGenerations: 250, dailyAiGenerations: 25, storedTemplates: 150, members: 3, workspaces: 15, testEmailsPerDay: 100 },
   PRO:     { aiGenerations: 550, dailyAiGenerations: 50, storedTemplates: 300, members: 5, workspaces: -1, testEmailsPerDay: 300 },
 };
 
@@ -49,22 +49,22 @@ export type PlanFeatures = {
 
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   FREE:    { sharePreviewLinks: true, exportFormats: [...EXPORT_FORMATS], exportProviders: "coming_soon" },
-  STARTER: { sharePreviewLinks: true, exportFormats: [...EXPORT_FORMATS], exportProviders: "coming_soon" },
-  GROWTH:  { sharePreviewLinks: true, exportFormats: [...EXPORT_FORMATS], exportProviders: "coming_soon" },
+  BASIC:   { sharePreviewLinks: true, exportFormats: [...EXPORT_FORMATS], exportProviders: "coming_soon" },
+  MEDIUM:  { sharePreviewLinks: true, exportFormats: [...EXPORT_FORMATS], exportProviders: "coming_soon" },
   PRO:     { sharePreviewLinks: true, exportFormats: [...EXPORT_FORMATS], exportProviders: "coming_soon" },
 };
 
 export const PLAN_PRICES: Record<Plan, number> = {
   FREE: 0,
-  STARTER: 25,
-  GROWTH: 50,
+  BASIC: 25,
+  MEDIUM: 50,
   PRO: 95,
 };
 
 export const PLAN_PRICES_ANNUAL: Record<Plan, number> = {
   FREE: 0,
-  STARTER: 21,
-  GROWTH: 42,
+  BASIC: 21,
+  MEDIUM: 42,
   PRO: 80,
 };
 
@@ -72,8 +72,8 @@ export type BillingInterval = "MONTHLY" | "ANNUAL";
 
 export const PLAN_DISPLAY_NAMES: Record<Plan, string> = {
   FREE: "Free",
-  STARTER: "Starter",
-  GROWTH: "Growth",
+  BASIC: "Basic",
+  MEDIUM: "Medium",
   PRO: "Pro",
 };
 
@@ -138,7 +138,7 @@ export const BillingOverviewSchema = z.object({
 export type BillingOverviewDto = z.infer<typeof BillingOverviewSchema>;
 
 export const CreateCheckoutSessionInputSchema = z.object({
-  plan: z.enum(["STARTER", "GROWTH", "PRO"]),
+  plan: z.enum(["BASIC", "MEDIUM", "PRO"]),
   interval: z.enum(["MONTHLY", "ANNUAL"]).default("MONTHLY"),
 });
 export type CreateCheckoutSessionInput = z.infer<

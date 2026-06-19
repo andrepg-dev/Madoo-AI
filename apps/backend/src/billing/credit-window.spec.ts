@@ -85,7 +85,7 @@ test("PLAN_LIMITS match the agreed per-feature caps", () => {
     workspaces: 0,
     testEmailsPerDay: 10,
   });
-  assert.deepEqual(PLAN_LIMITS.STARTER, {
+  assert.deepEqual(PLAN_LIMITS.BASIC, {
     aiGenerations: 100,
     dailyAiGenerations: 15,
     storedTemplates: 50,
@@ -93,7 +93,7 @@ test("PLAN_LIMITS match the agreed per-feature caps", () => {
     workspaces: 5,
     testEmailsPerDay: 50,
   });
-  assert.deepEqual(PLAN_LIMITS.GROWTH, {
+  assert.deepEqual(PLAN_LIMITS.MEDIUM, {
     aiGenerations: 250,
     dailyAiGenerations: 25,
     storedTemplates: 150,

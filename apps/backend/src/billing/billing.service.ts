@@ -35,8 +35,8 @@ import type {
 } from "./stripe-types";
 
 const PLAN_TO_PRICE_ENV: Record<Exclude<Plan, "FREE">, Record<"MONTHLY" | "ANNUAL", string>> = {
-  STARTER: { MONTHLY: "STRIPE_PRICE_BASIC", ANNUAL: "STRIPE_PRICE_BASIC_ANNUAL" },
-  GROWTH: { MONTHLY: "STRIPE_PRICE_MEDIUM", ANNUAL: "STRIPE_PRICE_MEDIUM_ANNUAL" },
+  BASIC: { MONTHLY: "STRIPE_PRICE_BASIC", ANNUAL: "STRIPE_PRICE_BASIC_ANNUAL" },
+  MEDIUM: { MONTHLY: "STRIPE_PRICE_MEDIUM", ANNUAL: "STRIPE_PRICE_MEDIUM_ANNUAL" },
   PRO: { MONTHLY: "STRIPE_PRICE_PRO", ANNUAL: "STRIPE_PRICE_PRO_ANNUAL" },
 };
 
@@ -398,11 +398,11 @@ export class BillingService {
       typeof sub.customer === "string" ? sub.customer : sub.customer.id;
     const fromMetadataPlan = parsePlanFromMetadata(sub.metadata?.plan);
     const fromPricePlan = parsePlanFromPrice(sub, {
-      starter: this.config.get<string>("STRIPE_PRICE_BASIC"),
-      growth: this.config.get<string>("STRIPE_PRICE_MEDIUM"),
+      basic: this.config.get<string>("STRIPE_PRICE_BASIC"),
+      medium: this.config.get<string>("STRIPE_PRICE_MEDIUM"),
       pro: this.config.get<string>("STRIPE_PRICE_PRO"),
-      starterAnnual: this.config.get<string>("STRIPE_PRICE_BASIC_ANNUAL"),
-      growthAnnual: this.config.get<string>("STRIPE_PRICE_MEDIUM_ANNUAL"),
+      basicAnnual: this.config.get<string>("STRIPE_PRICE_BASIC_ANNUAL"),
+      mediumAnnual: this.config.get<string>("STRIPE_PRICE_MEDIUM_ANNUAL"),
       proAnnual: this.config.get<string>("STRIPE_PRICE_PRO_ANNUAL"),
     });
     const plan: Plan =
@@ -479,22 +479,24 @@ function extractPeriodEnd(sub: StripeSubscription): number | null {
 
 function parsePlanFromMetadata(value: string | undefined): Plan | null {
   if (
-    value === "STARTER" ||
-    value === "GROWTH" ||
+    value === "BASIC" ||
+    value === "MEDIUM" ||
     value === "PRO" ||
     value === "FREE"
   ) {
     return value;
   }
+  if (value === "STARTER") return "BASIC";
+  if (value === "GROWTH") return "MEDIUM";
   return null;
 }
 
 type PriceEnvIds = {
-  starter: string | undefined;
-  growth: string | undefined;
+  basic: string | undefined;
+  medium: string | undefined;
   pro: string | undefined;
-  starterAnnual: string | undefined;
-  growthAnnual: string | undefined;
+  basicAnnual: string | undefined;
+  mediumAnnual: string | undefined;
   proAnnual: string | undefined;
 };
 
@@ -504,8 +506,8 @@ function parsePlanFromPrice(
 ): Plan | null {
   for (const item of sub.items.data) {
     const id = item.price.id;
-    if (id && (id === ids.starter || id === ids.starterAnnual)) return "STARTER";
-    if (id && (id === ids.growth || id === ids.growthAnnual)) return "GROWTH";
+    if (id && (id === ids.basic || id === ids.basicAnnual)) return "BASIC";
+    if (id && (id === ids.medium || id === ids.mediumAnnual)) return "MEDIUM";
     if (id && (id === ids.pro || id === ids.proAnnual)) return "PRO";
   }
   return null;
