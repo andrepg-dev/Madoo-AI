@@ -34,15 +34,15 @@
 }
 
 [data-theme="indigo"] {
-  --bg: #F6F4F9;
-  --bg-2: #EDEAF2;
-  --surface: #FFFFFF;
-  --surface-2: #EFECF5;
-  --border: #E4DFEC;
-  --border-soft: #EFEAF4;
-  --accent: #5B5FCB;
-  --accent-deep: #2C3070;
-  --accent-soft: #E5E5F5;
+  --bg: #f6f4f9;
+  --bg-2: #edeaf2;
+  --surface: #ffffff;
+  --surface-2: #efecf5;
+  --border: #e4dfec;
+  --border-soft: #efeaf4;
+  --accent: #5b5fcb;
+  --accent-deep: #2c3070;
+  --accent-soft: #e5e5f5;
 }
 
 [data-density="compact"] {
@@ -78,7 +78,11 @@ table {
 }
 
 body {
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    var(--font-inter),
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;

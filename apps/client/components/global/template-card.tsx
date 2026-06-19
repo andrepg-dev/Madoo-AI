@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 type TemplateCardProps = {
   badge?: string;
   disabled?: boolean;
+  masonryIndex?: number;
   menu?: ReactNode;
   onClick?: () => void;
   onToggleStar?: () => void;
@@ -13,9 +14,18 @@ type TemplateCardProps = {
   title: string;
 };
 
+const masonryPreviewClasses = [
+  "aspect-[4/5]",
+  "aspect-[5/7]",
+  "aspect-[3/4]",
+  "aspect-[7/10]",
+  "aspect-[2/3]",
+] as const;
+
 export default function TemplateCard({
   badge,
   disabled,
+  masonryIndex,
   menu,
   onClick,
   onToggleStar,
@@ -25,11 +35,15 @@ export default function TemplateCard({
   title,
 }: TemplateCardProps) {
   const hasActions = Boolean(onToggleStar || menu);
+  const previewClass =
+    typeof masonryIndex === "number"
+      ? masonryPreviewClasses[masonryIndex % masonryPreviewClasses.length]
+      : "aspect-4/5 min-h-52";
 
   return (
     <article
       className={cx(
-        "group min-w-0 text-left",
+        "group w-full min-w-0 text-left",
         disabled && "pointer-events-none opacity-70",
       )}
     >
@@ -43,7 +57,12 @@ export default function TemplateCard({
         onClick={onClick}
         type="button"
       >
-        <div className="relative flex aspect-4/5 min-h-52 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition-[box-shadow] duration-150 group-focus-within:shadow-[inset_0_0_0_1.5px_var(--accent)] group-hover:shadow-[inset_0_0_0_1px_rgb(12_52_106/0.22)]">
+        <div
+          className={cx(
+            "relative flex items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition-[box-shadow] duration-150 group-focus-within:shadow-[inset_0_0_0_1.5px_var(--accent)] group-hover:shadow-[inset_0_0_0_1px_rgb(12_52_106/0.22)]",
+            previewClass,
+          )}
+        >
           {previewUrl ? (
             <img
               alt=""

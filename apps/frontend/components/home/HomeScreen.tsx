@@ -38,6 +38,88 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { TemplateCard } from "./TemplateCard";
 
+const masonryPreviewAspects = [
+  "4 / 5",
+  "5 / 7",
+  "3 / 4",
+  "7 / 10",
+  "2 / 3",
+] as const;
+const masonryPreviewWeights = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
+
+function getRequestedMasonryColumnCount(maxColumns: number) {
+  if (window.matchMedia("(min-width: 1240px)").matches) return maxColumns;
+  if (window.matchMedia("(min-width: 1040px)").matches) {
+    return Math.min(maxColumns, 3);
+  }
+  if (window.matchMedia("(min-width: 700px)").matches) {
+    return Math.min(maxColumns, 2);
+  }
+  return 1;
+}
+
+function useResponsiveMasonryColumnCount(
+  itemCount: number,
+  maxColumns: number,
+) {
+  const [columnCount, setColumnCount] = useState(1);
+
+  useEffect(() => {
+    const queries = [
+      window.matchMedia("(min-width: 1240px)"),
+      window.matchMedia("(min-width: 1040px)"),
+      window.matchMedia("(min-width: 700px)"),
+    ];
+
+    const updateColumnCount = () => {
+      setColumnCount(
+        Math.max(
+          1,
+          Math.min(
+            itemCount || 1,
+            maxColumns,
+            getRequestedMasonryColumnCount(maxColumns),
+          ),
+        ),
+      );
+    };
+
+    updateColumnCount();
+    queries.forEach((query) =>
+      query.addEventListener("change", updateColumnCount),
+    );
+
+    return () => {
+      queries.forEach((query) =>
+        query.removeEventListener("change", updateColumnCount),
+      );
+    };
+  }, [itemCount, maxColumns]);
+
+  return columnCount;
+}
+
+function buildMasonryColumns<T>(items: T[], columnCount: number) {
+  const columns = Array.from(
+    { length: Math.max(1, Math.min(columnCount, items.length || 1)) },
+    () => ({
+      entries: [] as Array<{ index: number; item: T }>,
+      weight: 0,
+    }),
+  );
+
+  items.forEach((item, index) => {
+    const target = columns.reduce((shortest, column) =>
+      column.weight < shortest.weight ? column : shortest,
+    );
+    target.entries.push({ index, item });
+    target.weight +=
+      masonryPreviewWeights[index % masonryPreviewWeights.length];
+  });
+
+  return columns;
+}
+
 export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
   const router = useRouter();
   const { data: user, isPending: loading } = useMe();
@@ -61,6 +143,20 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
     activeCat === "All"
       ? TEMPLATES
       : TEMPLATES.filter((t) => t.category === activeCat);
+  const recentEmails = emails.slice(0, 12);
+  const recentEmailColumnCount = useResponsiveMasonryColumnCount(
+    recentEmails.length,
+    3,
+  );
+  const recentEmailColumns = buildMasonryColumns(
+    recentEmails,
+    recentEmailColumnCount,
+  );
+  const templateColumnCount = useResponsiveMasonryColumnCount(
+    filtered.length,
+    4,
+  );
+  const templateColumns = buildMasonryColumns(filtered, templateColumnCount);
 
   const createFromPrompt = async (input: {
     prompt: string;
@@ -364,163 +460,171 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
                 gap: 12,
+                gridTemplateColumns: `repeat(${recentEmailColumns.length}, minmax(0, 1fr))`,
               }}
             >
-              {emails.slice(0, 12).map((email) => {
-                const latest = email.variants[email.variants.length - 1];
-                const preview = latest?.previewUrl ?? null;
-                const goTo =
-                  email.status === "DRAFT"
-                    ? `/emails/${email.id}/generate`
-                    : `/emails/${email.id}/editor`;
-                return (
-                  <button
-                    key={email.id}
-                    type="button"
-                    onClick={() => router.push(goTo)}
-                    style={{
-                      textAlign: "left",
-                      border: "1px solid var(--border)",
-                      borderRadius: 14,
-                      padding: 0,
-                      background: "var(--surface)",
-                      cursor: "pointer",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {/* Preview thumbnail */}
-                    <div
-                      style={{
-                        width: "100%",
-                        height: 160,
-                        background: preview
-                          ? "transparent"
-                          : "var(--surface-raised)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        overflow: "hidden",
-                        borderBottom: "1px solid var(--border)",
-                      }}
-                    >
-                      {preview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={preview}
-                          alt={email.title ?? "Email preview"}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            objectPosition: "top",
-                          }}
-                        />
-                      ) : latest?.compiledHtml ? (
+              {recentEmailColumns.map((column, columnIndex) => (
+                <div
+                  key={columnIndex}
+                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                >
+                  {column.entries.map(({ index, item: email }) => {
+                    const latest = email.variants[email.variants.length - 1];
+                    const preview = latest?.previewUrl ?? null;
+                    const goTo =
+                      email.status === "DRAFT"
+                        ? `/emails/${email.id}/generate`
+                        : `/emails/${email.id}/editor`;
+                    return (
+                      <button
+                        key={email.id}
+                        type="button"
+                        onClick={() => router.push(goTo)}
+                        style={{
+                          textAlign: "left",
+                          border: "1px solid var(--border)",
+                          borderRadius: 14,
+                          padding: 0,
+                          background: "var(--surface)",
+                          cursor: "pointer",
+                          overflow: "hidden",
+                        }}
+                      >
                         <div
                           style={{
                             width: "100%",
-                            height: "100%",
+                            aspectRatio:
+                              masonryPreviewAspects[
+                                index % masonryPreviewAspects.length
+                              ],
+                            background: preview
+                              ? "transparent"
+                              : "var(--surface-raised)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                             overflow: "hidden",
-                            background: "#fff",
+                            borderBottom: "1px solid var(--border)",
                           }}
                         >
-                          <iframe
-                            title={email.title ?? "Email preview"}
-                            srcDoc={latest.compiledHtml}
-                            sandbox="allow-same-origin"
-                            scrolling="no"
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              border: "none",
-                              pointerEvents: "none",
-                            }}
-                          />
+                          {preview ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={preview}
+                              alt={email.title ?? "Email preview"}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                objectPosition: "top",
+                              }}
+                            />
+                          ) : latest?.compiledHtml ? (
+                            <div
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                overflow: "hidden",
+                                background: "#fff",
+                              }}
+                            >
+                              <iframe
+                                title={email.title ?? "Email preview"}
+                                srcDoc={latest.compiledHtml}
+                                sandbox="allow-same-origin"
+                                scrolling="no"
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  border: "none",
+                                  pointerEvents: "none",
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <svg
+                              width={32}
+                              height={32}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="var(--ink-faint)"
+                              strokeWidth={1.5}
+                            >
+                              <rect x={2} y={4} width={20} height={16} rx={2} />
+                              <path d="M2 9h20" />
+                              <path d="M7 13h3m-3 3h6" />
+                            </svg>
+                          )}
                         </div>
-                      ) : (
-                        <svg
-                          width={32}
-                          height={32}
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="var(--ink-faint)"
-                          strokeWidth={1.5}
-                        >
-                          <rect x={2} y={4} width={20} height={16} rx={2} />
-                          <path d="M2 9h20" />
-                          <path d="M7 13h3m-3 3h6" />
-                        </svg>
-                      )}
-                    </div>
 
-                    {/* Card info */}
-                    <div style={{ padding: "12px 14px" }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 8,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: "var(--ink-faint)",
-                            fontFamily: "var(--font-jetbrains-mono)",
-                          }}
-                        >
-                          {shortEmailId(email.id)}
+                        <div style={{ padding: "12px 14px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 8,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "var(--ink-faint)",
+                                fontFamily: "var(--font-jetbrains-mono)",
+                              }}
+                            >
+                              {shortEmailId(email.id)}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 10.5,
+                                fontWeight: 600,
+                                color: "var(--accent-deep)",
+                                background: "var(--accent-soft)",
+                                borderRadius: 999,
+                                padding: "3px 8px",
+                              }}
+                            >
+                              {email.status}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              marginTop: 6,
+                              fontSize: 14,
+                              fontWeight: 600,
+                              color: "var(--ink)",
+                            }}
+                          >
+                            {email.title ?? latest?.subject ?? "Untitled email"}
+                          </div>
+                          <div
+                            style={{
+                              marginTop: 4,
+                              fontSize: 12.5,
+                              color: "var(--ink-soft)",
+                              lineHeight: 1.45,
+                            }}
+                          >
+                            {email.prompt.slice(0, 80)}
+                            {email.prompt.length > 80 ? "…" : ""}
+                          </div>
+                          <div
+                            style={{
+                              marginTop: 8,
+                              fontSize: 11,
+                              color: "var(--ink-faint)",
+                            }}
+                          >
+                            {new Date(email.updatedAt).toLocaleString()}
+                          </div>
                         </div>
-                        <div
-                          style={{
-                            fontSize: 10.5,
-                            fontWeight: 600,
-                            color: "var(--accent-deep)",
-                            background: "var(--accent-soft)",
-                            borderRadius: 999,
-                            padding: "3px 8px",
-                          }}
-                        >
-                          {email.status}
-                        </div>
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 6,
-                          fontSize: 14,
-                          fontWeight: 600,
-                          color: "var(--ink)",
-                        }}
-                      >
-                        {email.title ?? latest?.subject ?? "Untitled email"}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 12.5,
-                          color: "var(--ink-soft)",
-                          lineHeight: 1.45,
-                        }}
-                      >
-                        {email.prompt.slice(0, 80)}
-                        {email.prompt.length > 80 ? "…" : ""}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 8,
-                          fontSize: 11,
-                          color: "var(--ink-faint)",
-                        }}
-                      >
-                        {new Date(email.updatedAt).toLocaleString()}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </section>
@@ -576,16 +680,24 @@ export function HomeScreen({ brand = "Madoo AI" }: { brand?: string }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
             gap: 18,
+            gridTemplateColumns: `repeat(${templateColumns.length}, minmax(0, 1fr))`,
           }}
         >
-          {filtered.map((t) => (
-            <TemplateCard
-              key={t.id}
-              template={t}
-              onClick={() => void onSelectTemplate(t)}
-            />
+          {templateColumns.map((column, columnIndex) => (
+            <div
+              key={columnIndex}
+              style={{ display: "flex", flexDirection: "column", gap: 18 }}
+            >
+              {column.entries.map(({ index, item: t }) => (
+                <TemplateCard
+                  key={t.id}
+                  template={t}
+                  masonryIndex={index}
+                  onClick={() => void onSelectTemplate(t)}
+                />
+              ))}
+            </div>
           ))}
         </div>
       </section>

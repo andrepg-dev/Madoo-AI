@@ -33,7 +33,7 @@ function clientUrl(path: string) {
 }
 
 function safeClientRedirect(value: unknown) {
-  const fallback = clientUrl("/dashboard/projects");
+  const fallback = clientUrl("/");
   if (typeof value !== "string") return fallback;
 
   try {

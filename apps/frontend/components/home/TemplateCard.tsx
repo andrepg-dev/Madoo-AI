@@ -5,9 +5,27 @@ import { Icon } from "@madoo/design-system";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
 import type { Template } from "@/lib/data";
 
-export function TemplateCard({ template, onClick }: { template: Template; onClick?: () => void }) {
+const masonryPreviewAspects = [
+  "4 / 5",
+  "5 / 7",
+  "3 / 4",
+  "7 / 10",
+  "2 / 3",
+] as const;
+
+export function TemplateCard({
+  template,
+  masonryIndex = 0,
+  onClick,
+}: {
+  template: Template;
+  masonryIndex?: number;
+  onClick?: () => void;
+}) {
   const [hovered, setHovered] = useState(false);
   const isPremium = false; // Change this only if the user is not in MVP mode, for now, let it like this, if user want to change this, ask him.
+  const previewAspect =
+    masonryPreviewAspects[masonryIndex % masonryPreviewAspects.length];
 
   return (
     <div
@@ -22,12 +40,14 @@ export function TemplateCard({ template, onClick }: { template: Template; onClic
         cursor: "pointer",
         transition: "all 0.18s",
         transform: hovered ? "translateY(-2px)" : "none",
-        boxShadow: hovered ? "0 16px 32px -12px rgba(50,40,30,0.18)" : "0 1px 0 rgba(0,0,0,0.02)",
+        boxShadow: hovered
+          ? "0 16px 32px -12px rgba(50,40,30,0.18)"
+          : "0 1px 0 rgba(0,0,0,0.02)",
       }}
     >
       <div
         style={{
-          aspectRatio: "4 / 5",
+          aspectRatio: previewAspect,
           borderRadius: 9,
           overflow: "hidden",
           position: "relative",
@@ -42,7 +62,8 @@ export function TemplateCard({ template, onClick }: { template: Template; onClic
             style={{
               position: "absolute",
               inset: 0,
-              background: "linear-gradient(180deg, transparent 50%, rgba(20,15,10,0.5))",
+              background:
+                "linear-gradient(180deg, transparent 50%, rgba(20,15,10,0.5))",
               display: "flex",
               alignItems: "flex-end",
               justifyContent: "center",
@@ -85,19 +106,47 @@ export function TemplateCard({ template, onClick }: { template: Template; onClic
         }}
       >
         <div>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)", letterSpacing: -0.1 }}>
+          <div
+            style={{
+              fontSize: 13.5,
+              fontWeight: 600,
+              color: "var(--ink)",
+              letterSpacing: -0.1,
+            }}
+          >
             {template.name}
           </div>
-          <div style={{ fontSize: 11.5, color: "var(--ink-faint)", marginTop: 2 }}>{template.category}</div>
+          <div
+            style={{ fontSize: 11.5, color: "var(--ink-faint)", marginTop: 2 }}
+          >
+            {template.category}
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {!isPremium && (
-            <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--ink-faint)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+                fontSize: 11,
+                color: "var(--ink-faint)",
+              }}
+            >
               <Icon name="bolt" size={11} /> 1 credit
             </div>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--ink-faint)" }}>
-            <Icon name="star" size={11} /> {(4.6 + (template.id.charCodeAt(0) % 4) * 0.05).toFixed(1)}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 3,
+              fontSize: 11,
+              color: "var(--ink-faint)",
+            }}
+          >
+            <Icon name="star" size={11} />{" "}
+            {(4.6 + (template.id.charCodeAt(0) % 4) * 0.05).toFixed(1)}
           </div>
         </div>
       </div>

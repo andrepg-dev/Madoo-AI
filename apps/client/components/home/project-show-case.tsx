@@ -13,6 +13,7 @@ import {
   type ShareEmailToCommunityInput,
 } from "@/actions/community-templates";
 import EmailPreviewFrame from "@/components/global/email-preview-frame";
+import { MasonryGrid } from "@/components/global/masonry-grid";
 import TemplateCard from "@/components/global/template-card";
 import { useAuthStore } from "@/stores/auth-store";
 import {
@@ -47,6 +48,7 @@ const projectTabs = [
 ];
 
 const compactMenuItemClass = "justify-start! px-2! py-1.5! text-[13px]!";
+const templateMasonryWeights = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
 
 const roleLabels: Record<NonNullable<VariableSpec["role"]>, string> = {
   text: "Text",
@@ -79,6 +81,10 @@ function getCommunitySubtitle(template: CommunityTemplateDto): string {
 
 function getPreviewUrl(email: EmailDto): string | null {
   return email.variants[email.variants.length - 1]?.previewUrl ?? null;
+}
+
+function getTemplateMasonryWeight(_item: unknown, index: number): number {
+  return templateMasonryWeights[index % templateMasonryWeights.length];
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -308,14 +314,18 @@ export function ProjectShowCase() {
             Loading
           </div>
         ) : activeCount ? (
-          <div className="grid grid-cols-5 gap-x-5 gap-y-5 max-[1100px]:grid-cols-3 max-[760px]:grid-cols-2 max-sm:grid-cols-1 max-sm:gap-4">
-            {activeProjectTab === "projects"
-              ? recentEmails.map((email) => (
+          <>
+            {activeProjectTab === "projects" ? (
+              <MasonryGrid
+                getWeight={getTemplateMasonryWeight}
+                items={recentEmails}
+                renderItem={(email, index) => (
                   <TemplateCard
                     badge={
                       email.status === "GENERATING" ? "Generating" : undefined
                     }
                     key={email.id}
+                    masonryIndex={index}
                     menu={
                       <EmailCardMenu
                         email={email}
@@ -338,14 +348,19 @@ export function ProjectShowCase() {
                     subtitle={getEmailSubtitle(email)}
                     title={getEmailTitle(email)}
                   />
-                ))
-              : null}
+                )}
+              />
+            ) : null}
 
-            {activeProjectTab === "community"
-              ? communityTemplates.map((template) => (
+            {activeProjectTab === "community" ? (
+              <MasonryGrid
+                getWeight={getTemplateMasonryWeight}
+                items={communityTemplates}
+                renderItem={(template, index) => (
                   <TemplateCard
                     badge={template.category ?? undefined}
                     key={template.id}
+                    masonryIndex={index}
                     menu={
                       template.owned ? (
                         <CommunityCardMenu
@@ -366,11 +381,20 @@ export function ProjectShowCase() {
                     subtitle={getCommunitySubtitle(template)}
                     title={template.name}
                   />
-                ))
-              : null}
-          </div>
+                )}
+              />
+            ) : null}
+          </>
         ) : (
-          <div className="grid min-h-60 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
+          <div
+            className="grid min-h-90 place-items-center rounded-lg bg-white p-6 text-center"
+            style={{
+              background: "#ffffff",
+              backgroundImage:
+                "radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.05) 1px, transparent 0)",
+              backgroundSize: "20px 20px",
+            }}
+          >
             <div className="grid justify-items-center gap-2">
               <span className="grid size-10 place-items-center rounded-lg bg-madoo-bg-2 text-madoo-ink-muted">
                 <Icon
@@ -382,9 +406,7 @@ export function ProjectShowCase() {
                 {emptyCopy}
               </h3>
               <p className="m-0 max-w-sm text-[13px] leading-5 text-madoo-ink-muted">
-                {user
-                  ? "New items will appear here."
-                  : "Sign in to load this workspace."}
+                {user ? "New items will appear here." : "Loading workspace."}
               </p>
             </div>
           </div>
@@ -491,10 +513,7 @@ function CommunityCardMenu({
         align="end"
         className="w-52 gap-0.5 overflow-hidden p-1!"
       >
-        <DropdownItem
-          className={compactMenuItemClass}
-          onSelect={onMakePrivate}
-        >
+        <DropdownItem className={compactMenuItemClass} onSelect={onMakePrivate}>
           <span className="flex items-center gap-2.5">
             <Icon name="lock" size={14} />
             Make private
@@ -545,10 +564,10 @@ function MakePrivateModal({
     >
       <p className="m-0 text-sm leading-6 text-madoo-ink-muted">
         This removes{" "}
-        <span className="font-medium text-madoo-ink">{template?.name}</span> from
-        the public community gallery. Others will no longer be able to find,
-        star, or use it, and its stars will be lost. Your original email stays in
-        your workspace, and you can share it again later.
+        <span className="font-medium text-madoo-ink">{template?.name}</span>{" "}
+        from the public community gallery. Others will no longer be able to
+        find, star, or use it, and its stars will be lost. Your original email
+        stays in your workspace, and you can share it again later.
       </p>
     </Modal>
   );
