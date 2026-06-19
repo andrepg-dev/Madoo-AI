@@ -114,6 +114,7 @@ export function ProjectShowCase() {
   const user = useAuthStore((state) => state.user);
   const [activeProjectTab, setActiveProjectTab] =
     useState<ProjectTab>("projects");
+  const [projectTabTouched, setProjectTabTouched] = useState(false);
   const [shareTarget, setShareTarget] = useState<EmailDto | null>(null);
   const [privateTarget, setPrivateTarget] =
     useState<CommunityTemplateDto | null>(null);
@@ -159,6 +160,12 @@ export function ProjectShowCase() {
     queryFn: () => fetchCommunityTemplate(selectedCommunityTemplateId!),
     enabled: Boolean(selectedCommunityTemplateId),
   });
+
+  useEffect(() => {
+    if (!user || projectTabTouched || emailsLoading) return;
+
+    setActiveProjectTab(recentEmails.length > 0 ? "projects" : "community");
+  }, [emailsLoading, projectTabTouched, recentEmails.length, user]);
 
   const emailStarMutation = useMutation({
     mutationFn: ({ email, starred }: { email: EmailDto; starred: boolean }) =>
@@ -293,7 +300,10 @@ export function ProjectShowCase() {
           <SegmentedControl
             aria-label="Project view"
             items={projectTabs}
-            onChange={(value) => setActiveProjectTab(value as ProjectTab)}
+            onChange={(value) => {
+              setProjectTabTouched(true);
+              setActiveProjectTab(value as ProjectTab);
+            }}
             value={activeProjectTab}
           />
           {activeProjectTab === "projects" ? (

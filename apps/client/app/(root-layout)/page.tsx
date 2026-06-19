@@ -29,14 +29,14 @@ const emailProviders = [
 ];
 
 const headlineMessages = [
-  "Let's craft something",
-  "Draft something sharp",
-  "Shape your next email",
-  "Turn ideas into campaigns",
-  "Build a better launch",
-  "Write something worth opening",
-  "Make your message click",
-  "Start with one clear idea",
+  { text: "Let's craft something", includeName: true },
+  { text: "Draft something sharp", includeName: false },
+  { text: "Shape your next email", includeName: true },
+  { text: "Turn ideas into campaigns", includeName: false },
+  { text: "Build a better launch", includeName: true },
+  { text: "Write something worth opening", includeName: false },
+  { text: "Make your message click", includeName: false },
+  { text: "Start with one clear idea", includeName: false },
 ] as const;
 
 export default function Page() {
@@ -96,7 +96,9 @@ export default function Page() {
         </div>
 
         <h3 className="z-50 text-3xl text-black text-center">
-          {firstName ? `${headlineMessage}, ${firstName}` : headlineMessage}
+          {firstName && headlineMessage.includeName
+            ? `${headlineMessage.text}, ${firstName}`
+            : headlineMessage.text}
         </h3>
         <div className="self-center">
           <ClientPromptBox />
