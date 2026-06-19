@@ -21,6 +21,7 @@ import {
   PRICING_PLANS,
   getPlanDisplayPrice,
   getPlanYearlySavings,
+  getRecommendedUpgradePlan,
   type BillingInterval,
   type Plan,
   type PricingFeature,
@@ -31,6 +32,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import posthog from "posthog-js";
 
 type PaidPlan = Exclude<Plan, "FREE">;
+
+const planRank: Record<Plan, number> = {
+  FREE: 0,
+  BASIC: 1,
+  MEDIUM: 2,
+  PRO: 3,
+};
 
 const pricingFaqs = [
   {
@@ -68,7 +76,7 @@ function AppIcon({ icon, size = 16 }: { icon: IconSvgElement; size?: number }) {
 
 function getPlanCta(plan: PricingPlan, currentPlan: Plan, isCurrent: boolean) {
   if (isCurrent) return "Current plan";
-  return currentPlan === "FREE"
+  return planRank[plan.checkoutPlan] > planRank[currentPlan]
     ? `Upgrade to ${plan.name}`
     : `Switch to ${plan.name}`;
 }
@@ -179,6 +187,9 @@ function PlanCard({
   const interval = billingInterval === "ANNUAL" ? "yearly" : "monthly";
   const displayPrice = getPlanDisplayPrice(plan.monthlyPrice, interval);
   const isCurrent = plan.checkoutPlan === currentPlan;
+  const isRecommended =
+    plan.checkoutPlan === getRecommendedUpgradePlan(currentPlan);
+  const isFeatured = isRecommended;
   const buttonDisabled =
     (isCurrent && !hasStripeCustomer) || checkoutPending || portalPending;
   const cta = getPlanCta(plan, currentPlan, isCurrent);
@@ -187,7 +198,7 @@ function PlanCard({
     <Card
       className={cx(
         "flex min-h-97.5 flex-col gap-5 rounded-[20px]! bg-madoo-surface! p-4!",
-        plan.featured &&
+        isFeatured &&
           "bg-[color-mix(in_srgb,var(--surface)_72%,var(--accent-soft))]! shadow-(--shadow-border-accent)",
       )}
     >
@@ -202,8 +213,8 @@ function PlanCard({
         </div>
         {isCurrent ? (
           <Badge tone="neutral">Current</Badge>
-        ) : plan.featured ? (
-          <Badge tone="accent">Popular</Badge>
+        ) : isRecommended ? (
+          <Badge tone="accent">Recommended</Badge>
         ) : null}
       </div>
 
@@ -226,7 +237,7 @@ function PlanCard({
       <Button
         block
         size="md"
-        variant={plan.featured ? "primary" : "secondary"}
+        variant={isFeatured ? "primary" : "secondary"}
         disabled={buttonDisabled}
         onClick={() => {
           if (isCurrent && hasStripeCustomer) {

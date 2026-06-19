@@ -18,6 +18,7 @@ import {
 } from "@madoo/design-system";
 import {
   PLAN_DISPLAY_NAMES,
+  getRecommendedUpgradePlan,
   type CreditUsageDto,
   type ResourceUsageDto,
   type SubscriptionStatus,
@@ -273,6 +274,13 @@ export function BillingPanel() {
   const trialEnds = formatDate(subscription.trialEndsAt);
   const periodEnd = formatDate(subscription.currentPeriodEnd);
   const isPaid = subscription.plan !== "FREE";
+  const recommendedUpgradePlan = getRecommendedUpgradePlan(subscription.plan);
+  const upgradeCtaLabel = recommendedUpgradePlan
+    ? `Upgrade to ${PLAN_DISPLAY_NAMES[recommendedUpgradePlan]}`
+    : null;
+  const showPlanAction = Boolean(
+    upgradeCtaLabel || subscription.hasStripeCustomer,
+  );
   const cancelBusy = cancelMutation.isPending || resumeMutation.isPending;
   const dailyReset = formatResetDate(usage.dailyAiGenerations.resetsAt);
   const monthlyReset = formatResetDate(usage.aiGenerations.resetsAt);
@@ -304,21 +312,25 @@ export function BillingPanel() {
         title="Your plan"
         description={planLine}
         action={
-          <div className="flex flex-wrap gap-2">
-            <Button size="md" onClick={() => setPricingOpen(true)}>
-              {subscription.plan === "PRO" ? "Change plan" : "Upgrade plan"}
-            </Button>
-            {subscription.hasStripeCustomer ? (
-              <Button
-                size="md"
-                variant="secondary"
-                disabled={portalMutation.isPending}
-                onClick={() => portalMutation.mutate()}
-              >
-                {portalMutation.isPending ? "Opening…" : "Manage billing"}
-              </Button>
-            ) : null}
-          </div>
+          showPlanAction ? (
+            <div className="flex flex-wrap gap-2">
+              {upgradeCtaLabel ? (
+                <Button size="md" onClick={() => setPricingOpen(true)}>
+                  {upgradeCtaLabel}
+                </Button>
+              ) : null}
+              {subscription.hasStripeCustomer ? (
+                <Button
+                  size="md"
+                  variant="secondary"
+                  disabled={portalMutation.isPending}
+                  onClick={() => portalMutation.mutate()}
+                >
+                  {portalMutation.isPending ? "Opening…" : "Manage billing"}
+                </Button>
+              ) : null}
+            </div>
+          ) : undefined
         }
       >
         <div className="flex flex-wrap items-center gap-3">
