@@ -21,6 +21,7 @@ import {
   Dropdown,
   DropdownContent,
   DropdownItem,
+  useToast,
 } from "@madoo/design-system";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent, KeyboardEvent } from "react";
@@ -128,6 +129,45 @@ type PromptImage = {
   url: string;
 };
 
+type SpeechRecognitionEventLike = Event & {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal: boolean;
+      length: number;
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+};
+
+type SpeechRecognitionErrorEventLike = Event & {
+  error?: string;
+};
+
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: (() => void) | null;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
+
 export function ClientPromptBox({
   className,
   classNames,
@@ -136,6 +176,7 @@ export function ClientPromptBox({
   variant = "home",
 }: ClientPromptBoxProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const user = useAuthStore((state) => state.user);
   const searchCommandOpen = useClientStore((state) => state.searchCommandOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
@@ -146,13 +187,21 @@ export function ClientPromptBox({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [images, setImages] = useState<PromptImage[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const voicePromptBaseRef = useRef("");
   const imagesRef = useRef<PromptImage[]>([]);
   imagesRef.current = images;
   const hasPrompt = prompt.trim().length > 0;
-  const submitDisabled = disabled || isSubmitting;
+  const submitDisabled =
+    disabled || isSubmitting || isListening || isTranscribing;
   const isChatVariant = variant === "chat";
   const placeholderBody = useTypingPlaceholder(
     isChatVariant ? [] : placeholders,
@@ -208,9 +257,200 @@ export function ClientPromptBox({
     setImages([]);
   };
 
+  const appendSpokenText = (text: string) => {
+    const spokenText = text.trim();
+    if (!spokenText) return;
+
+    setPrompt((current) => {
+      const basePrompt = voicePromptBaseRef.current.trim() || current.trim();
+      const separator = basePrompt.length > 0 ? " " : "";
+      return `${basePrompt}${separator}${spokenText}`;
+    });
+  };
+
+  const cleanupMediaStream = () => {
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+  };
+
+  const transcribeAudio = async (audio: Blob) => {
+    if (!user) {
+      toast({
+        tone: "danger",
+        title: "Sign in required",
+        body: "Sign in to use microphone dictation in this browser.",
+      });
+      return;
+    }
+
+    setIsTranscribing(true);
+    try {
+      const form = new FormData();
+      form.append("audio", audio, "speech.webm");
+      const response = await fetch("/api/transcription", {
+        method: "POST",
+        body: form,
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        text?: string;
+        message?: string;
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.message ?? "Transcription failed");
+      }
+
+      appendSpokenText(payload?.text ?? "");
+    } catch (error) {
+      toast({
+        tone: "danger",
+        title: "Microphone failed",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Try again in a supported browser.",
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const stopListening = () => {
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+
+    setIsListening(false);
+  };
+
+  const startAudioRecordingFallback = async () => {
+    if (
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof MediaRecorder === "undefined"
+    ) {
+      toast({
+        tone: "danger",
+        title: "Microphone not supported",
+        body: "Use Chrome, Edge, or Safari voice dictation.",
+      });
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+      voicePromptBaseRef.current = prompt;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const audio = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        mediaRecorderRef.current = null;
+        cleanupMediaStream();
+        if (audio.size > 0) void transcribeAudio(audio);
+      };
+
+      recorder.start();
+      setIsListening(true);
+      promptTextareaRef.current?.focus({ preventScroll: true });
+    } catch {
+      cleanupMediaStream();
+      toast({
+        tone: "danger",
+        title: "Microphone failed",
+        body: "Allow microphone access in your browser and try again.",
+      });
+    }
+  };
+
+  const startListening = () => {
+    if (disabled || isSubmitting) return;
+
+    if (
+      recognitionRef.current ||
+      mediaRecorderRef.current?.state === "recording"
+    ) {
+      stopListening();
+      return;
+    }
+
+    const Recognition =
+      window.SpeechRecognition ?? window.webkitSpeechRecognition;
+
+    if (!Recognition) {
+      void startAudioRecordingFallback();
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || "en-US";
+    recognitionRef.current = recognition;
+    voicePromptBaseRef.current = prompt;
+
+    recognition.onresult = (event) => {
+      let transcript = "";
+
+      for (let index = 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        transcript += result?.[0]?.transcript ?? "";
+      }
+
+      appendSpokenText(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      recognitionRef.current = null;
+      setIsListening(false);
+      if (event.error === "no-speech" || event.error === "aborted") return;
+      if (event.error === "not-allowed") {
+        toast({
+          tone: "danger",
+          title: "Microphone failed",
+          body: "Allow microphone access in your browser and try again.",
+        });
+        return;
+      }
+
+      void startAudioRecordingFallback();
+    };
+
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      setIsListening(false);
+    };
+
+    try {
+      recognition.start();
+      setIsListening(true);
+      promptTextareaRef.current?.focus({ preventScroll: true });
+    } catch {
+      recognitionRef.current = null;
+      setIsListening(false);
+      void startAudioRecordingFallback();
+    }
+  };
+
   // Revoke any leftover object URLs when the box unmounts.
   useEffect(() => {
     return () => {
+      recognitionRef.current?.abort();
+      mediaRecorderRef.current?.state === "recording" &&
+        mediaRecorderRef.current.stop();
+      cleanupMediaStream();
       for (const image of imagesRef.current) URL.revokeObjectURL(image.url);
     };
   }, []);
@@ -219,6 +459,7 @@ export function ClientPromptBox({
     const trimmedPrompt = prompt.trim();
 
     if (!trimmedPrompt || submitDisabled) return;
+    if (recognitionRef.current) stopListening();
 
     const input: PromptSubmitInput = { prompt: trimmedPrompt };
     const params = new URLSearchParams({ prompt: trimmedPrompt });
@@ -515,11 +756,25 @@ export function ClientPromptBox({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={startListening}
+              disabled={disabled || isSubmitting || isTranscribing}
               className={cn(
-                "inline-flex cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[rgb(var(--rule-rgb)/0.06)]",
+                "inline-flex items-center justify-center rounded-full text-[#101114] transition",
+                isListening
+                  ? "cursor-pointer bg-black text-white hover:bg-black/80"
+                  : disabled || isSubmitting || isTranscribing
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer hover:bg-[rgb(var(--rule-rgb)/0.06)]",
                 isChatVariant ? "h-7 w-7" : "h-8 w-8",
               )}
-              aria-label="Use microphone"
+              aria-pressed={isListening}
+              aria-label={
+                isListening
+                  ? "Stop microphone"
+                  : isTranscribing
+                    ? "Transcribing microphone"
+                    : "Use microphone"
+              }
             >
               <HugeiconsIcon
                 icon={Mic02Icon}
