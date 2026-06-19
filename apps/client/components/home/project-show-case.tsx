@@ -386,7 +386,15 @@ export function ProjectShowCase() {
             ) : null}
           </>
         ) : (
-          <div className="grid min-h-90 place-items-center rounded-lg bg-white p-6 text-center shadow-madoo-border">
+          <div
+            className="grid min-h-90 place-items-center rounded-lg bg-white p-6 text-center"
+            style={{
+              background: "#ffffff",
+              backgroundImage:
+                "radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.05) 1px, transparent 0)",
+              backgroundSize: "20px 20px",
+            }}
+          >
             <div className="grid justify-items-center gap-2">
               <span className="grid size-10 place-items-center rounded-lg bg-madoo-bg-2 text-madoo-ink-muted">
                 <Icon
