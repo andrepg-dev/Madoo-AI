@@ -232,8 +232,7 @@ const localeCopy = {
     },
     value: {
       eyebrow: "Built for modern email operations",
-      title:
-        "Create AI-assisted email templates",
+      title: "Create AI-assisted email templates",
       description:
         "Start with a prompt, turn it into a branded email template, review every production detail, and export it to the tool your team already uses.",
       status: "AI-assisted template creation",
@@ -252,9 +251,9 @@ const localeCopy = {
       integrationsTitle: "ESP integrations",
       integrationsDescription:
         "Move finished campaigns into Mailchimp, HubSpot, Klaviyo, Salesforce, and other ESPs.",
-      qaTitle: "Testing and compliance",
+      qaTitle: "Test email engine",
       qaDescription:
-        "Previews, QA states, compliance checks, and export-ready assets live beside the design.",
+        "Send real test emails straight from Madoo to verify your HTML renders correctly in Gmail, Outlook, and more before you ship.",
       clients: ["Gmail", "Outlook", "Apple Mail", "Yahoo", "Mobile"],
       flow: ["Draft", "Review", "Approved", "Export"],
       controls: ["Copy", "Layout", "Brand", "Audience", "Compliance", "Export"],
@@ -397,9 +396,9 @@ const localeCopy = {
       integrationsTitle: "Integraciones ESP",
       integrationsDescription:
         "Mueve campañas terminadas a Mailchimp, HubSpot, Klaviyo, Salesforce y otros ESPs.",
-      qaTitle: "Testing y compliance",
+      qaTitle: "Motor de emails de prueba",
       qaDescription:
-        "Previews, estados de QA, checks de cumplimiento y assets listos para exportar viven junto al diseño.",
+        "Envía emails de prueba reales desde Madoo para verificar que tu HTML se renderiza bien en Gmail, Outlook y más antes de lanzar.",
       clients: ["Gmail", "Outlook", "Apple Mail", "Yahoo", "Mobile"],
       flow: ["Borrador", "Review", "Aprobado", "Exportar"],
       controls: [
@@ -648,8 +647,8 @@ export default function HomePage({
       description:
         copy.templates.cards[index]?.description ?? template.description,
     }));
-  const communityTemplateCards: TemplateShowcaseCard[] =
-    communityTemplates.map((template, index) => ({
+  const communityTemplateCards: TemplateShowcaseCard[] = communityTemplates.map(
+    (template, index) => ({
       id: template.id,
       name: template.name,
       description:
@@ -664,13 +663,13 @@ export default function HomePage({
       category: template.category,
       variableCount: template.variableCount,
       isCommunityTemplate: true,
-    }));
-  const createTemplateCard =
-    localizedFallbackTemplateCards[0] ?? {
-      name: copy.templates.cards[0].name,
-      description: copy.templates.cards[0].description,
-      isCreateCard: true,
-    };
+    }),
+  );
+  const createTemplateCard = localizedFallbackTemplateCards[0] ?? {
+    name: copy.templates.cards[0].name,
+    description: copy.templates.cards[0].description,
+    isCreateCard: true,
+  };
   const localizedTemplateCards: TemplateShowcaseCard[] =
     communityTemplateCards.length > 0
       ? [createTemplateCard, ...communityTemplateCards]
@@ -822,7 +821,7 @@ export default function HomePage({
 
       <main lang={locale} className="relative min-h-screen w-full">
         <div className="relative z-50 px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
-          <div className="relative isolate mx-auto flex min-h-[150vh] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-9 overflow-visible rounded-2xl pt-36 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:pt-40 lg:pt-65 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
+          <div className="relative isolate mx-auto flex min-h-[calc(100svh-1rem)] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-7 overflow-visible rounded-2xl px-4 pt-32 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:gap-9 sm:px-6 sm:pt-40 lg:min-h-[150vh] lg:pt-65 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
             <video
               src="/background-video.mp4"
               aria-hidden="true"
@@ -834,7 +833,7 @@ export default function HomePage({
               className="pointer-events-none absolute inset-0 z-0 h-full w-full rounded-2xl object-cover"
             />
 
-            <div className="absolute left-0 right-0 top-0 z-30">
+            <div className="absolute left-0 right-0 top-0 z-[120]">
               <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
             </div>
 
@@ -858,8 +857,8 @@ export default function HomePage({
               priority
             />
 
-            <div className="relative z-10 flex flex-col gap-1.5">
-              <h3 className="text-center text-5xl font-medium leading-[0.94] tracking-normal text-black">
+            <div className="relative z-10 flex max-w-3xl flex-col gap-1.5 px-2">
+              <h3 className="text-center text-4xl font-medium leading-[0.94] tracking-normal text-black sm:text-5xl">
                 <span>{copy.hero.titleStart}</span>{" "}
                 <span className="relative inline-flex items-center justify-center">
                   <span className="font-semibold text-black">
@@ -867,18 +866,18 @@ export default function HomePage({
                   </span>
                 </span>
               </h3>
-              <h4 className="mt-1.5 text-center text-lg font-light text-black">
+              <h4 className="mt-1.5 text-center text-base font-light text-black sm:text-lg">
                 {copy.hero.subtitle}
               </h4>
             </div>
 
-            <div className="relative z-60 flex flex-col gap-2">
+            <div className="relative z-60 flex w-full max-w-[44rem] flex-col gap-2">
               <AttachmentPreviewList
                 attachments={attachments}
                 className="px-1"
                 onRemove={removeAttachment}
               />
-              <div className="madoo-paper-border min-w-175 overflow-visible rounded-3xl bg-white">
+              <div className="madoo-paper-border w-full overflow-visible rounded-3xl bg-white">
                 <textarea
                   ref={promptTextareaRef}
                   value={prompt}
@@ -888,15 +887,15 @@ export default function HomePage({
                   className="madoo-prompt-textarea mr-3 max-h-80 min-h-24 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
                 />
 
-                <div className="flex items-center justify-between px-3.5 pb-3">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-3 px-3.5 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <AttachMenu
                       label={copy.hero.addAttachment}
                       onUploadFile={openFilePicker}
                       onUploadImage={openImagePicker}
                     />
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       {copy.promptOptions.map((option) => (
                         <Select
                           key={option.label}
@@ -918,7 +917,7 @@ export default function HomePage({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center justify-end gap-2">
                     <button
                       type="button"
                       className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
@@ -952,7 +951,7 @@ export default function HomePage({
                 <h6 className="text-xs font-light text-zinc-600">
                   {copy.hero.exportLabel}
                 </h6>
-                <div className="mt-3 w-175 overflow-hidden">
+                <div className="mt-3 w-full overflow-hidden">
                   <div className="madoo-provider-marquee flex w-max gap-3">
                     {movingExportProviders.map((provider, index) => (
                       <div
@@ -987,14 +986,14 @@ export default function HomePage({
           </div>
         </div>
 
-        <section className="madoo-paper-section relative z-10 w-full px-4 pb-18 sm:px-8 sm:pb-24 pt-64 xl:px-0">
+        <section className="madoo-paper-section relative z-10 w-full px-4 pb-16 pt-20 sm:px-8 sm:pb-24 sm:pt-32 lg:pt-64 xl:px-0">
           <div className="mx-auto w-full max-w-7xl font-ibm-plex-sans">
             <div className="flex w-full flex-col justify-between gap-5 sm:flex-row sm:items-end">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5b63ff]">
                   {copy.value.eyebrow}
                 </p>
-                <h2 className="mt-3 max-w-3xl text-4xl font-semibold leading-[0.98] tracking-normal text-[#171717] sm:text-5xl">
+                <h2 className="mt-3 max-w-3xl text-3xl font-semibold leading-[0.98] tracking-normal text-[#171717] sm:text-5xl">
                   {copy.value.title}
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-7 text-[#6f6961]">
@@ -1002,7 +1001,7 @@ export default function HomePage({
                 </p>
               </div>
 
-              <div className="w-fit rounded-full border border-[#0c346a]/15 bg-white px-4 py-2 text-sm font-medium text-[#071b38] shadow-[0_18px_45px_rgb(var(--madoo-ink-shadow-rgb)/0.06)]">
+              <div className="madoo-paper-border w-full rounded-full bg-white px-4 py-2 text-sm font-medium text-[#071b38] sm:w-fit">
                 {copy.value.status}
               </div>
             </div>
@@ -1045,7 +1044,7 @@ export default function HomePage({
                 />
 
                 <div className="relative">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
                     <div>
                       <h3 className="text-lg font-semibold leading-tight">
                         {copy.value.compatibilityTitle}
@@ -1054,7 +1053,7 @@ export default function HomePage({
                         {copy.value.compatibilityDescription}
                       </p>
                     </div>
-                    <div className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-right">
+                    <div className="rounded-lg bg-white/10 px-3 py-2 text-left shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)] sm:text-right">
                       <p className="text-[11px] uppercase tracking-[0.14em] text-white/50">
                         QA
                       </p>
@@ -1068,7 +1067,7 @@ export default function HomePage({
                     {copy.value.clients.map((client) => (
                       <div
                         key={client}
-                        className="rounded-lg border border-white/10 bg-white/6 px-3 py-3"
+                        className="rounded-lg bg-white/6 px-3 py-3 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)]"
                       >
                         <div className="mb-3 h-1.5 w-8 rounded-full bg-[#7dd3fc]" />
                         <p className="text-xs font-medium text-white">
@@ -1081,7 +1080,7 @@ export default function HomePage({
                     ))}
                   </div>
 
-                  <div className="mt-6 rounded-lg border border-white/10 bg-white/6 p-4">
+                  <div className="mt-6 rounded-lg bg-white/6 p-4 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)]">
                     <div className="flex flex-wrap items-center gap-2">
                       {copy.value.flow.map((step, index) => (
                         <div key={step} className="flex items-center gap-2">
@@ -1100,7 +1099,7 @@ export default function HomePage({
                   </div>
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_1.1fr]">
-                    <div className="rounded-lg border border-white/10 bg-white/6 p-4">
+                    <div className="rounded-lg bg-white/6 p-4 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)]">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
                         {copy.value.brandTitle}
                       </p>
@@ -1109,7 +1108,7 @@ export default function HomePage({
                           (color) => (
                             <span
                               key={color}
-                              className="h-8 w-8 rounded-full border border-white/20"
+                              className="h-8 w-8 rounded-full shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.20)]"
                               style={{ backgroundColor: color }}
                             />
                           ),
@@ -1125,11 +1124,11 @@ export default function HomePage({
                       </div>
                     </div>
 
-                    <div className="rounded-lg border border-white/10 bg-white/6 p-4">
+                    <div className="rounded-lg bg-white/6 p-4 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)]">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
                         {copy.value.integrationsTitle}
                       </p>
-                      <div className="mt-4 grid grid-cols-3 gap-2">
+                      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
                         {exportProviders.slice(0, 6).map((provider, index) => (
                           <div
                             key={provider.name}
@@ -1167,12 +1166,12 @@ export default function HomePage({
 
         <section
           id="templates"
-          className="madoo-paper-section madoo-paper-templates relative z-10 w-full px-4 my-56 mb-80 sm:px-8 xl:px-0"
+          className="madoo-paper-section madoo-paper-templates relative z-10 my-24 mb-28 w-full px-4 sm:my-36 sm:mb-44 sm:px-8 lg:my-56 lg:mb-80 xl:px-0"
         >
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex w-full flex-col justify-between gap-6 sm:flex-row sm:items-end">
               <div>
-                <h2 className="font-ibm-plex-sans text-5xl font-semibold text-[#171717]">
+                <h2 className="font-ibm-plex-sans text-3xl font-semibold text-[#171717] sm:text-5xl">
                   {copy.templates.title}
                 </h2>
                 <h4 className="mt-3 max-w-xl font-ibm-plex-sans text-zinc-600">
@@ -1192,7 +1191,7 @@ export default function HomePage({
                   className="group min-w-0 cursor-pointer outline-none"
                 >
                   {template.isCreateCard ? (
-                    <div className="relative flex min-h-64 max-h-6min-h-64 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40">
+                    <div className="relative flex aspect-[4/5] min-h-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40 sm:min-h-64">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f3faff] text-[#071b38] shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.18)]">
                         <HugeiconsIcon
                           icon={Add01Icon}
@@ -1202,11 +1201,11 @@ export default function HomePage({
                       </div>
                     </div>
                   ) : (
-                    <div className="relative flex min-h-64 max-h-64 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40">
+                    <div className="relative flex aspect-[4/5] min-h-0 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40 sm:min-h-64">
                       <img
                         src={template.imageSrc ?? "/templates/news-letter.png"}
                         alt={`${template.name} ${copy.templates.previewAlt}`}
-                        className="w-full object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
+                        className="h-full w-full object-cover object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
                         loading="lazy"
                       />
                     </div>
@@ -1225,7 +1224,7 @@ export default function HomePage({
                           <span className="truncate">
                             {template.authorName
                               ? `${copy.templates.by} ${template.authorName}`
-                              : template.category ?? copy.nav.community}
+                              : (template.category ?? copy.nav.community)}
                           </span>
                           {(template.variableCount ?? 0) > 0 ? (
                             <span className="shrink-0">
@@ -1243,7 +1242,7 @@ export default function HomePage({
           </div>
         </section>
 
-        <section className="relative z-10 flex h-[80vh] items-center overflow-hidden px-4 mx-4 rounded-3xl my-44">
+        <section className="relative z-10 mx-2 my-24 flex min-h-[34rem] items-center overflow-hidden rounded-2xl px-4 py-16 sm:mx-4 sm:my-36 sm:min-h-[80vh] sm:rounded-3xl sm:py-20 lg:my-44">
           <Image
             src="/background-photo-2.webp"
             alt=""
@@ -1252,12 +1251,12 @@ export default function HomePage({
             className="pointer-events-none absolute inset-0 -z-10 object-cover"
             aria-hidden="true"
           />
-          <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center font-ibm-plex-sans mb-4">
+          <div className="mx-auto mb-4 flex w-full max-w-4xl flex-col items-center text-center font-ibm-plex-sans">
             <div className="inline-flex items-center gap-2 rounded-full px-3 text-sm text-zinc-800">
               {copy.cta.eyebrow}
             </div>
 
-            <h2 className="text-5xl leading-none tracking-normal text-black font-extralight text-shadow-lg">
+            <h2 className="text-4xl font-extralight leading-none tracking-normal text-black text-shadow-lg sm:text-5xl">
               {copy.cta.title}
             </h2>
 
@@ -1270,47 +1269,49 @@ export default function HomePage({
               <div className="madoo-paper-border w-full overflow-visible rounded-3xl bg-white text-left">
                 <textarea
                   ref={ctaPromptTextareaRef}
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                onKeyDown={onPromptKeyDown}
-                placeholder={hasPrompt ? "" : ctaPlaceholder}
-                className="madoo-prompt-textarea mr-3 max-h-56 min-h-20 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
-              />
-
-              <div className="flex items-center justify-between px-3.5 pb-3">
-                <AttachMenu
-                  label={copy.hero.addAttachment}
-                  onUploadFile={openFilePicker}
-                  onUploadImage={openImagePicker}
+                  value={prompt}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  onKeyDown={onPromptKeyDown}
+                  placeholder={hasPrompt ? "" : ctaPlaceholder}
+                  className="madoo-prompt-textarea mr-3 max-h-56 min-h-20 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
                 />
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
-                    aria-label={copy.hero.microphone}
-                  >
-                    <HugeiconsIcon
-                      icon={Mic02Icon}
-                      size={16}
-                      strokeWidth={1.8}
-                      aria-hidden="true"
-                    />
-                  </button>
+                <div className="flex flex-col gap-3 px-3.5 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                  <AttachMenu
+                    label={copy.hero.addAttachment}
+                    onUploadFile={openFilePicker}
+                    onUploadImage={openImagePicker}
+                  />
 
-                  <button
-                    type="button"
-                    onClick={openAuthDialog}
-                    className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${
-                      hasPrompt ? "bg-black" : "bg-[#7d7d7a] hover:bg-[#666663]"
-                    }`}
-                    aria-label={copy.hero.submit}
-                  >
-                    {copy.hero.submit}
-                  </button>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#101114] transition hover:bg-[#f3faff]"
+                      aria-label={copy.hero.microphone}
+                    >
+                      <HugeiconsIcon
+                        icon={Mic02Icon}
+                        size={16}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={openAuthDialog}
+                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${
+                        hasPrompt
+                          ? "bg-black"
+                          : "bg-[#7d7d7a] hover:bg-[#666663]"
+                      }`}
+                      aria-label={copy.hero.submit}
+                    >
+                      {copy.hero.submit}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             </div>
           </div>
         </section>
