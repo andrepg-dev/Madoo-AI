@@ -393,8 +393,11 @@ function EmailTemplateProjectInner() {
               ...(baseVariantId ? { baseVariantId } : {}),
               ...(hasImages ? { imageUrls } : {}),
             })
-            : mode === "generate" && hasImages
-              ? JSON.stringify({ imageUrls })
+            : mode === "generate" && ((instruction?.trim().length ?? 0) > 0 || hasImages)
+              ? JSON.stringify({
+                ...(instruction?.trim() ? { prompt: instruction.trim() } : {}),
+                ...(hasImages ? { imageUrls } : {}),
+              })
               : undefined;
         await consumeEmailSseStream(
           `/api/emails/${emailId}/${mode}`,
@@ -461,18 +464,35 @@ function EmailTemplateProjectInner() {
       };
 
       if (currentEmailId) {
-        posthog.capture("email_edit_submitted", {
-          email_id: currentEmailId,
-          has_images: (input.images?.length ?? 0) > 0,
-        });
         const uploaded = await uploadImages(currentEmailId);
-        await startStream(
-          currentEmailId,
-          "edit",
-          input.prompt,
-          variant?.id,
-          uploaded,
-        );
+        const shouldGenerateInitialVariant =
+          Boolean(email) && (email?.variants.length ?? 0) === 0;
+        if (!shouldGenerateInitialVariant) {
+          posthog.capture("email_edit_submitted", {
+            email_id: currentEmailId,
+            has_images: (input.images?.length ?? 0) > 0,
+          });
+          await startStream(
+            currentEmailId,
+            "edit",
+            input.prompt,
+            variant?.id,
+            uploaded,
+          );
+        } else {
+          posthog.capture("email_generation_started", {
+            email_id: currentEmailId,
+            continued_after_chat_only: true,
+            has_images: (input.images?.length ?? 0) > 0,
+          });
+          await startStream(
+            currentEmailId,
+            "generate",
+            input.prompt,
+            undefined,
+            uploaded,
+          );
+        }
         return;
       }
 
@@ -509,7 +529,14 @@ function EmailTemplateProjectInner() {
         ]);
       }
     },
-    [currentEmailId, isStreaming, router, startStream, variant?.id],
+    [
+      currentEmailId,
+      email,
+      isStreaming,
+      router,
+      startStream,
+      variant?.id,
+    ],
   );
 
   // In-place edit: drop the edited turn and everything after it, then re-run the
@@ -902,7 +929,7 @@ function EmailTemplateProjectInner() {
                 panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)/0.18)]",
                 textarea: "min-h-17 rounded-t-2xl px-4.5 pt-4.25",
               }}
-              disabled={isStreaming}
+              disabled={isStreaming || (Boolean(currentEmailId) && emailQuery.isLoading)}
               onSubmit={submitChatPrompt}
               variant="chat"
             />

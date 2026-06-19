@@ -5,7 +5,7 @@ Date: 2026-06-11
 ## Work
 
 - Wired client pricing drawer to `fetchBillingOverview`, `createCheckoutSession`, and `createPortalSession`.
-- Replaced old Basic/Medium/Pro pricing with shared Free/Starter/Growth constants.
+- Billing UI uses shared Free/Basic/Medium/Pro constants.
 - Added current-plan badges, disabled Free/current-plan state, Stripe checkout redirects, and billing portal redirects.
 - Yearly toggle now maps to backend `ANNUAL`; monthly maps to `MONTHLY`.
 

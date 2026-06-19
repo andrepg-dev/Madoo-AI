@@ -298,6 +298,8 @@ export const CreateEmailSchema = z.object({
 
 /** Body for POST /emails/:id/generate — optional image attachments. */
 export const GenerateEmailSchema = z.object({
+  /** Optional replacement prompt when a chat-only first turn did not create a variant yet. */
+  prompt: z.string().min(1).optional(),
   imageUrls: EmailImageUrlsSchema,
 });
 

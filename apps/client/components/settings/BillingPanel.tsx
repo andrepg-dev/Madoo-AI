@@ -284,7 +284,9 @@ export function BillingPanel() {
         ? `Cancels on ${periodEnd}`
         : periodEnd
           ? `Renews on ${periodEnd}`
-          : "You're on the free plan — no billing.";
+          : subscription.plan === "FREE"
+            ? "You're on the free plan — no billing."
+            : `You're on the ${planName} plan.`;
 
   const onCancel = () => {
     if (

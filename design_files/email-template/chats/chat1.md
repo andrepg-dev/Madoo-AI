@@ -720,7 +720,7 @@ _[tool: snip]_
 
 - **Hero** con headline editorial en Instrument Serif
 - **Toggle Monthly / Yearly** con badge "Save 20%" — los precios cambian en vivo
-- **3 planes** (Free, Starter $19/mes, Pro $49/mes) con el plan **Starter destacado** ("Most popular") con borde oscuro y badge
+- **4 planes** (Free, Basic, Medium, Pro) con el plan **Medium destacado** ("Most popular") con borde oscuro y badge
 - **Plan actual** marcado con badge "Current plan" y botón deshabilitado
 - **Comparación detallada** debajo: tabla con 12 features agrupadas en 4 categorías (Sending, AI, Audience, Support) — checks ✓ o valores específicos
 - **Add-ons** opcionales (extra contactos, dedicated IP)
@@ -766,4 +766,3 @@ Added a **Getting Started** dropdown to the top bar.
   - Footer with "Read the docs" + Dismiss
 - Clicks navigate directly to the relevant screen
 - Closes on outside click
-

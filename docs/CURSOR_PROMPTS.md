@@ -462,9 +462,9 @@ apps/backend/src/billing/:
 Plan limits enforcement:
 - ContactsService.upsert: throws ForbiddenException if it exceeds plan limits.
 - CampaignsService.send: ditto.
-- Plans: starter (1k contacts), growth (5k). Constant table in @madoo/shared.
+- Plans: free, basic, medium, pro. Constant table in @madoo/shared.
 
-ENV: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_STARTER, STRIPE_PRICE_GROWTH.
+ENV: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_BASIC, STRIPE_PRICE_MEDIUM, STRIPE_PRICE_PRO.
 
 Frontend /settings/billing: current plan + upgrade button + portal link.
 

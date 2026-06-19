@@ -446,8 +446,8 @@ model WorkspaceInvite {
 
 enum Plan {
   FREE
-  STARTER
-  GROWTH
+  BASIC
+  MEDIUM
   PRO
 }
 

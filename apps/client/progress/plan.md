@@ -88,7 +88,7 @@ Conventions (`docs/CONVENTIONS.md`, mandatory): every feature = zod schema in `p
 
 ## Phase 5 — Billing
 
-**Mapping decision: change UI, not backend.** PricingDrawer's hardcoded Basic $20/Medium $45/Pro $95 → render from `@madoo/shared` constants (PLAN_PRICES etc.): Free / Starter $19 ($15 annual) / Growth $49 ($39 annual). Backend enum, Stripe prices, webhook untouched. Flag copy change in progress log.
+**Mapping decision: align UI and backend plan names.** PricingDrawer's hardcoded Basic/Medium/Pro pricing now maps to shared billing constants: Free / Basic / Medium / Pro. Stripe price env names remain `STRIPE_PRICE_BASIC*`, `STRIPE_PRICE_MEDIUM*`, and `STRIPE_PRICE_PRO*`.
 
 - `actions/billing.ts`: port (fetchBillingOverview, createCheckoutSession, createPortalSession).
 - `PricingDrawer.tsx`: yearly toggle → `interval: "ANNUAL"`; CTA → checkout URL redirect; current-plan state; manage → portal.
@@ -297,5 +297,5 @@ Build order: **8A Accessibility** (real, Axe-core) and **8B Email Clients** (pre
 ## Risks summary
 
 - Cookie cross-origin: BFF first-party cookie (proven in apps/frontend) is source of truth; backend Set-Cookie added per mandate; prod subdomains need Domain attr.
-- Plan naming: UI adopts Free/Starter/Growth from shared constants — copy change needs sign-off.
+- Plan naming: product uses Free/Basic/Medium/Pro end to end.
 - One project page = one Email row; EmailChatMessage already per-email → no new chat model.

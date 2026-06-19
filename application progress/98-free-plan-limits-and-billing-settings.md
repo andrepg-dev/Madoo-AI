@@ -12,8 +12,8 @@ members, workspaces, testEmailsPerDay:
 | Plan | ai/mo | ai/day | templates | members(+owner) | workspaces | test emails/day |
 |------|-------|--------|-----------|-----------------|------------|-----------------|
 | FREE | 30 | 5 | 10 | 0 | 0 | 10 |
-| STARTER | 100 | 15 | 50 | 2 | 5 | 50 |
-| GROWTH | 250 | 25 | 150 | 3 | 15 | 100 |
+| BASIC | 100 | 15 | 50 | 2 | 5 | 50 |
+| MEDIUM | 250 | 25 | 150 | 3 | 15 | 100 |
 | PRO | 550 | 50 | 300 | 5 | -1 | 300 |
 
 Plus `PLAN_FEATURES` (same across plans for now): sharePreviewLinks, exportFormats
@@ -61,7 +61,7 @@ New `components/settings/BillingPanel.tsx` + nav entry. Shows:
 - **Runtime check against the dev DB** (throwaway script booting the real
   TemplatesService / WorkspaceInvitesService / BillingService, then cleaned up):
   6/6 — FREE blocks the 11th template, any invite, and the 6th daily credit;
-  STARTER allows all three. Real service code, real Prisma queries.
+  BASIC allows all three. Real service code, real Prisma queries.
 
 ## Notes / follow-ups
 - Test-email daily meter + enforcement needs a per-send counter (deferred).

@@ -3,9 +3,8 @@
  * landing page (`PricingPlans`) and the in-app upgrade modal (`PricingDrawer`).
  *
  * NOTE: the Stripe-backed billing plans live in `billing.ts` as
- * `Plan = FREE | STARTER | GROWTH`. These marketing plans map to them via
- * `checkoutPlan` so the modal can still trigger checkout. There is no Free plan
- * here on purpose — the product only offers a 7-day trial.
+ * `Plan = FREE | BASIC | MEDIUM | PRO`. Free exists in billing; this list
+ * only contains paid upgrade cards that can start Stripe checkout.
  */
 
 export type PricingPlanId = "basic" | "medium" | "pro";
@@ -30,7 +29,7 @@ export type PricingPlan = {
   cta: string;
   featured?: boolean;
   /** Stripe-backed billing plan used when this card triggers checkout. */
-  checkoutPlan: "STARTER" | "GROWTH" | "PRO";
+  checkoutPlan: "BASIC" | "MEDIUM" | "PRO";
   features: PricingFeature[];
 };
 
@@ -44,7 +43,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     description: "For solo creators building more templates and exports.",
     monthlyPrice: 25,
     cta: "Try Basic",
-    checkoutPlan: "STARTER",
+    checkoutPlan: "BASIC",
     features: [
       { value: "100", label: "monthly credits", emphasized: true },
       { value: "50", label: "stored templates", emphasized: true },
@@ -62,7 +61,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     monthlyPrice: 50,
     cta: "Try Medium",
     featured: true,
-    checkoutPlan: "GROWTH",
+    checkoutPlan: "MEDIUM",
     features: [
       { value: "250", label: "monthly credits", emphasized: true },
       { value: "150", label: "stored templates", emphasized: true },
