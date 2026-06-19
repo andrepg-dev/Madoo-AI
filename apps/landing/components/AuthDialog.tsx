@@ -3,7 +3,7 @@
 import { CLIENT_APP_URL, GITHUB_CLIENT_ID, GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type AuthDialogProps = {
   open: boolean;
@@ -171,6 +171,7 @@ export default function AuthDialog({
   nextUrl,
 }: AuthDialogProps) {
   const copy = authCopy[locale];
+  const googleButtonRef = useRef<HTMLDivElement>(null);
   const [emailStep, setEmailStep] = useState<EmailStep>("email");
   const [emailMode, setEmailMode] = useState<EmailAuthMode>("login");
   const [name, setName] = useState("");
@@ -179,12 +180,15 @@ export default function AuthDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const pendingPayload: PendingPayload = {
-    pendingPrompt: prompt?.trim() || undefined,
-    pendingTone: tone || undefined,
-    pendingLength: length || undefined,
-    pendingAudience: audience || undefined,
-  };
+  const pendingPayload: PendingPayload = useMemo(
+    () => ({
+      pendingPrompt: prompt?.trim() || undefined,
+      pendingTone: tone || undefined,
+      pendingLength: length || undefined,
+      pendingAudience: audience || undefined,
+    }),
+    [audience, length, prompt, tone],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -199,82 +203,103 @@ export default function AuthDialog({
     };
   }, [open, onClose]);
 
-  async function authenticate(
-    provider: string,
-    payload: Record<string, unknown>,
-  ) {
-    setIsSubmitting(true);
-    setError(null);
+  const authenticate = useCallback(
+    async function authenticate(
+      provider: string,
+      payload: Record<string, unknown>,
+    ) {
+      setIsSubmitting(true);
+      setError(null);
 
-    try {
-      const response = await fetch(`/api/auth/${provider}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, ...pendingPayload }),
-      });
+      try {
+        const response = await fetch(`/api/auth/${provider}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, ...pendingPayload }),
+        });
 
-      const raw = (await response.json().catch(() => null)) as
-        | AuthResult
-        | { message?: string }
-        | null;
+        const raw = (await response.json().catch(() => null)) as
+          | AuthResult
+          | { message?: string }
+          | null;
 
-      if (!response.ok) {
-        throw new Error(
-          raw && "message" in raw && raw.message
-            ? raw.message
-            : copy.authFailed,
-        );
+        if (!response.ok) {
+          throw new Error(
+            raw && "message" in raw && raw.message
+              ? raw.message
+              : copy.authFailed,
+          );
+        }
+
+        redirectAfterAuth((raw ?? {}) as AuthResult, nextUrl);
+      } catch (err) {
+        setIsSubmitting(false);
+        setError(err instanceof Error ? err.message : copy.authFailed);
       }
+    },
+    [copy.authFailed, nextUrl, pendingPayload],
+  );
 
-      redirectAfterAuth((raw ?? {}) as AuthResult, nextUrl);
-    } catch (err) {
-      setIsSubmitting(false);
-      setError(err instanceof Error ? err.message : copy.authFailed);
-    }
-  }
+  useEffect(() => {
+    if (!open) return;
 
-  async function handleGoogleLogin() {
     if (!GOOGLE_CLIENT_ID) {
       setError(copy.authFailed);
       return;
     }
 
-    setIsSubmitting(true);
-    setError(null);
+    let cancelled = false;
 
-    try {
-      await loadGsiScript();
-
-      if (!window.google?.accounts?.id) {
-        throw new Error(copy.authFailed);
-      }
-
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response: GsiCredentialResponse) => {
-          if (!response.credential) {
-            setIsSubmitting(false);
-            setError(copy.authFailed);
-            return;
-          }
-
-          void authenticate("google", { idToken: response.credential });
-        },
-        cancel_on_tap_outside: true,
-        ux_mode: "popup",
-      });
-
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setIsSubmitting(false);
-          setError(copy.authFailed);
+    loadGsiScript()
+      .then(() => {
+        if (
+          cancelled ||
+          !window.google?.accounts?.id ||
+          !googleButtonRef.current
+        ) {
+          return;
         }
+
+        const buttonWidth = Math.floor(
+          googleButtonRef.current.getBoundingClientRect().width,
+        );
+
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (response: GsiCredentialResponse) => {
+            if (!response.credential) {
+              setIsSubmitting(false);
+              setError(copy.authFailed);
+              return;
+            }
+
+            void authenticate("google", { idToken: response.credential });
+          },
+          auto_select: false,
+          cancel_on_tap_outside: false,
+          ux_mode: "popup",
+        });
+
+        googleButtonRef.current.innerHTML = "";
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          type: "standard",
+          theme: "outline",
+          size: "medium",
+          shape: "rectangular",
+          text: "continue_with",
+          logo_alignment: "center",
+          width: Math.max(200, buttonWidth),
+          locale,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setError(copy.authFailed);
       });
-    } catch (err) {
-      setIsSubmitting(false);
-      setError(err instanceof Error ? err.message : copy.authFailed);
-    }
-  }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticate, copy.authFailed, locale, open]);
 
   function handleGithubLogin() {
     if (!GITHUB_CLIENT_ID) {
@@ -300,11 +325,6 @@ export default function AuthDialog({
   }
 
   function handleProvider(provider: string) {
-    if (provider === "Google") {
-      void handleGoogleLogin();
-      return;
-    }
-
     if (provider === "GitHub") {
       handleGithubLogin();
     }
@@ -391,16 +411,25 @@ export default function AuthDialog({
 
         <div className="grid gap-3">
           {authProviders.map((provider) => (
-            <button
-              key={provider.name}
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handleProvider(provider.name)}
-              className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-madoo-paper text-sm text-madoo-ink shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-neutral-50 hover:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.28)] disabled:cursor-wait disabled:opacity-70"
-            >
-              <span className="text-madoo-ink">{provider.icon}</span>
-              {copy.continueWith} {provider.name}
-            </button>
+            provider.name === "Google" ? (
+              <div
+                key={provider.name}
+                className={isSubmitting ? "pointer-events-none opacity-70" : ""}
+              >
+                <div ref={googleButtonRef} className="min-h-8 w-full" />
+              </div>
+            ) : (
+              <button
+                key={provider.name}
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => handleProvider(provider.name)}
+                className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-madoo-paper text-sm text-madoo-ink shadow-[0_1px_2px_rgb(var(--madoo-ink-shadow-rgb)/0.035),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-neutral-50 hover:shadow-[0_2px_6px_rgb(var(--madoo-ink-shadow-rgb)/0.055),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.28)] disabled:cursor-wait disabled:opacity-70"
+              >
+                <span className="text-madoo-ink">{provider.icon}</span>
+                {copy.continueWith} {provider.name}
+              </button>
+            )
           ))}
         </div>
 
