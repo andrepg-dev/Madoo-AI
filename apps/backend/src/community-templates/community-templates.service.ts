@@ -7,6 +7,7 @@ import {
 import {
   CommunityTemplateDetailDtoSchema,
   CommunityTemplateDtoSchema,
+  extractVariableSchemaFromComponent,
   parseVariableSchemaJson,
   type CommunityTemplateDetailDto,
   type CommunityTemplateDto,
@@ -19,6 +20,11 @@ import {
 import { BillingService } from "../billing/billing.service";
 import { EmailsService } from "../emails/emails.service";
 import { PrismaService } from "../prisma/prisma.service";
+import {
+  SEED_TEMPLATES,
+  SEED_TEMPLATE_SLUGS,
+  type SeedTemplateSlug,
+} from "../templates/seed-templates";
 
 type CommunityTemplateRow = {
   id: string;
@@ -50,6 +56,8 @@ function cleanOptional(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
 }
+
+const SEED_PUBLIC_CREATED_AT = new Date(0).toISOString();
 
 @Injectable()
 export class CommunityTemplatesService {
@@ -88,6 +96,9 @@ export class CommunityTemplatesService {
         createdAt: true,
       },
     });
+    if (rows.length === 0) {
+      return SEED_TEMPLATE_SLUGS.map((slug) => this.toSeedPublicDto(slug));
+    }
     return rows.map((row) => this.toPublicDto(row));
   }
 
@@ -294,6 +305,36 @@ export class CommunityTemplatesService {
       },
       null,
     );
+    return {
+      id: dto.id,
+      name: dto.name,
+      description: dto.description,
+      category: dto.category,
+      previewUrl: dto.previewUrl,
+      variableSchema: dto.variableSchema,
+      authorName: dto.authorName,
+      createdAt: dto.createdAt,
+    };
+  }
+
+  private toSeedPublicDto(slug: SeedTemplateSlug): PublicCommunityTemplateDto {
+    const template = SEED_TEMPLATES[slug];
+    const dto = CommunityTemplateDtoSchema.parse({
+      id: `seed-${slug}`,
+      name: template.name,
+      description: template.description,
+      category: template.category,
+      previewUrl: null,
+      variableSchema: extractVariableSchemaFromComponent(
+        template.componentCode,
+      ),
+      viewCount: 0,
+      useCount: 0,
+      authorName: "Madoo",
+      starred: false,
+      owned: false,
+      createdAt: SEED_PUBLIC_CREATED_AT,
+    });
     return {
       id: dto.id,
       name: dto.name,
