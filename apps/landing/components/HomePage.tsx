@@ -255,6 +255,20 @@ function clientUseTemplateUrl(id: string): string {
   return url.toString();
 }
 
+// Already-signed-in visitors own a session on the app, so their prompt is handed
+// straight to the app to start generating instead of through the login dialog.
+function clientPromptUrl(prompt: string, tone?: string, length?: string): string {
+  const url = new URL("/email-template-project", CLIENT_APP_URL);
+  url.searchParams.set("prompt", prompt);
+  if (tone) url.searchParams.set("tone", tone);
+  if (length) url.searchParams.set("length", length);
+  return url.toString();
+}
+
+function clientHomeUrl(): string {
+  return new URL("/", CLIENT_APP_URL).toString();
+}
+
 function getRequestedMasonryColumnCount(maxColumns: number) {
   if (window.matchMedia("(min-width: 1280px)").matches) return maxColumns;
   if (window.matchMedia("(min-width: 1024px)").matches) {
@@ -335,6 +349,7 @@ const localeCopy = {
       pricing: "Pricing",
       login: "Login",
       getStarted: "Get started",
+      goToApp: "Open app",
       mobileMenu: "Open navigation",
     },
     hero: {
@@ -479,6 +494,7 @@ const localeCopy = {
       pricing: "Precios",
       login: "Iniciar sesión",
       getStarted: "Empezar",
+      goToApp: "Abrir app",
       mobileMenu: "Abrir navegación",
     },
     hero: {
@@ -850,6 +866,7 @@ export default function HomePage({
     Record<string, string>
   >({});
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [previewTemplate, setPreviewTemplate] =
     useState<TemplatePreviewData | null>(null);
@@ -883,8 +900,30 @@ export default function HomePage({
     };
   }, []);
 
+  // Cookies aren't available during SSR, so detect the session after mount to
+  // avoid a hydration mismatch on the header/prompt CTAs.
+  useEffect(() => {
+    setSignedIn(isLikelySignedIn());
+  }, []);
+
   const openAuthDialog = () => setAuthDialogOpen(true);
   const closeAuthDialog = () => setAuthDialogOpen(false);
+
+  // The prompt CTAs open the login dialog for anonymous visitors, but send
+  // already-signed-in visitors straight into the app (carrying their prompt).
+  const handlePromptSubmit = () => {
+    if (!signedIn) {
+      openAuthDialog();
+      return;
+    }
+
+    const trimmed = prompt.trim();
+    window.location.assign(
+      trimmed
+        ? clientPromptUrl(trimmed, selectedTone, selectedLength)
+        : clientHomeUrl(),
+    );
+  };
 
   const openTemplatePreview = (template: TemplateShowcaseCard) =>
     setPreviewTemplate(template);
@@ -999,7 +1038,7 @@ export default function HomePage({
   const onPromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      openAuthDialog();
+      handlePromptSubmit();
     }
   };
 
@@ -1102,7 +1141,12 @@ export default function HomePage({
             />
 
             <div className="absolute left-0 right-0 top-0 z-[120]">
-              <LandingHeader copy={copy.nav} onAuthClick={openAuthDialog} />
+              <LandingHeader
+                copy={copy.nav}
+                onAuthClick={signedIn ? undefined : openAuthDialog}
+                appUrl={signedIn ? clientHomeUrl() : undefined}
+                goToAppLabel={copy.nav.goToApp}
+              />
             </div>
 
             <Image
@@ -1207,7 +1251,7 @@ export default function HomePage({
 
                     <button
                       type="button"
-                      onClick={openAuthDialog}
+                      onClick={handlePromptSubmit}
                       className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${
                         hasPrompt
                           ? "bg-black"
@@ -1543,7 +1587,7 @@ export default function HomePage({
 
                     <button
                       type="button"
-                      onClick={openAuthDialog}
+                      onClick={handlePromptSubmit}
                       className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${
                         hasPrompt
                           ? "bg-black"
