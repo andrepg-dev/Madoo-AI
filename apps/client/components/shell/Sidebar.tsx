@@ -438,7 +438,12 @@ export function Sidebar() {
         className={cx(
           "group/sidebar z-[100] flex h-dvh flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] px-3 py-3 ease-out",
           "fixed inset-y-0 left-0 w-65 shadow-xl transition-[width,transform] duration-(--duration-base) md:static md:z-auto md:shadow-none",
-          mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          // On desktop force transform:none — any transform here creates a
+          // stacking context that would trap the workspace dropdown beneath the
+          // main content. Mobile keeps the slide-in translate.
+          mobileNavOpen
+            ? "translate-x-0 md:transform-none"
+            : "-translate-x-full md:transform-none",
           collapsed ? "md:w-15" : "md:w-65",
         )}
       >
