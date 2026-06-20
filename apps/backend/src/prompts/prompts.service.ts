@@ -6,14 +6,12 @@ import {
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { EmailsService } from "../emails/emails.service";
-import { GenerationService } from "../generation/generation.service";
 
 @Injectable()
 export class PromptsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emails: EmailsService,
-    private readonly generation: GenerationService,
   ) {}
   async create(
     userId: string,
@@ -67,8 +65,7 @@ export class PromptsService {
       });
     }
 
-    const { emailId, workspaceId } = await this.emails.consumePendingIntoEmail(userId, id);
-    void this.generation.generateEmailInBackground(emailId, workspaceId);
+    const { emailId } = await this.emails.consumePendingIntoEmail(userId, id);
 
     const row = await this.prisma.pendingPrompt.findUniqueOrThrow({
       where: { id },

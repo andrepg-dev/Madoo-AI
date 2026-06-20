@@ -677,6 +677,18 @@ function EmailTemplateProjectInner() {
             },
           ]);
           await invalidateEmailState(pendingPrompt.emailId);
+          await new Promise((resolve) => window.setTimeout(resolve, 750));
+          const existingEmail = await fetchEmail(pendingPrompt.emailId);
+          queryClient.setQueryData(
+            ["email", pendingPrompt.emailId],
+            existingEmail,
+          );
+          if (
+            existingEmail.status === "DRAFT" &&
+            existingEmail.variants.length === 0
+          ) {
+            await startStream(pendingPrompt.emailId, "generate");
+          }
         })
         .catch((error) => {
           setMessages([
@@ -724,6 +736,7 @@ function EmailTemplateProjectInner() {
       });
   }, [
     invalidateEmailState,
+    queryClient,
     router,
     searchParams,
     startStream,
