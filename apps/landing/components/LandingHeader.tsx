@@ -22,6 +22,10 @@ type LandingHeaderProps = {
   onAuthClick?: () => void;
   sectionHrefPrefix?: "" | "/";
   scrolledBackgroundClassName?: string;
+  // When the visitor is already signed in we skip the auth buttons entirely and
+  // surface a single link straight into the app.
+  appUrl?: string | null;
+  goToAppLabel?: string;
 };
 
 function HeaderAction({
@@ -46,6 +50,8 @@ export function LandingHeader({
   onAuthClick,
   sectionHrefPrefix = "",
   scrolledBackgroundClassName = "bg-madoo-paper-tint/50",
+  appUrl,
+  goToAppLabel,
 }: LandingHeaderProps) {
   const [hasScrolled, setHasScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -130,7 +136,11 @@ export function LandingHeader({
         </div>
 
         <div className="hidden gap-1.5 sm:flex">
-          {onAuthClick ? (
+          {appUrl ? (
+            <HeaderAction href={appUrl}>
+              {goToAppLabel ?? copy.getStarted}
+            </HeaderAction>
+          ) : onAuthClick ? (
             <>
               <LandingButton variant="secondary" onClick={onAuthClick}>
                 {copy.login}
@@ -201,7 +211,15 @@ export function LandingHeader({
           </nav>
 
           <div className="mt-2 grid gap-2 pt-2 shadow-[inset_0_0.5px_0_rgb(var(--madoo-rule-rgb)/0.12)]">
-            {onAuthClick ? (
+            {appUrl ? (
+              <Link
+                className="flex min-h-10 cursor-pointer items-center justify-center rounded-lg bg-madoo-ink px-4 text-sm leading-none text-white transition hover:bg-madoo-ink-hover"
+                href={appUrl}
+                onClick={closeMobileMenu}
+              >
+                {goToAppLabel ?? copy.getStarted}
+              </Link>
+            ) : onAuthClick ? (
               <>
                 <LandingButton
                   variant="secondary"
