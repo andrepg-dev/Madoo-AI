@@ -75,13 +75,6 @@ const statusClasses: Record<EmailDto["status"], string> = {
 };
 
 const compactMenuItemClass = "justify-start! px-2! py-1.5! text-[13px]!";
-const masonryPreviewClasses = [
-  "aspect-[4/5]",
-  "aspect-[5/7]",
-  "aspect-[3/4]",
-  "aspect-[7/10]",
-  "aspect-[2/3]",
-] as const;
 const masonryPreviewWeights = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
 
 function latestVariant(email: EmailDto): EmailVariantDto | null {
@@ -167,37 +160,31 @@ function useFilteredEmails(
   }, [emails, query, sortMode, status, starredOnly]);
 }
 
-function ProjectPreview({
-  email,
-  masonryIndex,
-}: {
-  email: EmailDto;
-  masonryIndex: number;
-}) {
+function ProjectPreview({ email }: { email: EmailDto }) {
   const previewUrl = latestVariant(email)?.previewUrl;
-  const previewClass =
-    masonryPreviewClasses[masonryIndex % masonryPreviewClasses.length];
 
   return (
     <div
       className={cx(
-        "relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]",
-        previewClass,
+        "relative flex w-full items-center justify-center overflow-hidden rounded-lg shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]",
+        // Image previews follow the email's real height (no forced aspect, no
+        // letterboxing); empty drafts/errors get a compact placeholder box.
+        previewUrl ? "bg-white" : "aspect-[16/11] bg-madoo-bg-2",
       )}
     >
       {previewUrl ? (
         <img
           alt=""
-          className="h-full w-full object-contain object-top"
+          className="block w-full h-auto max-h-[620px] object-cover object-top"
           loading="lazy"
           src={previewUrl}
         />
       ) : (
-        <Icon name="message" size={30} className="text-[#d8d3c7]" />
+        <Icon name="message" size={26} className="text-madoo-ink-muted/45" />
       )}
       <span
         className={cx(
-          "absolute left-2 top-2 rounded-md px-2 py-1 text-[11px] font-medium leading-none shadow-madoo-border",
+          "absolute left-2 top-2 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium leading-none shadow-madoo-border",
           statusClasses[email.status],
         )}
       >
@@ -214,7 +201,6 @@ function ProjectPreview({
 
 function ProjectGridCard({
   email,
-  masonryIndex,
   onDelete,
   onRename,
   onOpen,
@@ -222,7 +208,6 @@ function ProjectGridCard({
   onTransfer,
 }: {
   email: EmailDto;
-  masonryIndex: number;
   onDelete: (email: EmailDto) => void;
   onRename: (email: EmailDto) => void;
   onOpen: (email: EmailDto) => void;
@@ -235,11 +220,11 @@ function ProjectGridCard({
     <article className="w-full min-w-0 rounded-lg bg-white p-3 shadow-madoo-border">
       <button
         aria-label={`Open ${title}`}
-        className="group min-w-0 cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-none"
+        className="group block w-full min-w-0 cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-none"
         onClick={() => onOpen(email)}
         type="button"
       >
-        <ProjectPreview email={email} masonryIndex={masonryIndex} />
+        <ProjectPreview email={email} />
       </button>
       <div className="mt-1 flex min-w-0 items-center justify-between gap-3">
         <button
@@ -665,11 +650,10 @@ export function ProjectLibrary({
                   getWeight={getProjectMasonryWeight}
                   items={filteredEmails}
                   maxColumns={5}
-                  renderItem={(email, index) => (
+                  renderItem={(email) => (
                     <ProjectGridCard
                       email={email}
                       key={email.id}
-                      masonryIndex={index}
                       onDelete={deleteProject}
                       onOpen={openEmail}
                       onRename={renameProject}
