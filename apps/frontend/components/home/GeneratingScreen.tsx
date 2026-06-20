@@ -9,7 +9,7 @@ import { shortEmailId } from "@/lib/email-id";
 const FALLBACK_STEPS = [
   "Reading your prompt…",
   "Studying your audience…",
-  "Drafting HTML Coditor layout…",
+  "Drafting Madoo layout…",
   "Calling Claude Sonnet…",
   "Rendering HTML preview…",
 ];

@@ -40,7 +40,7 @@ import { ConversationTitleAgent } from "./conversation-title.agent";
 const EMIT_EMAIL_TOOL: Tool = {
   name: "emit_email",
   description:
-    "Return the final email as structured data: subject line, full TSX HTML Coditor component source with default export, and merge-field schema.",
+    "Return the final email as structured data: subject line, full TSX Madoo email component source with default export, and merge-field schema.",
   input_schema: {
     type: "object",
     properties: {
@@ -52,7 +52,7 @@ const EMIT_EMAIL_TOOL: Tool = {
       componentCode: {
         type: "string",
         description:
-          "Complete TSX file body using HTML Coditor. Must export default function.",
+          "Complete TSX file body for Madoo. Must export default function.",
       },
       variableSchema: {
         type: "array",
@@ -111,7 +111,7 @@ const INSPECT_WEBSITE_BRAND_TOOL: Tool = {
 };
 
 const STATIC_INSTRUCTION = [
-  "You are Madoo's transactional HTML email generator, powered by 'HTML Coditor'.",
+  "You are Madoo, an AI email generator for polished, production-ready email templates.",
   "Output MUST call tool emit_email once when finished only when the user request include some email modification.",
   "componentCode must be valid TSX with a single default-exported component. Do NOT write any import statements — React and all email components are already available in scope. The components you may use as JSX tags are: Html, Head, Preview, Body, Container, Section, Row, Column, Text, Button, Hr, Img, Link. Just use them directly, e.g. <Body>…</Body>.",
   "Style every component with inline `style` objects (email-safe), exactly like the reference templates. Do not rely on Tailwind classes, external CSS, flexbox, grid, position, or float — email clients ignore them.",
@@ -648,7 +648,7 @@ export class GenerationService {
       ctx.length ? `Length preference: ${ctx.length}` : "",
       ctx.audience ? `Audience: ${ctx.audience}` : "",
       ctx.template?.componentCode
-        ? `Reference HTML Coditor template (do not copy verbatim; adapt):\n${ctx.template.componentCode.slice(0, 12000)}`
+        ? `Reference Madoo email template (do not copy verbatim; adapt):\n${ctx.template.componentCode.slice(0, 12000)}`
         : "",
     ]
       .filter(Boolean)
@@ -749,7 +749,7 @@ export class GenerationService {
     const codeContext = buildCodeContextSnippet(snapshot.componentCode, CODE_CONTEXT_LIMIT);
 
     const editPrompt = [
-      "Edit the current HTML Coditor TSX according to the instruction.",
+      "Edit the current Madoo TSX email component according to the instruction.",
       `Instruction:\n${instruction}`,
       "",
       "Conversation context (most recent first):",
