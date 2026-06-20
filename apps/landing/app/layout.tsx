@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, IBM_Plex_Sans, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "@madoo/design-system/tokens.css";
 import { LandingFooter } from "../components/LandingFooter";
 import "./globals.css";
@@ -64,6 +65,7 @@ export default function RootLayout({
             <LandingFooter />
           </div>
         </div>
+        <Analytics />
       </body>
     </html>
   );
