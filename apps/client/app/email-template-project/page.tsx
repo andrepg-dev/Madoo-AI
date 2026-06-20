@@ -91,7 +91,18 @@ function EmailTemplateProjectInner() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [testingModalOpen, setTestingModalOpen] = useState(false);
   const [dislikeTarget, setDislikeTarget] = useState<string | null>(null);
+  // On narrow screens the chat and preview share one column via a tab toggle.
+  const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
+  const [isNarrowEditor, setIsNarrowEditor] = useState(false);
   const processedStartupRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsNarrowEditor(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   const {
     messagesRef,
@@ -339,6 +350,10 @@ function EmailTemplateProjectInner() {
           if (event.compiledHtml) {
             setStreamedHtml(event.compiledHtml);
             setSidebarOpen(true);
+            // Reveal the freshly generated email on narrow screens.
+            if (window.matchMedia("(max-width: 1023px)").matches) {
+              setMobileTab("preview");
+            }
           }
           if (event.subject) setStreamedSubject(event.subject);
           if (event.conversationTitle) {
@@ -859,13 +874,16 @@ function EmailTemplateProjectInner() {
     lastUserIndex === -1 ? messages : messages.slice(lastUserIndex + 1);
 
   return (
-    <main className="relative h-screen overflow-hidden bg-white">
+    <main className="relative flex h-screen flex-col overflow-hidden bg-white">
       <header
         className={cn(
           "fixed left-3 top-0 z-30 flex h-11 w-fit items-center bg-white transition-[opacity,transform]",
           hasPreview &&
           previewExpanded &&
           "pointer-events-none -translate-y-3 opacity-0",
+          // On narrow screens hide the title while viewing the preview pane so
+          // it doesn't overlap the preview's own header.
+          hasPreview && mobileTab === "preview" && "hidden lg:flex",
         )}
       >
         <ConversationTitleDropdown
@@ -875,12 +893,45 @@ function EmailTemplateProjectInner() {
         />
       </header>
 
-      <div className="flex h-full min-h-0 overflow-hidden">
+      {/* Mobile-only toggle to switch the single column between chat and preview. */}
+      {hasPreview && previewSrcDoc ? (
+        <div className="z-30 flex shrink-0 items-center justify-center bg-white py-1.5 shadow-(--shadow-border-bottom-soft) lg:hidden">
+          <div className="flex items-center gap-1 rounded-full bg-madoo-bg p-1 shadow-madoo-border">
+            <button
+              type="button"
+              onClick={() => setMobileTab("chat")}
+              className={cn(
+                "rounded-full px-4 py-1 text-xs font-medium transition",
+                mobileTab === "chat"
+                  ? "bg-white text-madoo-ink shadow-madoo-border"
+                  : "text-madoo-ink-muted",
+              )}
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("preview")}
+              className={cn(
+                "rounded-full px-4 py-1 text-xs font-medium transition",
+                mobileTab === "preview"
+                  ? "bg-white text-madoo-ink shadow-madoo-border"
+                  : "text-madoo-ink-muted",
+              )}
+            >
+              Preview
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* CHAT SECTION, (User messages, AI agent messages, date at the top, and so on...) */}
         <section
           className={cn(
             "flex min-w-0 flex-1 flex-col pb-4 pt-11 transition-opacity",
             hasPreview && previewExpanded && "pointer-events-none opacity-0",
+            hasPreview && mobileTab === "preview" && "hidden lg:flex",
           )}
         >
           {/* messages */}
@@ -950,27 +1001,35 @@ function EmailTemplateProjectInner() {
         </section>
 
         {hasPreview && previewSrcDoc ? (
-          <EmailPreviewSidebar
-            email={email}
-            emailId={currentEmailId}
-            expanded={previewExpanded}
-            mode={previewMode}
-            onOpenExport={() => setExportModalOpen(true)}
-            onOpenPreview={() => setPreviewOverlayOpen(true)}
-            onOpenPricing={() => setPricingOpen(true)}
-            onOpenTesting={() => setTestingModalOpen(true)}
-            onSelectVersion={setSelectedVariantId}
-            onToggleExpanded={togglePreviewExpanded}
-            open={sidebarOpen}
-            setMode={setPreviewMode}
-            srcDoc={highlightedPreviewSrcDoc ?? ""}
-            setTheme={setTemplateTheme}
-            setWidth={updatePreviewWidth}
-            subject={previewSubject}
-            theme={templateTheme}
-            variant={activeVariant}
-            width={previewWidth}
-          />
+          <div
+            className={cn(
+              "min-h-0 w-full lg:flex lg:w-auto lg:shrink-0",
+              mobileTab === "preview" ? "flex" : "hidden lg:flex",
+            )}
+          >
+            <EmailPreviewSidebar
+              email={email}
+              emailId={currentEmailId}
+              expanded={previewExpanded}
+              fullWidth={isNarrowEditor}
+              mode={previewMode}
+              onOpenExport={() => setExportModalOpen(true)}
+              onOpenPreview={() => setPreviewOverlayOpen(true)}
+              onOpenPricing={() => setPricingOpen(true)}
+              onOpenTesting={() => setTestingModalOpen(true)}
+              onSelectVersion={setSelectedVariantId}
+              onToggleExpanded={togglePreviewExpanded}
+              open={sidebarOpen}
+              setMode={setPreviewMode}
+              srcDoc={highlightedPreviewSrcDoc ?? ""}
+              setTheme={setTemplateTheme}
+              setWidth={updatePreviewWidth}
+              subject={previewSubject}
+              theme={templateTheme}
+              variant={activeVariant}
+              width={previewWidth}
+            />
+          </div>
         ) : null}
       </div>
 

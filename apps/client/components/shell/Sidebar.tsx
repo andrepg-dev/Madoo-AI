@@ -8,6 +8,7 @@ import { useClientStore } from "@/stores/client-store";
 import {
   Add01Icon,
   ArrowDown01Icon,
+  Cancel01Icon,
   Crown02Icon,
   GiftIcon,
   Grid2X2Icon,
@@ -259,6 +260,7 @@ export function Sidebar() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const authUser = useAuthStore((state) => state.user);
@@ -270,6 +272,8 @@ export function Sidebar() {
   const setSearchCommandOpen = useClientStore(
     (state) => state.setSearchCommandOpen,
   );
+  const mobileNavOpen = useClientStore((state) => state.mobileNavOpen);
+  const setMobileNavOpen = useClientStore((state) => state.setMobileNavOpen);
 
   const { data: queriedUser } = useQuery({
     queryKey: ["me"],
@@ -398,13 +402,46 @@ export function Sidebar() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // Track the mobile breakpoint so the drawer always renders its expanded
+  // content (labels visible) regardless of the desktop collapse state.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // Close the off-canvas drawer whenever navigation changes the route.
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname, setMobileNavOpen]);
+
+  // On mobile the drawer is full-width, so never apply the collapsed layout.
+  const effectiveCollapsed = isMobile ? false : collapsed;
+
   return (
-    <aside
-      className={cx(
-        "group/sidebar flex h-dvh flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] py-3 transition-[width] duration-(--duration-base) ease-out",
-        collapsed ? "w-15 px-3" : "w-65 px-3",
-      )}
-    >
+    <>
+      {/* Backdrop behind the off-canvas drawer (mobile only). */}
+      <button
+        type="button"
+        aria-hidden={!mobileNavOpen}
+        tabIndex={-1}
+        aria-label="Close navigation"
+        onClick={() => setMobileNavOpen(false)}
+        className={cx(
+          "fixed inset-0 z-40 bg-black/40 transition-opacity duration-(--duration-base) md:hidden",
+          mobileNavOpen ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      />
+      <aside
+        className={cx(
+          "group/sidebar z-50 flex h-dvh flex-col gap-2.5 bg-[color-mix(in_srgb,var(--surface)_68%,var(--accent-soft))] px-3 py-3 ease-out",
+          "fixed inset-y-0 left-0 w-65 shadow-xl transition-[width,transform] duration-(--duration-base) md:static md:z-auto md:shadow-none",
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          collapsed ? "md:w-15" : "md:w-65",
+        )}
+      >
       <div
         className={cx(
           "relative flex min-h-7.5 items-center",
@@ -416,7 +453,7 @@ export function Sidebar() {
           href="/"
           className={cx(
             "inline-flex h-7 w-7 items-center justify-center rounded-lg text-madoo-ink-soft transition-[background,color,opacity] duration-(--duration-fast) hover:bg-madoo-surface-2 hover:text-madoo-ink",
-            collapsed &&
+            effectiveCollapsed &&
               "group-hover/sidebar:pointer-events-none group-hover/sidebar:opacity-0",
           )}
         >
@@ -439,6 +476,7 @@ export function Sidebar() {
             setWorkspaceOpen(false);
           }}
           className={cx(
+            "hidden md:inline-flex",
             collapsed &&
               "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 transition-[opacity,transform] duration-(--duration-fast) group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
           )}
@@ -447,6 +485,15 @@ export function Sidebar() {
             icon={collapsed ? PanelRightIcon : PanelLeftIcon}
             size={15}
           />
+        </IconButton>
+        <IconButton
+          aria-label="Close navigation"
+          size="sm"
+          variant="ghost"
+          onClick={() => setMobileNavOpen(false)}
+          className="md:hidden"
+        >
+          <AppIcon icon={Cancel01Icon} size={16} />
         </IconButton>
       </div>
 
@@ -471,14 +518,16 @@ export function Sidebar() {
               <span
                 className={cx(
                   "ml-auto inline-flex overflow-hidden transition-[opacity,max-width] duration-(--duration-base) ease-out",
-                  collapsed ? "max-w-0 opacity-0" : "max-w-4 opacity-100",
+                  effectiveCollapsed
+                    ? "max-w-0 opacity-0"
+                    : "max-w-4 opacity-100",
                 )}
               >
                 <AppIcon icon={ArrowDown01Icon} size={13} />
               </span>
             }
             size="sm"
-            variant={collapsed ? "secondary" : "ghost"}
+            variant={effectiveCollapsed ? "secondary" : "ghost"}
             className={cx(
               "h-8! min-h-8! overflow-hidden py-0! font-normal! transition-[width,padding,background,color,box-shadow] duration-(--duration-base) ease-out",
               "justify-start! gap-2! px-1! pr-3!",
@@ -487,7 +536,9 @@ export function Sidebar() {
             <span
               className={cx(
                 "min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-(--duration-base) ease-out",
-                collapsed ? "max-w-0 opacity-0" : "max-w-44 opacity-100",
+                effectiveCollapsed
+                  ? "max-w-0 opacity-0"
+                  : "max-w-44 opacity-100",
               )}
             >
               {activeWorkspaceName}
@@ -588,7 +639,7 @@ export function Sidebar() {
           return (
             <SidebarNavButton
               active={active}
-              collapsed={collapsed}
+              collapsed={effectiveCollapsed}
               item={item}
               key={item.href}
               onSearchSelect={() => {
@@ -603,7 +654,7 @@ export function Sidebar() {
       <div
         className={cx(
           "overflow-hidden px-2.5 pt-6 pb-1 font-madoo-sans text-(length:--font-size-base) text-ellipsis whitespace-nowrap text-madoo-ink-soft/70",
-          collapsed ? "invisible" : "visible",
+          effectiveCollapsed ? "invisible" : "visible",
         )}
       >
         Template Projects
@@ -618,7 +669,7 @@ export function Sidebar() {
           return (
             <SidebarNavButton
               active={active}
-              collapsed={collapsed}
+              collapsed={effectiveCollapsed}
               item={item}
               key={item.href}
             />
@@ -628,7 +679,7 @@ export function Sidebar() {
 
       <div className="flex-1" />
 
-      {!collapsed ? (
+      {!effectiveCollapsed ? (
         <div className="grid gap-2">
           {upgradeCtaLabel ? (
             <div>
@@ -669,7 +720,9 @@ export function Sidebar() {
       <div
         className={cx(
           "w-full gap-1.5",
-          collapsed ? "grid justify-items-center" : "flex justify-between",
+          effectiveCollapsed
+            ? "grid justify-items-center"
+            : "flex justify-between",
         )}
       >
         <Dropdown>
@@ -691,8 +744,8 @@ export function Sidebar() {
             />
           </DropdownTrigger>
           <DropdownContent
-            side={collapsed ? "right" : "top"}
-            align={collapsed ? "end" : "start"}
+            side={effectiveCollapsed ? "right" : "top"}
+            align={effectiveCollapsed ? "end" : "start"}
             className="w-56 p-2!"
           >
             <div className="flex items-center gap-2.5 p-1.5">
@@ -741,7 +794,7 @@ export function Sidebar() {
               aria-label="Open updates menu"
               leftIcon={<AppIcon icon={InboxIcon} size={15} />}
               rightIcon={
-                !collapsed ? (
+                !effectiveCollapsed ? (
                   <AppIcon icon={ArrowDown01Icon} size={12} />
                 ) : undefined
               }
@@ -770,6 +823,7 @@ export function Sidebar() {
         onClose={() => setCreateWorkspaceOpen(false)}
       />
       <PricingDrawer open={pricingOpen} onClose={() => setPricingOpen(false)} />
-    </aside>
+      </aside>
+    </>
   );
 }

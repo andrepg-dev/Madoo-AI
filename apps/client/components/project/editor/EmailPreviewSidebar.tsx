@@ -17,6 +17,7 @@ export function EmailPreviewSidebar({
   expanded,
   email,
   emailId,
+  fullWidth = false,
   mode,
   onOpenExport,
   onOpenPreview,
@@ -37,6 +38,8 @@ export function EmailPreviewSidebar({
   expanded: boolean;
   email: EmailDto | null | undefined;
   emailId: string | null;
+  /** Mobile: fill the available width and drop the desktop vw resizing. */
+  fullWidth?: boolean;
   mode: PreviewMode;
   onOpenExport: () => void;
   onOpenPreview: () => void;
@@ -144,34 +147,31 @@ export function EmailPreviewSidebar({
     <aside
       aria-label="Email template preview"
       className={cn(
-        "min-h-0 shrink-0 overflow-hidden bg-white ease-out",
-        expanded ? "absolute inset-y-0 right-0 z-20" : "relative",
-        isResizing
-          ? "transition-[opacity,transform]"
-          : expanded ? "" : "",
-            // ? "transition-[opacity,transform] duration-150"
-            // : "transition-[width,opacity,transform] duration-300",
-        open ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0",
+        "min-h-0 overflow-hidden bg-white ease-out",
+        fullWidth
+          ? "relative h-full w-full min-w-0 shrink"
+          : cn(
+              "shrink-0",
+              expanded ? "absolute inset-y-0 right-0 z-20" : "relative",
+              isResizing ? "transition-[opacity,transform]" : "",
+              open ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0",
+            ),
       )}
-      style={{
-        maxWidth: open
-          ? expanded
-            ? "100vw"
-            : "calc(100vw - 320px)"
-          : 0,
-        minWidth: open
-          ? expanded
-            ? "100vw"
-            : "min(560px, 58vw)"
-          : 0,
-        width: open
-          ? expanded
-            ? "100vw"
-            : `${width}vw`
-          : 0,
-      }}
+      style={
+        fullWidth
+          ? undefined
+          : {
+              maxWidth: open
+                ? expanded
+                  ? "100vw"
+                  : "calc(100vw - 320px)"
+                : 0,
+              minWidth: open ? (expanded ? "100vw" : "min(560px, 58vw)") : 0,
+              width: open ? (expanded ? "100vw" : `${width}vw`) : 0,
+            }
+      }
     >
-      {open ? (
+      {open && !fullWidth ? (
         <button
           aria-label="Resize email preview"
           className="group absolute inset-y-0 left-0 z-30 w-3 cursor-col-resize touch-none bg-transparent outline-none"
@@ -189,14 +189,22 @@ export function EmailPreviewSidebar({
         </button>
       ) : null}
 
-      <div className="flex h-full min-w-105 flex-col">
+      <div
+        className={cn(
+          "flex h-full flex-col",
+          fullWidth ? "min-w-0" : "min-w-105",
+        )}
+      >
         <div className="shrink-0 rounded-t-3xl bg-madoo-bg shadow-(--shadow-border-bottom)">
           <div className="flex min-h-13 items-center gap-3 bg-madoo-bg px-4">
             <Button
               aria-label={
                 expanded ? "Collapse email preview" : "Expand email preview"
               }
-              className="size-9 shrink-0 rounded-lg"
+              className={cn(
+                "size-9 shrink-0 rounded-lg",
+                fullWidth && "hidden",
+              )}
               onClick={onToggleExpanded}
               size="sm"
               type="button"
@@ -227,7 +235,14 @@ export function EmailPreviewSidebar({
               </p>
             </div>
 
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <div
+              className={cn(
+                "ml-auto flex items-center gap-1.5",
+                fullWidth
+                  ? "madoo-chat-scrollbar min-w-0 overflow-x-auto [&>*]:shrink-0"
+                  : "shrink-0",
+              )}
+            >
               <ShareProjectDropdown
                 email={email}
                 emailId={emailId}
@@ -271,7 +286,14 @@ export function EmailPreviewSidebar({
             </div>
           </div>
 
-          <div className="flex min-h-11 items-center justify-between gap-2 px-4">
+          <div
+            className={cn(
+              "flex min-h-11 items-center gap-2 px-4",
+              fullWidth
+                ? "madoo-chat-scrollbar overflow-x-auto [&>*]:shrink-0"
+                : "justify-between",
+            )}
+          >
             <div className="flex items-center gap-2">
               {canEditVariables ? (
                 <Button
