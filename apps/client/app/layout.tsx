@@ -4,6 +4,7 @@ import "@madoo/design-system/base.css";
 import "@madoo/design-system/tokens.css";
 import type { Metadata, Viewport } from "next";
 import { Figtree, IBM_Plex_Sans, Inter, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const inter = Inter({
@@ -65,6 +66,7 @@ export default function RootLayout({
     >
       <body>
         <AppProviders>{children}</AppProviders>
+        <Analytics />
       </body>
     </html>
   );
