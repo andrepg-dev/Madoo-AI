@@ -74,7 +74,7 @@ export default function Page() {
         <source src="/background-photo-4-a.mp4" type="video/mp4" />
       </video>
 
-      <div className="relative z-50 flex flex-col gap-5 h-[75vh] justify-center pt-24 sm:pt-36">
+      <div className="relative z-40 flex flex-col gap-5 h-[75vh] justify-center pt-24 sm:pt-36">
         <div className="rounded-2xl sm:rounded-full backdrop-blur-md bg-white/80 p-2 px-4 madoo-paper-border w-max max-w-[calc(100vw-2rem)] text-xs sm:text-sm flex flex-wrap items-center justify-center text-center gap-2 mx-auto">
           <div className="flex h-5 -space-x-1.5">
             {emailProviders.map((provider) => (
