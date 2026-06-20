@@ -316,7 +316,14 @@ export function Sidebar() {
     ? "Loading"
     : usageLimit === -1
       ? "Unlimited"
-      : `${creditsLeft ?? 0} left`;
+      : `${creditsLeft ?? 0} of ${usageLimit} left`;
+  const monthlyUsage = billingOverview?.usage.aiGenerations;
+  const monthlyLimit = monthlyUsage?.limit ?? 0;
+  const monthlyText = billingLoading
+    ? "…"
+    : monthlyLimit === -1
+      ? "Unlimited"
+      : `${monthlyUsage?.used ?? 0} of ${monthlyLimit} used`;
   const currentPlan = billingOverview?.subscription.plan ?? "FREE";
   const planLabel =
     currentPlan === "FREE"
@@ -579,6 +586,14 @@ export function Sidebar() {
               tone="ink"
               label="Daily credits left"
             />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+                Monthly credits
+              </span>
+              <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+                {monthlyText}
+              </span>
+            </div>
             <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
               Resets {formatResetDate(usage?.resetsAt)}
             </span>
