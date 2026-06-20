@@ -670,11 +670,6 @@ function EmailTemplateProjectInner() {
               role: "user",
               content: pendingPrompt.prompt,
             },
-            {
-              id: `${pendingPrompt.emailId}-status`,
-              role: "status",
-              content: "Generation is running...",
-            },
           ]);
           await invalidateEmailState(pendingPrompt.emailId);
           await new Promise((resolve) => window.setTimeout(resolve, 750));
