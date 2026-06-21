@@ -1503,7 +1503,7 @@ export default function HomePage({
                   // small gallery (e.g. 2 templates) never stretches a card across
                   // half the screen. With more cards the columns shrink below the
                   // cap to fit (min 0), so the cap is a no-op then.
-                  gridTemplateColumns: `repeat(${templateMasonryColumns.length}, minmax(0, 480px))`,
+                  gridTemplateColumns: `repeat(${templateMasonryColumns.length}, minmax(0, 340px))`,
                 }}
               >
                 {templateMasonryColumns.map((column, columnIndex) => (
