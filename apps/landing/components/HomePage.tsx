@@ -1497,9 +1497,13 @@ export default function HomePage({
               </div>
             ) : (
               <div
-                className="mt-10 grid gap-4"
+                className="mt-10 grid justify-center gap-4"
                 style={{
-                  gridTemplateColumns: `repeat(${templateMasonryColumns.length}, minmax(0, 1fr))`,
+                  // Cap each column's width and center the grid so a small gallery
+                  // (e.g. 2 templates) renders at a normal card size instead of
+                  // stretching each card across half the screen. With more cards
+                  // the columns shrink to fit (min 0) and centering is a no-op.
+                  gridTemplateColumns: `repeat(${templateMasonryColumns.length}, minmax(0, 340px))`,
                 }}
               >
                 {templateMasonryColumns.map((column, columnIndex) => (
