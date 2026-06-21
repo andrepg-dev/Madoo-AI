@@ -35,7 +35,16 @@ export class BillingController {
       current.sub,
       body.plan,
       body.interval ?? "MONTHLY",
+      body.claimTrial ?? false,
     );
+  }
+
+  @Post("claim-trial")
+  claimTrial(
+    @CurrentWorkspace() workspace: WorkspaceContext,
+    @CurrentUser() current: { sub: string },
+  ) {
+    return this.billing.claimTrial(workspace.id, current.sub);
   }
 
   @Post("portal-session")

@@ -48,6 +48,11 @@ export class AuthService {
     const email = payload.email!.toLowerCase();
     const googleId = payload.sub!;
 
+    const existing = await this.prisma.user.findUnique({
+      where: { googleId },
+      select: { id: true },
+    });
+
     const user = await this.prisma.user.upsert({
       where: { googleId },
       create: {
@@ -70,6 +75,7 @@ export class AuthService {
     });
 
     await this.linkAuthAccount(user.id, "GOOGLE", googleId, email);
+    if (!existing) await this.attributeReferral(user.id, dto.referralCode);
 
     return this.issueSession(user, dto);
   }
@@ -91,6 +97,8 @@ export class AuthService {
         lastLoginAt: new Date(),
       },
     });
+
+    await this.attributeReferral(user.id, dto.referralCode);
 
     return this.issueSession(user, dto);
   }
@@ -193,7 +201,7 @@ export class AuthService {
       );
     }
 
-    const user = await this.upsertOauthUser({
+    const { user, isNew } = await this.upsertOauthUser({
       provider: "GITHUB",
       providerAccountId: String(ghUser.id),
       email,
@@ -201,6 +209,8 @@ export class AuthService {
       name: ghUser.name ?? ghUser.login,
       avatarUrl: ghUser.avatar_url,
     });
+
+    if (isNew) await this.attributeReferral(user.id, dto.referralCode);
 
     return this.issueSession(user, dto);
   }
@@ -220,6 +230,11 @@ export class AuthService {
       toMyWorkspaceDto(row, row.membership),
     );
     const defaultWorkspaceId = workspaces[0]!.id;
+
+    // Reconcile any pre-signup opt-in trial claim: if this email reserved a
+    // 7-day trial spot in the landing FAQ, mark the workspace subscription so
+    // the pricing drawer offers (and checkout grants) the trial.
+    await this.applyTrialClaim(user.email, defaultWorkspaceId);
 
     let pendingPromptId: string | null = null;
     if (pending?.pendingPrompt && pending.pendingPrompt.trim()) {
@@ -270,7 +285,7 @@ export class AuthService {
     emailVerified: boolean;
     name: string | null;
     avatarUrl: string | null;
-  }): Promise<User> {
+  }): Promise<{ user: User; isNew: boolean }> {
     const account = await this.prisma.authAccount.findUnique({
       where: {
         provider_providerAccountId: {
@@ -282,7 +297,7 @@ export class AuthService {
     });
 
     if (account) {
-      return this.prisma.user.update({
+      const user = await this.prisma.user.update({
         where: { id: account.userId },
         data: {
           name: account.user.name ?? input.name ?? undefined,
@@ -290,18 +305,18 @@ export class AuthService {
           lastLoginAt: new Date(),
         },
       });
+      return { user, isNew: false };
     }
 
     // Link by verified email when the user already exists (e.g. signed up with Google first).
-    if (!input.emailVerified) {
-      const clash = await this.prisma.user.findUnique({
-        where: { email: input.email },
-      });
-      if (clash) {
-        throw new BadRequestException(
-          "This email already has an account. Verify the email on your provider before linking.",
-        );
-      }
+    const priorByEmail = await this.prisma.user.findUnique({
+      where: { email: input.email },
+      select: { id: true },
+    });
+    if (!input.emailVerified && priorByEmail) {
+      throw new BadRequestException(
+        "This email already has an account. Verify the email on your provider before linking.",
+      );
     }
 
     const user = await this.prisma.user.upsert({
@@ -323,7 +338,64 @@ export class AuthService {
       input.email,
     );
 
-    return user;
+    // Brand-new only when no prior user existed for this email before upsert.
+    return { user, isNew: !priorByEmail };
+  }
+
+  /**
+   * Attributes a brand-new user to the referrer behind `code`. Defensive: only
+   * sets `referredByUserId` when the code resolves to a different existing user
+   * and the new user has no referrer yet. Never throws — a bad or self code must
+   * not block signup.
+   */
+  /**
+   * If `email` reserved an opt-in 7-day trial spot (TrialClaim), latch
+   * `trialClaimed` on its workspace subscription. Idempotent; best-effort.
+   */
+  private async applyTrialClaim(
+    email: string,
+    workspaceId: string,
+  ): Promise<void> {
+    try {
+      const claim = await this.prisma.trialClaim.findUnique({
+        where: { email: email.toLowerCase() },
+        select: { id: true },
+      });
+      if (!claim) return;
+      await this.prisma.billingSubscription.upsert({
+        where: { workspaceId },
+        create: {
+          workspaceId,
+          plan: "FREE",
+          status: "ACTIVE",
+          trialClaimed: true,
+        },
+        update: { trialClaimed: true },
+      });
+    } catch {
+      // Trial reconciliation is best-effort; never block login on it.
+    }
+  }
+
+  private async attributeReferral(
+    newUserId: string,
+    code?: string | null,
+  ): Promise<void> {
+    const trimmed = code?.trim();
+    if (!trimmed) return;
+    try {
+      const referrer = await this.prisma.user.findUnique({
+        where: { referralCode: trimmed },
+        select: { id: true },
+      });
+      if (!referrer || referrer.id === newUserId) return;
+      await this.prisma.user.updateMany({
+        where: { id: newUserId, referredByUserId: null },
+        data: { referredByUserId: referrer.id },
+      });
+    } catch {
+      // Attribution is best-effort; never block account creation on it.
+    }
   }
 
   private async linkAuthAccount(

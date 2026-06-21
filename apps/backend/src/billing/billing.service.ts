@@ -17,6 +17,7 @@ import {
 import type { BillingSubscription, Plan as PrismaPlan } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
+import { ReferralsService } from "../referrals/referrals.service";
 import { SEED_TEMPLATE_SLUGS } from "../templates/seed-templates";
 import { StripeService } from "./stripe.service";
 import {
@@ -52,6 +53,7 @@ export class BillingService {
     private readonly workspaces: WorkspacesService,
     private readonly stripe: StripeService,
     private readonly config: ConfigService,
+    private readonly referrals: ReferralsService,
   ) {}
 
   /**
@@ -113,13 +115,19 @@ export class BillingService {
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         hasStripeCustomer: Boolean(subscription.stripeCustomerId),
         trialEndsAt: subscription.trialEndsAt?.toISOString() ?? null,
+        trialClaimed: subscription.trialClaimed,
+        // Claimed AND still grantable — drives the "Start free trial" CTA.
+        trialEligible:
+          subscription.trialClaimed &&
+          !subscription.hasUsedTrial &&
+          !subscription.stripeSubscriptionId,
       },
       usage: {
-        aiGenerations: buildCreditUsage(
-          monthlyUsed,
-          limits.aiGenerations,
-          periodEnd,
-        ),
+        aiGenerations: {
+          ...buildCreditUsage(monthlyUsed, limits.aiGenerations, periodEnd),
+          // Referral bonus credits extend the monthly allowance only.
+          bonus: subscription.bonusCredits,
+        },
         dailyAiGenerations: buildCreditUsage(
           dailyUsed,
           limits.dailyAiGenerations,
@@ -161,6 +169,16 @@ export class BillingService {
         periodStart,
       );
       if (usedThisPeriod >= limits.aiGenerations) {
+        // Past the base monthly cap: allow only if referral bonus credits
+        // remain, spending one for this generation. The daily cap above still
+        // applies. `bonusCredits > 0` guards the balance from going negative.
+        if (subscription.bonusCredits > 0) {
+          await this.prisma.billingSubscription.updateMany({
+            where: { id: subscription.id, bonusCredits: { gt: 0 } },
+            data: { bonusCredits: { decrement: 1 } },
+          });
+          return;
+        }
         throw new ForbiddenException(
           `Monthly AI credit limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limits.aiGenerations} credits per month (used ${usedThisPeriod}). Upgrade to generate more.`,
         );
@@ -188,11 +206,45 @@ export class BillingService {
    * the workspace's `stripeCustomerId` if it exists; otherwise Stripe will
    * mint a new customer and we'll record it via the webhook.
    */
+  /**
+   * Records a pre-signup opt-in trial claim by email (landing FAQ). Idempotent.
+   * Public — no auth; the email is reconciled to the user on their next login.
+   */
+  async recordTrialClaimEmail(email: string): Promise<{ claimed: boolean }> {
+    const normalized = email.trim().toLowerCase();
+    await this.prisma.trialClaim.upsert({
+      where: { email: normalized },
+      create: { email: normalized },
+      update: {},
+    });
+    return { claimed: true };
+  }
+
+  /**
+   * Marks the opt-in 7-day trial as claimed for a workspace (owner only). The
+   * claim latches so the FAQ/landing flow can grant the trial at the next
+   * checkout. Does not start a trial by itself.
+   */
+  async claimTrial(
+    workspaceId: string,
+    userId: string,
+  ): Promise<{ trialClaimed: boolean }> {
+    await this.workspaces.assertOwner(userId, workspaceId);
+    const subscription = await this.ensureSubscription(workspaceId);
+    if (subscription.trialClaimed) return { trialClaimed: true };
+    const updated = await this.prisma.billingSubscription.update({
+      where: { id: subscription.id },
+      data: { trialClaimed: true },
+    });
+    return { trialClaimed: updated.trialClaimed };
+  }
+
   async createCheckoutSession(
     workspaceId: string,
     userId: string,
     targetPlan: Exclude<Plan, "FREE">,
     interval: "MONTHLY" | "ANNUAL" = "MONTHLY",
+    claimTrial = false,
   ): Promise<{ url: string }> {
     await this.workspaces.assertOwner(userId, workspaceId);
     if (!this.stripe.isEnabled()) {
@@ -210,6 +262,18 @@ export class BillingService {
     }
 
     const subscription = await this.ensureSubscription(workspaceId);
+
+    // Opt-in trial: the trial is no longer granted by default. Persist the
+    // claim when the caller asks for it so the FAQ/landing flow latches it.
+    let trialClaimed = subscription.trialClaimed;
+    if (claimTrial && !trialClaimed) {
+      const updated = await this.prisma.billingSubscription.update({
+        where: { id: subscription.id },
+        data: { trialClaimed: true },
+      });
+      trialClaimed = updated.trialClaimed;
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { email: true },
@@ -217,13 +281,14 @@ export class BillingService {
     const appUrl =
       this.config.get<string>("APP_URL") ?? "http://localhost:3000";
 
-    // Grant the free trial only to workspaces that have never started one and
-    // never had a Stripe subscription, so cancel-and-resubscribe can't farm
-    // repeated trials. Stripe still collects a card up front and auto-charges
-    // when the trial ends.
+    // Grant the free trial only when it was explicitly claimed, the workspace
+    // has never started one, and it never had a Stripe subscription — so
+    // cancel-and-resubscribe can't farm repeated trials. Stripe still collects a
+    // card up front and auto-charges when the trial ends.
     const trialDays = this.trialPeriodDays();
     const grantTrial =
       trialDays > 0 &&
+      trialClaimed &&
       !subscription.hasUsedTrial &&
       !subscription.stripeSubscriptionId;
 
@@ -460,6 +525,27 @@ export class BillingService {
         ...(planChanged ? { creditsAnchor: new Date() } : {}),
       },
     });
+
+    // Referral payout: only on a *real charge* — the workspace transitions INTO
+    // a paid plan with status ACTIVE. A TRIALING subscription (no charge yet)
+    // does not qualify; it pays out later if/when the trial converts. Idempotent
+    // via the ReferralReward unique key, but gated on the transition to avoid
+    // re-running on every routine webhook.
+    const becamePaidActive =
+      plan !== "FREE" &&
+      status === "ACTIVE" &&
+      (target.plan === "FREE" || target.status !== "ACTIVE");
+    if (becamePaidActive) {
+      try {
+        await this.referrals.rewardIfQualified(target.workspaceId);
+      } catch (err) {
+        this.logger.error(
+          `referral reward failed for workspace ${target.workspaceId}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
   }
 }
 
