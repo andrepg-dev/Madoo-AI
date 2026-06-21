@@ -185,7 +185,7 @@ function TemplatePreviewImage({
 
   return (
     <div
-      className="relative flex min-h-0 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40"
+      className="relative max-w-62 flex min-h-0 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40"
       style={{ aspectRatio: 1 / heightRatio }}
     >
       <img
@@ -1503,7 +1503,7 @@ export default function HomePage({
                   // small gallery (e.g. 2 templates) never stretches a card across
                   // half the screen. With more cards the columns shrink below the
                   // cap to fit (min 0), so the cap is a no-op then.
-                  gridTemplateColumns: `repeat(${templateMasonryColumns.length}, minmax(0, 340px))`,
+                  gridTemplateColumns: `repeat(${templateMasonryColumns.length}, minmax(0, 280px))`,
                 }}
               >
                 {templateMasonryColumns.map((column, columnIndex) => (

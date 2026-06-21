@@ -51,7 +51,10 @@ export default function TemplateCard({
   return (
     <article
       className={cx(
-        "group w-full min-w-0 text-left",
+        // max-w caps the card so the masonry still decides its real width but a
+        // sparse grid never stretches a card across the column. Matches the
+        // landing gallery cards.
+        "group w-full min-w-0 max-w-62 text-left",
         disabled && "pointer-events-none opacity-70",
       )}
     >
