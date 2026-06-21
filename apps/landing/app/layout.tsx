@@ -3,6 +3,7 @@ import { Figtree, IBM_Plex_Sans, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "@madoo/design-system/tokens.css";
 import { LandingFooter } from "../components/LandingFooter";
+import { ReferralCapture } from "../components/ReferralCapture";
 import "./globals.css";
 
 const inter = Inter({
@@ -59,6 +60,7 @@ export default function RootLayout({
       className={`${inter.variable} ${figtree.variable} ${ibmPlexSans.variable}`}
     >
       <body className={`${inter.className} bg-madoo-page`}>
+        <ReferralCapture />
         <div className="relative min-h-screen w-full bg-madoo-page">
           <div className="relative z-10">
             {children}

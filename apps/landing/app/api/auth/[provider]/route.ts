@@ -25,10 +25,13 @@ type PendingFields = {
   pendingAudience?: string;
 };
 
+type ReferralField = { referralCode?: string };
+
 type AuthPayload =
-  | ({ idToken: string } & PendingFields)
-  | ({ email: string; password: string; name?: string } & PendingFields)
-  | ({ email: string; password: string } & PendingFields);
+  | ({ idToken: string } & PendingFields & ReferralField)
+  | ({ email: string; password: string; name?: string } & PendingFields &
+      ReferralField)
+  | ({ email: string; password: string } & PendingFields & ReferralField);
 
 const PROVIDERS: Record<Provider, string> = {
   google: "/auth/google",
@@ -49,13 +52,19 @@ function pendingFields(input: Record<string, unknown>): PendingFields {
   };
 }
 
+function referralField(input: Record<string, unknown>): ReferralField {
+  return { referralCode: optionalString(input.referralCode) };
+}
+
 function parsePayload(provider: Provider, raw: unknown): AuthPayload | null {
   if (!raw || typeof raw !== "object") return null;
   const input = raw as Record<string, unknown>;
 
   if (provider === "google") {
     const idToken = optionalString(input.idToken);
-    return idToken ? { idToken, ...pendingFields(input) } : null;
+    return idToken
+      ? { idToken, ...pendingFields(input), ...referralField(input) }
+      : null;
   }
 
   const email = optionalString(input.email);
@@ -68,9 +77,11 @@ function parsePayload(provider: Provider, raw: unknown): AuthPayload | null {
       password,
       name: optionalString(input.name),
       ...pendingFields(input),
+      ...referralField(input),
     };
   }
 
+  // Login is an existing-account flow — no referral attribution.
   return { email, password, ...pendingFields(input) };
 }
 

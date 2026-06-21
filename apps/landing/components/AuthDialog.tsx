@@ -2,6 +2,7 @@
 
 import { CLIENT_APP_URL, GITHUB_CLIENT_ID, GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
+import { getStoredReferralCode } from "@/lib/referral";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -212,10 +213,15 @@ export default function AuthDialog({
       setError(null);
 
       try {
+        const referralCode = getStoredReferralCode();
         const response = await fetch(`/api/auth/${provider}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...payload, ...pendingPayload }),
+          body: JSON.stringify({
+            ...payload,
+            ...pendingPayload,
+            ...(referralCode ? { referralCode } : {}),
+          }),
         });
 
         const raw = (await response.json().catch(() => null)) as
@@ -307,10 +313,12 @@ export default function AuthDialog({
       return;
     }
 
+    const referralCode = getStoredReferralCode();
     const state = base64UrlEncode(
       JSON.stringify({
         next: safeClientRedirect(nextUrl),
         ...pendingPayload,
+        ...(referralCode ? { referralCode } : {}),
       }),
     );
     const url = new URL("https://github.com/login/oauth/authorize");
