@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { UserSchema } from "./user";
 import { MyWorkspaceSchema } from "./workspace";
+import { ReferralCodeFields } from "./referrals";
 
 const PendingPromptFields = {
   pendingPrompt: z.string().optional(),
@@ -12,6 +13,7 @@ const PendingPromptFields = {
 export const GoogleLoginInputSchema = z.object({
   idToken: z.string().min(1),
   ...PendingPromptFields,
+  ...ReferralCodeFields,
 });
 export type GoogleLoginInput = z.infer<typeof GoogleLoginInputSchema>;
 
@@ -20,6 +22,7 @@ export const RegisterInputSchema = z.object({
   password: z.string().min(8).max(128),
   name: z.string().min(1).max(120).optional(),
   ...PendingPromptFields,
+  ...ReferralCodeFields,
 });
 export type RegisterInput = z.infer<typeof RegisterInputSchema>;
 
@@ -34,6 +37,7 @@ export const GithubLoginInputSchema = z.object({
   code: z.string().min(1),
   redirectUri: z.string().url(),
   ...PendingPromptFields,
+  ...ReferralCodeFields,
 });
 export type GithubLoginInput = z.infer<typeof GithubLoginInputSchema>;
 

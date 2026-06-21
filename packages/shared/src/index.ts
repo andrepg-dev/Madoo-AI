@@ -7,6 +7,7 @@ export * from "./prompts";
 export * from "./emails";
 export * from "./audit-log";
 export * from "./billing";
+export * from "./referrals";
 export * from "./pricing";
 export * from "./assistant";
 export * from "./support";
