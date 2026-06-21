@@ -131,6 +131,7 @@ function EmailTemplateProjectInner() {
     queryKey: ["email", currentEmailId],
     queryFn: () => fetchEmail(currentEmailId!),
     enabled: Boolean(currentEmailId),
+    staleTime: 15_000,
   });
   const chatQuery = useQuery({
     queryKey: ["email-chat", currentEmailId],
@@ -988,7 +989,7 @@ function EmailTemplateProjectInner() {
                 panel: "bg-madoo-bg shadow-[inset_0_0_0_0.75px_rgb(var(--ink-shadow-rgb)/0.18)]",
                 textarea: "min-h-17 rounded-t-2xl px-4.5 pt-4.25",
               }}
-              disabled={isStreaming || (Boolean(currentEmailId) && emailQuery.isLoading)}
+              disabled={isStreaming}
               onSubmit={submitChatPrompt}
               variant="chat"
             />

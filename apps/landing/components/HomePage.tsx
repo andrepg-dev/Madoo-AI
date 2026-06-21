@@ -160,7 +160,6 @@ const templateDefaultHeightRatios = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
 // long email reads as a long card instead of being cropped into a short box.
 const TEMPLATE_MIN_HEIGHT_RATIO = 0.6;
 const TEMPLATE_MAX_HEIGHT_RATIO = 2.3;
-const minimumLandingTemplateCards = 5;
 
 function clampTemplateHeightRatio(ratio: number): number {
   return Math.min(
@@ -837,18 +836,12 @@ export default function HomePage({
       isCommunityTemplate: true,
     }),
   );
+  // Show only real community templates when any exist. The hardcoded sample
+  // cards are a fallback for an empty gallery, not padding to a minimum count —
+  // padding made decorative cards look like real DB templates.
   const localizedTemplateCards: TemplateShowcaseCard[] =
     communityTemplateCards.length > 0
-      ? [
-          ...communityTemplateCards,
-          ...localizedFallbackTemplateCards.slice(
-            0,
-            Math.max(
-              0,
-              minimumLandingTemplateCards - communityTemplateCards.length,
-            ),
-          ),
-        ]
+      ? communityTemplateCards
       : localizedFallbackTemplateCards;
   const templateMasonryColumnCount = useResponsiveMasonryColumnCount(
     localizedTemplateCards.length,
