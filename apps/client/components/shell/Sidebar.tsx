@@ -42,7 +42,7 @@ import { PLAN_DISPLAY_NAMES, getRecommendedUpgradePlan } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { PricingDrawer } from "./PricingDrawer";
@@ -256,7 +256,6 @@ function formatResetDate(value: string | undefined) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(true);
@@ -354,7 +353,9 @@ export function Sidebar() {
       queryClient.removeQueries({ queryKey: ["emails"] });
       queryClient.removeQueries({ queryKey: ["templates"] });
       queryClient.removeQueries({ queryKey: ["template-preview"] });
-      router.push("/");
+      // Hard navigation so middleware re-runs with the cleared cookies and
+      // redirects to the landing login instead of soft-rendering the app shell.
+      window.location.assign("/");
     },
     onError: (error) => {
       toast({
