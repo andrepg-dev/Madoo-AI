@@ -182,14 +182,19 @@ function ProjectPreview({ email }: { email: EmailDto }) {
       ) : (
         <Icon name="message" size={26} className="text-madoo-ink-muted/45" />
       )}
-      <span
-        className={cx(
-          "absolute left-2 top-2 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium leading-none shadow-madoo-border",
-          statusClasses[email.status],
-        )}
-      >
-        {statusLabels[email.status]}
-      </span>
+      {/* Only surface the status as a badge when something needs attention
+          (an error). Draft/Ready/Generating are the normal flow and just add
+          noise to every card. */}
+      {email.status === "ERROR" ? (
+        <span
+          className={cx(
+            "absolute left-2 top-2 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium leading-none shadow-madoo-border",
+            statusClasses[email.status],
+          )}
+        >
+          {statusLabels[email.status]}
+        </span>
+      ) : null}
       {email.starred ? (
         <span className="absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-md bg-white/90 text-amber-500 shadow-madoo-border backdrop-blur">
           <Icon name="star" size={13} />
@@ -283,14 +288,18 @@ function ProjectListRow({
           {email.prompt}
         </span>
       </button>
-      <span
-        className={cx(
-          "w-max rounded-md px-2 py-1 text-[11px] font-medium leading-none max-[760px]:hidden",
-          statusClasses[email.status],
-        )}
-      >
-        {statusLabels[email.status]}
-      </span>
+      {email.status === "ERROR" ? (
+        <span
+          className={cx(
+            "w-max rounded-md px-2 py-1 text-[11px] font-medium leading-none max-[760px]:hidden",
+            statusClasses[email.status],
+          )}
+        >
+          {statusLabels[email.status]}
+        </span>
+      ) : (
+        <span className="max-[760px]:hidden" />
+      )}
       <span className="text-xs text-madoo-ink-muted max-[760px]:hidden">
         {formatDate(email.updatedAt)}
       </span>

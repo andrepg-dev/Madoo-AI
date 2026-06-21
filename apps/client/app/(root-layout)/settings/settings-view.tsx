@@ -2,6 +2,7 @@
 
 import { getMe, updateMe, uploadAvatar } from "@/actions/auth";
 import { BillingPanel } from "@/components/settings/BillingPanel";
+import { ReferralPanel } from "@/components/settings/ReferralPanel";
 import { createSupportTicket } from "@/actions/support";
 import {
   createWorkspaceInvite,
@@ -54,7 +55,7 @@ import { useEffect, useMemo, useState } from "react";
 import posthog from "posthog-js";
 
 type SettingsArea = "account" | "workspace" | "support";
-type AccountSection = "profile" | "billing" | "sound";
+type AccountSection = "profile" | "billing" | "referral" | "sound";
 type WorkspaceSection = "overview" | "avatar" | "members" | "danger";
 
 type NavIcon =
@@ -65,7 +66,8 @@ type NavIcon =
   | "image"
   | "copy"
   | "lock"
-  | "message";
+  | "message"
+  | "sparkle";
 
 type NavItem = {
   area: SettingsArea;
@@ -94,6 +96,13 @@ const navGroups: NavGroup[] = [
         label: "Billing & usage",
         description: "Your plan, AI credits, limits, and invoices.",
         icon: "barChart",
+      },
+      {
+        area: "account",
+        section: "referral",
+        label: "Refer & earn",
+        description: "Share Madoo and earn credits when invitees subscribe.",
+        icon: "sparkle",
       },
       {
         area: "account",
@@ -342,6 +351,10 @@ function AccountPanel({ section }: { section: AccountSection }) {
 
   if (section === "billing") {
     return <BillingPanel />;
+  }
+
+  if (section === "referral") {
+    return <ReferralPanel />;
   }
 
   if (section === "sound") {

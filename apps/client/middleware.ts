@@ -11,9 +11,6 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:4000/api/v1";
 
-const CLIENT_APP_URL =
-  process.env.NEXT_PUBLIC_CLIENT_APP_URL ?? "http://localhost:3003";
-
 function isPublicPath(pathname: string) {
   return PUBLIC_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -33,7 +30,7 @@ async function isTokenValid(token: string) {
 }
 
 export async function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+  const { pathname } = req.nextUrl;
 
   if (isPublicPath(pathname)) return NextResponse.next();
 
@@ -41,8 +38,6 @@ export async function middleware(req: NextRequest) {
   if (token && (await isTokenValid(token))) return NextResponse.next();
 
   const redirect = new URL(LANDING_URL);
-  const next = new URL(`${pathname}${search}`, CLIENT_APP_URL);
-  redirect.searchParams.set("next", next.toString());
 
   const response = NextResponse.redirect(redirect);
   response.cookies.delete({ name: AUTH_COOKIE, domain: COOKIE_DOMAIN, path: "/" });

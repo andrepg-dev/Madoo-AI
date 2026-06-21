@@ -4,6 +4,7 @@ import { SettingsView } from "../settings-view";
 const sectionTitles: Record<string, string> = {
   profile: "Profile Settings",
   billing: "Billing & Usage",
+  referral: "Refer & Earn",
   sound: "Completion Sound",
   general: "Workspace Settings",
   avatar: "Workspace Avatar",

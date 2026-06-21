@@ -54,7 +54,7 @@ export default function TemplateCard({
         // max-w caps the card so the masonry still decides its real width but a
         // sparse grid never stretches a card across the column. Matches the
         // landing gallery cards.
-        "group w-full min-w-0 max-w-62 text-left",
+        "group w-full min-w-0 max-w-85 text-left",
         disabled && "pointer-events-none opacity-70",
       )}
     >
