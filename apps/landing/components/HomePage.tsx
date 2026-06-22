@@ -1,5 +1,8 @@
 "use client";
 
+import type { LandingCommunityTemplate } from "@/lib/community-templates";
+import { CLIENT_APP_URL } from "@/lib/env";
+import { useDictation } from "@/lib/use-dictation";
 import {
   Add01Icon,
   AiIdeaIcon,
@@ -19,18 +22,15 @@ import {
   Select,
   cx,
 } from "@madoo/design-system";
-import { CLIENT_APP_URL } from "@/lib/env";
-import { useDictation } from "@/lib/use-dictation";
-import type { LandingCommunityTemplate } from "@/lib/community-templates";
 import type { VariableSchemaRoot } from "@madoo/shared";
 import Image from "next/image";
 import type { ChangeEvent, KeyboardEvent, SVGAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
 import AuthDialog from "./AuthDialog";
+import { LandingHeader } from "./LandingHeader";
 import TemplatePreviewDialog, {
   type TemplatePreviewData,
 } from "./TemplatePreviewDialog";
-import { LandingHeader } from "./LandingHeader";
 
 const exportProviders = [
   {
@@ -850,9 +850,9 @@ export default function HomePage({
   const templateMasonryColumns =
     templateMasonryColumnCount > 0
       ? buildTemplateMasonryColumns(
-          localizedTemplateCards,
-          templateMasonryColumnCount,
-        )
+        localizedTemplateCards,
+        templateMasonryColumnCount,
+      )
       : [];
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
@@ -972,12 +972,12 @@ export default function HomePage({
   const openFilePicker = () => fileInputRef.current?.click();
   const onTemplateCardKeyDown =
     (template: TemplateShowcaseCard) =>
-    (event: KeyboardEvent<HTMLElement>) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openTemplatePreview(template);
-      }
-    };
+      (event: KeyboardEvent<HTMLElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openTemplatePreview(template);
+        }
+      };
 
   const renderTemplateCard = (
     template: TemplateShowcaseCard,
@@ -996,7 +996,7 @@ export default function HomePage({
         alt={`${template.name} ${copy.templates.previewAlt}`}
         defaultHeightRatio={
           templateDefaultHeightRatios[
-            index % templateDefaultHeightRatios.length
+          index % templateDefaultHeightRatios.length
           ]
         }
       />
@@ -1227,11 +1227,10 @@ export default function HomePage({
                       type="button"
                       onClick={dictation.toggle}
                       aria-pressed={dictation.isListening}
-                      className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-[background,color] duration-(--duration-fast) ease-out ${
-                        dictation.isListening
+                      className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-[background,color] duration-(--duration-fast) ease-out ${dictation.isListening
                           ? "bg-red-500/10 text-red-600"
                           : "text-[#101114] hover:bg-[rgb(var(--rule-rgb)/0.06)]"
-                      }`}
+                        }`}
                       aria-label={copy.hero.microphone}
                     >
                       <HugeiconsIcon
@@ -1245,11 +1244,10 @@ export default function HomePage({
                     <button
                       type="button"
                       onClick={handlePromptSubmit}
-                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${
-                        hasPrompt
+                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt
                           ? "bg-black"
                           : "bg-[#7d7d7a] hover:bg-[#666663]"
-                      }`}
+                        }`}
                       aria-label={copy.hero.submit}
                     >
                       {copy.hero.submit}
@@ -1274,7 +1272,7 @@ export default function HomePage({
                           style={{
                             backgroundColor:
                               providerLogoSwatches[
-                                index % providerLogoSwatches.length
+                              index % providerLogoSwatches.length
                               ],
                           }}
                         >
@@ -1310,10 +1308,6 @@ export default function HomePage({
                 <p className="mt-4 max-w-2xl text-base leading-7 text-[#6f6961]">
                   {copy.value.description}
                 </p>
-              </div>
-
-              <div className="madoo-paper-border w-full rounded-full bg-white px-4 py-2 text-sm font-medium text-[#071b38] sm:w-fit">
-                {copy.value.status}
               </div>
             </div>
 
@@ -1450,7 +1444,7 @@ export default function HomePage({
                               style={{
                                 backgroundColor:
                                   providerLogoSwatches[
-                                    index % providerLogoSwatches.length
+                                  index % providerLogoSwatches.length
                                   ],
                               }}
                             >
@@ -1567,11 +1561,10 @@ export default function HomePage({
                       type="button"
                       onClick={dictation.toggle}
                       aria-pressed={dictation.isListening}
-                      className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-[background,color] duration-(--duration-fast) ease-out ${
-                        dictation.isListening
+                      className={`inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-[background,color] duration-(--duration-fast) ease-out ${dictation.isListening
                           ? "bg-red-500/10 text-red-600"
                           : "text-[#101114] hover:bg-[rgb(var(--rule-rgb)/0.06)]"
-                      }`}
+                        }`}
                       aria-label={copy.hero.microphone}
                     >
                       <HugeiconsIcon
@@ -1585,11 +1578,10 @@ export default function HomePage({
                     <button
                       type="button"
                       onClick={handlePromptSubmit}
-                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${
-                        hasPrompt
+                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt
                           ? "bg-black"
                           : "bg-[#7d7d7a] hover:bg-[#666663]"
-                      }`}
+                        }`}
                       aria-label={copy.hero.submit}
                     >
                       {copy.hero.submit}
