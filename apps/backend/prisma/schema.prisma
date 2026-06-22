@@ -331,6 +331,7 @@ model CommunityTemplate {
   name        String
   description String?
   category    String?
+  categories  String[] @default([])
 
   componentCode  String  @db.Text
   compiledHtml   String  @db.Text

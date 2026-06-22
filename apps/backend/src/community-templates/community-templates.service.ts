@@ -6,9 +6,11 @@ import {
 } from "@nestjs/common";
 import {
   CommunityTemplateDetailDtoSchema,
+  CommunityTemplateCategorySchema,
   CommunityTemplateDtoSchema,
   extractVariableSchemaFromComponent,
   parseVariableSchemaJson,
+  type CommunityTemplateCategory,
   type CommunityTemplateDetailDto,
   type CommunityTemplateDto,
   type EmailDto,
@@ -31,6 +33,7 @@ type CommunityTemplateRow = {
   name: string;
   description: string | null;
   category: string | null;
+  categories: string[];
   componentCode?: string;
   compiledHtml?: string;
   previewUrl: string | null;
@@ -57,7 +60,42 @@ function cleanOptional(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+const legacyCategoryMap: Record<string, CommunityTemplateCategory> = {
+  event: "Events & Webinars",
+  engagement: "Re-engagement",
+  growth: "Promotional",
+  launch: "Product Launch",
+  newsletter: "Newsletter",
+  onboarding: "Welcome",
+  promotion: "Promotional",
+  transactional: "Transactional",
+};
+
 const SEED_PUBLIC_CREATED_AT = new Date(0).toISOString();
+
+function normalizeCategory(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const parsed = CommunityTemplateCategorySchema.safeParse(trimmed);
+  if (parsed.success) return parsed.data;
+  return legacyCategoryMap[trimmed.toLowerCase()] ?? "Other";
+}
+
+function normalizeCategories(
+  category: string | null | undefined,
+  categories: readonly string[] | undefined,
+): CommunityTemplateCategory[] {
+  const normalized: CommunityTemplateCategory[] = [];
+  const push = (value: string | null | undefined) => {
+    const next = normalizeCategory(value);
+    if (next && !normalized.includes(next)) normalized.push(next);
+  };
+
+  categories?.forEach(push);
+  push(category);
+  if (normalized.length === 0) normalized.push("Other");
+  return normalized.slice(0, 3);
+}
 
 @Injectable()
 export class CommunityTemplatesService {
@@ -90,6 +128,7 @@ export class CommunityTemplatesService {
         name: true,
         description: true,
         category: true,
+        categories: true,
         previewUrl: true,
         variableSchema: true,
         authorName: true,
@@ -161,11 +200,13 @@ export class CommunityTemplatesService {
       where: { id: userId },
       select: { email: true, name: true },
     });
+    const categories = normalizeCategories(dto.category, dto.categories);
     const created = await this.prisma.communityTemplate.create({
       data: {
         name: dto.name.trim(),
         description: cleanOptional(dto.description),
-        category: cleanOptional(dto.category),
+        category: categories[0],
+        categories,
         componentCode: variant.componentCode,
         compiledHtml: variant.compiledHtml,
         previewUrl: variant.previewUrl,
@@ -272,11 +313,13 @@ export class CommunityTemplatesService {
     const variableSchema: VariableSchemaRoot = parseVariableSchemaJson(
       row.variableSchema,
     );
+    const categories = normalizeCategories(row.category, row.categories);
     return CommunityTemplateDtoSchema.parse({
       id: row.id,
       name: row.name,
       description: row.description,
-      category: row.category,
+      category: categories[0],
+      categories,
       previewUrl:
         typeof row.previewUrl === "string" &&
         /^https?:\/\//i.test(row.previewUrl.trim())
@@ -310,6 +353,7 @@ export class CommunityTemplatesService {
       name: dto.name,
       description: dto.description,
       category: dto.category,
+      categories: dto.categories,
       previewUrl: dto.previewUrl,
       variableSchema: dto.variableSchema,
       authorName: dto.authorName,
@@ -319,11 +363,13 @@ export class CommunityTemplatesService {
 
   private toSeedPublicDto(slug: SeedTemplateSlug): PublicCommunityTemplateDto {
     const template = SEED_TEMPLATES[slug];
+    const categories = normalizeCategories(template.category, []);
     const dto = CommunityTemplateDtoSchema.parse({
       id: `seed-${slug}`,
       name: template.name,
       description: template.description,
-      category: template.category,
+      category: categories[0],
+      categories,
       previewUrl: null,
       variableSchema: extractVariableSchemaFromComponent(
         template.componentCode,
@@ -340,6 +386,7 @@ export class CommunityTemplatesService {
       name: dto.name,
       description: dto.description,
       category: dto.category,
+      categories: dto.categories,
       previewUrl: dto.previewUrl,
       variableSchema: dto.variableSchema,
       authorName: dto.authorName,
