@@ -46,7 +46,7 @@ import { useEffect, useMemo, useState } from "react";
 type ProjectTab = "projects" | "community";
 
 const projectTabs = [
-  { value: "projects", label: "My emails" },
+  { value: "projects", label: "My templates" },
   { value: "community", label: "Community" },
 ];
 
@@ -438,7 +438,7 @@ export function ProjectShowCase() {
         : "No templates in this category";
 
   return (
-    <div className="relative z-10 w-full px-6 py-6">
+    <div className="relative z-10 w-full px-0 sm:px-6 py-6">
       <Card
         aria-label="Project gallery"
         className="w-full overflow-hidden rounded-lg! bg-madoo-accent-fg! p-6 pb-9 shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.14)]!"
@@ -1099,10 +1099,6 @@ function CommunityTemplateUseModal({
                 ))}
               </div>
             ) : null}
-            <p className="m-0 mb-3 text-[11px] font-medium text-madoo-ink-muted">
-              {detail.viewCount} {detail.viewCount === 1 ? "view" : "views"} ·{" "}
-              {detail.useCount} {detail.useCount === 1 ? "use" : "uses"}
-            </p>
             <div className="madoo-preview-scrollbar max-h-[78vh] space-y-3 overflow-y-auto pr-1">
               {draft.variables.length ? (
                 draft.variables.map((variable) => {

@@ -96,7 +96,7 @@ export function MasonryGrid<T>({
 
   if (columnCount === 0) {
     return (
-      <div className={cx("grid gap-4 sm:grid-cols-2", responsiveClassName)}>
+      <div className={cx("grid gap-4 grid-cols-2", responsiveClassName)}>
         {items.map((item, index) => (
           <Fragment key={index}>{renderItem(item, index)}</Fragment>
         ))}
