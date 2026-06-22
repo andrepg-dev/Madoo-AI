@@ -164,7 +164,7 @@ export function LandingHeader({
         </div>
 
         <button
-          className="madoo-paper-border inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-madoo-paper/60 text-madoo-nav sm:hidden"
+          className="madoo-paper-border inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-madoo-paper/60 text-madoo-nav sm:hidden"
           type="button"
           aria-label={copy.mobileMenu}
           aria-controls={mobileMenuId}
@@ -173,7 +173,7 @@ export function LandingHeader({
         >
           <HugeiconsIcon
             icon={Menu01Icon}
-            size={21}
+            size={16}
             strokeWidth={2}
             aria-hidden="true"
           />

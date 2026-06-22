@@ -11,11 +11,11 @@ import {
   CreateWorkspaceInviteInputSchema,
   PLAN_DISPLAY_NAMES,
   PLAN_LIMITS,
-  type Plan,
 } from "@madoo/shared";
 import type { Prisma, Role } from "@prisma/client";
 import { MailService } from "../mail/mail.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { planForWorkspace } from "../billing/account";
 
 @Injectable()
 export class WorkspaceInvitesService {
@@ -189,11 +189,7 @@ export class WorkspaceInvitesService {
     opts: { countPending: boolean; tx?: Prisma.TransactionClient },
   ): Promise<void> {
     const db = opts.tx ?? this.prisma;
-    const sub = await db.billingSubscription.findUnique({
-      where: { workspaceId },
-      select: { plan: true },
-    });
-    const plan = (sub?.plan as Plan) ?? "FREE";
+    const plan = await planForWorkspace(db, workspaceId);
     const limit = PLAN_LIMITS[plan].members;
     if (limit === -1) return;
     const allowed = 1 + limit; // owner + invited members

@@ -234,7 +234,7 @@ export class AuthService {
     // Reconcile any pre-signup opt-in trial claim: if this email reserved a
     // 7-day trial spot in the landing FAQ, mark the workspace subscription so
     // the pricing drawer offers (and checkout grants) the trial.
-    await this.applyTrialClaim(user.email, defaultWorkspaceId);
+    await this.applyTrialClaim(user.email, user.id);
 
     let pendingPromptId: string | null = null;
     if (pending?.pendingPrompt && pending.pendingPrompt.trim()) {
@@ -350,12 +350,9 @@ export class AuthService {
    */
   /**
    * If `email` reserved an opt-in 7-day trial spot (TrialClaim), latch
-   * `trialClaimed` on its workspace subscription. Idempotent; best-effort.
+   * `trialClaimed` on the user's account subscription. Idempotent; best-effort.
    */
-  private async applyTrialClaim(
-    email: string,
-    workspaceId: string,
-  ): Promise<void> {
+  private async applyTrialClaim(email: string, userId: string): Promise<void> {
     try {
       const claim = await this.prisma.trialClaim.findUnique({
         where: { email: email.toLowerCase() },
@@ -363,9 +360,9 @@ export class AuthService {
       });
       if (!claim) return;
       await this.prisma.billingSubscription.upsert({
-        where: { workspaceId },
+        where: { userId },
         create: {
-          workspaceId,
+          userId,
           plan: "FREE",
           status: "ACTIVE",
           trialClaimed: true,

@@ -1121,7 +1121,7 @@ export default function HomePage({
 
       <main lang={locale} className="relative min-h-screen w-full">
         <div className="relative z-50 px-2 pb-3 pt-2 sm:px-2 sm:pb-4 sm:pt-2">
-          <div className="relative isolate mx-auto flex min-h-[calc(100svh-1rem)] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-7 overflow-visible rounded-2xl px-4 pt-32 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:gap-9 sm:px-6 sm:pt-40 lg:min-h-[150vh] lg:pt-65 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
+          <div className="relative isolate mx-auto flex min-h-[calc(100svh-1rem)] w-full max-w-[calc(100vw-1rem)] flex-col items-center justify-start gap-7 overflow-visible rounded-2xl px-4 pt-52 font-ibm-plex-sans shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.14)] sm:max-w-[calc(100vw-1.5rem)] sm:gap-9 sm:px-6 lg:min-h-[150vh] lg:pt-65 2xl:pt-75 xl:max-w-[calc(100vw-2rem)]">
             <video
               src="/background-video.mp4"
               aria-hidden="true"
@@ -1192,7 +1192,7 @@ export default function HomePage({
                   className="madoo-prompt-textarea mr-3 max-h-80 min-h-24 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
                 />
 
-                <div className="flex flex-col gap-3 px-3.5 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center justify-between gap-3 px-3.5 pb-3">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <AttachMenu
                       label={copy.hero.addAttachment}
@@ -1200,7 +1200,7 @@ export default function HomePage({
                       onUploadImage={openImagePicker}
                     />
 
-                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <div className="hidden min-w-0 flex-wrap items-center gap-1.5 sm:flex">
                       {copy.promptOptions.map((option) => (
                         <Select
                           key={option.label}

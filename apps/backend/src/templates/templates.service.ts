@@ -6,13 +6,13 @@ import {
   buildRenderVariables,
   extractVariableSchemaFromComponent,
   parseVariableSchemaJson,
-  type Plan,
   type TemplateDto,
   type TemplateSeedPreviewDto,
   type TemplateSlug,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReactToHtmlService } from "../generation/react-to-html.service";
+import { planForWorkspace } from "../billing/account";
 import { SEED_TEMPLATE_SLUGS, SEED_TEMPLATES } from "./seed-templates";
 
 @Injectable()
@@ -117,13 +117,9 @@ export class TemplatesService {
     return template;
   }
 
-  /** Blocks saving a template once the workspace plan's storedTemplates cap is hit. */
+  /** Blocks saving a template once the account plan's storedTemplates cap is hit. */
   private async assertCanStoreTemplate(workspaceId: string): Promise<void> {
-    const sub = await this.prisma.billingSubscription.findUnique({
-      where: { workspaceId },
-      select: { plan: true },
-    });
-    const plan = (sub?.plan as Plan) ?? "FREE";
+    const plan = await planForWorkspace(this.prisma, workspaceId);
     const limit = PLAN_LIMITS[plan].storedTemplates;
     if (limit === -1) return;
     // Seed/starter templates are system-provided and don't count toward the cap.

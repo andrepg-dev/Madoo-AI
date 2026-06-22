@@ -3,6 +3,7 @@
 import { useClientStore } from "@/stores/client-store";
 import { Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { IconButton } from "@madoo/design-system";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -15,20 +16,21 @@ export function MobileTopBar() {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 bg-white px-2 shadow-(--shadow-border-bottom-soft) md:hidden">
-      <button
-        type="button"
+      <IconButton
         aria-label="Open navigation"
+        className="h-5! w-5!"
         onClick={() => setMobileNavOpen(true)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-madoo-ink-soft transition hover:bg-madoo-surface-2 hover:text-madoo-ink"
+        size="sm"
+        variant="ghost"
       >
         <HugeiconsIcon
           aria-hidden="true"
           icon={Menu01Icon}
           primaryColor="currentColor"
-          size={20}
+          size={16}
           strokeWidth={1.5}
         />
-      </button>
+      </IconButton>
       <Link
         aria-label="Madoo home"
         href="/"
