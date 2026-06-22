@@ -1,9 +1,7 @@
 import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
-import {
-  CurrentWorkspace,
-} from "../workspaces/current-workspace.decorator";
+import { CurrentWorkspace } from "../workspaces/current-workspace.decorator";
 import {
   WorkspaceGuard,
   type WorkspaceContext,
@@ -26,12 +24,10 @@ export class BillingController {
 
   @Post("checkout-session")
   createCheckoutSession(
-    @CurrentWorkspace() workspace: WorkspaceContext,
     @CurrentUser() current: { sub: string },
     @Body() body: CreateCheckoutSessionDto,
   ) {
     return this.billing.createCheckoutSession(
-      workspace.id,
       current.sub,
       body.plan,
       body.interval ?? "MONTHLY",
@@ -40,34 +36,22 @@ export class BillingController {
   }
 
   @Post("claim-trial")
-  claimTrial(
-    @CurrentWorkspace() workspace: WorkspaceContext,
-    @CurrentUser() current: { sub: string },
-  ) {
-    return this.billing.claimTrial(workspace.id, current.sub);
+  claimTrial(@CurrentUser() current: { sub: string }) {
+    return this.billing.claimTrial(current.sub);
   }
 
   @Post("portal-session")
-  createPortalSession(
-    @CurrentWorkspace() workspace: WorkspaceContext,
-    @CurrentUser() current: { sub: string },
-  ) {
-    return this.billing.createPortalSession(workspace.id, current.sub);
+  createPortalSession(@CurrentUser() current: { sub: string }) {
+    return this.billing.createPortalSession(current.sub);
   }
 
   @Post("cancel")
-  cancelSubscription(
-    @CurrentWorkspace() workspace: WorkspaceContext,
-    @CurrentUser() current: { sub: string },
-  ) {
-    return this.billing.setCancellation(workspace.id, current.sub, true);
+  cancelSubscription(@CurrentUser() current: { sub: string }) {
+    return this.billing.setCancellation(current.sub, true);
   }
 
   @Post("resume")
-  resumeSubscription(
-    @CurrentWorkspace() workspace: WorkspaceContext,
-    @CurrentUser() current: { sub: string },
-  ) {
-    return this.billing.setCancellation(workspace.id, current.sub, false);
+  resumeSubscription(@CurrentUser() current: { sub: string }) {
+    return this.billing.setCancellation(current.sub, false);
   }
 }

@@ -27,6 +27,7 @@ import {
   currentPeriodStart,
   startOfUtcDay,
 } from "./credit-window";
+import { accountUserIdForWorkspace, ownedWorkspaceIds } from "./account";
 import type {
   StripeCheckoutSession,
   StripeEvent,
@@ -57,17 +58,17 @@ export class BillingService {
   ) {}
 
   /**
-   * Returns the current subscription for a workspace, lazily creating a
-   * default FREE row if it does not exist yet (workspaces created before
-   * billing landed).
+   * Returns the account subscription for a user, lazily creating a default FREE
+   * row if it does not exist yet. Billing is account-wide: one subscription per
+   * user, shared across every workspace they own.
    */
-  async ensureSubscription(workspaceId: string): Promise<BillingSubscription> {
+  async ensureSubscription(userId: string): Promise<BillingSubscription> {
     const existing = await this.prisma.billingSubscription.findUnique({
-      where: { workspaceId },
+      where: { userId },
     });
     if (existing) return existing;
     return this.prisma.billingSubscription.create({
-      data: { workspaceId, plan: "FREE", status: "ACTIVE" },
+      data: { userId, plan: "FREE", status: "ACTIVE" },
     });
   }
 
@@ -86,7 +87,9 @@ export class BillingService {
     userId: string,
   ): Promise<BillingOverviewDto> {
     await this.workspaces.assertMembership(userId, workspaceId);
-    const subscription = await this.ensureSubscription(workspaceId);
+    // Credits are account-wide: resolve the requesting user's own subscription
+    // and meter usage across every workspace they own, not just this one.
+    const subscription = await this.ensureSubscription(userId);
     const plan = subscription.plan as Plan;
     const limits = PLAN_LIMITS[plan];
 
@@ -96,9 +99,10 @@ export class BillingService {
     const dayStart = startOfUtcDay(now);
     const nextDay = addUtcDays(dayStart, 1);
 
+    const scope = await ownedWorkspaceIds(this.prisma, userId);
     const [monthlyUsed, dailyUsed, templatesUsed] = await Promise.all([
-      this.countCreditsUsed(workspaceId, periodStart),
-      this.countCreditsUsed(workspaceId, dayStart),
+      this.countCreditsUsed(scope, periodStart),
+      this.countCreditsUsed(scope, dayStart),
       this.prisma.template.count({
         where: { workspaceId, slug: { notIn: [...SEED_TEMPLATE_SLUGS] } },
       }),
@@ -145,15 +149,22 @@ export class BillingService {
   }
 
   async assertCanGenerate(workspaceId: string): Promise<void> {
-    const subscription = await this.ensureSubscription(workspaceId);
+    // A workspace meters against its owning account's shared credit pool.
+    const accountUserId = await accountUserIdForWorkspace(
+      this.prisma,
+      workspaceId,
+    );
+    if (!accountUserId) return; // orphan workspace with no owner — nothing to meter
+    const subscription = await this.ensureSubscription(accountUserId);
     const plan = subscription.plan as Plan;
     const limits = PLAN_LIMITS[plan];
     const now = new Date();
+    const scope = await ownedWorkspaceIds(this.prisma, accountUserId);
 
     // Daily cap (free tier: 5 credits/day, resets at 00:00 UTC).
     if (limits.dailyAiGenerations !== -1) {
       const dayStart = startOfUtcDay(now);
-      const usedToday = await this.countCreditsUsed(workspaceId, dayStart);
+      const usedToday = await this.countCreditsUsed(scope, dayStart);
       if (usedToday >= limits.dailyAiGenerations) {
         throw new ForbiddenException(
           `Daily AI credit limit reached: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${limits.dailyAiGenerations} credits per day (used ${usedToday}). Resets at 00:00 UTC.`,
@@ -164,10 +175,7 @@ export class BillingService {
     // Monthly cap (rolling window from the credits anchor; resets on upgrade).
     if (limits.aiGenerations !== -1) {
       const periodStart = currentPeriodStart(subscription.creditsAnchor, now);
-      const usedThisPeriod = await this.countCreditsUsed(
-        workspaceId,
-        periodStart,
-      );
+      const usedThisPeriod = await this.countCreditsUsed(scope, periodStart);
       if (usedThisPeriod >= limits.aiGenerations) {
         // Past the base monthly cap: allow only if referral bonus credits
         // remain, spending one for this generation. The daily cap above still
@@ -187,13 +195,18 @@ export class BillingService {
   }
 
   /**
-   * Counts consumed AI credits since `since`. Every non-failed generation run —
-   * an initial draft (INITIAL) or a chat/template edit (EDIT) — costs one credit.
+   * Counts consumed AI credits since `since` across the account's workspaces.
+   * Every non-failed generation run — an initial draft (INITIAL) or a
+   * chat/template edit (EDIT) — costs one credit, drawn from the shared pool.
    */
-  private countCreditsUsed(workspaceId: string, since: Date): Promise<number> {
+  private countCreditsUsed(
+    workspaceIds: string[],
+    since: Date,
+  ): Promise<number> {
+    if (workspaceIds.length === 0) return Promise.resolve(0);
     return this.prisma.emailGenerationRun.count({
       where: {
-        workspaceId,
+        workspaceId: { in: workspaceIds },
         kind: { in: ["INITIAL", "EDIT"] },
         status: { not: "FAILED" },
         createdAt: { gte: since },
@@ -221,16 +234,12 @@ export class BillingService {
   }
 
   /**
-   * Marks the opt-in 7-day trial as claimed for a workspace (owner only). The
-   * claim latches so the FAQ/landing flow can grant the trial at the next
-   * checkout. Does not start a trial by itself.
+   * Marks the opt-in 7-day trial as claimed for the user's account. The claim
+   * latches so the FAQ/landing flow can grant the trial at the next checkout.
+   * Does not start a trial by itself.
    */
-  async claimTrial(
-    workspaceId: string,
-    userId: string,
-  ): Promise<{ trialClaimed: boolean }> {
-    await this.workspaces.assertOwner(userId, workspaceId);
-    const subscription = await this.ensureSubscription(workspaceId);
+  async claimTrial(userId: string): Promise<{ trialClaimed: boolean }> {
+    const subscription = await this.ensureSubscription(userId);
     if (subscription.trialClaimed) return { trialClaimed: true };
     const updated = await this.prisma.billingSubscription.update({
       where: { id: subscription.id },
@@ -240,13 +249,11 @@ export class BillingService {
   }
 
   async createCheckoutSession(
-    workspaceId: string,
     userId: string,
     targetPlan: Exclude<Plan, "FREE">,
     interval: "MONTHLY" | "ANNUAL" = "MONTHLY",
     claimTrial = false,
   ): Promise<{ url: string }> {
-    await this.workspaces.assertOwner(userId, workspaceId);
     if (!this.stripe.isEnabled()) {
       throw new ServiceUnavailableException(
         "Billing is not configured on this server.",
@@ -261,7 +268,7 @@ export class BillingService {
       );
     }
 
-    const subscription = await this.ensureSubscription(workspaceId);
+    const subscription = await this.ensureSubscription(userId);
 
     // Opt-in trial: the trial is no longer granted by default. Persist the
     // claim when the caller asks for it so the FAQ/landing flow latches it.
@@ -302,10 +309,10 @@ export class BillingService {
         : {
             customer_email: user?.email ?? undefined,
           }),
-      client_reference_id: workspaceId,
-      metadata: { workspaceId, plan: targetPlan, interval },
+      client_reference_id: userId,
+      metadata: { userId, plan: targetPlan, interval },
       subscription_data: {
-        metadata: { workspaceId, plan: targetPlan, interval },
+        metadata: { userId, plan: targetPlan, interval },
         ...(grantTrial ? { trial_period_days: trialDays } : {}),
       },
       allow_promotion_codes: true,
@@ -317,20 +324,16 @@ export class BillingService {
     return { url: session.url };
   }
 
-  async createPortalSession(
-    workspaceId: string,
-    userId: string,
-  ): Promise<{ url: string }> {
-    await this.workspaces.assertOwner(userId, workspaceId);
+  async createPortalSession(userId: string): Promise<{ url: string }> {
     if (!this.stripe.isEnabled()) {
       throw new ServiceUnavailableException(
         "Billing is not configured on this server.",
       );
     }
-    const subscription = await this.ensureSubscription(workspaceId);
+    const subscription = await this.ensureSubscription(userId);
     if (!subscription.stripeCustomerId) {
       throw new BadRequestException(
-        "Workspace has no Stripe customer yet — start a checkout first.",
+        "Account has no Stripe customer yet — start a checkout first.",
       );
     }
     const appUrl =
@@ -345,22 +348,20 @@ export class BillingService {
   }
 
   /**
-   * Cancels (or resumes) the workspace's subscription at the end of the current
+   * Cancels (or resumes) the account's subscription at the end of the current
    * paid period. The user keeps paid access until then, after which Stripe's
    * `customer.subscription.deleted` webhook drops the plan back to FREE.
    */
   async setCancellation(
-    workspaceId: string,
     userId: string,
     cancelAtPeriodEnd: boolean,
   ): Promise<{ cancelAtPeriodEnd: boolean; currentPeriodEnd: string | null }> {
-    await this.workspaces.assertOwner(userId, workspaceId);
     if (!this.stripe.isEnabled()) {
       throw new ServiceUnavailableException(
         "Billing is not configured on this server.",
       );
     }
-    const subscription = await this.ensureSubscription(workspaceId);
+    const subscription = await this.ensureSubscription(userId);
     if (!subscription.stripeSubscriptionId) {
       throw new BadRequestException(
         "No active paid subscription to update.",
@@ -430,13 +431,13 @@ export class BillingService {
   private async handleCheckoutCompleted(
     session: StripeCheckoutSession,
   ): Promise<void> {
-    const workspaceId =
+    const userId =
       session.client_reference_id ??
-      (typeof session.metadata?.workspaceId === "string"
-        ? session.metadata.workspaceId
+      (typeof session.metadata?.userId === "string"
+        ? session.metadata.userId
         : null);
-    if (!workspaceId) {
-      this.logger.warn("checkout.session.completed without workspaceId");
+    if (!userId) {
+      this.logger.warn("checkout.session.completed without userId");
       return;
     }
     const customerId =
@@ -445,9 +446,9 @@ export class BillingService {
         : session.customer?.id;
     if (!customerId) return;
     await this.prisma.billingSubscription.upsert({
-      where: { workspaceId },
+      where: { userId },
       create: {
-        workspaceId,
+        userId,
         stripeCustomerId: customerId,
         plan: "FREE",
         status: "ACTIVE",
@@ -477,18 +478,16 @@ export class BillingService {
 
     const status = mapStripeStatus(sub.status);
 
-    const workspaceFromMetadata =
-      typeof sub.metadata?.workspaceId === "string"
-        ? sub.metadata.workspaceId
-        : null;
+    const userFromMetadata =
+      typeof sub.metadata?.userId === "string" ? sub.metadata.userId : null;
 
     const target =
       (await this.prisma.billingSubscription.findUnique({
         where: { stripeCustomerId: customerId },
       })) ??
-      (workspaceFromMetadata
+      (userFromMetadata
         ? await this.prisma.billingSubscription.findUnique({
-            where: { workspaceId: workspaceFromMetadata },
+            where: { userId: userFromMetadata },
           })
         : null);
 
@@ -526,7 +525,7 @@ export class BillingService {
       },
     });
 
-    // Referral payout: only on a *real charge* — the workspace transitions INTO
+    // Referral payout: only on a *real charge* — the account transitions INTO
     // a paid plan with status ACTIVE. A TRIALING subscription (no charge yet)
     // does not qualify; it pays out later if/when the trial converts. Idempotent
     // via the ReferralReward unique key, but gated on the transition to avoid
@@ -537,10 +536,10 @@ export class BillingService {
       (target.plan === "FREE" || target.status !== "ACTIVE");
     if (becamePaidActive) {
       try {
-        await this.referrals.rewardIfQualified(target.workspaceId);
+        await this.referrals.rewardIfQualified(target.userId);
       } catch (err) {
         this.logger.error(
-          `referral reward failed for workspace ${target.workspaceId}: ${
+          `referral reward failed for user ${target.userId}: ${
             err instanceof Error ? err.message : String(err)
           }`,
         );

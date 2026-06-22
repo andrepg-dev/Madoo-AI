@@ -60,31 +60,21 @@ export class WorkspacesService {
       throw new ForbiddenException("Workspace name is required.");
     }
 
-    const [ownedCount, subs] = await Promise.all([
+    // Billing is account-wide: one subscription per user gates how many
+    // workspaces they may own.
+    const [ownedCount, sub] = await Promise.all([
       this.prisma.membership.count({ where: { userId, role: "OWNER" } }),
-      this.prisma.billingSubscription.findMany({
-        where: { workspace: { members: { some: { userId, role: "OWNER" } } } },
+      this.prisma.billingSubscription.findUnique({
+        where: { userId },
         select: { plan: true },
       }),
     ]);
 
-    const PLAN_RANK: Record<string, number> = {
-      FREE: 0,
-      BASIC: 1,
-      MEDIUM: 2,
-      PRO: 3,
-    };
-    const bestPlan = subs
-      .map((s) => s.plan as string)
-      .reduce(
-        (best, plan) => ((PLAN_RANK[plan] ?? 0) > (PLAN_RANK[best] ?? 0) ? plan : best),
-        "FREE",
-      ) as Plan;
-
-    const wsLimit = PLAN_LIMITS[bestPlan].workspaces;
+    const plan = (sub?.plan as Plan) ?? "FREE";
+    const wsLimit = PLAN_LIMITS[plan].workspaces;
     if (wsLimit !== -1 && ownedCount >= wsLimit) {
       throw new ForbiddenException(
-        `Workspace limit: ${PLAN_DISPLAY_NAMES[bestPlan]} plan allows ${wsLimit} workspace${wsLimit === 1 ? "" : "s"}. Upgrade to create more.`,
+        `Workspace limit: ${PLAN_DISPLAY_NAMES[plan]} plan allows ${wsLimit} workspace${wsLimit === 1 ? "" : "s"}. Upgrade to create more.`,
       );
     }
 

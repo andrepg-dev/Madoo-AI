@@ -30,6 +30,7 @@ model User {
 
   pendingPrompts           PendingPrompt[]
   memberships              Membership[]
+  billingSubscription      BillingSubscription?
   authAccounts             AuthAccount[]
   providerConnections      ProviderConnection[]
   supportTickets           SupportTicket[]
@@ -124,7 +125,6 @@ model Workspace {
   emailChatMessages   EmailChatMessage[]
   emailVfsSnapshots   EmailVfsSnapshot[]
   auditLogs           AuditLog[]
-  billingSubscription BillingSubscription?
   supportTickets      SupportTicket[]
   invites             WorkspaceInvite[]
 
@@ -473,7 +473,10 @@ enum SubscriptionStatus {
 
 model BillingSubscription {
   id                   String             @id @default(cuid())
-  workspaceId          String             @unique
+  // Account-wide billing: one subscription per user. AI credits (monthly,
+  // daily, and bonus) are a single pool shared across every workspace the user
+  // owns — they are NOT renewed per workspace.
+  userId               String             @unique
   stripeCustomerId     String?            @unique
   stripeSubscriptionId String?            @unique
   plan                 Plan               @default(FREE)
@@ -495,7 +498,7 @@ model BillingSubscription {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([stripeCustomerId])
   @@index([plan, status])

@@ -51,21 +51,14 @@ export class ReferralsService {
   }
 
   /**
-   * Called when a workspace becomes a real paying customer. Resolves the
-   * workspace owner; if they were referred and no reward exists yet for them,
-   * grants the referrer a one-time bonus-credit reward. Idempotent: the unique
+   * Called when a user becomes a real paying customer. If they were referred
+   * and no reward exists yet for them, grants the referrer a one-time
+   * bonus-credit reward on their account subscription. Idempotent: the unique
    * `ReferralReward.referredUserId` absorbs Stripe re-delivery and resubscribes.
    */
-  async rewardIfQualified(workspaceId: string): Promise<void> {
-    const ownerMembership = await this.prisma.membership.findFirst({
-      where: { workspaceId, role: "OWNER" },
-      orderBy: { createdAt: "asc" },
-      select: { userId: true },
-    });
-    if (!ownerMembership) return;
-
+  async rewardIfQualified(paidUserId: string): Promise<void> {
     const owner = await this.prisma.user.findUnique({
-      where: { id: ownerMembership.userId },
+      where: { id: paidUserId },
       select: { id: true, referredByUserId: true },
     });
     if (!owner?.referredByUserId) return;
@@ -77,6 +70,8 @@ export class ReferralsService {
     });
     if (existing) return;
 
+    // Audit trail only: the referrer's oldest owned workspace. Credits now land
+    // on the referrer's account subscription, not a workspace.
     const rewardWorkspaceId = await this.firstOwnedWorkspaceId(
       owner.referredByUserId,
     );
@@ -93,9 +88,9 @@ export class ReferralsService {
           },
         }),
         this.prisma.billingSubscription.upsert({
-          where: { workspaceId: rewardWorkspaceId },
+          where: { userId: owner.referredByUserId },
           create: {
-            workspaceId: rewardWorkspaceId,
+            userId: owner.referredByUserId,
             plan: "FREE",
             status: "ACTIVE",
             bonusCredits: REFERRAL_REWARD_CREDITS,
