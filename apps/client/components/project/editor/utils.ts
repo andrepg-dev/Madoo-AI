@@ -1,15 +1,19 @@
 import type { ConnectionProvider } from "@madoo/shared";
 import { maxPreviewWidthVw, minPreviewWidthVw } from "./constants";
 
-export function formatCreditReset(value: string | undefined): string {
-  if (!value) return "next month";
+export function formatCreditReset(value: string | undefined): string | null {
+  if (!value) return null;
   try {
-    return new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      day: "numeric",
-    }).format(new Date(value));
+    const ms = new Date(value).getTime() - Date.now();
+    if (ms <= 0) return null;
+    const hours = Math.floor(ms / 3_600_000);
+    if (hours < 1) {
+      const mins = Math.floor(ms / 60_000);
+      return `${mins}m left`;
+    }
+    return `${hours}h left`;
   } catch {
-    return "next month";
+    return null;
   }
 }
 

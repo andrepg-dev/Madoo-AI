@@ -139,9 +139,11 @@ export function ConversationTitleDropdown({
             </span>
           </div>
           <ProgressBar value={creditsPct} tone="ink" label="Daily credits left" />
-          <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
-            Resets {formatCreditReset(usage?.resetsAt)}
-          </span>
+          {formatCreditReset(usage?.resetsAt) ? (
+            <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+              {formatCreditReset(usage?.resetsAt)}
+            </span>
+          ) : null}
         </Card>
 
         <DropdownDivider />
