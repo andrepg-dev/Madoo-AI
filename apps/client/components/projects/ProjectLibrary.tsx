@@ -391,7 +391,7 @@ function ProjectActionsMenu({
 }
 
 export function ProjectLibrary({
-  emptyTitle = "No projects yet",
+  emptyTitle = "No templates yet",
   title,
   starredOnly = false,
 }: ProjectLibraryProps) {
@@ -606,7 +606,7 @@ export function ProjectLibrary({
               className="h-9! rounded-[9px]!"
               inputSize="md"
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search projects..."
+              placeholder="Search templates..."
               startAdornment={<Icon name="search" size={15} />}
               value={query}
             />

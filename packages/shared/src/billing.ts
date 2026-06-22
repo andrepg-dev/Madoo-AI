@@ -82,7 +82,7 @@ export type PaidPlan = Exclude<Plan, "FREE">;
 export const NEXT_UPGRADE_PLAN: Record<Plan, PaidPlan | null> = {
   FREE: "BASIC",
   BASIC: "MEDIUM",
-  MEDIUM: null,
+  MEDIUM: "PRO",
   PRO: null,
 };
 

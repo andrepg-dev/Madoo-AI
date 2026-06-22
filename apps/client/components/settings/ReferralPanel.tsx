@@ -97,6 +97,14 @@ export function ReferralPanel() {
           className="object-cover"
         />
         <div className="relative z-10 grid gap-4 p-5">
+          <div className="inline-flex w-max items-baseline gap-1.5 rounded-full bg-white/20 px-4 py-2 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.4)] backdrop-blur-sm absolute top-5 right-5">
+            <span className="text-2xl font-semibold leading-none text-white">
+              {new Intl.NumberFormat().format(data.creditsEarned)}
+            </span>
+            <span className="text-(length:--font-size-sm) leading-none text-white/85">
+              credits
+            </span>
+          </div>
           <div>
             <h2 className="text-lg font-semibold leading-none text-white">
               Rewards you&apos;ve won
@@ -105,13 +113,17 @@ export function ReferralPanel() {
               How much you&apos;ve earned by referring Madoo to your friends.
             </p>
           </div>
-          <div className="inline-flex w-max items-baseline gap-1.5 rounded-full bg-white/20 px-4 py-2 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.4)] backdrop-blur-sm">
-            <span className="text-2xl font-semibold leading-none text-white">
-              {new Intl.NumberFormat().format(data.creditsEarned)}
-            </span>
-            <span className="text-(length:--font-size-sm) leading-none text-white/85">
-              credits
-            </span>
+          <div className="inline-flex w-max max-w-full items-center gap-3 rounded-lg bg-white/95 p-2 pl-3.5 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.4)] backdrop-blur-sm">
+            <code className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-madoo-ink-muted">
+              {data.url}
+            </code>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void copyLink()}
+            >
+              Copy link
+            </Button>
           </div>
         </div>
       </div>
@@ -120,17 +132,8 @@ export function ReferralPanel() {
         title="Share Madoo"
         description="Share your link with marketers and agencies. You earn credits when an invitee subscribes to a paid plan."
       >
-        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-madoo-bg-2 p-3 shadow-madoo-border">
-          <code className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-madoo-ink-muted">
-            {data.url}
-          </code>
-          <Button size="sm" variant="secondary" onClick={() => void copyLink()}>
-            Copy link
-          </Button>
-        </div>
-
         <div
-          className="mt-4 flex items-start gap-2.5 rounded-lg bg-[color-mix(in_srgb,var(--accent)_8%,var(--surface))] p-3.5 shadow-madoo-border"
+          className="flex items-start gap-2.5 rounded-lg bg-[color-mix(in_srgb,var(--accent)_8%,var(--surface))] p-3.5 shadow-madoo-border"
           role="note"
         >
           <span className="mt-0.5 text-madoo-accent-deep" aria-hidden="true">

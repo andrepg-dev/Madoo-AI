@@ -75,7 +75,7 @@ export default function Page() {
       </video>
 
       <div className="relative z-40 flex flex-col gap-5 h-[75vh] justify-center pt-24 sm:pt-36">
-        <div className="rounded-2xl sm:rounded-full backdrop-blur-md bg-white/80 p-2 px-4 madoo-paper-border w-max max-w-[calc(100vw-2rem)] text-xs sm:text-sm flex flex-wrap items-center justify-center text-center gap-2 mx-auto">
+        <div className="rounded-2xl ring-2! ring-white/20 sm:rounded-full backdrop-blur-md bg-white/60 select-none p-2 px-4 madoo-paper-border w-max max-w-[calc(100vw-2rem)] text-xs sm:text-sm flex flex-wrap items-center justify-center text-center gap-2 mx-auto">
           <div className="flex h-5 -space-x-1.5">
             {emailProviders.map((provider) => (
               <div

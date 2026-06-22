@@ -1041,7 +1041,7 @@ function EmailTemplateProjectInner() {
         emailId={currentEmailId}
         onClose={() => setExportModalOpen(false)}
         open={exportModalOpen}
-        variantId={variant?.id ?? null}
+        variantId={activeVariant?.id ?? null}
       />
       <PricingDrawer
         onClose={() => setPricingOpen(false)}

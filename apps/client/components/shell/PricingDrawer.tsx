@@ -28,6 +28,7 @@ import {
 } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import posthog from "posthog-js";
 
 type PaidPlan = Exclude<Plan, "FREE">;
@@ -201,12 +202,12 @@ function PlanCard({
   return (
     <Card
       className={cx(
-        "flex min-h-97.5 flex-col gap-5 rounded-[20px]! bg-madoo-surface! p-4!",
+        "flex flex-col gap-5 rounded-[20px]! bg-madoo-surface! p-4! md:min-h-97.5",
         isFeatured &&
           "bg-[color-mix(in_srgb,var(--surface)_72%,var(--accent-soft))]! shadow-(--shadow-border-accent)",
       )}
     >
-      <div className="flex min-h-18 items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 md:min-h-18">
         <div className="min-w-0">
           <h3 className="text-xl font-semibold leading-none text-madoo-ink">
             {plan.name}
@@ -349,7 +350,7 @@ export function PricingDrawer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const onSelectPlan = (plan: PricingPlan, claimTrial = false) => {
     if (!workspaceId) {
@@ -386,7 +387,7 @@ export function PricingDrawer({
     });
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[rgba(20,15,10,0.28)] p-4 backdrop-blur-[2px] animate-madoo-modal-overlay-in motion-reduce:animate-none"
       role="presentation"
@@ -436,7 +437,7 @@ export function PricingDrawer({
             />
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
             {PRICING_PLANS.map((plan) => (
               <PlanCard
                 key={plan.id}
@@ -468,7 +469,7 @@ export function PricingDrawer({
               <Badge tone="neutral">Billing</Badge>
             </div>
 
-            <div className="mt-4 grid gap-2 lg:grid-cols-2">
+            <div className="mt-4 grid gap-2 md:grid-cols-2">
               {pricingFaqs.map((faq) => (
                 <details
                   key={faq.question}
@@ -491,6 +492,7 @@ export function PricingDrawer({
           </section>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

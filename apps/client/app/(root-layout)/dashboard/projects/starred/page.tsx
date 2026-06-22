@@ -6,7 +6,7 @@ export default function StarredPage() {
   return (
     <ProjectLibrary
       title="Starred"
-      emptyTitle="No starred projects yet"
+      emptyTitle="No starred templates yet"
       starredOnly
     />
   );

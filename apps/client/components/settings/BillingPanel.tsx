@@ -73,13 +73,21 @@ function formatDate(value: string | null | undefined) {
   }
 }
 
-function formatResetDate(value: string | null | undefined) {
+function formatResetDate(value: string | null | undefined, unit: "hours" | "days" = "hours") {
   if (!value) return null;
   try {
-    return new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      day: "numeric",
-    }).format(new Date(value));
+    const ms = new Date(value).getTime() - Date.now();
+    if (ms <= 0) return null;
+    if (unit === "days") {
+      const days = Math.ceil(ms / 86_400_000);
+      return `${days}d left`;
+    }
+    const hours = Math.floor(ms / 3_600_000);
+    if (hours < 1) {
+      const mins = Math.floor(ms / 60_000);
+      return `${mins}m left`;
+    }
+    return `${hours}h left`;
   } catch {
     return null;
   }
@@ -294,7 +302,7 @@ export function BillingPanel() {
   );
   const cancelBusy = cancelMutation.isPending || resumeMutation.isPending;
   const dailyReset = formatResetDate(usage.dailyAiGenerations.resetsAt);
-  const monthlyReset = formatResetDate(usage.aiGenerations.resetsAt);
+  const monthlyReset = formatResetDate(usage.aiGenerations.resetsAt, "days");
 
   const planLine =
     subscription.status === "TRIALING" && trialEnds
@@ -391,12 +399,12 @@ export function BillingPanel() {
           <UsageMeter
             title="Daily credits"
             usage={usage.dailyAiGenerations}
-            resetLabel={dailyReset ? `Resets ${dailyReset}` : null}
+            resetLabel={dailyReset ? `${dailyReset}` : null}
           />
           <UsageMeter
             title="Monthly credits"
             usage={usage.aiGenerations}
-            resetLabel={monthlyReset ? `Resets ${monthlyReset}` : null}
+            resetLabel={monthlyReset ? `${monthlyReset}` : null}
             bonus={usage.aiGenerations.bonus}
           />
           <UsageMeter

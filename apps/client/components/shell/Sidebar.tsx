@@ -9,12 +9,16 @@ import {
   Add01Icon,
   ArrowDown01Icon,
   Cancel01Icon,
+  CreditCardIcon,
   Crown02Icon,
+  GiftIcon,
   Grid2X2Icon,
   InboxIcon,
+  Logout01Icon,
   PanelLeftIcon,
   PanelRightIcon,
   Search01Icon,
+  Settings02Icon,
   StarIcon,
   Tick02Icon,
   UserIcon,
@@ -45,7 +49,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { PricingDrawer } from "./PricingDrawer";
-import { ReferralInviteDialog } from "./ReferralInviteDialog";
 
 type NavItem = {
   href: string;
@@ -60,7 +63,7 @@ const primaryItems: NavItem[] = [
 ];
 
 const templateProjectItems: NavItem[] = [
-  { href: "/dashboard/projects", label: "All projects", icon: Grid2X2Icon },
+  { href: "/dashboard/projects", label: "All templates", icon: Grid2X2Icon },
   { href: "/dashboard/projects/starred", label: "Starred", icon: StarIcon },
   {
     href: "/dashboard/projects/created-by-me",
@@ -219,10 +222,12 @@ function DropdownLink({
   href,
   children,
   className,
+  icon,
 }: {
   href: string;
   children: React.ReactNode;
   className?: string;
+  icon?: IconSvgElement;
 }) {
   return (
     <Link
@@ -233,6 +238,7 @@ function DropdownLink({
         className,
       )}
     >
+      {icon ? <AppIcon icon={icon} size={18} /> : null}
       {children}
     </Link>
   );
@@ -243,14 +249,18 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 function formatResetDate(value: string | undefined) {
-  if (!value) return "next month";
+  if (!value) return null;
   try {
-    return new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      day: "numeric",
-    }).format(new Date(value));
+    const ms = new Date(value).getTime() - Date.now();
+    if (ms <= 0) return null;
+    const hours = Math.floor(ms / 3_600_000);
+    if (hours < 1) {
+      const mins = Math.floor(ms / 60_000);
+      return `${mins}m left`;
+    }
+    return `${hours}h left`;
   } catch {
-    return "next month";
+    return null;
   }
 }
 
@@ -262,7 +272,6 @@ export function Sidebar() {
   const [isMobile, setIsMobile] = useState(false);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
-  const [referralInviteOpen, setReferralInviteOpen] = useState(false);
   const authUser = useAuthStore((state) => state.user);
   const setAuthUser = useAuthStore((state) => state.setUser);
   const workspaceId = useClientStore((state) => state.workspaceId);
@@ -322,10 +331,12 @@ export function Sidebar() {
     currentPlan === "FREE"
       ? "Free plan"
       : `${PLAN_DISPLAY_NAMES[currentPlan]} plan`;
+  const isSubscribed = currentPlan !== "FREE";
   const recommendedUpgradePlan = getRecommendedUpgradePlan(currentPlan);
-  const upgradeCtaLabel = recommendedUpgradePlan
-    ? `Upgrade to ${PLAN_DISPLAY_NAMES[recommendedUpgradePlan]}`
-    : null;
+  const upgradeCtaLabel =
+    !isSubscribed && recommendedUpgradePlan
+      ? `Upgrade to ${PLAN_DISPLAY_NAMES[recommendedUpgradePlan]}`
+      : null;
 
   const switchWorkspaceMutation = useMutation({
     mutationFn: setActiveWorkspace,
@@ -447,400 +458,408 @@ export function Sidebar() {
           collapsed ? "md:w-15" : "md:w-65",
         )}
       >
-      <div
-        className={cx(
-          "relative flex min-h-7.5 items-center",
-          "w-full justify-between px-0.5",
-        )}
-      >
-        <Link
-          aria-label="Madoo home"
-          href="/"
+        <div
           className={cx(
-            "inline-flex h-7 w-7 items-center justify-center rounded-lg text-madoo-ink-soft transition-[background,color,opacity] duration-(--duration-fast) hover:bg-madoo-surface-2 hover:text-madoo-ink",
-            effectiveCollapsed &&
+            "relative flex min-h-7.5 items-center",
+            "w-full justify-between px-0.5",
+          )}
+        >
+          <Link
+            aria-label="Madoo home"
+            href="/"
+            className={cx(
+              "inline-flex h-7 w-7 items-center justify-center rounded-lg text-madoo-ink-soft transition-[background,color,opacity] duration-(--duration-fast) hover:bg-madoo-surface-2 hover:text-madoo-ink",
+              effectiveCollapsed &&
               "group-hover/sidebar:pointer-events-none group-hover/sidebar:opacity-0",
+            )}
+          >
+            <Image
+              alt="Madoo"
+              height={26}
+              src="/madoo-transparent.png"
+              width={26}
+              className="rounded-[7px] object-contain ml-1.5"
+              priority
+            />
+          </Link>
+          {!isMobile ? (
+            <IconButton
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-pressed={collapsed}
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setCollapsed((value) => !value);
+                setWorkspaceOpen(false);
+              }}
+              className={cx(
+                collapsed &&
+                "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 transition-[opacity,transform] duration-(--duration-fast) group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
+              )}
+            >
+              <AppIcon
+                icon={collapsed ? PanelRightIcon : PanelLeftIcon}
+                size={15}
+              />
+            </IconButton>
+          ) : (
+            <IconButton
+              aria-label="Close navigation"
+              size="sm"
+              variant="ghost"
+              onClick={() => setMobileNavOpen(false)}
+            >
+              <AppIcon icon={Cancel01Icon} size={16} />
+            </IconButton>
           )}
-        >
-          <Image
-            alt="Madoo"
-            height={26}
-            src="/madoo-transparent.png"
-            width={26}
-            className="rounded-[7px] object-contain ml-1.5"
-            priority
-          />
-        </Link>
-        <IconButton
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-pressed={collapsed}
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            setCollapsed((value) => !value);
-            setWorkspaceOpen(false);
-          }}
-          className={cx(
-            "hidden md:inline-flex",
-            collapsed &&
-              "pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-0 transition-[opacity,transform] duration-(--duration-fast) group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
-          )}
-        >
-          <AppIcon
-            icon={collapsed ? PanelRightIcon : PanelLeftIcon}
-            size={15}
-          />
-        </IconButton>
-        <IconButton
-          aria-label="Close navigation"
-          size="sm"
-          variant="ghost"
-          onClick={() => setMobileNavOpen(false)}
-          className="md:hidden"
-        >
-          <AppIcon icon={Cancel01Icon} size={16} />
-        </IconButton>
-      </div>
+        </div>
 
-      <Dropdown
-        open={workspaceOpen}
-        onOpenChange={setWorkspaceOpen}
-        className="w-full"
-      >
-        <DropdownTrigger asChild>
-          <Button
-            aria-label="Open workspace switcher"
-            block
-            leftIcon={
+        <Dropdown
+          open={workspaceOpen}
+          onOpenChange={setWorkspaceOpen}
+          className="w-full"
+        >
+          <DropdownTrigger asChild>
+            <Button
+              aria-label="Open workspace switcher"
+              block
+              leftIcon={
+                <Avatar
+                  name={activeWorkspaceName}
+                  src={displayWorkspace?.avatarUrl ?? undefined}
+                  size="sm"
+                  className="bg-madoo-rule rounded-[7.5px]"
+                />
+              }
+              rightIcon={
+                <span
+                  className={cx(
+                    "ml-auto inline-flex overflow-hidden transition-[opacity,max-width] duration-(--duration-base) ease-out",
+                    effectiveCollapsed
+                      ? "max-w-0 opacity-0"
+                      : "max-w-4 opacity-100",
+                  )}
+                >
+                  <AppIcon icon={ArrowDown01Icon} size={13} />
+                </span>
+              }
+              size="sm"
+              variant={effectiveCollapsed ? "secondary" : "ghost"}
+              className={cx(
+                "h-8! min-h-8! overflow-hidden py-0! font-normal! transition-[width,padding,background,color,box-shadow] duration-(--duration-base) ease-out",
+                "justify-start! gap-2! px-1! pr-3!",
+              )}
+            >
+              <span
+                className={cx(
+                  "min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-(--duration-base) ease-out",
+                  effectiveCollapsed
+                    ? "max-w-0 opacity-0"
+                    : "max-w-44 opacity-100",
+                )}
+              >
+                {activeWorkspaceName}
+              </span>
+            </Button>
+          </DropdownTrigger>
+
+          <DropdownContent className="w-80 max-w-[calc(100vw-1rem)] gap-2 overflow-hidden p-2!">
+            <div className="flex items-center gap-2.5 p-1">
               <Avatar
                 name={activeWorkspaceName}
                 src={displayWorkspace?.avatarUrl ?? undefined}
                 size="sm"
-                className="bg-madoo-rule rounded-[7.5px]"
               />
-            }
-            rightIcon={
-              <span
-                className={cx(
-                  "ml-auto inline-flex overflow-hidden transition-[opacity,max-width] duration-(--duration-base) ease-out",
-                  effectiveCollapsed
-                    ? "max-w-0 opacity-0"
-                    : "max-w-4 opacity-100",
-                )}
-              >
-                <AppIcon icon={ArrowDown01Icon} size={13} />
-              </span>
-            }
-            size="sm"
-            variant={effectiveCollapsed ? "secondary" : "ghost"}
-            className={cx(
-              "h-8! min-h-8! overflow-hidden py-0! font-normal! transition-[width,padding,background,color,box-shadow] duration-(--duration-base) ease-out",
-              "justify-start! gap-2! px-1! pr-3!",
-            )}
-          >
-            <span
-              className={cx(
-                "min-w-0 flex-1 overflow-hidden text-left text-(length:--font-size-base) font-normal text-ellipsis whitespace-nowrap transition-[opacity,max-width] duration-(--duration-base) ease-out",
-                effectiveCollapsed
-                  ? "max-w-0 opacity-0"
-                  : "max-w-44 opacity-100",
-              )}
-            >
-              {activeWorkspaceName}
-            </span>
-          </Button>
-        </DropdownTrigger>
+              <div className="min-w-0">
+                <span className="block truncate text-(length:--font-size-base) font-normal">
+                  {activeWorkspaceName}
+                </span>
+                {user ? (
+                  <span className="block truncate text-(length:--font-size-sm) text-madoo-ink-muted">
+                    {planLabel}
+                  </span>
+                ) : null}
+              </div>
+            </div>
 
-        <DropdownContent className="w-80 max-w-[calc(100vw-1rem)] gap-2 overflow-hidden p-2!">
-          <div className="flex items-center gap-2.5 p-1">
-            <Avatar
-              name={activeWorkspaceName}
-              src={displayWorkspace?.avatarUrl ?? undefined}
-              size="sm"
-            />
-            <div className="min-w-0">
-              <span className="block truncate text-(length:--font-size-base) font-normal">
-                {activeWorkspaceName}
-              </span>
-              {user ? (
-                <span className="block truncate text-(length:--font-size-sm) text-madoo-ink-muted">
-                  {planLabel}
+            <Card surface="secondary" className="grid gap-2 p-2.5!">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-(length:--font-size-base) font-normal">
+                  Daily credits
+                </span>
+                <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+                  {creditsText}
+                </span>
+              </div>
+              <ProgressBar
+                value={creditsPct}
+                tone="ink"
+                label="Daily credits left"
+              />
+              {formatResetDate(usage?.resetsAt) ? (
+                <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
+                  {formatResetDate(usage?.resetsAt)}
                 </span>
               ) : null}
-            </div>
-          </div>
+            </Card>
 
-          <Card surface="secondary" className="grid gap-2 p-2.5!">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-(length:--font-size-base) font-normal">
-                Daily credits
-              </span>
+            <div className="grid gap-1.5 p-1">
               <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
-                {creditsText}
+                All workspaces
               </span>
+              {workspaces.length > 0 ? (
+                workspaces.map((item) => {
+                  const selected = item.id === workspaceId;
+                  return (
+                    <DropdownItem
+                      key={item.id}
+                      className="px-0!"
+                      disabled={switchWorkspaceMutation.isPending}
+                      onSelect={() => switchWorkspaceMutation.mutate(item.id)}
+                    >
+                      <Avatar
+                        name={item.name}
+                        src={item.avatarUrl ?? undefined}
+                        size="xs"
+                      />
+                      <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                        {item.name}
+                      </span>
+                      <Badge tone="neutral">{item.role}</Badge>
+                      {selected ? <AppIcon icon={Tick02Icon} size={13} /> : null}
+                    </DropdownItem>
+                  );
+                })
+              ) : (
+                <span className="px-1 py-2 text-(length:--font-size-sm) text-madoo-ink-muted">
+                  {user ? "No workspaces found" : "Loading workspaces"}
+                </span>
+              )}
             </div>
-            <ProgressBar
-              value={creditsPct}
-              tone="ink"
-              label="Daily credits left"
-            />
-            <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
-              Resets {formatResetDate(usage?.resetsAt)}
-            </span>
-          </Card>
 
-          <div className="grid gap-1.5 p-1">
-            <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
-              All workspaces
-            </span>
-            {workspaces.length > 0 ? (
-              workspaces.map((item) => {
-                const selected = item.id === workspaceId;
-                return (
-                  <DropdownItem
-                    key={item.id}
-                    className="px-0!"
-                    disabled={switchWorkspaceMutation.isPending}
-                    onSelect={() => switchWorkspaceMutation.mutate(item.id)}
-                  >
-                    <Avatar
-                      name={item.name}
-                      src={item.avatarUrl ?? undefined}
-                      size="xs"
-                    />
-                    <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                      {item.name}
+            {user ? (
+              <DropdownItem
+                className="justify-start! text-(length:--font-size-base)! font-normal! shadow-madoo-border"
+                onSelect={() => {
+                  setWorkspaceOpen(false);
+                  setCreateWorkspaceOpen(true);
+                }}
+              >
+                <AppIcon icon={Add01Icon} size={14} />
+                Create workspace
+              </DropdownItem>
+            ) : null}
+          </DropdownContent>
+        </Dropdown>
+
+        <nav aria-label="Primary navigation" className="grid w-full gap-1 pt-0.5">
+          {primaryItems.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <SidebarNavButton
+                active={active}
+                collapsed={effectiveCollapsed}
+                item={item}
+                key={item.href}
+                onSearchSelect={() => {
+                  setSearchCommandOpen(true);
+                  setWorkspaceOpen(false);
+                }}
+              />
+            );
+          })}
+        </nav>
+
+        <div
+          className={cx(
+            "overflow-hidden px-2.5 pt-6 pb-1 font-madoo-sans text-(length:--font-size-base) text-ellipsis whitespace-nowrap text-madoo-ink-soft/70",
+            effectiveCollapsed ? "invisible" : "visible",
+          )}
+        >
+          Templates
+        </div>
+
+        <nav aria-label="Templates" className="grid w-full gap-1 pt-0.5">
+          {templateProjectItems.map((item) => {
+            const active =
+              item.href === "/dashboard/projects"
+                ? pathname === item.href
+                : isActive(item.href);
+            return (
+              <SidebarNavButton
+                active={active}
+                collapsed={effectiveCollapsed}
+                item={item}
+                key={item.href}
+              />
+            );
+          })}
+        </nav>
+
+        <div className="flex-1" />
+
+        {!effectiveCollapsed ? (
+          <div className="grid gap-2">
+            {upgradeCtaLabel ? (
+              <div>
+                <Button
+                  aria-label={upgradeCtaLabel}
+                  block
+                  leftIcon={
+                    <span className="grid size-5 place-items-center rounded-sm bg-white/18">
+                      <AppIcon icon={Crown02Icon} size={15} />
                     </span>
-                    <Badge tone="neutral">{item.role}</Badge>
-                    {selected ? <AppIcon icon={Tick02Icon} size={13} /> : null}
-                  </DropdownItem>
-                );
-              })
-            ) : (
-              <span className="px-1 py-2 text-(length:--font-size-sm) text-madoo-ink-muted">
-                {user ? "No workspaces found" : "Loading workspaces"}
-              </span>
-            )}
+                  }
+                  size="sm"
+                  variant="accent"
+                  onClick={() => setPricingOpen(true)}
+                  className="h-10! min-h-10! justify-center! rounded-lg! bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))]! text-(length:--font-size-sm)! font-medium! shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.28),var(--shadow-border-accent)]! hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent-deep)_88%,white),var(--accent-deep))]!"
+                >
+                  <span className="truncate">{upgradeCtaLabel}</span>
+                </Button>
+              </div>
+            ) : null}
+
+            {isSubscribed ? (
+              <Link
+                href="/settings/referral"
+                aria-label="Invite people to Madoo"
+                className="relative flex min-h-17 w-full cursor-pointer items-center overflow-hidden rounded-xl text-left no-underline shadow-madoo-border transition-[filter,transform] hover:brightness-105 active:scale-[0.99]"
+              >
+                <Image
+                  src="/referral-banner.png"
+                  alt=""
+                  fill
+                  sizes="280px"
+                  className="object-cover"
+                />
+                <span className="relative z-10 grid min-w-0 gap-1 px-3.5 py-3">
+                  <span className="truncate font-madoo-sans text-(length:--font-size-base) font-medium leading-none text-white">
+                    Share Madoo
+                  </span>
+                  <span className="truncate text-(length:--font-size-xs) leading-none text-white/80">
+                    100 credits per paid referral
+                  </span>
+                </span>
+              </Link>
+            ) : null}
           </div>
+        ) : null}
 
-          {user ? (
-            <DropdownItem
-              className="justify-start! text-(length:--font-size-base)! font-normal! shadow-madoo-border"
-              onSelect={() => {
-                setWorkspaceOpen(false);
-                setCreateWorkspaceOpen(true);
-              }}
-            >
-              <AppIcon icon={Add01Icon} size={14} />
-              Create workspace
-            </DropdownItem>
-          ) : null}
-        </DropdownContent>
-      </Dropdown>
-
-      <nav aria-label="Primary navigation" className="grid w-full gap-1 pt-0.5">
-        {primaryItems.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <SidebarNavButton
-              active={active}
-              collapsed={effectiveCollapsed}
-              item={item}
-              key={item.href}
-              onSearchSelect={() => {
-                setSearchCommandOpen(true);
-                setWorkspaceOpen(false);
-              }}
-            />
-          );
-        })}
-      </nav>
-
-      <div
-        className={cx(
-          "overflow-hidden px-2.5 pt-6 pb-1 font-madoo-sans text-(length:--font-size-base) text-ellipsis whitespace-nowrap text-madoo-ink-soft/70",
-          effectiveCollapsed ? "invisible" : "visible",
-        )}
-      >
-        Template Projects
-      </div>
-
-      <nav aria-label="Template projects" className="grid w-full gap-1 pt-0.5">
-        {templateProjectItems.map((item) => {
-          const active =
-            item.href === "/dashboard/projects"
-              ? pathname === item.href
-              : isActive(item.href);
-          return (
-            <SidebarNavButton
-              active={active}
-              collapsed={effectiveCollapsed}
-              item={item}
-              key={item.href}
-            />
-          );
-        })}
-      </nav>
-
-      <div className="flex-1" />
-
-      {!effectiveCollapsed ? (
-        <div className="grid gap-2">
-          {upgradeCtaLabel ? (
-            <div>
+        <div
+          className={cx(
+            "w-full gap-1.5",
+            effectiveCollapsed
+              ? "grid justify-items-center"
+              : "flex justify-between",
+          )}
+        >
+          <Dropdown>
+            <DropdownTrigger asChild>
               <Button
-                aria-label={upgradeCtaLabel}
+                aria-label="Open user profile"
                 block
                 leftIcon={
-                  <span className="grid size-5 place-items-center rounded-sm bg-white/18">
-                    <AppIcon icon={Crown02Icon} size={15} />
-                  </span>
+                  <Avatar
+                    name={user?.name ?? user?.email ?? "Account"}
+                    src={user?.avatarUrl ?? undefined}
+                    size="xs"
+                    circle
+                  />
                 }
                 size="sm"
-                variant="accent"
-                onClick={() => setPricingOpen(true)}
-                className="h-10! min-h-10! justify-center! rounded-lg! bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent)_92%,white),var(--accent-deep))]! text-(length:--font-size-sm)! font-medium! shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.28),var(--shadow-border-accent)]! hover:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--accent-deep)_88%,white),var(--accent-deep))]!"
-              >
-                <span className="truncate">{upgradeCtaLabel}</span>
-              </Button>
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            aria-label="Invite people to Madoo"
-            onClick={() => setReferralInviteOpen(true)}
-            className="relative flex min-h-17 w-full cursor-pointer items-center overflow-hidden rounded-xl text-left shadow-madoo-border transition-[filter,transform] hover:brightness-105 active:scale-[0.99]"
-          >
-            <Image
-              src="/referral-banner.png"
-              alt=""
-              fill
-              sizes="280px"
-              className="object-cover"
-            />
-            <span className="relative z-10 grid min-w-0 gap-1 px-3.5 py-3">
-              <span className="truncate font-madoo-sans text-(length:--font-size-base) font-medium leading-none text-white">
-                Share Madoo
-              </span>
-              <span className="truncate text-(length:--font-size-xs) leading-none text-white/80">
-                100 credits per paid referral
-              </span>
-            </span>
-          </button>
-        </div>
-      ) : null}
-
-      <div
-        className={cx(
-          "w-full gap-1.5",
-          effectiveCollapsed
-            ? "grid justify-items-center"
-            : "flex justify-between",
-        )}
-      >
-        <Dropdown>
-          <DropdownTrigger asChild>
-            <Button
-              aria-label="Open user profile"
-              block
-              leftIcon={
+                variant="ghost"
+                className="w-max shadow-none! hover:shadow-none! data-[state=open]:shadow-none!"
+              />
+            </DropdownTrigger>
+            <DropdownContent
+              side={effectiveCollapsed ? "right" : "top"}
+              align={effectiveCollapsed ? "end" : "start"}
+              className="w-56 p-2!"
+            >
+              <div className="flex items-center gap-2.5 p-1.5">
                 <Avatar
                   name={user?.name ?? user?.email ?? "Account"}
                   src={user?.avatarUrl ?? undefined}
-                  size="xs"
+                  size="sm"
                   circle
                 />
-              }
-              size="sm"
-              variant="ghost"
-              className="w-max shadow-none! hover:shadow-none! data-[state=open]:shadow-none!"
-            />
-          </DropdownTrigger>
-          <DropdownContent
-            side={effectiveCollapsed ? "right" : "top"}
-            align={effectiveCollapsed ? "end" : "start"}
-            className="w-56 p-2!"
-          >
-            <div className="flex items-center gap-2.5 p-1.5">
-              <Avatar
-                name={user?.name ?? user?.email ?? "Account"}
-                src={user?.avatarUrl ?? undefined}
-                size="sm"
-                circle
-              />
-              <span className="grid min-w-0 gap-0.5">
-                <span className="truncate text-(length:--font-size-base) leading-none">
-                  {user?.name ?? "Account"}
+                <span className="grid min-w-0 gap-0.5">
+                  <span className="truncate text-(length:--font-size-base) leading-none">
+                    {user?.name ?? "Account"}
+                  </span>
+                  <span className="truncate text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
+                    {user?.email ?? "Checking session"}
+                  </span>
                 </span>
-                <span className="truncate text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
-                  {user?.email ?? "Checking session"}
-                </span>
-              </span>
-            </div>
-            <DropdownDivider />
-            {user ? (
-              <>
-                <DropdownLink href="/settings/profile">Profile</DropdownLink>
-                <DropdownLink href="/settings/billing">
-                  Billing & usage
-                </DropdownLink>
-                <DropdownLink href="/settings/general">Settings</DropdownLink>
-                <DropdownItem
-                  className="justify-start! text-madoo-danger"
-                  disabled={signOutMutation.isPending}
-                  onSelect={() => signOutMutation.mutate()}
-                >
-                  Sign out
+              </div>
+              <DropdownDivider />
+              {user ? (
+                <>
+                  <DropdownLink href="/settings/profile" icon={UserIcon}>
+                    Profile
+                  </DropdownLink>
+                  <DropdownLink href="/settings/billing" icon={CreditCardIcon}>
+                    Billing & usage
+                  </DropdownLink>
+                  <DropdownLink href="/settings/general" icon={Settings02Icon}>
+                    Settings
+                  </DropdownLink>
+                  <DropdownLink href="/settings/referral" icon={GiftIcon}>
+                    Refer and earn
+                  </DropdownLink>
+                  <DropdownDivider />
+                  <DropdownItem
+                    className="justify-start! gap-3! text-madoo-danger"
+                    disabled={signOutMutation.isPending}
+                    onSelect={() => signOutMutation.mutate()}
+                  >
+                    Sign out
+                  </DropdownItem>
+                </>
+              ) : (
+                <DropdownItem className="justify-start!" disabled>
+                  Session unavailable
                 </DropdownItem>
-              </>
-            ) : (
-              <DropdownItem className="justify-start!" disabled>
-                Session unavailable
-              </DropdownItem>
-            )}
-          </DropdownContent>
-        </Dropdown>
+              )}
+            </DropdownContent>
+          </Dropdown>
 
-        <Dropdown>
-          <DropdownTrigger asChild>
-            <Button
-              aria-label="Open updates menu"
-              leftIcon={<AppIcon icon={InboxIcon} size={15} />}
-              rightIcon={
-                !effectiveCollapsed ? (
-                  <AppIcon icon={ArrowDown01Icon} size={12} />
-                ) : undefined
-              }
-              size="sm"
-              variant="ghost"
-              className="w-max"
-            />
-          </DropdownTrigger>
-          <DropdownContent side="right" align="end" className="w-64 p-0!">
-            <div className="grid justify-items-center gap-1.5 px-4 py-6 text-center">
-              <span className="grid size-9 place-items-center rounded-full bg-madoo-surface-2 text-madoo-ink-muted">
-                <AppIcon icon={InboxIcon} size={16} />
-              </span>
-              <span className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
-                What's new
-              </span>
-              <span className="text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
-                Product news and updates will show up here.
-              </span>
-            </div>
-          </DropdownContent>
-        </Dropdown>
-      </div>
-      <CreateWorkspaceModal
-        open={createWorkspaceOpen}
-        onClose={() => setCreateWorkspaceOpen(false)}
-      />
-      <PricingDrawer open={pricingOpen} onClose={() => setPricingOpen(false)} />
-      <ReferralInviteDialog
-        open={referralInviteOpen}
-        onClose={() => setReferralInviteOpen(false)}
-      />
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button
+                aria-label="Open updates menu"
+                leftIcon={<AppIcon icon={InboxIcon} size={15} />}
+                rightIcon={
+                  !effectiveCollapsed ? (
+                    <AppIcon icon={ArrowDown01Icon} size={12} />
+                  ) : undefined
+                }
+                size="sm"
+                variant="ghost"
+                className="w-max"
+              />
+            </DropdownTrigger>
+            <DropdownContent side="right" align="end" className="w-64 p-0!">
+              <div className="grid justify-items-center gap-1.5 px-4 py-6 text-center">
+                <span className="grid size-9 place-items-center rounded-full bg-madoo-surface-2 text-madoo-ink-muted">
+                  <AppIcon icon={InboxIcon} size={16} />
+                </span>
+                <span className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
+                  What's new
+                </span>
+                <span className="text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
+                  Product news and updates will show up here.
+                </span>
+              </div>
+            </DropdownContent>
+          </Dropdown>
+        </div>
+        <CreateWorkspaceModal
+          open={createWorkspaceOpen}
+          onClose={() => setCreateWorkspaceOpen(false)}
+        />
+        <PricingDrawer open={pricingOpen} onClose={() => setPricingOpen(false)} />
       </aside>
     </>
   );
