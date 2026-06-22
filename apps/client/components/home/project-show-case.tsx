@@ -32,7 +32,10 @@ import {
   useToast,
 } from "@madoo/design-system";
 import {
+  COMMUNITY_TEMPLATE_CATEGORIES,
+  COMMUNITY_TEMPLATE_MAX_CATEGORIES,
   type EmailDto,
+  type CommunityTemplateCategory,
   type VariableSchemaRoot,
   type VariableSpec,
 } from "@madoo/shared";
@@ -49,6 +52,79 @@ const projectTabs = [
 
 const compactMenuItemClass = "justify-start! px-2! py-1.5! text-[13px]!";
 const templateMasonryWeights = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
+type CommunityCategoryFilter = "all" | CommunityTemplateCategory;
+
+const categorySuggestionRules: Array<{
+  category: CommunityTemplateCategory;
+  pattern: RegExp;
+}> = [
+  {
+    category: "Abandoned Cart",
+    pattern: /\b(abandoned\s+cart|cart\s+recovery)\b/i,
+  },
+  {
+    category: "Events & Webinars",
+    pattern: /\b(event|webinar|conference|workshop|invite|invitation)\b/i,
+  },
+  {
+    category: "Seasonal / Holiday",
+    pattern:
+      /\b(holiday|christmas|black\s+friday|cyber\s+monday|thanksgiving|new\s+year|valentine|halloween|seasonal)\b/i,
+  },
+  {
+    category: "Product Launch",
+    pattern: /\b(launch|new\s+product|release|waitlist)\b/i,
+  },
+  {
+    category: "Survey & Feedback",
+    pattern: /\b(survey|feedback|review|rating|nps)\b/i,
+  },
+  {
+    category: "Re-engagement",
+    pattern: /\b(re-engage|reengage|winback|inactive|miss\s+you|come\s+back)\b/i,
+  },
+  {
+    category: "Transactional",
+    pattern:
+      /\b(receipt|invoice|password|reset|account|security|shipping|delivery|order)\b/i,
+  },
+  {
+    category: "Confirmation",
+    pattern: /\b(confirm|confirmation|rsvp|booking|reservation)\b/i,
+  },
+  {
+    category: "Promotional",
+    pattern: /\b(sale|discount|promo|coupon|offer|deal)\b/i,
+  },
+  {
+    category: "Newsletter",
+    pattern: /\b(newsletter|digest|roundup|weekly|monthly)\b/i,
+  },
+  {
+    category: "Welcome",
+    pattern: /\b(welcome|onboard|onboarding|get\s+started)\b/i,
+  },
+  {
+    category: "Announcement",
+    pattern: /\b(announce|announcement|update|news|feature)\b/i,
+  },
+  {
+    category: "Referral",
+    pattern: /\b(referral|refer|invite\s+(a\s+)?friend)\b/i,
+  },
+  {
+    category: "Internal / HR",
+    pattern: /\b(hiring|hr|employee|team|internal|policy)\b/i,
+  },
+  {
+    category: "Education / Tutorial",
+    pattern: /\b(tutorial|lesson|course|guide|learn|education)\b/i,
+  },
+  {
+    category: "Thank You",
+    pattern: /\b(thank\s+you|thanks|appreciation)\b/i,
+  },
+];
 
 const roleLabels: Record<NonNullable<VariableSpec["role"]>, string> = {
   text: "Text",
@@ -76,7 +152,7 @@ function getEmailSubtitle(email: EmailDto): string {
 }
 
 function getCommunitySubtitle(template: CommunityTemplateDto): string {
-  return template.authorName || template.category || "Community";
+  return template.authorName || template.categories[0] || "Community";
 }
 
 function getPreviewUrl(email: EmailDto): string | null {
@@ -107,6 +183,39 @@ function defaultScope(variable: VariableSpec): "dynamic" | "static" {
   return variable.scope ?? "dynamic";
 }
 
+function suggestCommunityCategories(
+  email: EmailDto,
+): CommunityTemplateCategory[] {
+  const latestVariant = email.variants[email.variants.length - 1];
+  const text = [
+    getEmailTitle(email),
+    email.prompt,
+    email.audience,
+    latestVariant?.subject,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const suggestions: CommunityTemplateCategory[] = [];
+  for (const rule of categorySuggestionRules) {
+    if (rule.pattern.test(text) && !suggestions.includes(rule.category)) {
+      suggestions.push(rule.category);
+      if (suggestions.length === COMMUNITY_TEMPLATE_MAX_CATEGORIES) break;
+    }
+  }
+  return suggestions;
+}
+
+function toggleCategorySelection(
+  current: CommunityTemplateCategory[],
+  category: CommunityTemplateCategory,
+): CommunityTemplateCategory[] {
+  if (current.includes(category)) {
+    return current.filter((item) => item !== category);
+  }
+  if (current.length >= COMMUNITY_TEMPLATE_MAX_CATEGORIES) return current;
+  return [...current, category];
+}
+
 export function ProjectShowCase() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -120,6 +229,8 @@ export function ProjectShowCase() {
     useState<CommunityTemplateDto | null>(null);
   const [selectedCommunityTemplateId, setSelectedCommunityTemplateId] =
     useState<string | null>(null);
+  const [communityCategoryFilter, setCommunityCategoryFilter] =
+    useState<CommunityCategoryFilter>("all");
 
   const { data: emails = [], isLoading: emailsLoading } = useQuery({
     queryKey: ["emails"],
@@ -155,6 +266,31 @@ export function ProjectShowCase() {
     [communityTemplates, selectedCommunityTemplateId],
   );
 
+  const communityCategoryCounts = useMemo(() => {
+    const counts = new Map<CommunityTemplateCategory, number>();
+    for (const template of communityTemplates) {
+      for (const category of template.categories) {
+        counts.set(category, (counts.get(category) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [communityTemplates]);
+
+  const communityCategoryOptions = useMemo(
+    () =>
+      COMMUNITY_TEMPLATE_CATEGORIES.filter((category) =>
+        communityCategoryCounts.has(category),
+      ),
+    [communityCategoryCounts],
+  );
+
+  const filteredCommunityTemplates = useMemo(() => {
+    if (communityCategoryFilter === "all") return communityTemplates;
+    return communityTemplates.filter((template) =>
+      template.categories.includes(communityCategoryFilter),
+    );
+  }, [communityCategoryFilter, communityTemplates]);
+
   const communityDetailQuery = useQuery({
     queryKey: ["community-template", selectedCommunityTemplateId],
     queryFn: () => fetchCommunityTemplate(selectedCommunityTemplateId!),
@@ -166,6 +302,15 @@ export function ProjectShowCase() {
 
     setActiveProjectTab(recentEmails.length > 0 ? "projects" : "community");
   }, [emailsLoading, projectTabTouched, recentEmails.length, user]);
+
+  useEffect(() => {
+    if (
+      communityCategoryFilter !== "all" &&
+      !communityCategoryCounts.has(communityCategoryFilter)
+    ) {
+      setCommunityCategoryFilter("all");
+    }
+  }, [communityCategoryCounts, communityCategoryFilter]);
 
   const emailStarMutation = useMutation({
     mutationFn: ({ email, starred }: { email: EmailDto; starred: boolean }) =>
@@ -283,12 +428,14 @@ export function ProjectShowCase() {
   const activeCount =
     activeProjectTab === "projects"
       ? recentEmails.length
-      : communityTemplates.length;
+      : filteredCommunityTemplates.length;
 
   const emptyCopy =
     activeProjectTab === "projects"
       ? "No emails yet"
-      : "No community templates yet";
+      : communityCategoryFilter === "all"
+        ? "No community templates yet"
+        : "No templates in this category";
 
   return (
     <div className="relative z-10 w-full px-6 py-6">
@@ -318,6 +465,16 @@ export function ProjectShowCase() {
             </Button>
           ) : null}
         </div>
+
+        {activeProjectTab === "community" && communityCategoryOptions.length ? (
+          <CommunityCategoryFilterChips
+            active={communityCategoryFilter}
+            counts={communityCategoryCounts}
+            onChange={setCommunityCategoryFilter}
+            options={communityCategoryOptions}
+            total={communityTemplates.length}
+          />
+        ) : null}
 
         {loading ? (
           <div className="grid min-h-60 place-items-center rounded-lg bg-white text-sm text-madoo-ink-muted shadow-madoo-border">
@@ -363,10 +520,12 @@ export function ProjectShowCase() {
             {activeProjectTab === "community" ? (
               <MasonryGrid
                 getWeight={getTemplateMasonryWeight}
-                items={communityTemplates}
+                items={filteredCommunityTemplates}
                 renderItem={(template, index) => (
                   <TemplateCard
-                    badge={template.category ?? undefined}
+                    badge={
+                      template.categories[0] ?? template.category ?? undefined
+                    }
                     key={template.id}
                     masonryIndex={index}
                     menu={
@@ -455,6 +614,54 @@ export function ProjectShowCase() {
         }
         template={privateTarget}
       />
+    </div>
+  );
+}
+
+function CommunityCategoryFilterChips({
+  active,
+  counts,
+  onChange,
+  options,
+  total,
+}: {
+  active: CommunityCategoryFilter;
+  counts: Map<CommunityTemplateCategory, number>;
+  onChange: (category: CommunityCategoryFilter) => void;
+  options: CommunityTemplateCategory[];
+  total: number;
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap items-center gap-2">
+      <button
+        aria-pressed={active === "all"}
+        className={cx(
+          "h-8 cursor-pointer rounded-full border-0 px-3 text-[12px] font-medium transition",
+          active === "all"
+            ? "bg-madoo-ink text-white"
+            : "bg-white text-madoo-ink-muted shadow-madoo-border hover:text-madoo-ink",
+        )}
+        onClick={() => onChange("all")}
+        type="button"
+      >
+        All {total}
+      </button>
+      {options.map((category) => (
+        <button
+          aria-pressed={active === category}
+          className={cx(
+            "h-8 cursor-pointer rounded-full border-0 px-3 text-[12px] font-medium transition",
+            active === category
+              ? "bg-madoo-ink text-white"
+              : "bg-white text-madoo-ink-muted shadow-madoo-border hover:text-madoo-ink",
+          )}
+          key={category}
+          onClick={() => onChange(category)}
+          type="button"
+        >
+          {category} {counts.get(category) ?? 0}
+        </button>
+      ))}
     </div>
   );
 }
@@ -594,19 +801,26 @@ function ShareToCommunityModal({
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<
+    CommunityTemplateCategory[]
+  >([]);
+  const [suggestedCategories, setSuggestedCategories] = useState<
+    CommunityTemplateCategory[]
+  >([]);
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (!email) return;
+    const suggestions = suggestCommunityCategories(email);
     setName(getEmailTitle(email));
     setDescription("");
-    setCategory("");
+    setSelectedCategories(suggestions);
+    setSuggestedCategories(suggestions);
     setConfirming(false);
   }, [email]);
 
   const submit = () => {
-    if (!email || !name.trim()) return;
+    if (!email || !name.trim() || selectedCategories.length === 0) return;
     if (!confirming) {
       setConfirming(true);
       return;
@@ -615,9 +829,13 @@ function ShareToCommunityModal({
       emailId: email.id,
       name: name.trim(),
       description: description.trim() || null,
-      category: category.trim() || null,
+      category: selectedCategories[0] ?? null,
+      categories: selectedCategories,
     });
   };
+
+  const categoryLimitReached =
+    selectedCategories.length >= COMMUNITY_TEMPLATE_MAX_CATEGORIES;
 
   return (
     <Modal
@@ -643,7 +861,12 @@ function ShareToCommunityModal({
             </Button>
           )}
           <Button
-            disabled={!email || !name.trim() || isPending}
+            disabled={
+              !email ||
+              !name.trim() ||
+              selectedCategories.length === 0 ||
+              isPending
+            }
             onClick={submit}
             size="sm"
             variant="primary"
@@ -679,6 +902,21 @@ function ShareToCommunityModal({
               {name.trim()}
             </div>
           </div>
+          <div className="rounded-lg bg-madoo-bg p-3 shadow-madoo-border">
+            <div className="text-xs font-medium uppercase text-madoo-ink-muted">
+              Categories
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {selectedCategories.map((category) => (
+                <span
+                  className="rounded-full bg-white px-2.5 py-1 text-[12px] font-medium text-madoo-ink shadow-madoo-border"
+                  key={category}
+                >
+                  {category}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <form
@@ -701,11 +939,74 @@ function ShareToCommunityModal({
             rows={3}
             value={description}
           />
-          <Input
-            label="Category"
-            onChange={(event) => setCategory(event.target.value)}
-            value={category}
-          />
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-madoo-ink">
+                Categories
+              </span>
+              <span className="text-[12px] text-madoo-ink-muted">
+                Choose up to {COMMUNITY_TEMPLATE_MAX_CATEGORIES}
+              </span>
+            </div>
+            {suggestedCategories.length ? (
+              <div className="rounded-lg bg-madoo-accent-soft p-3">
+                <p className="m-0 mb-2 text-[12px] font-medium text-madoo-accent-deep">
+                  Suggested for this template
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestedCategories.map((category) => (
+                    <button
+                      aria-pressed={selectedCategories.includes(category)}
+                      className={cx(
+                        "h-8 cursor-pointer rounded-full border-0 px-3 text-[12px] font-medium transition",
+                        selectedCategories.includes(category)
+                          ? "bg-madoo-ink text-white"
+                          : "bg-white text-madoo-accent-deep shadow-madoo-border",
+                      )}
+                      key={category}
+                      onClick={() =>
+                        setSelectedCategories((current) =>
+                          toggleCategorySelection(current, category),
+                        )
+                      }
+                      type="button"
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-1.5">
+              {COMMUNITY_TEMPLATE_CATEGORIES.map((category) => {
+                const selected = selectedCategories.includes(category);
+                const disabled = !selected && categoryLimitReached;
+                return (
+                  <button
+                    aria-pressed={selected}
+                    className={cx(
+                      "h-8 rounded-full border-0 px-3 text-[12px] font-medium transition",
+                      selected
+                        ? "cursor-pointer bg-madoo-ink text-white"
+                        : disabled
+                          ? "cursor-not-allowed bg-madoo-bg-2 text-madoo-ink-muted/55"
+                          : "cursor-pointer bg-madoo-bg-2 text-madoo-ink-muted shadow-madoo-border hover:text-madoo-ink",
+                    )}
+                    disabled={disabled}
+                    key={category}
+                    onClick={() =>
+                      setSelectedCategories((current) =>
+                        toggleCategorySelection(current, category),
+                      )
+                    }
+                    type="button"
+                  >
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </form>
       )}
     </Modal>
@@ -785,12 +1086,19 @@ function CommunityTemplateUseModal({
               <h3 className="m-0 text-sm font-medium text-madoo-ink">
                 Variables
               </h3>
-              {detail.category ? (
-                <span className="rounded-md bg-madoo-bg-2 px-2 py-1 text-[11px] font-medium text-madoo-ink-muted">
-                  {detail.category}
-                </span>
-              ) : null}
             </div>
+            {detail.categories.length ? (
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {detail.categories.map((category) => (
+                  <span
+                    className="rounded-md bg-madoo-bg-2 px-2 py-1 text-[11px] font-medium text-madoo-ink-muted"
+                    key={category}
+                  >
+                    {category}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <p className="m-0 mb-3 text-[11px] font-medium text-madoo-ink-muted">
               {detail.viewCount} {detail.viewCount === 1 ? "view" : "views"} ·{" "}
               {detail.useCount} {detail.useCount === 1 ? "use" : "uses"}

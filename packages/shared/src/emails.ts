@@ -471,12 +471,42 @@ export type CreateEmailFromTemplateInput = z.infer<
   typeof CreateEmailFromTemplateSchema
 >;
 
+export const COMMUNITY_TEMPLATE_CATEGORIES = [
+  "Promotional",
+  "Newsletter",
+  "Welcome",
+  "Product Launch",
+  "Announcement",
+  "Transactional",
+  "Abandoned Cart",
+  "Confirmation",
+  "Events & Webinars",
+  "Seasonal / Holiday",
+  "Survey & Feedback",
+  "Re-engagement",
+  "Referral",
+  "Internal / HR",
+  "Education / Tutorial",
+  "Thank You",
+  "Other",
+] as const;
+
+export const COMMUNITY_TEMPLATE_MAX_CATEGORIES = 3;
+
+export const CommunityTemplateCategorySchema = z.enum(
+  COMMUNITY_TEMPLATE_CATEGORIES,
+);
+export type CommunityTemplateCategory = z.infer<
+  typeof CommunityTemplateCategorySchema
+>;
+
 /** A template published to the global community gallery (list/card shape). */
 export const CommunityTemplateDtoSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().nullable(),
   category: z.string().nullable(),
+  categories: z.array(CommunityTemplateCategorySchema).default([]),
   previewUrl: z.string().nullable(),
   variableSchema: VariableSchemaRootSchema,
   viewCount: z.number(),
@@ -511,6 +541,10 @@ export const ShareEmailToCommunitySchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(280).optional().nullable(),
   category: z.string().trim().max(48).optional().nullable(),
+  categories: z
+    .array(CommunityTemplateCategorySchema)
+    .min(1)
+    .max(COMMUNITY_TEMPLATE_MAX_CATEGORIES),
 });
 
 export type ShareEmailToCommunityInput = z.infer<
