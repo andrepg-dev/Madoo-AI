@@ -5,11 +5,13 @@ import {
   BillingOverviewSchema,
   CancelSubscriptionResponseSchema,
   CheckoutSessionResponseSchema,
+  ClaimTrialResponseSchema,
   CreateCheckoutSessionInputSchema,
   PortalSessionResponseSchema,
   type BillingOverviewDto,
   type CancelSubscriptionResponse,
   type CheckoutSessionResponse,
+  type ClaimTrialResponse,
   type CreateCheckoutSessionInput,
   type PortalSessionResponse,
 } from "@madoo/shared";
@@ -18,6 +20,7 @@ export type {
   BillingOverviewDto,
   CancelSubscriptionResponse,
   CheckoutSessionResponse,
+  ClaimTrialResponse,
   CreateCheckoutSessionInput,
   PortalSessionResponse,
 } from "@madoo/shared";
@@ -39,6 +42,13 @@ export async function createCheckoutSession(
     },
   );
   return CheckoutSessionResponseSchema.parse(raw);
+}
+
+export async function claimTrial(): Promise<ClaimTrialResponse> {
+  const raw = await FetchWrapper<ClaimTrialResponse>("/billing/claim-trial", {
+    method: "POST",
+  });
+  return ClaimTrialResponseSchema.parse(raw);
 }
 
 export async function createPortalSession(): Promise<PortalSessionResponse> {

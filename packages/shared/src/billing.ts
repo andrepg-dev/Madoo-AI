@@ -98,6 +98,10 @@ export const BillingSubscriptionSchema = z.object({
   hasStripeCustomer: z.boolean(),
   /** When the active free trial ends (ISO), or null if not trialing. */
   trialEndsAt: z.string().datetime().nullable(),
+  /** The opt-in 7-day trial has been claimed for this workspace. */
+  trialClaimed: z.boolean(),
+  /** Claimed AND still grantable (never used a trial, no Stripe sub yet). */
+  trialEligible: z.boolean(),
 });
 export type BillingSubscriptionDto = z.infer<typeof BillingSubscriptionSchema>;
 
@@ -106,6 +110,11 @@ const CreditUsageSchema = z.object({
   limit: z.number().int(), // -1 = unlimited
   remaining: z.number().int(), // -1 = unlimited
   resetsAt: z.string().datetime(),
+  /**
+   * Granted referral bonus credits available on top of `remaining`. Present on
+   * the monthly window only; spendable once the monthly base cap is reached.
+   */
+  bonus: z.number().int().nonnegative().optional(),
 });
 export type CreditUsageDto = z.infer<typeof CreditUsageSchema>;
 
@@ -153,6 +162,12 @@ export type BillingOverviewDto = z.infer<typeof BillingOverviewSchema>;
 export const CreateCheckoutSessionInputSchema = z.object({
   plan: z.enum(["BASIC", "MEDIUM", "PRO"]),
   interval: z.enum(["MONTHLY", "ANNUAL"]).default("MONTHLY"),
+  /**
+   * Opt-in 7-day trial: when true, claim the trial so checkout adds
+   * `trial_period_days` (still gated by never having used a trial). When false
+   * or omitted, checkout charges immediately.
+   */
+  claimTrial: z.boolean().optional(),
 });
 export type CreateCheckoutSessionInput = z.infer<
   typeof CreateCheckoutSessionInputSchema
@@ -169,6 +184,19 @@ export const PortalSessionResponseSchema = z.object({
   url: z.string().url(),
 });
 export type PortalSessionResponse = z.infer<typeof PortalSessionResponseSchema>;
+
+/** Pre-signup opt-in trial claim: reserve a 7-day trial spot by email. */
+export const ClaimTrialEmailInputSchema = z.object({
+  email: z.string().email(),
+});
+export type ClaimTrialEmailInput = z.infer<typeof ClaimTrialEmailInputSchema>;
+
+export const ClaimTrialEmailResponseSchema = z.object({
+  claimed: z.boolean(),
+});
+export type ClaimTrialEmailResponse = z.infer<
+  typeof ClaimTrialEmailResponseSchema
+>;
 
 /** Result of toggling cancel-at-period-end on the active subscription. */
 export const CancelSubscriptionResponseSchema = z.object({

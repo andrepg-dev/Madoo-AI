@@ -20,6 +20,14 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Share-Madoo referral: the user's own short, url-safe share code (lazily
+  // generated the first time they open the referral panel) and the user who
+  // referred them (set once at signup, never overwritten).
+  referralCode     String? @unique
+  referredByUserId String?
+  referredBy       User?   @relation("UserReferrals", fields: [referredByUserId], references: [id], onDelete: SetNull)
+  referrals        User[]  @relation("UserReferrals")
+
   pendingPrompts           PendingPrompt[]
   memberships              Membership[]
   authAccounts             AuthAccount[]
@@ -29,8 +37,10 @@ model User {
   acceptedWorkspaceInvites WorkspaceInvite[]       @relation("WorkspaceInviteAcceptedBy")
   communityTemplates       CommunityTemplate[]
   communityTemplateStars   CommunityTemplateStar[]
+  referralRewards          ReferralReward[]        @relation("ReferralRewardReferrer")
 
   @@index([email])
+  @@index([referredByUserId])
 }
 
 enum AuthProviderKind {
@@ -471,6 +481,12 @@ model BillingSubscription {
   cancelAtPeriodEnd    Boolean            @default(false)
   trialEndsAt          DateTime?
   hasUsedTrial         Boolean            @default(false)
+  // Opt-in 7-day trial: the trial is granted at checkout only when explicitly
+  // claimed. `hasUsedTrial` still latches once any trial has run to block repeats.
+  trialClaimed         Boolean            @default(false)
+  // Remaining consumable referral bonus credits. Spent only after the monthly
+  // base cap is reached; the daily cap still applies.
+  bonusCredits         Int                @default(0)
   // Anchor for the rolling monthly AI-credit window. Reset to now() whenever the
   // plan changes (upgrade/downgrade) so credits refresh immediately; otherwise
   // the window rolls forward one month at a time from this date.
@@ -482,4 +498,30 @@ model BillingSubscription {
 
   @@index([stripeCustomerId])
   @@index([plan, status])
+}
+
+/// Idempotent ledger of paid-referral rewards. One row per referred user
+/// (`referredUserId` unique) guarantees a referrer is rewarded at most once for
+/// the same invitee, even across Stripe webhook re-delivery or resubscribes.
+model ReferralReward {
+  id             String   @id @default(cuid())
+  referrerUserId String
+  referredUserId String   @unique
+  workspaceId    String
+  credits        Int
+  createdAt      DateTime @default(now())
+
+  referrer User @relation("ReferralRewardReferrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerUserId])
+}
+
+/// Pre-signup claims for the opt-in 7-day trial. A visitor enters their email in
+/// the landing FAQ to reserve a trial "spot". On login/signup, if the user's
+/// email is here, their workspace subscription is marked `trialClaimed` so the
+/// pricing drawer offers (and checkout grants) the trial.
+model TrialClaim {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
 }

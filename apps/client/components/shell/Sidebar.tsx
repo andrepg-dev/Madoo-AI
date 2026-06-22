@@ -10,7 +10,6 @@ import {
   ArrowDown01Icon,
   Cancel01Icon,
   Crown02Icon,
-  GiftIcon,
   Grid2X2Icon,
   InboxIcon,
   PanelLeftIcon,
@@ -46,6 +45,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { PricingDrawer } from "./PricingDrawer";
+import { ReferralInviteDialog } from "./ReferralInviteDialog";
 
 type NavItem = {
   href: string;
@@ -262,6 +262,7 @@ export function Sidebar() {
   const [isMobile, setIsMobile] = useState(false);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [referralInviteOpen, setReferralInviteOpen] = useState(false);
   const authUser = useAuthStore((state) => state.user);
   const setAuthUser = useAuthStore((state) => state.setUser);
   const workspaceId = useClientStore((state) => state.workspaceId);
@@ -705,19 +706,28 @@ export function Sidebar() {
             </div>
           ) : null}
 
-          <div className="madoo-paper-border flex min-h-17 items-center justify-between gap-3 rounded-xl bg-madoo-bg-2/50 px-3.5 py-3">
-            <span className="grid min-w-0 flex-1 gap-1">
-              <span className="truncate font-madoo-sans text-(length:--font-size-base) leading-none text-madoo-ink">
+          <button
+            type="button"
+            aria-label="Invite people to Madoo"
+            onClick={() => setReferralInviteOpen(true)}
+            className="relative flex min-h-17 w-full cursor-pointer items-center overflow-hidden rounded-xl text-left shadow-madoo-border transition-[filter,transform] hover:brightness-105 active:scale-[0.99]"
+          >
+            <Image
+              src="/referral-banner.png"
+              alt=""
+              fill
+              sizes="280px"
+              className="object-cover"
+            />
+            <span className="relative z-10 grid min-w-0 gap-1 px-3.5 py-3">
+              <span className="truncate font-madoo-sans text-(length:--font-size-base) font-medium leading-none text-white">
                 Share Madoo
               </span>
-              <span className="truncate text-(length:--font-size-xs) leading-none">
+              <span className="truncate text-(length:--font-size-xs) leading-none text-white/80">
                 100 credits per paid referral
               </span>
             </span>
-            <span className="madoo-paper-border grid h-10 w-10 shrink-0 place-items-center rounded-full bg-madoo-bg">
-              <AppIcon icon={GiftIcon} size={18} />
-            </span>
-          </div>
+          </button>
         </div>
       ) : null}
 
@@ -827,6 +837,10 @@ export function Sidebar() {
         onClose={() => setCreateWorkspaceOpen(false)}
       />
       <PricingDrawer open={pricingOpen} onClose={() => setPricingOpen(false)} />
+      <ReferralInviteDialog
+        open={referralInviteOpen}
+        onClose={() => setReferralInviteOpen(false)}
+      />
       </aside>
     </>
   );

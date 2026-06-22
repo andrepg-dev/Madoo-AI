@@ -331,9 +331,7 @@ export function ProjectShowCase() {
                 items={recentEmails}
                 renderItem={(email, index) => (
                   <TemplateCard
-                    badge={
-                      email.status === "GENERATING" ? "Generating" : undefined
-                    }
+                    badge={email.status === "ERROR" ? "Error" : undefined}
                     key={email.id}
                     masonryIndex={index}
                     menu={

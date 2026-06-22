@@ -14,6 +14,7 @@ type GithubState = {
   pendingTone?: string;
   pendingLength?: string;
   pendingAudience?: string;
+  referralCode?: string;
 };
 
 type AuthSessionPayload = {
@@ -60,6 +61,7 @@ function decodeState(state: string | null): GithubState {
       pendingTone: optionalString(decoded.pendingTone),
       pendingLength: optionalString(decoded.pendingLength),
       pendingAudience: optionalString(decoded.pendingAudience),
+      referralCode: optionalString(decoded.referralCode),
     };
   } catch {
     return {};
@@ -120,6 +122,7 @@ export async function GET(req: NextRequest) {
       pendingTone: state.pendingTone,
       pendingLength: state.pendingLength,
       pendingAudience: state.pendingAudience,
+      referralCode: state.referralCode,
     }),
     cache: "no-store",
   });

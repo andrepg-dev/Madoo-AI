@@ -13,6 +13,7 @@ import { HealthController } from "./health.controller";
 import { InvitesModule } from "./invites/invites.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { PromptsModule } from "./prompts/prompts.module";
+import { ReferralsModule } from "./referrals/referrals.module";
 import { SupportModule } from "./support/support.module";
 import { TemplatesModule } from "./templates/templates.module";
 import { TestingModule } from "./testing/testing.module";
@@ -68,6 +69,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     AuditLogsModule,
     AssistantModule,
     BillingModule,
+    ReferralsModule,
     CommunityTemplatesModule,
     SupportModule,
     TestingModule,

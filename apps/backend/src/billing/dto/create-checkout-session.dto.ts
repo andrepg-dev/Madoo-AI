@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
 
 export class CreateCheckoutSessionDto {
   @IsString()
@@ -9,4 +9,9 @@ export class CreateCheckoutSessionDto {
   @IsString()
   @IsIn(["MONTHLY", "ANNUAL"])
   interval?: "MONTHLY" | "ANNUAL";
+
+  /** Opt-in 7-day trial: when true, claim and grant the trial at checkout. */
+  @IsOptional()
+  @IsBoolean()
+  claimTrial?: boolean;
 }

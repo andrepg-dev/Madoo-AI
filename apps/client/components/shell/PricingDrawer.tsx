@@ -21,7 +21,6 @@ import {
   PRICING_PLANS,
   getPlanDisplayPrice,
   getPlanYearlySavings,
-  getRecommendedUpgradePlan,
   type BillingInterval,
   type Plan,
   type PricingFeature,
@@ -48,7 +47,7 @@ const pricingFaqs = [
   {
     question: "Is there any free trial?",
     answer:
-      "Yes. New users get a 7-day free trial, and no credit card is needed.",
+      "Yes — a 7-day free trial, but it's opt-in: claim it when you sign up. Subscribing here starts your paid plan right away.",
   },
   {
     question: "How do credits work?",
@@ -170,6 +169,7 @@ function PlanCard({
   billingInterval,
   currentPlan,
   hasStripeCustomer,
+  trialEligible,
   checkoutPending,
   portalPending,
   onSelect,
@@ -179,20 +179,24 @@ function PlanCard({
   billingInterval: BillingInterval;
   currentPlan: Plan;
   hasStripeCustomer: boolean;
+  trialEligible: boolean;
   checkoutPending: boolean;
   portalPending: boolean;
-  onSelect: (plan: PricingPlan) => void;
+  onSelect: (plan: PricingPlan, claimTrial?: boolean) => void;
   onManage: () => void;
 }) {
   const interval = billingInterval === "ANNUAL" ? "yearly" : "monthly";
   const displayPrice = getPlanDisplayPrice(plan.monthlyPrice, interval);
   const isCurrent = plan.checkoutPlan === currentPlan;
-  const isRecommended =
-    plan.checkoutPlan === getRecommendedUpgradePlan(currentPlan);
+  // Medium is the highlighted/recommended plan for now.
+  const isRecommended = plan.checkoutPlan === "MEDIUM";
   const isFeatured = isRecommended;
   const buttonDisabled =
     (isCurrent && !hasStripeCustomer) || checkoutPending || portalPending;
   const cta = getPlanCta(plan, currentPlan, isCurrent);
+  // Offer the trial CTA only to users who claimed a trial spot and can still use
+  // it, and only on a plan they aren't already on.
+  const offerTrial = trialEligible && !isCurrent;
 
   return (
     <Card
@@ -234,22 +238,33 @@ function PlanCard({
         ) : null}
       </div>
 
-      <Button
-        block
-        size="md"
-        variant={isFeatured ? "primary" : "secondary"}
-        disabled={buttonDisabled}
-        onClick={() => {
-          if (isCurrent && hasStripeCustomer) {
-            onManage();
-            return;
-          }
-          onSelect(plan);
-        }}
-        className="mt-auto h-10! rounded-lg!"
-      >
-        {isCurrent && hasStripeCustomer ? "Manage billing" : cta}
-      </Button>
+      <div className="mt-auto grid gap-1.5">
+        <Button
+          block
+          size="md"
+          variant={isFeatured ? "primary" : "secondary"}
+          disabled={buttonDisabled}
+          onClick={() => {
+            if (isCurrent && hasStripeCustomer) {
+              onManage();
+              return;
+            }
+            onSelect(plan, offerTrial);
+          }}
+          className="h-10! rounded-lg!"
+        >
+          {isCurrent && hasStripeCustomer
+            ? "Manage billing"
+            : offerTrial
+              ? "Start 7-day free trial"
+              : cta}
+        </Button>
+        {offerTrial ? (
+          <p className="text-center text-(length:--font-size-xs) leading-none text-madoo-ink-muted">
+            Free for 7 days, then ${displayPrice}/month
+          </p>
+        ) : null}
+      </div>
 
       <ul className="grid gap-2.5 text-(length:--font-size-sm) leading-5 text-madoo-ink-soft">
         {plan.features.map((feature) => (
@@ -288,8 +303,11 @@ export function PricingDrawer({
     billingQuery.data?.subscription.hasStripeCustomer ?? false;
 
   const checkoutMutation = useMutation({
-    mutationFn: (input: { plan: PaidPlan; interval: BillingInterval }) =>
-      createCheckoutSession(input),
+    mutationFn: (input: {
+      plan: PaidPlan;
+      interval: BillingInterval;
+      claimTrial?: boolean;
+    }) => createCheckoutSession(input),
     onSuccess: (session) => {
       window.location.assign(session.url);
     },
@@ -333,7 +351,7 @@ export function PricingDrawer({
 
   if (!open) return null;
 
-  const onSelectPlan = (plan: PricingPlan) => {
+  const onSelectPlan = (plan: PricingPlan, claimTrial = false) => {
     if (!workspaceId) {
       toast({
         tone: "danger",
@@ -348,10 +366,12 @@ export function PricingDrawer({
       plan_name: plan.name,
       billing_interval: billingInterval,
       current_plan: currentPlan,
+      claim_trial: claimTrial,
     });
     checkoutMutation.mutate({
       plan: plan.checkoutPlan,
       interval: billingInterval,
+      claimTrial,
     });
   };
 
@@ -424,6 +444,9 @@ export function PricingDrawer({
                 billingInterval={billingInterval}
                 currentPlan={currentPlan}
                 hasStripeCustomer={hasStripeCustomer}
+                trialEligible={
+                  billingQuery.data?.subscription.trialEligible ?? false
+                }
                 checkoutPending={checkoutMutation.isPending}
                 portalPending={portalMutation.isPending}
                 onSelect={onSelectPlan}

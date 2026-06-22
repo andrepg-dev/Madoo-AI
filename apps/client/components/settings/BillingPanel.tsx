@@ -124,10 +124,12 @@ function UsageMeter({
   title,
   usage,
   resetLabel,
+  bonus,
 }: {
   title: string;
   usage: CreditUsageDto | ResourceUsageDto;
   resetLabel?: string | null;
+  bonus?: number;
 }) {
   const unlimited = usage.limit === -1 || usage.remaining === -1;
   const remaining = unlimited ? null : Math.max(0, usage.remaining);
@@ -140,6 +142,7 @@ function UsageMeter({
   const remainingText = unlimited
     ? "Unlimited"
     : `${formatNumber(remaining ?? 0)} left`;
+  const hasBonus = typeof bonus === "number" && bonus > 0;
 
   return (
     <div className="grid gap-3 rounded-xl bg-madoo-bg-2 p-4 shadow-madoo-border">
@@ -149,12 +152,20 @@ function UsageMeter({
         </p>
         <p className="whitespace-nowrap text-(length:--font-size-sm) text-madoo-ink-muted">
           {remainingText}
+          {hasBonus ? (
+            <span className="text-madoo-accent-deep">
+              {" "}
+              + {formatNumber(bonus!)} bonus
+            </span>
+          ) : null}
         </p>
       </div>
       <ProgressBar value={pct} tone="ink" label={`${title} left`} />
-      {resetLabel ? (
+      {resetLabel || hasBonus ? (
         <span className="text-(length:--font-size-sm) text-madoo-ink-muted">
           {resetLabel}
+          {resetLabel && hasBonus ? " · " : ""}
+          {hasBonus ? "Referral bonus, spent after the monthly cap" : ""}
         </span>
       ) : null}
     </div>
@@ -386,6 +397,7 @@ export function BillingPanel() {
             title="Monthly credits"
             usage={usage.aiGenerations}
             resetLabel={monthlyReset ? `Resets ${monthlyReset}` : null}
+            bonus={usage.aiGenerations.bonus}
           />
           <UsageMeter
             title="Stored templates"
