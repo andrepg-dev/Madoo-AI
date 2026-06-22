@@ -1549,7 +1549,7 @@ export default function HomePage({
                   className="madoo-prompt-textarea mr-3 max-h-56 min-h-20 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
                 />
 
-                <div className="flex flex-col gap-3 px-3.5 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center justify-between gap-3 px-3.5 pb-3">
                   <AttachMenu
                     label={copy.hero.addAttachment}
                     onUploadFile={openFilePicker}
