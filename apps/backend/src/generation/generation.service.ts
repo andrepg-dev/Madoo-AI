@@ -395,6 +395,7 @@ export class GenerationService {
     kind: EmailChatKind;
     content: string;
     groupId?: string;
+    imageUrls?: string[];
   }): Promise<void> {
     const content = args.content.trim();
     if (!content) return;
@@ -406,6 +407,7 @@ export class GenerationService {
         kind: args.kind,
         content,
         groupId: args.groupId ?? null,
+        imageUrls: args.imageUrls ?? [],
       },
     });
   }
@@ -637,17 +639,40 @@ export class GenerationService {
             role: "USER",
             kind: "TEXT",
             content: replacementPrompt,
+            imageUrls: imageUrls ?? [],
           },
         }),
       ]);
+    } else if (imageUrls?.length) {
+      // First generation from the home flow: images are uploaded after the brief
+      // is created, so attach them to that latest user message for restore.
+      const brief = await this.prisma.emailChatMessage.findFirst({
+        where: { emailId, workspaceId, role: "USER" },
+        orderBy: { createdAt: "desc" },
+      });
+      if (brief) {
+        await this.prisma.emailChatMessage.update({
+          where: { id: brief.id },
+          data: { imageUrls },
+        });
+      }
     }
     const ctx = await this.loadGenerationContext(emailId, workspaceId);
+
+    // Carry the prior conversation so a generation that follows chat-only turns
+    // (e.g. the user answered the assistant's questions, then "go ahead") keeps
+    // the full context instead of treating it as a brand-new conversation.
+    const recentChat = await this.loadRecentChatContext(emailId);
+    const hasPriorChat = recentChat !== "No previous chat context.";
 
     const userPrompt = [
       `User brief:\n${ctx.prompt}`,
       ctx.tone ? `Tone: ${ctx.tone}` : "",
       ctx.length ? `Length preference: ${ctx.length}` : "",
       ctx.audience ? `Audience: ${ctx.audience}` : "",
+      hasPriorChat
+        ? `Conversation context (most recent first):\n${recentChat}`
+        : "",
       ctx.template?.componentCode
         ? `Reference Madoo email template (do not copy verbatim; adapt):\n${ctx.template.componentCode.slice(0, 12000)}`
         : "",
@@ -773,6 +798,7 @@ export class GenerationService {
         role: "USER",
         kind: "TEXT",
         content: instruction,
+        imageUrls: body.imageUrls,
       });
     }
 

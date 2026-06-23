@@ -395,6 +395,8 @@ export const EmailChatMessageDtoSchema = z.object({
   role: z.enum(["USER", "ASSISTANT", "SYSTEM"]),
   kind: z.enum(["TEXT", "THINKING", "STATUS"]),
   content: z.string(),
+  /** Public URLs of images the user attached to this turn. */
+  imageUrls: z.array(z.string()).default([]),
   feedback: z.enum(["LIKE", "DISLIKE"]).nullable().optional(),
   feedbackComment: z.string().nullable().optional(),
   /** Shared by assistant responses that are regenerations of the same turn. */

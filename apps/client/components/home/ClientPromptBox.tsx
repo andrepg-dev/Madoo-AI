@@ -202,6 +202,9 @@ export function ClientPromptBox({
   const searchCommandOpen = useClientStore((state) => state.searchCommandOpen);
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
   const setPricingOpen = useClientStore((state) => state.setPricingOpen);
+  const setPendingPromptImages = useClientStore(
+    (state) => state.setPendingPromptImages,
+  );
   const workspaceId = useClientStore((state) => state.workspaceId);
   const [prompt, setPrompt] = useState("");
   const [creditsAlertDismissed, setCreditsAlertDismissed] = useState(false);
@@ -519,7 +522,9 @@ export function ClientPromptBox({
       return;
     }
 
-    // Navigation can't carry File objects, so drop the previews before leaving.
+    // Navigation can't carry File objects in the URL, so hand them to the store
+    // for the project page to upload and attach to the first generation.
+    if (input.images?.length) setPendingPromptImages(input.images);
     resetImages();
     setSidebarOpen(true);
     router.push(`/email-template-project?${params.toString()}`);
@@ -779,7 +784,11 @@ export function ClientPromptBox({
                 />
               </button>
 
-              <DropdownContent side="bottom" align="start" className="min-w-44">
+              <DropdownContent
+                side={isChatVariant ? "top" : "bottom"}
+                align="start"
+                className="min-w-44"
+              >
                 <DropdownItem onSelect={() => imageInputRef.current?.click()}>
                   <span>Upload image</span>
                   <HugeiconsIcon
