@@ -1034,11 +1034,15 @@ export default function HomePage({
     copy.productFeatures.tabs[0]!;
   const activeFeatureImage =
     featureTabImages[activeFeatureTab] ?? featureTabImages[0]!;
-  const featureCollageImages = (
-    hasCommunityTemplates ? communityTemplateCards : localizedFallbackTemplateCards
-  )
-    .map((card) => card.imageSrc ?? "/templates/news-letter.png")
-    .slice(0, 3);
+  const featureCollageImages = [
+    // First collage tile is a fixed editorial newsletter design; the rest come
+    // from real template previews (community first, samples otherwise).
+    "/product/design-newsletter.png",
+    ...(hasCommunityTemplates
+      ? communityTemplateCards
+      : localizedFallbackTemplateCards
+    ).map((card) => card.imageSrc ?? "/templates/news-letter.png"),
+  ].slice(0, 3);
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
