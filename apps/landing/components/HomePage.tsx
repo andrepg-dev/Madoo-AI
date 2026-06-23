@@ -25,6 +25,7 @@ import {
   Mic02Icon,
   PaintBoardIcon,
   SourceCodeSquareIcon,
+  TestTube01Icon,
   UserMultiple02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -253,7 +254,7 @@ const featureTabIcons = [
   [AiMagicIcon, PaintBoardIcon],
   [Download04Icon, SourceCodeSquareIcon],
   [FlashIcon, DashboardSquare01Icon],
-  [MailValidation01Icon, ComputerIcon],
+  [MailValidation01Icon, ComputerIcon, TestTube01Icon],
   [CheckmarkBadge01Icon, UserMultiple02Icon],
 ] as const;
 
@@ -431,6 +432,10 @@ export const localeCopy = {
             {
               heading: "VERIFY GENERATED HTML",
               body: "Our Test Email Engine sends real test emails from Madoo and checks that the generated HTML is valid and renders correctly before you ship.",
+            },
+            {
+              heading: "SPAM, LINKS & ACCESSIBILITY",
+              body: "Built-in checks score your spam risk, flag broken links, and catch accessibility issues so your email lands in the inbox and works for everyone.",
             },
             {
               heading: "EMAIL REVIEW",
@@ -666,6 +671,10 @@ export const localeCopy = {
             {
               heading: "VERIFICA EL HTML GENERADO",
               body: "Nuestro Test Email Engine envía emails de prueba reales desde Madoo y verifica que el HTML generado sea válido y se renderice correctamente antes de enviar.",
+            },
+            {
+              heading: "SPAM, ENLACES Y ACCESIBILIDAD",
+              body: "Chequeos integrados evalúan el riesgo de spam, detectan enlaces rotos y revisan la accesibilidad para que tu email llegue al inbox y funcione para todos.",
             },
             {
               heading: "REVISIÓN DE EMAIL",
