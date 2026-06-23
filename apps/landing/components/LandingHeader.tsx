@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
+import { Menu01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -8,9 +8,8 @@ import { useEffect, useState } from "react";
 import { LandingButton } from "./LandingButton";
 
 type LandingHeaderCopy = {
-  solutions: string;
-  resources: string;
-  community: string;
+  useCases: string;
+  emailTemplates: string;
   pricing: string;
   login: string;
   getStarted: string;
@@ -20,7 +19,6 @@ type LandingHeaderCopy = {
 type LandingHeaderProps = {
   copy: LandingHeaderCopy;
   onAuthClick?: () => void;
-  sectionHrefPrefix?: "" | "/";
   scrolledBackgroundClassName?: string;
   // When the visitor is already signed in we skip the auth buttons entirely and
   // surface a single link straight into the app.
@@ -48,7 +46,6 @@ function HeaderAction({
 export function LandingHeader({
   copy,
   onAuthClick,
-  sectionHrefPrefix = "",
   scrolledBackgroundClassName = "bg-madoo-paper-tint/50",
   appUrl,
   goToAppLabel,
@@ -70,17 +67,8 @@ export function LandingHeader({
   ].join(" ");
   const mobileMenuId = "landing-mobile-menu";
   const navLinks = [
-    {
-      label: copy.solutions,
-      href: `${sectionHrefPrefix}#solutions`,
-      hasArrow: true,
-    },
-    {
-      label: copy.resources,
-      href: `${sectionHrefPrefix}#resources`,
-      hasArrow: true,
-    },
-    { label: copy.community, href: `${sectionHrefPrefix}#community` },
+    { label: copy.useCases, href: "/use-cases" },
+    { label: copy.emailTemplates, href: "/templates" },
     { label: copy.pricing, href: "/pricing" },
   ];
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -121,15 +109,6 @@ export function LandingHeader({
                 href={link.href}
               >
                 {link.label}
-                {link.hasArrow ? (
-                  <HugeiconsIcon
-                    icon={ArrowDown01Icon}
-                    size={13}
-                    strokeWidth={2.4}
-                    className="text-[#4f5b68] [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
-                    aria-hidden="true"
-                  />
-                ) : null}
               </Link>
             ))}
           </nav>
@@ -197,15 +176,6 @@ export function LandingHeader({
                 onClick={closeMobileMenu}
               >
                 {link.label}
-                {link.hasArrow ? (
-                  <HugeiconsIcon
-                    icon={ArrowDown01Icon}
-                    size={14}
-                    strokeWidth={2.4}
-                    className="text-[#4f5b68] [&_path]:[stroke-linecap:square] [&_path]:[stroke-linejoin:miter]"
-                    aria-hidden="true"
-                  />
-                ) : null}
               </Link>
             ))}
           </nav>

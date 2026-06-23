@@ -3,9 +3,8 @@ import { PricingFaq } from "../../components/PricingFaq";
 import { PricingPlans } from "../../components/PricingPlans";
 
 const pricingHeaderCopy = {
-  solutions: "Solutions",
-  resources: "Resources",
-  community: "Community",
+  useCases: "Use cases",
+  emailTemplates: "Email Templates",
   pricing: "Pricing",
   login: "Login",
   getStarted: "Get started",
@@ -15,7 +14,7 @@ const pricingHeaderCopy = {
 export default function PricingPage() {
   return (
     <main className="relative min-h-screen w-full overflow-hidden bg-white font-ibm-plex-sans">
-      <LandingHeader copy={pricingHeaderCopy} sectionHrefPrefix="/" />
+      <LandingHeader copy={pricingHeaderCopy} />
 
       <section className="relative z-10 min-h-screen w-full">
         <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-20 sm:px-8 sm:py-24">
