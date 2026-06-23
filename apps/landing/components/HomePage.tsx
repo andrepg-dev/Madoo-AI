@@ -253,7 +253,7 @@ const featureTabIcons = [
   [AiMagicIcon, PaintBoardIcon],
   [Download04Icon, SourceCodeSquareIcon],
   [FlashIcon, DashboardSquare01Icon],
-  [ComputerIcon, MailValidation01Icon],
+  [MailValidation01Icon, ComputerIcon],
   [CheckmarkBadge01Icon, UserMultiple02Icon],
 ] as const;
 
@@ -425,16 +425,16 @@ export const localeCopy = {
           ],
         },
         {
-          label: "Testing & Validation",
-          title: "Review before you export",
+          label: "Test Email Engine",
+          title: "Test email engine",
           blocks: [
+            {
+              heading: "VERIFY GENERATED HTML",
+              body: "Our Test Email Engine sends real test emails from Madoo and checks that the generated HTML is valid and renders correctly before you ship.",
+            },
             {
               heading: "EMAIL REVIEW",
               body: "Check your email layout, copy, sections, and responsive presentation in Madoo before you export.",
-            },
-            {
-              heading: "REAL TEST EMAILS",
-              body: "Send test emails from Madoo so your team can review the final message before moving it into your email platform.",
             },
           ],
         },
@@ -660,16 +660,16 @@ export const localeCopy = {
           ],
         },
         {
-          label: "Pruebas y Validación",
-          title: "Revisa antes de exportar",
+          label: "Test Email Engine",
+          title: "Test email engine",
           blocks: [
+            {
+              heading: "VERIFICA EL HTML GENERADO",
+              body: "Nuestro Test Email Engine envía emails de prueba reales desde Madoo y verifica que el HTML generado sea válido y se renderice correctamente antes de enviar.",
+            },
             {
               heading: "REVISIÓN DE EMAIL",
               body: "Revisa layout, copy, secciones y presentación responsive en Madoo antes de exportar.",
-            },
-            {
-              heading: "EMAILS DE PRUEBA REALES",
-              body: "Envía emails de prueba desde Madoo para que tu equipo revise el mensaje final antes de moverlo a tu plataforma de email.",
             },
           ],
         },
