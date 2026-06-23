@@ -1517,7 +1517,7 @@ export default function HomePage({
           </div>
         </div>
 
-        <section className="madoo-paper-section relative z-10 w-full px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-64 xl:px-0">
+        <section className="madoo-paper-section relative z-10 w-full px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-80 xl:px-0">
           <div className="mx-auto w-full max-w-7xl font-ibm-plex-sans">
             <div
               className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:gap-x-4"
