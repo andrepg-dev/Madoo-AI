@@ -257,8 +257,8 @@ function pickCategoryShowcase(
 // Icons for the product-feature tabs, paired to each tab's two blocks (same
 // order as `productFeatures.tabs` in localeCopy).
 const featureTabIcons = [
-  [Download04Icon, SourceCodeSquareIcon],
   [AiMagicIcon, PaintBoardIcon],
+  [Download04Icon, SourceCodeSquareIcon],
   [FlashIcon, DashboardSquare01Icon],
   [MailValidation01Icon, ComputerIcon, TestTube01Icon],
   [UserAdd01Icon, CheckmarkBadge01Icon, Share08Icon],
@@ -279,15 +279,15 @@ function Hi({ children, color }: { children: ReactNode; color: string }) {
 
 const featureTabImages = [
   {
-    src: "/integrations-export.png",
-    alt: "HTML export connected to Mailchimp, Klaviyo, Zapier, SendGrid, Outlook, and upload anywhere",
-    collage: false,
-  },
-  {
     // Designs & Layouts uses the overlapping template-preview collage.
     src: "/templates/news-letter.png",
     alt: "Email template design previews",
     collage: true,
+  },
+  {
+    src: "/integrations-export.png",
+    alt: "HTML export connected to Mailchimp, Klaviyo, Zapier, SendGrid, Outlook, and upload anywhere",
+    collage: false,
   },
   {
     src: "/product/prompt-to-inbox-flow.png",
@@ -400,26 +400,6 @@ export const localeCopy = {
       cta: "Get started free",
       tabs: [
         {
-          label: "Integrations & Export",
-          title: "Ship to any email provider",
-          blocks: [
-            {
-              heading: "ONE-CLICK EXPORT",
-              body: (
-                <>
-                  Send <Hi color="#5b63ff">production-ready HTML</Hi> straight to
-                  Mailchimp, Klaviyo, HubSpot, Salesforce, and the other ESPs your
-                  team already uses.
-                </>
-              ),
-            },
-            {
-              heading: "CLEAN, PORTABLE HTML",
-              body: "Every email exports as standards-based HTML that renders the same wherever you paste it — no lock-in, no rework.",
-            },
-          ],
-        },
-        {
           label: "Designs & Layouts",
           title: "Design emails your way",
           blocks: [
@@ -439,6 +419,26 @@ export const localeCopy = {
             {
               heading: "BRAND SYSTEMS",
               body: "Reusable templates, colors, type, and saved blocks keep every campaign consistent. Refine copy, sections, and layout until it's exactly right.",
+            },
+          ],
+        },
+        {
+          label: "Integrations & Export",
+          title: "Ship to any email provider",
+          blocks: [
+            {
+              heading: "ONE-CLICK EXPORT",
+              body: (
+                <>
+                  Send <Hi color="#5b63ff">production-ready HTML</Hi> straight to
+                  Mailchimp, Klaviyo, HubSpot, Salesforce, and the other ESPs your
+                  team already uses.
+                </>
+              ),
+            },
+            {
+              heading: "CLEAN, PORTABLE HTML",
+              body: "Every email exports as standards-based HTML that renders the same wherever you paste it — no lock-in, no rework.",
             },
           ],
         },
@@ -675,26 +675,6 @@ export const localeCopy = {
       cta: "Empieza gratis",
       tabs: [
         {
-          label: "Integraciones y Exportación",
-          title: "Envía a cualquier herramienta",
-          blocks: [
-            {
-              heading: "EXPORTA EN UN CLIC",
-              body: (
-                <>
-                  Envía <Hi color="#5b63ff">HTML listo para producción</Hi> directo
-                  a Mailchimp, Klaviyo, HubSpot, Salesforce y los demás ESPs que tu
-                  equipo ya usa.
-                </>
-              ),
-            },
-            {
-              heading: "HTML LIMPIO Y PORTABLE",
-              body: "Cada email se exporta como HTML estándar que se ve igual donde lo pegues — sin lock-in ni retrabajo.",
-            },
-          ],
-        },
-        {
           label: "Diseño y Layouts",
           title: "Diseña emails a tu manera",
           blocks: [
@@ -712,6 +692,26 @@ export const localeCopy = {
             {
               heading: "SISTEMAS DE MARCA",
               body: "Plantillas reutilizables, colores, tipografías y bloques guardados mantienen cada campaña consistente. Ajusta copy, secciones y layout hasta dejarlo perfecto.",
+            },
+          ],
+        },
+        {
+          label: "Integraciones y Exportación",
+          title: "Envía a cualquier herramienta",
+          blocks: [
+            {
+              heading: "EXPORTA EN UN CLIC",
+              body: (
+                <>
+                  Envía <Hi color="#5b63ff">HTML listo para producción</Hi> directo
+                  a Mailchimp, Klaviyo, HubSpot, Salesforce y los demás ESPs que tu
+                  equipo ya usa.
+                </>
+              ),
+            },
+            {
+              heading: "HTML LIMPIO Y PORTABLE",
+              body: "Cada email se exporta como HTML estándar que se ve igual donde lo pegues — sin lock-in ni retrabajo.",
             },
           ],
         },
@@ -1027,7 +1027,7 @@ export default function HomePage({
   // category overview. The full gallery lives on /templates.
   const categoryShowcase = pickCategoryShowcase(communityTemplateCards, 5);
   // Product-features section: tabs switch the copy and a matching product visual.
-  // Integrations & Export is the first tab and the default selection.
+  // Designs & Layouts is the first tab and the default selection.
   const [activeFeatureTab, setActiveFeatureTab] = useState(0);
   const activeTab =
     copy.productFeatures.tabs[activeFeatureTab] ??
