@@ -39,7 +39,12 @@ import {
 import type { VariableSchemaRoot } from "@madoo/shared";
 import Image from "next/image";
 import Link from "next/link";
-import type { ChangeEvent, KeyboardEvent, SVGAttributes } from "react";
+import type {
+  ChangeEvent,
+  KeyboardEvent,
+  ReactNode,
+  SVGAttributes,
+} from "react";
 import { useEffect, useRef, useState } from "react";
 import AuthDialog from "./AuthDialog";
 import { LandingHeader } from "./LandingHeader";
@@ -258,6 +263,19 @@ const featureTabIcons = [
   [CheckmarkBadge01Icon, UserMultiple02Icon],
 ] as const;
 
+// Highlights the most important phrase in a feature block, with an underline in
+// a per-keyword accent color so the key idea pops without reading every word.
+function Hi({ children, color }: { children: ReactNode; color: string }) {
+  return (
+    <span
+      className="font-semibold text-[#171717] underline decoration-2 underline-offset-4"
+      style={{ textDecorationColor: color }}
+    >
+      {children}
+    </span>
+  );
+}
+
 const featureTabImages = [
   {
     src: "/feature-design-layouts.svg",
@@ -393,7 +411,13 @@ export const localeCopy = {
             },
             {
               heading: "BRAND SYSTEMS",
-              body: "Reusable templates, colors, type, and saved blocks keep every campaign consistent. Refine copy, sections, and layout until it's exactly right.",
+              body: (
+                <>
+                  Reusable templates, colors, type, and saved blocks keep{" "}
+                  <Hi color="#0d9488">every campaign consistent</Hi>. Refine copy,
+                  sections, and layout until it's exactly right.
+                </>
+              ),
             },
           ],
         },
@@ -403,11 +427,23 @@ export const localeCopy = {
           blocks: [
             {
               heading: "ONE-CLICK EXPORT",
-              body: "Send production-ready HTML straight to Mailchimp, Klaviyo, HubSpot, Salesforce, and the other ESPs your team already uses.",
+              body: (
+                <>
+                  Send <Hi color="#5b63ff">production-ready HTML</Hi> straight to
+                  Mailchimp, Klaviyo, HubSpot, Salesforce, and the other ESPs your
+                  team already uses.
+                </>
+              ),
             },
             {
               heading: "CLEAN, PORTABLE HTML",
-              body: "Every email exports as standards-based HTML that renders the same wherever you paste it — no lock-in, no rework.",
+              body: (
+                <>
+                  Every email exports as standards-based HTML that renders the
+                  same wherever you paste it —{" "}
+                  <Hi color="#e11d48">no lock-in, no rework</Hi>.
+                </>
+              ),
             },
           ],
         },
@@ -417,11 +453,23 @@ export const localeCopy = {
           blocks: [
             {
               heading: "PROMPT TO EMAIL",
-              body: "Go from a one-line prompt to a finished campaign in seconds. Iterate with AI instead of rebuilding layouts by hand.",
+              body: (
+                <>
+                  Go from a one-line prompt to a finished campaign{" "}
+                  <Hi color="#d97706">in seconds</Hi>. Iterate with AI instead of
+                  rebuilding layouts by hand.
+                </>
+              ),
             },
             {
               heading: "START FROM TEMPLATES",
-              body: "Begin with community-tested templates and let AI adapt the copy, tone, and audience to your campaign.",
+              body: (
+                <>
+                  Begin with{" "}
+                  <Hi color="#0d9488">community-tested templates</Hi> and let AI
+                  adapt the copy, tone, and audience to your campaign.
+                </>
+              ),
             },
           ],
         },
@@ -431,15 +479,35 @@ export const localeCopy = {
           blocks: [
             {
               heading: "VERIFY GENERATED HTML",
-              body: "Our Test Email Engine sends real test emails from Madoo and checks that the generated HTML is valid and renders correctly before you ship.",
+              body: (
+                <>
+                  Our Test Email Engine sends{" "}
+                  <Hi color="#5b63ff">real test emails</Hi> from Madoo and checks
+                  that the <Hi color="#0d9488">generated HTML is valid</Hi> and
+                  renders correctly before you ship.
+                </>
+              ),
             },
             {
               heading: "SPAM, LINKS & ACCESSIBILITY",
-              body: "Built-in checks score your spam risk, flag broken links, and catch accessibility issues so your email lands in the inbox and works for everyone.",
+              body: (
+                <>
+                  Built-in checks score your <Hi color="#e11d48">spam risk</Hi>,
+                  flag <Hi color="#d97706">broken links</Hi>, and catch{" "}
+                  <Hi color="#0d9488">accessibility issues</Hi> so your email lands
+                  in the inbox and works for everyone.
+                </>
+              ),
             },
             {
               heading: "EMAIL REVIEW",
-              body: "Check your email layout, copy, sections, and responsive presentation in Madoo before you export.",
+              body: (
+                <>
+                  Check your email layout, copy, sections, and responsive
+                  presentation in Madoo{" "}
+                  <Hi color="#8b5cf6">before you export</Hi>.
+                </>
+              ),
             },
           ],
         },
@@ -449,11 +517,22 @@ export const localeCopy = {
           blocks: [
             {
               heading: "REVIEWS & APPROVALS",
-              body: "Drafts, reviews, ownership, and approvals stay visible so campaigns move from idea to launch without confusion.",
+              body: (
+                <>
+                  Drafts, reviews, ownership, and approvals stay visible so
+                  campaigns move from idea to launch{" "}
+                  <Hi color="#0d9488">without confusion</Hi>.
+                </>
+              ),
             },
             {
               heading: "SHARED WORKSPACE",
-              body: "Share templates across your workspace and hand off finished campaigns cleanly before export.",
+              body: (
+                <>
+                  <Hi color="#5b63ff">Share templates across your workspace</Hi>{" "}
+                  and hand off finished campaigns cleanly before export.
+                </>
+              ),
             },
           ],
         },
@@ -628,11 +707,25 @@ export const localeCopy = {
           blocks: [
             {
               heading: "CONSTRUCTOR CON IA",
-              body: "Describe la audiencia, la oferta y el tono — Madoo convierte tu prompt en un layout de email pulido y con tu marca. Sin empezar de cero ni armar secciones a mano.",
+              body: (
+                <>
+                  Describe la audiencia, la oferta y el tono — Madoo convierte tu
+                  prompt en un layout de email pulido y con tu marca.{" "}
+                  <Hi color="#8b5cf6">Sin empezar de cero</Hi> ni armar secciones a
+                  mano.
+                </>
+              ),
             },
             {
               heading: "SISTEMAS DE MARCA",
-              body: "Plantillas reutilizables, colores, tipografías y bloques guardados mantienen cada campaña consistente. Ajusta copy, secciones y layout hasta dejarlo perfecto.",
+              body: (
+                <>
+                  Plantillas reutilizables, colores, tipografías y bloques
+                  guardados mantienen{" "}
+                  <Hi color="#0d9488">cada campaña consistente</Hi>. Ajusta copy,
+                  secciones y layout hasta dejarlo perfecto.
+                </>
+              ),
             },
           ],
         },
@@ -642,11 +735,22 @@ export const localeCopy = {
           blocks: [
             {
               heading: "EXPORTA EN UN CLIC",
-              body: "Envía HTML listo para producción directo a Mailchimp, Klaviyo, HubSpot, Salesforce y los demás ESPs que tu equipo ya usa.",
+              body: (
+                <>
+                  Envía <Hi color="#5b63ff">HTML listo para producción</Hi> directo
+                  a Mailchimp, Klaviyo, HubSpot, Salesforce y los demás ESPs que tu
+                  equipo ya usa.
+                </>
+              ),
             },
             {
               heading: "HTML LIMPIO Y PORTABLE",
-              body: "Cada email se exporta como HTML estándar que se ve igual donde lo pegues — sin lock-in ni retrabajo.",
+              body: (
+                <>
+                  Cada email se exporta como HTML estándar que se ve igual donde lo
+                  pegues — <Hi color="#e11d48">sin lock-in ni retrabajo</Hi>.
+                </>
+              ),
             },
           ],
         },
@@ -656,11 +760,23 @@ export const localeCopy = {
           blocks: [
             {
               heading: "DEL PROMPT AL EMAIL",
-              body: "Pasa de un prompt de una línea a una campaña terminada en segundos. Itera con IA en vez de rehacer layouts a mano.",
+              body: (
+                <>
+                  Pasa de un prompt de una línea a una campaña terminada{" "}
+                  <Hi color="#d97706">en segundos</Hi>. Itera con IA en vez de
+                  rehacer layouts a mano.
+                </>
+              ),
             },
             {
               heading: "EMPIEZA CON PLANTILLAS",
-              body: "Empieza con plantillas probadas por la comunidad y deja que la IA adapte copy, tono y audiencia a tu campaña.",
+              body: (
+                <>
+                  Empieza con{" "}
+                  <Hi color="#0d9488">plantillas probadas por la comunidad</Hi> y
+                  deja que la IA adapte copy, tono y audiencia a tu campaña.
+                </>
+              ),
             },
           ],
         },
@@ -670,15 +786,36 @@ export const localeCopy = {
           blocks: [
             {
               heading: "VERIFICA EL HTML GENERADO",
-              body: "Nuestro Test Email Engine envía emails de prueba reales desde Madoo y verifica que el HTML generado sea válido y se renderice correctamente antes de enviar.",
+              body: (
+                <>
+                  Nuestro Test Email Engine envía{" "}
+                  <Hi color="#5b63ff">emails de prueba reales</Hi> desde Madoo y
+                  verifica que el{" "}
+                  <Hi color="#0d9488">HTML generado sea válido</Hi> y se renderice
+                  correctamente antes de enviar.
+                </>
+              ),
             },
             {
               heading: "SPAM, ENLACES Y ACCESIBILIDAD",
-              body: "Chequeos integrados evalúan el riesgo de spam, detectan enlaces rotos y revisan la accesibilidad para que tu email llegue al inbox y funcione para todos.",
+              body: (
+                <>
+                  Chequeos integrados evalúan el{" "}
+                  <Hi color="#e11d48">riesgo de spam</Hi>, detectan{" "}
+                  <Hi color="#d97706">enlaces rotos</Hi> y revisan la{" "}
+                  <Hi color="#0d9488">accesibilidad</Hi> para que tu email llegue al
+                  inbox y funcione para todos.
+                </>
+              ),
             },
             {
               heading: "REVISIÓN DE EMAIL",
-              body: "Revisa layout, copy, secciones y presentación responsive en Madoo antes de exportar.",
+              body: (
+                <>
+                  Revisa layout, copy, secciones y presentación responsive en
+                  Madoo <Hi color="#8b5cf6">antes de exportar</Hi>.
+                </>
+              ),
             },
           ],
         },
@@ -688,11 +825,22 @@ export const localeCopy = {
           blocks: [
             {
               heading: "REVISIONES Y APROBACIONES",
-              body: "Borradores, revisiones, dueños y aprobaciones quedan visibles para que las campañas avancen sin confusión.",
+              body: (
+                <>
+                  Borradores, revisiones, dueños y aprobaciones quedan visibles
+                  para que las campañas avancen{" "}
+                  <Hi color="#0d9488">sin confusión</Hi>.
+                </>
+              ),
             },
             {
               heading: "WORKSPACE COMPARTIDO",
-              body: "Comparte plantillas en tu workspace y entrega campañas terminadas de forma limpia antes de exportar.",
+              body: (
+                <>
+                  <Hi color="#5b63ff">Comparte plantillas en tu workspace</Hi> y
+                  entrega campañas terminadas de forma limpia antes de exportar.
+                </>
+              ),
             },
           ],
         },
