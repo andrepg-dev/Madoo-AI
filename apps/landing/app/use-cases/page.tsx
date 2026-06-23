@@ -27,40 +27,40 @@ const useCases = {
   items: [
     {
       audience: "E-commerce",
-      title: "Promotions, drops, and win-back emails",
-      body: "Create seasonal sales, product launches, abandoned-cart flows, and loyalty campaigns without rebuilding layouts.",
+      title: "Sales emails without starting from zero",
+      body: "Turn product launches, discounts, abandoned-cart ideas, and win-back offers into polished campaign emails.",
       accent: "#7c6ff6",
       accentSoft: "#f0edff",
       icon: "commerce" as UseCaseIconName,
     },
     {
       audience: "SaaS",
-      title: "Lifecycle emails for product teams",
-      body: "Turn product updates, onboarding steps, feature launches, and trial nudges into clear branded campaigns.",
+      title: "Product updates and lifecycle emails",
+      body: "Create onboarding emails, feature announcements, trial nudges, and churn-save messages with clear structure and consistent tone.",
       accent: "#3b82f6",
       accentSoft: "#edf5ff",
       icon: "saas" as UseCaseIconName,
     },
     {
       audience: "Agencies",
-      title: "Reusable client campaign systems",
-      body: "Standardize offers, newsletters, announcements, and approval-ready templates across client accounts.",
+      title: "Client-ready email drafts faster",
+      body: "Draft campaigns, newsletters, and announcements for clients, then hand off clean templates your team can review and approve.",
       accent: "#0f766e",
       accentSoft: "#ecf8f6",
       icon: "agency" as UseCaseIconName,
     },
     {
       audience: "Creators",
-      title: "Newsletters and audience updates",
-      body: "Draft sponsor slots, announcements, essays, and product drops with consistent structure and tone.",
+      title: "Newsletter drafts for your audience",
+      body: "Write product drops, sponsor mentions, launches, and regular updates while keeping your voice and format consistent.",
       accent: "#c084fc",
       accentSoft: "#f7f0ff",
       icon: "creator" as UseCaseIconName,
     },
     {
       audience: "Startups",
-      title: "Launches, waitlists, and milestones",
-      body: "Move faster on waitlist emails, investor updates, beta invites, and launch announcements.",
+      title: "Launch emails when speed matters",
+      body: "Create waitlist updates, beta invites, launch announcements, and milestone emails without spending hours on copy and layout.",
       accent: "#111827",
       accentSoft: "#f1f2f4",
       icon: "startup" as UseCaseIconName,
@@ -231,10 +231,10 @@ export default function UseCasesPage() {
             Browse email templates
           </Link>
           <Link
-            href="/pricing"
+            href="/pricing#free-trial"
             className="madoo-paper-border madoo-paper-border-hover inline-flex h-11 w-fit items-center justify-center rounded-lg bg-white px-5 text-sm font-semibold text-madoo-ink transition"
           >
-            View pricing
+            Start 7-day free trial
           </Link>
         </div>
       </section>
