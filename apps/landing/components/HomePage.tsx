@@ -257,6 +257,29 @@ const featureTabIcons = [
   [CheckmarkBadge01Icon, UserMultiple02Icon],
 ] as const;
 
+const featureTabImages = [
+  {
+    src: "/feature-design-layouts.svg",
+    alt: "Modular email design canvas with layout blocks, brand controls, and approved sections",
+  },
+  {
+    src: "/integrations-export.png",
+    alt: "HTML export connected to Mailchimp, Klaviyo, Zapier, SendGrid, Outlook, and upload anywhere",
+  },
+  {
+    src: "/product/prompt-to-inbox-flow.png",
+    alt: "AI email flow from prompt to templates to a finished email, ready to send to the inbox",
+  },
+  {
+    src: "/feature-testing-validation.svg",
+    alt: "Email review screen with validation checks and test email approval",
+  },
+  {
+    src: "/feature-share-collaboration.svg",
+    alt: "Team review workflow with approvals, comments, and clean handoff",
+  },
+] as const;
+
 export const localeCopy = {
   en: {
     nav: {
@@ -908,12 +931,13 @@ export default function HomePage({
   // Homepage showcase: one card per category (up to 5) so the section reads as a
   // category overview. The full gallery lives on /templates.
   const categoryShowcase = pickCategoryShowcase(communityTemplateCards, 5);
-  // Product-features section: tabs switch the left-hand copy; the right-hand
-  // collage reuses real preview screenshots (community first, samples otherwise).
+  // Product-features section: tabs switch the copy and a matching product visual.
   const [activeFeatureTab, setActiveFeatureTab] = useState(0);
   const activeTab =
     copy.productFeatures.tabs[activeFeatureTab] ??
     copy.productFeatures.tabs[0]!;
+  const activeFeatureImage =
+    featureTabImages[activeFeatureTab] ?? featureTabImages[0]!;
   const featureCollageImages = (
     hasCommunityTemplates ? communityTemplateCards : localizedFallbackTemplateCards
   )
@@ -1427,7 +1451,10 @@ export default function HomePage({
             </div>
 
             <div className="mt-12 grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
-              <div key={activeFeatureTab} className="madoo-tab-panel flex flex-col">
+              <div
+                key={`feature-copy-${activeFeatureTab}`}
+                className="madoo-tab-panel flex flex-col"
+              >
                 <h2 className="max-w-md text-4xl font-semibold uppercase leading-[0.95] tracking-tight text-[#171717] sm:text-6xl">
                   {activeTab.title}
                 </h2>
@@ -1474,39 +1501,57 @@ export default function HomePage({
               </div>
 
               <div
-                key={activeFeatureTab}
-                className="madoo-tab-panel relative mx-auto h-104 w-full max-w-md sm:h-136 lg:max-w-none"
+                key={`feature-media-${activeFeatureTab}`}
+                className={cx(
+                  "madoo-tab-panel relative mx-auto w-full",
+                  activeFeatureTab === 0
+                    ? "h-104 max-w-md sm:h-136 lg:max-w-none"
+                    : "max-w-xl",
+                )}
               >
-                {featureCollageImages[0] ? (
-                  <div className="madoo-paper-border absolute left-0 top-[8%] z-10 w-[54%] overflow-hidden rounded-2xl bg-white">
+                {activeFeatureTab === 0 ? (
+                  <>
+                    {featureCollageImages[0] ? (
+                      <div className="madoo-paper-border absolute left-0 top-[8%] z-10 w-[54%] overflow-hidden rounded-2xl bg-white">
+                        <img
+                          src={featureCollageImages[0]}
+                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
+                          loading="lazy"
+                          className="aspect-3/4 w-full object-cover object-top"
+                        />
+                      </div>
+                    ) : null}
+                    {featureCollageImages[1] ? (
+                      <div className="madoo-paper-border absolute right-0 top-0 z-20 w-[48%] overflow-hidden rounded-2xl bg-white">
+                        <img
+                          src={featureCollageImages[1]}
+                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
+                          loading="lazy"
+                          className="aspect-3/4 w-full object-cover object-top"
+                        />
+                      </div>
+                    ) : null}
+                    {featureCollageImages[2] ? (
+                      <div className="madoo-paper-border absolute bottom-0 right-[6%] z-30 w-[50%] overflow-hidden rounded-2xl bg-white">
+                        <img
+                          src={featureCollageImages[2]}
+                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
+                          loading="lazy"
+                          className="aspect-3/4 w-full object-cover object-top"
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="relative aspect-square w-full overflow-hidden rounded-[2rem] bg-white">
                     <img
-                      src={featureCollageImages[0]}
-                      alt={`${activeTab.title} ${copy.templates.previewAlt}`}
+                      src={activeFeatureImage.src}
+                      alt={activeFeatureImage.alt}
                       loading="lazy"
-                      className="aspect-3/4 w-full object-cover object-top"
+                      className="h-full w-full object-contain"
                     />
                   </div>
-                ) : null}
-                {featureCollageImages[1] ? (
-                  <div className="madoo-paper-border absolute right-0 top-0 z-20 w-[48%] overflow-hidden rounded-2xl bg-white">
-                    <img
-                      src={featureCollageImages[1]}
-                      alt={`${activeTab.title} ${copy.templates.previewAlt}`}
-                      loading="lazy"
-                      className="aspect-3/4 w-full object-cover object-top"
-                    />
-                  </div>
-                ) : null}
-                {featureCollageImages[2] ? (
-                  <div className="madoo-paper-border absolute bottom-0 right-[6%] z-30 w-[50%] overflow-hidden rounded-2xl bg-white">
-                    <img
-                      src={featureCollageImages[2]}
-                      alt={`${activeTab.title} ${copy.templates.previewAlt}`}
-                      loading="lazy"
-                      className="aspect-3/4 w-full object-cover object-top"
-                    />
-                  </div>
-                ) : null}
+                )}
               </div>
             </div>
           </div>
