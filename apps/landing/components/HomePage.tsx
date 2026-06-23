@@ -407,11 +407,10 @@ export const localeCopy = {
               heading: "AI EMAIL BUILDER",
               body: (
                 <>
-                  Describe the audience, offer, and tone — Madoo turns your
-                  prompt into a polished, on-brand email layout. No blank-page
-                  work,{" "}
+                  Tell Madoo who it's for and what you're selling. You get a
+                  full email layout that fits your brand. No blank page,{" "}
                   <span className="font-semibold text-[#171717] underline decoration-[#8b5cf6] decoration-2 underline-offset-4">
-                    no manual section building.
+                    no building sections by hand.
                   </span>
                 </>
               ),
