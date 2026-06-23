@@ -463,20 +463,18 @@ export const localeCopy = {
               heading: "VERIFY GENERATED HTML",
               body: (
                 <>
-                  Our Test Email Engine sends real test emails from Madoo and
-                  checks that the{" "}
-                  <Hi color="#0d9488">generated HTML is valid</Hi> and renders
-                  correctly before you ship.
+                  Sends real test emails and checks the{" "}
+                  <Hi color="#0d9488">generated HTML is valid</Hi> before you ship.
                 </>
               ),
             },
             {
               heading: "SPAM, LINKS & ACCESSIBILITY",
-              body: "Built-in checks score your spam risk, flag broken links, and catch accessibility issues so your email lands in the inbox and works for everyone.",
+              body: "Built-in checks for spam risk, broken links, and accessibility.",
             },
             {
               heading: "EMAIL REVIEW",
-              body: "Check your email layout, copy, sections, and responsive presentation in Madoo before you export.",
+              body: "Review layout, copy, sections, and responsive design before you export.",
             },
           ],
         },
@@ -734,20 +732,18 @@ export const localeCopy = {
               heading: "VERIFICA EL HTML GENERADO",
               body: (
                 <>
-                  Nuestro Test Email Engine envía emails de prueba reales desde
-                  Madoo y verifica que el{" "}
-                  <Hi color="#0d9488">HTML generado sea válido</Hi> y se renderice
-                  correctamente antes de enviar.
+                  Envía emails de prueba reales y verifica que el{" "}
+                  <Hi color="#0d9488">HTML generado sea válido</Hi> antes de enviar.
                 </>
               ),
             },
             {
               heading: "SPAM, ENLACES Y ACCESIBILIDAD",
-              body: "Chequeos integrados evalúan el riesgo de spam, detectan enlaces rotos y revisan la accesibilidad para que tu email llegue al inbox y funcione para todos.",
+              body: "Chequeos integrados de riesgo de spam, enlaces rotos y accesibilidad.",
             },
             {
               heading: "REVISIÓN DE EMAIL",
-              body: "Revisa layout, copy, secciones y presentación responsive en Madoo antes de exportar.",
+              body: "Revisa layout, copy, secciones y diseño responsive antes de exportar.",
             },
           ],
         },
@@ -1543,7 +1539,12 @@ export default function HomePage({
                   {activeTab.title}
                 </h2>
 
-                <div className="mt-8 grid gap-6">
+                <div
+                  className={cx(
+                    "mt-8 grid",
+                    activeTab.blocks.length >= 3 ? "gap-8" : "gap-12",
+                  )}
+                >
                   {activeTab.blocks.map((block, blockIndex) => {
                     const icon =
                       featureTabIcons[activeFeatureTab]?.[blockIndex];
