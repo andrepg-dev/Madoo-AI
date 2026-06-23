@@ -25,8 +25,8 @@ import {
 } from "@madoo/design-system";
 import { PLAN_DISPLAY_NAMES, getRecommendedUpgradePlan } from "@madoo/shared";
 import { useRouter } from "next/navigation";
-import type { ChangeEvent, KeyboardEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent, ClipboardEvent, KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const placeholders = [
   "draft an email template for a product launch with a clear CTA...",
@@ -45,6 +45,26 @@ const ignoredPromptFocusSelector =
 function shouldSkipPromptFocus(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   return Boolean(target.closest(ignoredPromptFocusSelector));
+}
+
+// Pull image files out of a clipboard payload (covers both the FileList and the
+// item-based shapes browsers use for "copy image" / screenshot pastes).
+function getClipboardImages(clipboardData: DataTransfer | null): File[] {
+  if (!clipboardData) return [];
+
+  const fromFiles = Array.from(clipboardData.files).filter((file) =>
+    file.type.startsWith("image/"),
+  );
+  if (fromFiles.length > 0) return fromFiles;
+
+  const images: File[] = [];
+  for (const item of Array.from(clipboardData.items)) {
+    if (item.kind === "file" && item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      if (file) images.push(file);
+    }
+  }
+  return images;
 }
 
 function useTypingPlaceholder(texts: readonly string[]) {
@@ -232,7 +252,7 @@ export function ClientPromptBox({
     if (!outOfCredits) setCreditsAlertDismissed(false);
   }, [outOfCredits]);
 
-  const addFiles = (files: FileList | null) => {
+  const addFiles = useCallback((files: FileList | File[] | null) => {
     if (!files) return;
     const next = Array.from(files)
       .filter((file) => file.type.startsWith("image/"))
@@ -242,12 +262,19 @@ export function ClientPromptBox({
         url: URL.createObjectURL(file),
       }));
     if (next.length) setImages((current) => [...current, ...next]);
-  };
+  }, []);
 
   const onFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     addFiles(event.target.files);
     // Reset so picking the same file again still fires onChange.
     event.target.value = "";
+  };
+
+  const onPromptPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const imageFiles = getClipboardImages(event.clipboardData);
+    if (imageFiles.length === 0) return; // Let text paste fall through natively.
+    event.preventDefault();
+    addFiles(imageFiles);
   };
 
   const removeImage = (id: string) => {
@@ -553,12 +580,20 @@ export function ClientPromptBox({
       setPrompt((current) => `${current}${event.key}`);
     };
 
-    const onPaste = (event: ClipboardEvent) => {
+    const onPaste = (event: globalThis.ClipboardEvent) => {
       if (
         searchCommandOpen ||
         event.defaultPrevented ||
         shouldSkipPromptFocus(event.target)
       ) {
+        return;
+      }
+
+      const imageFiles = getClipboardImages(event.clipboardData);
+      if (imageFiles.length > 0) {
+        event.preventDefault();
+        focusPrompt();
+        addFiles(imageFiles);
         return;
       }
 
@@ -577,7 +612,7 @@ export function ClientPromptBox({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("paste", onPaste);
     };
-  }, [searchCommandOpen]);
+  }, [searchCommandOpen, addFiles]);
 
   return (
     <div
@@ -704,6 +739,7 @@ export function ClientPromptBox({
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={onPromptKeyDown}
+          onPaste={onPromptPaste}
           placeholder={hasPrompt ? "" : placeholder}
           className={cn(
             "madoo-prompt-textarea mr-3 max-h-80 w-[calc(100%-0.75rem)] resize-none bg-transparent text-sm text-[#101114] outline-none placeholder:text-[#4b5563]!",
