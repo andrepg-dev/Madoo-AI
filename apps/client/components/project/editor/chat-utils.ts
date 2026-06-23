@@ -162,6 +162,10 @@ export function mapChatMessages(
       content: message.content,
       seq: Date.parse(message.createdAt) || 0,
       emailId: email?.id,
+      images:
+        message.role === "USER" && message.imageUrls.length > 0
+          ? message.imageUrls
+          : undefined,
       thinking:
         message.role === "ASSISTANT"
           ? thinkingByText.get(message.id)

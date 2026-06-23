@@ -265,6 +265,9 @@ model EmailChatMessage {
   role        EmailChatRole
   kind        EmailChatKind @default(TEXT)
   content     String        @db.Text
+  // Public S3 URLs of images the user attached to this turn, so the chat can be
+  // restored with its attachments after a reload.
+  imageUrls   String[]      @default([])
   feedback    EmailChatFeedback?
   feedbackComment String? @db.Text
 

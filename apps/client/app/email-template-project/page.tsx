@@ -421,7 +421,9 @@ function EmailTemplateProjectInner() {
           undefined,
           requestBody,
         );
-        await invalidateEmailState(emailId);
+        // Refresh in the background — never gate the streaming flag (and thus the
+        // input's enabled state) on a refetch that could stall.
+        void invalidateEmailState(emailId);
       } catch (error) {
         setMessages((current) =>
           upsertMessage(finishTimeline(current, timelineId), {
@@ -728,14 +730,39 @@ function EmailTemplateProjectInner() {
     const length = searchParams.get("length") ?? undefined;
     const audience = searchParams.get("audience") ?? undefined;
 
+    // Images attached in the home prompt box are handed over via the store, since
+    // the URL can't carry File objects. Upload + attach them to this generation.
+    const pendingImages = useClientStore.getState().consumePendingPromptImages();
+    const previewUrls = pendingImages.map((file) => URL.createObjectURL(file));
+
     setMessages([
-      { id: "new-prompt", role: "user", content: prompt, seq: Date.now() },
+      {
+        id: "new-prompt",
+        role: "user",
+        content: prompt,
+        seq: Date.now(),
+        images: previewUrls.length > 0 ? previewUrls : undefined,
+      },
     ]);
     void createEmail({ prompt, tone, length, audience })
       .then(async (created) => {
         setCurrentEmailId(created.id);
         router.replace(`/email-template-project?id=${created.id}`);
-        await startStream(created.id, "generate");
+        let uploaded: string[] = [];
+        if (pendingImages.length > 0) {
+          try {
+            uploaded = await Promise.all(
+              pendingImages.map((file) => {
+                const form = new FormData();
+                form.append("file", file);
+                return uploadEmailImage(created.id, form);
+              }),
+            );
+          } catch {
+            uploaded = [];
+          }
+        }
+        await startStream(created.id, "generate", undefined, undefined, uploaded);
       })
       .catch((error) => {
         setMessages((current) => [

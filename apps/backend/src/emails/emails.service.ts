@@ -159,6 +159,7 @@ export class EmailsService {
         role: row.role,
         kind: row.kind,
         content: row.content,
+        imageUrls: row.imageUrls,
         feedback: row.feedback,
         feedbackComment: row.feedbackComment,
         groupId: row.groupId,
