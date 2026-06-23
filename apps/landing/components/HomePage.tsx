@@ -328,7 +328,7 @@ export const localeCopy = {
         "Create campaign-ready email templates from plain-language prompts, then refine copy, sections, tone, and layout.",
       compatibilityTitle: "Client compatibility",
       compatibilityDescription:
-        "Preview email behavior across Gmail, Outlook, Apple Mail, and more before launch.",
+        "Review your email layout, copy, structure, and responsive presentation before export.",
       brandTitle: "Brand systems",
       brandDescription:
         "Reusable templates, layout rules, colors, type, blocks, and saved campaign patterns.",
@@ -340,8 +340,8 @@ export const localeCopy = {
         "Move finished campaigns into Mailchimp, HubSpot, Klaviyo, Salesforce, and other ESPs.",
       qaTitle: "Test email engine",
       qaDescription:
-        "Send real test emails straight from Madoo to verify your HTML renders correctly in Gmail, Outlook, and more before you ship.",
-      clients: ["Gmail", "Outlook", "Apple Mail", "Yahoo", "Mobile"],
+        "Send test emails from Madoo to review the final message before you move it into your email tool.",
+      clients: ["Desktop", "Mobile", "Copy", "Layout", "Export"],
       flow: ["Draft", "Review", "Approved", "Export"],
       controls: ["Copy", "Layout", "Brand", "Audience", "Compliance", "Export"],
       previewLabel: "preview",
@@ -394,15 +394,15 @@ export const localeCopy = {
         },
         {
           label: "Testing & Validation",
-          title: "Know it renders everywhere",
+          title: "Review before you export",
           blocks: [
             {
-              heading: "CLIENT COMPATIBILITY",
-              body: "Preview how your email behaves across Gmail, Outlook, Apple Mail, Yahoo, and mobile before you ever hit send.",
+              heading: "EMAIL REVIEW",
+              body: "Check your email layout, copy, sections, and responsive presentation in Madoo before you export.",
             },
             {
               heading: "REAL TEST EMAILS",
-              body: "Send live test emails straight from Madoo to confirm your HTML renders correctly in every inbox.",
+              body: "Send test emails from Madoo so your team can review the final message before moving it into your email platform.",
             },
           ],
         },
@@ -556,7 +556,7 @@ export const localeCopy = {
         "Crea plantillas de email listas para campaña desde prompts simples y ajusta copy, secciones, tono y layout.",
       compatibilityTitle: "Compatibilidad",
       compatibilityDescription:
-        "Previsualiza el comportamiento en Gmail, Outlook, Apple Mail y más antes de lanzar.",
+        "Revisa layout, copy, estructura y presentación responsive antes de exportar.",
       brandTitle: "Sistemas de marca",
       brandDescription:
         "Plantillas reutilizables, reglas de layout, colores, tipografías, bloques y patrones guardados.",
@@ -568,8 +568,8 @@ export const localeCopy = {
         "Mueve campañas terminadas a Mailchimp, HubSpot, Klaviyo, Salesforce y otros ESPs.",
       qaTitle: "Motor de emails de prueba",
       qaDescription:
-        "Envía emails de prueba reales desde Madoo para verificar que tu HTML se renderiza bien en Gmail, Outlook y más antes de lanzar.",
-      clients: ["Gmail", "Outlook", "Apple Mail", "Yahoo", "Mobile"],
+        "Envía emails de prueba desde Madoo para revisar el mensaje final antes de moverlo a tu herramienta de email.",
+      clients: ["Desktop", "Mobile", "Copy", "Layout", "Export"],
       flow: ["Borrador", "Review", "Aprobado", "Exportar"],
       controls: [
         "Copy",
@@ -629,15 +629,15 @@ export const localeCopy = {
         },
         {
           label: "Pruebas y Validación",
-          title: "Asegura que se vea en todos lados",
+          title: "Revisa antes de exportar",
           blocks: [
             {
-              heading: "COMPATIBILIDAD",
-              body: "Previsualiza cómo se comporta tu email en Gmail, Outlook, Apple Mail, Yahoo y móvil antes de enviarlo.",
+              heading: "REVISIÓN DE EMAIL",
+              body: "Revisa layout, copy, secciones y presentación responsive en Madoo antes de exportar.",
             },
             {
               heading: "EMAILS DE PRUEBA REALES",
-              body: "Envía emails de prueba reales desde Madoo para confirmar que tu HTML se renderiza bien en cada inbox.",
+              body: "Envía emails de prueba desde Madoo para que tu equipo revise el mensaje final antes de moverlo a tu plataforma de email.",
             },
           ],
         },
