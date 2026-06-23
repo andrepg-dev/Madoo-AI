@@ -24,9 +24,10 @@ import {
   MailValidation01Icon,
   Mic02Icon,
   PaintBoardIcon,
+  Share08Icon,
   SourceCodeSquareIcon,
   TestTube01Icon,
-  UserMultiple02Icon,
+  UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -260,7 +261,7 @@ const featureTabIcons = [
   [Download04Icon, SourceCodeSquareIcon],
   [FlashIcon, DashboardSquare01Icon],
   [MailValidation01Icon, ComputerIcon, TestTube01Icon],
-  [CheckmarkBadge01Icon, UserMultiple02Icon],
+  [UserAdd01Icon, CheckmarkBadge01Icon, Share08Icon],
 ] as const;
 
 // Highlights the most important phrase in a feature block, with an underline in
@@ -278,8 +279,8 @@ function Hi({ children, color }: { children: ReactNode; color: string }) {
 
 const featureTabImages = [
   {
-    src: "/feature-design-layouts.svg",
-    alt: "Modular email design canvas with layout blocks, brand controls, and approved sections",
+    src: "/templates/news-letter.png",
+    alt: "Email template preview collage",
   },
   {
     src: "/integrations-export.png",
@@ -294,8 +295,8 @@ const featureTabImages = [
     alt: "Email client compatibility checks across Desktop Gmail, Tablet Outlook, and Mobile Gmail",
   },
   {
-    src: "/feature-share-collaboration.svg",
-    alt: "Team review workflow with approvals, comments, and clean handoff",
+    src: "/product/team-collaboration.png",
+    alt: "Teammates collaborating in a shared Madoo workspace",
   },
 ] as const;
 
@@ -482,6 +483,10 @@ export const localeCopy = {
           label: "Share & Collaboration",
           title: "Move campaigns as a team",
           blocks: [
+            {
+              heading: "INVITE WITH ROLES",
+              body: "Invite teammates as admins or members and control what they can access in your workspace.",
+            },
             {
               heading: "REVIEWS & APPROVALS",
               body: (
@@ -752,6 +757,10 @@ export const localeCopy = {
           title: "Mueve campañas en equipo",
           blocks: [
             {
+              heading: "INVITA CON ROLES",
+              body: "Invita a tu equipo como admins o miembros y controla qué puede ver cada uno en tu workspace.",
+            },
+            {
               heading: "REVISIONES Y APROBACIONES",
               body: (
                 <>
@@ -1012,7 +1021,8 @@ export default function HomePage({
   // category overview. The full gallery lives on /templates.
   const categoryShowcase = pickCategoryShowcase(communityTemplateCards, 5);
   // Product-features section: tabs switch the copy and a matching product visual.
-  const [activeFeatureTab, setActiveFeatureTab] = useState(0);
+  // Default to "Integrations & Export" (index 1); nav order stays unchanged.
+  const [activeFeatureTab, setActiveFeatureTab] = useState(1);
   const activeTab =
     copy.productFeatures.tabs[activeFeatureTab] ??
     copy.productFeatures.tabs[0]!;
@@ -1501,7 +1511,7 @@ export default function HomePage({
           </div>
         </div>
 
-        <section className="madoo-paper-section relative z-10 w-full px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-20 xl:px-0">
+        <section className="madoo-paper-section relative z-10 w-full px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-48 xl:px-0">
           <div className="mx-auto w-full max-w-7xl font-ibm-plex-sans">
             <div
               className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:gap-x-4"
