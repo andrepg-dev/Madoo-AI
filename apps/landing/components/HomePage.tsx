@@ -281,22 +281,28 @@ const featureTabImages = [
   {
     src: "/integrations-export.png",
     alt: "HTML export connected to Mailchimp, Klaviyo, Zapier, SendGrid, Outlook, and upload anywhere",
+    collage: false,
   },
   {
+    // Designs & Layouts uses the overlapping template-preview collage.
     src: "/templates/news-letter.png",
-    alt: "Email template preview collage",
+    alt: "Email template design previews",
+    collage: true,
   },
   {
     src: "/product/prompt-to-inbox-flow.png",
     alt: "AI email flow from prompt to templates to a finished email, ready to send to the inbox",
+    collage: false,
   },
   {
     src: "/product/client-compatibility.png",
     alt: "Email client compatibility checks across Desktop Gmail, Tablet Outlook, and Mobile Gmail",
+    collage: false,
   },
   {
     src: "/product/team-collaboration.png",
     alt: "Teammates collaborating in a shared Madoo workspace",
+    collage: false,
   },
 ] as const;
 
@@ -1599,12 +1605,12 @@ export default function HomePage({
                 key={`feature-media-${activeFeatureTab}`}
                 className={cx(
                   "madoo-tab-panel relative mx-auto w-full",
-                  activeFeatureTab === 0
+                  activeFeatureImage.collage
                     ? "h-104 max-w-md sm:h-136 lg:max-w-none"
                     : "max-w-xl",
                 )}
               >
-                {activeFeatureTab === 0 ? (
+                {activeFeatureImage.collage ? (
                   <>
                     {featureCollageImages[0] ? (
                       <div className="madoo-paper-border absolute left-0 top-[8%] z-10 w-[54%] overflow-hidden rounded-2xl bg-white">
