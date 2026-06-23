@@ -356,7 +356,16 @@ export const localeCopy = {
           blocks: [
             {
               heading: "AI EMAIL BUILDER",
-              body: "Describe the audience, offer, and tone — Madoo turns your prompt into a polished, on-brand email layout. No blank-page work, no manual section building.",
+              body: (
+                <>
+                  Describe the audience, offer, and tone — Madoo turns your
+                  prompt into a polished, on-brand email layout. No blank-page
+                  work,{" "}
+                  <span className="font-semibold text-[#171717] underline decoration-[#8b5cf6] decoration-2 underline-offset-4">
+                    no manual section building.
+                  </span>
+                </>
+              ),
             },
             {
               heading: "BRAND SYSTEMS",
@@ -1418,7 +1427,7 @@ export default function HomePage({
             </div>
 
             <div className="mt-12 grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
-              <div className="flex flex-col">
+              <div key={activeFeatureTab} className="madoo-tab-panel flex flex-col">
                 <h2 className="max-w-md text-4xl font-semibold uppercase leading-[0.95] tracking-tight text-[#171717] sm:text-6xl">
                   {activeTab.title}
                 </h2>
@@ -1428,14 +1437,14 @@ export default function HomePage({
                     const icon =
                       featureTabIcons[activeFeatureTab]?.[blockIndex];
                     return (
-                      <div key={block.heading}>
+                      <div className="madoo-feature-block" key={block.heading}>
                         <div className="flex items-center gap-2.5">
                           {icon ? (
                             <HugeiconsIcon
                               icon={icon}
                               size={22}
                               strokeWidth={2}
-                              className="shrink-0 text-[#171717]"
+                              className="madoo-feature-icon shrink-0 text-[#171717]"
                               aria-hidden="true"
                             />
                           ) : null}
@@ -1464,7 +1473,10 @@ export default function HomePage({
                 </button>
               </div>
 
-              <div className="relative mx-auto h-104 w-full max-w-md sm:h-136 lg:max-w-none">
+              <div
+                key={activeFeatureTab}
+                className="madoo-tab-panel relative mx-auto h-104 w-full max-w-md sm:h-136 lg:max-w-none"
+              >
                 {featureCollageImages[0] ? (
                   <div className="madoo-paper-border absolute left-0 top-[8%] z-10 w-[54%] overflow-hidden rounded-2xl bg-white">
                     <img

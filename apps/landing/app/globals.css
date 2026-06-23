@@ -396,10 +396,54 @@
   }
 }
 
+/* Product-feature section: icons animate on block hover, panels fade in on tab
+   change. Scoped class names so they don't touch Tailwind's `group` utilities. */
+.madoo-feature-icon {
+  transition: color 0.2s ease;
+}
+
+.madoo-feature-block:hover .madoo-feature-icon {
+  animation: madoo-icon-wiggle 0.6s ease-in-out;
+  color: #5b63ff;
+}
+
+@keyframes madoo-icon-wiggle {
+  0%,
+  100% {
+    transform: rotate(0) scale(1);
+  }
+
+  25% {
+    transform: rotate(-9deg) scale(1.1);
+  }
+
+  75% {
+    transform: rotate(9deg) scale(1.1);
+  }
+}
+
+.madoo-tab-panel {
+  animation: madoo-fade-up 0.4s ease-out both;
+}
+
+@keyframes madoo-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .madoo-hero-mesh,
   .madoo-hero-float-email,
-  .madoo-hero-float-browser {
+  .madoo-hero-float-browser,
+  .madoo-tab-panel,
+  .madoo-feature-block:hover .madoo-feature-icon {
     animation: none;
   }
 }
