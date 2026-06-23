@@ -1614,7 +1614,7 @@ export default function HomePage({
                 {activeFeatureImage.collage ? (
                   <>
                     {featureCollageImages[0] ? (
-                      <div className="madoo-paper-border absolute left-0 top-[8%] z-10 w-[54%] overflow-hidden rounded-2xl bg-white">
+                      <div className="madoo-paper-border absolute left-0 top-[10%] z-10 w-[52%] overflow-hidden rounded-lg bg-white">
                         <img
                           src={featureCollageImages[0]}
                           alt={`${activeTab.title} ${copy.templates.previewAlt}`}
@@ -1624,7 +1624,7 @@ export default function HomePage({
                       </div>
                     ) : null}
                     {featureCollageImages[1] ? (
-                      <div className="madoo-paper-border absolute right-0 top-0 z-20 w-[48%] overflow-hidden rounded-2xl bg-white">
+                      <div className="madoo-paper-border absolute right-0 top-0 z-20 w-[50%] overflow-hidden rounded-lg bg-white">
                         <img
                           src={featureCollageImages[1]}
                           alt={`${activeTab.title} ${copy.templates.previewAlt}`}
@@ -1634,7 +1634,7 @@ export default function HomePage({
                       </div>
                     ) : null}
                     {featureCollageImages[2] ? (
-                      <div className="madoo-paper-border absolute bottom-0 right-[6%] z-30 w-[50%] overflow-hidden rounded-2xl bg-white">
+                      <div className="madoo-paper-border absolute bottom-0 left-1/2 z-30 w-[54%] -translate-x-1/2 overflow-hidden rounded-lg bg-white">
                         <img
                           src={featureCollageImages[2]}
                           alt={`${activeTab.title} ${copy.templates.previewAlt}`}
