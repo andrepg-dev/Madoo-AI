@@ -1542,7 +1542,7 @@ export default function HomePage({
                 <div
                   className={cx(
                     "mt-8 grid",
-                    activeTab.blocks.length >= 3 ? "gap-8" : "gap-12",
+                    activeTab.blocks.length >= 3 ? "gap-10" : "gap-12",
                   )}
                 >
                   {activeTab.blocks.map((block, blockIndex) => {
