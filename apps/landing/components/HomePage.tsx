@@ -271,8 +271,8 @@ const featureTabImages = [
     alt: "AI email flow from prompt to templates to a finished email, ready to send to the inbox",
   },
   {
-    src: "/product/email-review-validation.png",
-    alt: "Desktop and mobile email previews with layout, copy, sections, and responsive checks, test email, and approval",
+    src: "/product/client-compatibility.png",
+    alt: "Email client compatibility checks across Desktop Gmail, Tablet Outlook, and Mobile Gmail",
   },
   {
     src: "/feature-share-collaboration.svg",
