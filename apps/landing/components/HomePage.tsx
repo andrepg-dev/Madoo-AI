@@ -1034,15 +1034,12 @@ export default function HomePage({
     copy.productFeatures.tabs[0]!;
   const activeFeatureImage =
     featureTabImages[activeFeatureTab] ?? featureTabImages[0]!;
+  // Designs & Layouts collage: three fixed template designs that show range.
   const featureCollageImages = [
-    // First collage tile is a fixed editorial newsletter design; the rest come
-    // from real template previews (community first, samples otherwise).
     "/product/design-newsletter.png",
-    ...(hasCommunityTemplates
-      ? communityTemplateCards
-      : localizedFallbackTemplateCards
-    ).map((card) => card.imageSrc ?? "/templates/news-letter.png"),
-  ].slice(0, 3);
+    "/product/design-bac.png",
+    "/product/design-anthropic.png",
+  ];
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
