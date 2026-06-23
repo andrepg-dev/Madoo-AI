@@ -1450,16 +1450,16 @@ export default function HomePage({
               })}
             </div>
 
-            <div className="mt-12 grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+            <div className="mt-12 grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-8">
               <div
                 key={`feature-copy-${activeFeatureTab}`}
                 className="madoo-tab-panel flex flex-col"
               >
-                <h2 className="max-w-md text-4xl font-semibold uppercase leading-[0.95] tracking-tight text-[#171717] sm:text-6xl">
+                <h2 className="max-w-xl text-4xl font-semibold uppercase leading-[0.95] tracking-tight text-[#171717] sm:text-5xl">
                   {activeTab.title}
                 </h2>
 
-                <div className="mt-10 grid gap-8">
+                <div className="mt-8 grid gap-6">
                   {activeTab.blocks.map((block, blockIndex) => {
                     const icon =
                       featureTabIcons[activeFeatureTab]?.[blockIndex];
@@ -1475,11 +1475,11 @@ export default function HomePage({
                               aria-hidden="true"
                             />
                           ) : null}
-                          <h3 className="text-lg font-bold uppercase tracking-tight text-[#171717]">
+                          <h3 className="text-xl font-bold uppercase tracking-tight text-[#171717]">
                             {block.heading}
                           </h3>
                         </div>
-                        <p className="mt-3 max-w-md text-base leading-7 text-[#6f6961]">
+                        <p className="mt-2 max-w-xl text-lg leading-8 text-[#6f6961]">
                           {block.body}
                         </p>
                       </div>
@@ -1494,7 +1494,7 @@ export default function HomePage({
                       ? window.location.assign(clientHomeUrl())
                       : openAuthDialog()
                   }
-                  className="mt-10 inline-flex h-12 w-fit cursor-pointer items-center justify-center rounded-full bg-madoo-ink px-7 text-sm font-semibold text-white transition hover:bg-madoo-ink-hover"
+                  className="mt-8 inline-flex h-12 w-fit cursor-pointer items-center justify-center rounded-full bg-madoo-ink px-7 text-sm font-semibold text-white transition hover:bg-madoo-ink-hover"
                 >
                   {copy.productFeatures.cta}
                 </button>
