@@ -271,8 +271,8 @@ const featureTabImages = [
     alt: "AI email flow from prompt to templates to a finished email, ready to send to the inbox",
   },
   {
-    src: "/feature-testing-validation.svg",
-    alt: "Email review screen with validation checks and test email approval",
+    src: "/product/email-review-validation.png",
+    alt: "Desktop and mobile email previews with layout, copy, sections, and responsive checks, test email, and approval",
   },
   {
     src: "/feature-share-collaboration.svg",
