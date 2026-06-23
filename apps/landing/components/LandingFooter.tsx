@@ -35,7 +35,7 @@ const footerContent: Array<{
           title: "Product",
           links: [
             { label: "Pricing", href: "/pricing" },
-            { label: "Templates", href: "/#templates" },
+            { label: "Templates", href: "/templates" },
             { label: "Email editor", href: "/" },
             { label: "AI generator", href: "/" },
             { label: "Export", href: "/" },
@@ -91,7 +91,7 @@ const footerContent: Array<{
           title: "Producto",
           links: [
             { label: "Precios", href: "/pricing" },
-            { label: "Plantillas", href: "/es#templates" },
+            { label: "Plantillas", href: "/templates" },
             { label: "Editor de emails", href: "/es" },
             { label: "Generador IA", href: "/es" },
             { label: "Exportar", href: "/es" },

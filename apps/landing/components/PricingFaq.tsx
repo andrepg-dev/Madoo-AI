@@ -145,8 +145,9 @@ export function PricingFaq() {
         {faqs.map((faq, index) => (
           <details
             key={faq.question}
+            id={faq.claimTrial ? "free-trial" : undefined}
             open={index === 1}
-            className="madoo-paper-border group rounded-[28px] bg-madoo-paper px-6 py-5"
+            className="madoo-paper-border group scroll-mt-24 rounded-[28px] bg-madoo-paper px-6 py-5"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-madoo-text [&::-webkit-details-marker]:hidden">
               {faq.question}

@@ -6,6 +6,7 @@ export type LandingCommunityTemplate = {
   name: string;
   description: string | null;
   category: string | null;
+  categories: string[];
   previewUrl: string | null;
   authorName: string | null;
   variableCount: number;
@@ -30,11 +31,21 @@ function toLandingTemplate(raw: unknown): LandingCommunityTemplate | null {
   );
   if (!variableSchema.success) return null;
 
+  const category = nullableString(template.category);
+  const rawCategories = Array.isArray(template.categories)
+    ? template.categories.filter(
+        (item): item is string => typeof item === "string",
+      )
+    : [];
+  const categories =
+    rawCategories.length > 0 ? rawCategories : category ? [category] : [];
+
   return {
     id: template.id,
     name: template.name,
     description: nullableString(template.description),
-    category: nullableString(template.category),
+    category: category ?? categories[0] ?? null,
+    categories,
     previewUrl: nullableString(template.previewUrl),
     authorName: nullableString(template.authorName),
     variableCount: variableSchema.data.variables.length,
@@ -54,7 +65,7 @@ export async function fetchLandingCommunityTemplates(): Promise<
     const data: unknown = await response.json();
     if (!Array.isArray(data)) return [];
 
-    return data.slice(0, 7).flatMap((template) => {
+    return data.flatMap((template) => {
       const parsed = toLandingTemplate(template);
       return parsed ? [parsed] : [];
     });

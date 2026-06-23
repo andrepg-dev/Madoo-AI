@@ -1,18 +1,33 @@
 "use client";
 
+import {
+  clientHomeUrl,
+  clientPromptUrl,
+  clientUseTemplateUrl,
+  isLikelySignedIn,
+} from "@/lib/client-app";
 import type { LandingCommunityTemplate } from "@/lib/community-templates";
 import { CLIENT_APP_URL } from "@/lib/env";
 import { useDictation } from "@/lib/use-dictation";
 import {
   Add01Icon,
-  AiIdeaIcon,
+  AiMagicIcon,
   ArrowRight01Icon,
   Attachment01Icon,
   Cancel01Icon,
-  Download01Icon,
+  CheckmarkBadge01Icon,
+  ComputerIcon,
+  DashboardSquare01Icon,
+  Download04Icon,
+  FlashIcon,
   Image01Icon,
+  MailValidation01Icon,
   Mic02Icon,
-  WebDesign01Icon,
+  PaintBoardIcon,
+  Share08Icon,
+  SourceCodeSquareIcon,
+  TestTube01Icon,
+  UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -24,7 +39,13 @@ import {
 } from "@madoo/design-system";
 import type { VariableSchemaRoot } from "@madoo/shared";
 import Image from "next/image";
-import type { ChangeEvent, KeyboardEvent, SVGAttributes } from "react";
+import Link from "next/link";
+import type {
+  ChangeEvent,
+  KeyboardEvent,
+  ReactNode,
+  SVGAttributes,
+} from "react";
 import { useEffect, useRef, useState } from "react";
 import AuthDialog from "./AuthDialog";
 import { LandingHeader } from "./LandingHeader";
@@ -134,27 +155,8 @@ const templateCards = [
   },
 ];
 
-const workflowSteps = [
-  {
-    label: "Prompt",
-    text: "Describe the audience, offer, tone, and goal.",
-    icon: AiIdeaIcon,
-  },
-  {
-    label: "Design",
-    text: "Madoo turns it into a polished email layout.",
-    icon: WebDesign01Icon,
-  },
-  {
-    label: "Export",
-    text: "Send production-ready HTML to your email tool.",
-    icon: Download01Icon,
-  },
-];
-
-const templateMasonryWeights = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
-// Tile heights (height / width) used before the preview image loads; mirrors
-// `templateMasonryWeights` so the masonry stays balanced while images stream in.
+// Tile heights (height / width) used before the preview image loads so the
+// showcase stays lively while screenshots stream in.
 const templateDefaultHeightRatios = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
 // Once the real preview loads we size the tile to its true aspect ratio so a
 // long email reads as a long card instead of being cropped into a short box.
@@ -226,125 +228,90 @@ type TemplateShowcaseCard = {
   variables?: VariableSchemaRoot["variables"];
 };
 
-const TEMPLATE_ROLE_LABELS: Record<string, string> = {
+export const TEMPLATE_ROLE_LABELS: Record<string, string> = {
   text: "Text",
   url: "URL",
   image: "Image",
   date: "Date",
 };
 
-const WORKSPACE_COOKIE = "madoo.workspace.id";
-
-/**
- * The auth + workspace cookies are shared across `.madooai.com`, and the
- * workspace cookie is readable from JS — its presence is a good-enough signal
- * that the visitor is already signed in, so we can send them straight to the
- * app to use a template instead of forcing the login dialog.
- */
-function isLikelySignedIn(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.cookie
-    .split(";")
-    .some((part) => part.trim().startsWith(`${WORKSPACE_COOKIE}=`));
-}
-
-function clientUseTemplateUrl(id: string): string {
-  const url = new URL("/use-template", CLIENT_APP_URL);
-  url.searchParams.set("id", id);
-  return url.toString();
-}
-
-// Already-signed-in visitors own a session on the app, so their prompt is handed
-// straight to the app to start generating instead of through the login dialog.
-function clientPromptUrl(prompt: string, tone?: string, length?: string): string {
-  const url = new URL("/email-template-project", CLIENT_APP_URL);
-  url.searchParams.set("prompt", prompt);
-  if (tone) url.searchParams.set("tone", tone);
-  if (length) url.searchParams.set("length", length);
-  return url.toString();
-}
-
-function clientHomeUrl(): string {
-  return new URL("/", CLIENT_APP_URL).toString();
-}
-
-function getRequestedMasonryColumnCount(maxColumns: number) {
-  if (window.matchMedia("(min-width: 1280px)").matches) return maxColumns;
-  if (window.matchMedia("(min-width: 1024px)").matches) {
-    return Math.min(maxColumns, 3);
+// One representative card per category, for the homepage showcase row. Picks the
+// first template seen for each category (templates arrive newest-first) up to a
+// small cap so the section reads as a clean category overview, not a full grid.
+function pickCategoryShowcase(
+  cards: TemplateShowcaseCard[],
+  max: number,
+): TemplateShowcaseCard[] {
+  const seen = new Set<string>();
+  const showcase: TemplateShowcaseCard[] = [];
+  for (const card of cards) {
+    const category = card.category;
+    if (!category || seen.has(category)) continue;
+    seen.add(category);
+    showcase.push(card);
+    if (showcase.length >= max) break;
   }
-  return 0;
+  return showcase;
 }
 
-function useResponsiveMasonryColumnCount(
-  itemCount: number,
-  maxColumns: number,
-) {
-  const [columnCount, setColumnCount] = useState(0);
+// Icons for the product-feature tabs, paired to each tab's two blocks (same
+// order as `productFeatures.tabs` in localeCopy).
+const featureTabIcons = [
+  [AiMagicIcon, PaintBoardIcon],
+  [Download04Icon, SourceCodeSquareIcon],
+  [FlashIcon, DashboardSquare01Icon],
+  [MailValidation01Icon, ComputerIcon, TestTube01Icon],
+  [UserAdd01Icon, CheckmarkBadge01Icon, Share08Icon],
+] as const;
 
-  useEffect(() => {
-    const queries = [
-      window.matchMedia("(min-width: 1280px)"),
-      window.matchMedia("(min-width: 1024px)"),
-    ];
-
-    const updateColumnCount = () => {
-      const requested = getRequestedMasonryColumnCount(maxColumns);
-      if (requested === 0) {
-        setColumnCount(0);
-        return;
-      }
-
-      setColumnCount(
-        Math.max(1, Math.min(itemCount || 1, maxColumns, requested)),
-      );
-    };
-
-    updateColumnCount();
-    queries.forEach((query) =>
-      query.addEventListener("change", updateColumnCount),
-    );
-
-    return () => {
-      queries.forEach((query) =>
-        query.removeEventListener("change", updateColumnCount),
-      );
-    };
-  }, [itemCount, maxColumns]);
-
-  return columnCount;
-}
-
-function buildTemplateMasonryColumns(
-  templates: TemplateShowcaseCard[],
-  columnCount: number,
-) {
-  const columns = Array.from(
-    { length: Math.max(1, Math.min(columnCount, templates.length || 1)) },
-    () => ({
-      entries: [] as Array<{ index: number; template: TemplateShowcaseCard }>,
-      weight: 0,
-    }),
+// Highlights the most important phrase in a feature block, with an underline in
+// a per-keyword accent color so the key idea pops without reading every word.
+function Hi({ children, color }: { children: ReactNode; color: string }) {
+  return (
+    <span
+      className="font-semibold text-[#171717] underline decoration-2 underline-offset-4"
+      style={{ textDecorationColor: color }}
+    >
+      {children}
+    </span>
   );
-
-  templates.forEach((template, index) => {
-    const target = columns.reduce((shortest, column) =>
-      column.weight < shortest.weight ? column : shortest,
-    );
-    target.entries.push({ index, template });
-    target.weight +=
-      templateMasonryWeights[index % templateMasonryWeights.length];
-  });
-
-  return columns;
 }
 
-const localeCopy = {
+const featureTabImages = [
+  {
+    // Designs & Layouts uses the overlapping template-preview collage.
+    src: "/templates/news-letter.png",
+    alt: "Email template design previews",
+    collage: true,
+  },
+  {
+    src: "/integrations-export.png",
+    alt: "HTML export connected to Mailchimp, Klaviyo, Zapier, SendGrid, Outlook, and upload anywhere",
+    collage: false,
+  },
+  {
+    src: "/product/prompt-to-inbox-flow.png",
+    alt: "AI email flow from prompt to templates to a finished email, ready to send to the inbox",
+    collage: false,
+  },
+  {
+    src: "/product/client-compatibility.png",
+    alt: "Email client compatibility checks across Desktop Gmail, Tablet Outlook, and Mobile Gmail",
+    collage: false,
+  },
+  {
+    src: "/product/team-collaboration.png",
+    alt: "Teammates collaborating in a shared Madoo workspace",
+    collage: false,
+  },
+] as const;
+
+export const localeCopy = {
   en: {
     nav: {
-      solutions: "Solutions",
-      resources: "Resources",
+      useCases: "Use cases",
       community: "Community",
+      emailTemplates: "Email Templates",
       pricing: "Pricing",
       login: "Login",
       getStarted: "Get started",
@@ -410,7 +377,7 @@ const localeCopy = {
         "Create campaign-ready email templates from plain-language prompts, then refine copy, sections, tone, and layout.",
       compatibilityTitle: "Client compatibility",
       compatibilityDescription:
-        "Preview email behavior across Gmail, Outlook, Apple Mail, and more before launch.",
+        "Review your email layout, copy, structure, and responsive presentation before export.",
       brandTitle: "Brand systems",
       brandDescription:
         "Reusable templates, layout rules, colors, type, blocks, and saved campaign patterns.",
@@ -422,17 +389,139 @@ const localeCopy = {
         "Move finished campaigns into Mailchimp, HubSpot, Klaviyo, Salesforce, and other ESPs.",
       qaTitle: "Test email engine",
       qaDescription:
-        "Send real test emails straight from Madoo to verify your HTML renders correctly in Gmail, Outlook, and more before you ship.",
-      clients: ["Gmail", "Outlook", "Apple Mail", "Yahoo", "Mobile"],
+        "Send test emails from Madoo to review the final message before you move it into your email tool.",
+      clients: ["Desktop", "Mobile", "Copy", "Layout", "Export"],
       flow: ["Draft", "Review", "Approved", "Export"],
       controls: ["Copy", "Layout", "Brand", "Audience", "Compliance", "Export"],
       previewLabel: "preview",
       readyLabel: "Ready",
     },
+    productFeatures: {
+      cta: "Get started free",
+      tabs: [
+        {
+          label: "Designs & Layouts",
+          title: "Design emails your way",
+          blocks: [
+            {
+              heading: "AI EMAIL BUILDER",
+              body: (
+                <>
+                  Describe the audience, offer, and tone — Madoo turns your
+                  prompt into a polished, on-brand email layout. No blank-page
+                  work,{" "}
+                  <span className="font-semibold text-[#171717] underline decoration-[#8b5cf6] decoration-2 underline-offset-4">
+                    no manual section building.
+                  </span>
+                </>
+              ),
+            },
+            {
+              heading: "BRAND SYSTEMS",
+              body: "Reusable templates, colors, type, and saved blocks keep every campaign consistent. Refine copy, sections, and layout until it's exactly right.",
+            },
+          ],
+        },
+        {
+          label: "Integrations & Export",
+          title: "Ship to any email provider",
+          blocks: [
+            {
+              heading: "ONE-CLICK EXPORT",
+              body: (
+                <>
+                  Send <Hi color="#5b63ff">production-ready HTML</Hi> straight to
+                  Mailchimp, Klaviyo, HubSpot, Salesforce, and the other ESPs your
+                  team already uses.
+                </>
+              ),
+            },
+            {
+              heading: "CLEAN, PORTABLE HTML",
+              body: "Every email exports as standards-based HTML that renders the same wherever you paste it — no lock-in, no rework.",
+            },
+          ],
+        },
+        {
+          label: "Time Saving & Automation",
+          title: "From idea to inbox in minutes",
+          blocks: [
+            {
+              heading: "PROMPT TO EMAIL",
+              body: (
+                <>
+                  Go from a one-line prompt to a finished campaign{" "}
+                  <Hi color="#d97706">in seconds</Hi>. Iterate with AI instead of
+                  rebuilding layouts by hand.
+                </>
+              ),
+            },
+            {
+              heading: "START FROM TEMPLATES",
+              body: "Begin with community-tested templates and let AI adapt the copy, tone, and audience to your campaign.",
+            },
+          ],
+        },
+        {
+          label: "Test Email Engine",
+          title: "Test email engine",
+          blocks: [
+            {
+              heading: "VERIFY GENERATED HTML",
+              body: (
+                <>
+                  Sends real test emails and checks the{" "}
+                  <Hi color="#0d9488">generated HTML is valid</Hi> before you ship.
+                </>
+              ),
+            },
+            {
+              heading: "SPAM, LINKS & ACCESSIBILITY",
+              body: "Built-in checks for spam risk, broken links, and accessibility.",
+            },
+            {
+              heading: "EMAIL REVIEW",
+              body: "Review layout, copy, sections, and responsive design before you export.",
+            },
+          ],
+        },
+        {
+          label: "Share & Collaboration",
+          title: "Move campaigns as a team",
+          blocks: [
+            {
+              heading: "INVITE WITH ROLES",
+              body: "Invite teammates as admins or members and control what they can access in your workspace.",
+            },
+            {
+              heading: "REVIEWS & APPROVALS",
+              body: (
+                <>
+                  Drafts, reviews, ownership, and approvals stay visible so
+                  campaigns move from idea to launch{" "}
+                  <Hi color="#0d9488">without confusion</Hi>.
+                </>
+              ),
+            },
+            {
+              heading: "SHARED WORKSPACE",
+              body: "Share templates across your workspace and hand off finished campaigns cleanly before export.",
+            },
+          ],
+        },
+      ],
+    },
     templates: {
       title: "Explore templates",
       description:
         "Start from community-tested templates, then adjust copy, layout, tone, and audience with AI.",
+      browseAll: "Browse all templates",
+      galleryTitle: "Email Templates",
+      galleryDescription:
+        "Free, ready-to-use email templates for every campaign and occasion. Pick one, then make it yours with AI.",
+      all: "All",
+      searchPlaceholder: "Search templates",
+      empty: "No templates in this category yet.",
       previewAlt: "email template preview",
       hover: "Template Details",
       by: "By",
@@ -487,9 +576,9 @@ const localeCopy = {
   },
   es: {
     nav: {
-      solutions: "Soluciones",
-      resources: "Recursos",
+      useCases: "Casos de uso",
       community: "Comunidad",
+      emailTemplates: "Plantillas",
       pricing: "Precios",
       login: "Iniciar sesión",
       getStarted: "Empezar",
@@ -556,7 +645,7 @@ const localeCopy = {
         "Crea plantillas de email listas para campaña desde prompts simples y ajusta copy, secciones, tono y layout.",
       compatibilityTitle: "Compatibilidad",
       compatibilityDescription:
-        "Previsualiza el comportamiento en Gmail, Outlook, Apple Mail y más antes de lanzar.",
+        "Revisa layout, copy, estructura y presentación responsive antes de exportar.",
       brandTitle: "Sistemas de marca",
       brandDescription:
         "Plantillas reutilizables, reglas de layout, colores, tipografías, bloques y patrones guardados.",
@@ -568,8 +657,8 @@ const localeCopy = {
         "Mueve campañas terminadas a Mailchimp, HubSpot, Klaviyo, Salesforce y otros ESPs.",
       qaTitle: "Motor de emails de prueba",
       qaDescription:
-        "Envía emails de prueba reales desde Madoo para verificar que tu HTML se renderiza bien en Gmail, Outlook y más antes de lanzar.",
-      clients: ["Gmail", "Outlook", "Apple Mail", "Yahoo", "Mobile"],
+        "Envía emails de prueba desde Madoo para revisar el mensaje final antes de moverlo a tu herramienta de email.",
+      clients: ["Desktop", "Mobile", "Copy", "Layout", "Export"],
       flow: ["Borrador", "Review", "Aprobado", "Exportar"],
       controls: [
         "Copy",
@@ -582,10 +671,130 @@ const localeCopy = {
       previewLabel: "preview",
       readyLabel: "Listo",
     },
+    productFeatures: {
+      cta: "Empieza gratis",
+      tabs: [
+        {
+          label: "Diseño y Layouts",
+          title: "Diseña emails a tu manera",
+          blocks: [
+            {
+              heading: "CONSTRUCTOR CON IA",
+              body: (
+                <>
+                  Describe la audiencia, la oferta y el tono — Madoo convierte tu
+                  prompt en un layout de email pulido y con tu marca.{" "}
+                  <Hi color="#8b5cf6">Sin empezar de cero</Hi> ni armar secciones a
+                  mano.
+                </>
+              ),
+            },
+            {
+              heading: "SISTEMAS DE MARCA",
+              body: "Plantillas reutilizables, colores, tipografías y bloques guardados mantienen cada campaña consistente. Ajusta copy, secciones y layout hasta dejarlo perfecto.",
+            },
+          ],
+        },
+        {
+          label: "Integraciones y Exportación",
+          title: "Envía a cualquier herramienta",
+          blocks: [
+            {
+              heading: "EXPORTA EN UN CLIC",
+              body: (
+                <>
+                  Envía <Hi color="#5b63ff">HTML listo para producción</Hi> directo
+                  a Mailchimp, Klaviyo, HubSpot, Salesforce y los demás ESPs que tu
+                  equipo ya usa.
+                </>
+              ),
+            },
+            {
+              heading: "HTML LIMPIO Y PORTABLE",
+              body: "Cada email se exporta como HTML estándar que se ve igual donde lo pegues — sin lock-in ni retrabajo.",
+            },
+          ],
+        },
+        {
+          label: "Ahorro y Automatización",
+          title: "De la idea al inbox en minutos",
+          blocks: [
+            {
+              heading: "DEL PROMPT AL EMAIL",
+              body: (
+                <>
+                  Pasa de un prompt de una línea a una campaña terminada{" "}
+                  <Hi color="#d97706">en segundos</Hi>. Itera con IA en vez de
+                  rehacer layouts a mano.
+                </>
+              ),
+            },
+            {
+              heading: "EMPIEZA CON PLANTILLAS",
+              body: "Empieza con plantillas probadas por la comunidad y deja que la IA adapte copy, tono y audiencia a tu campaña.",
+            },
+          ],
+        },
+        {
+          label: "Test Email Engine",
+          title: "Test email engine",
+          blocks: [
+            {
+              heading: "VERIFICA EL HTML GENERADO",
+              body: (
+                <>
+                  Envía emails de prueba reales y verifica que el{" "}
+                  <Hi color="#0d9488">HTML generado sea válido</Hi> antes de enviar.
+                </>
+              ),
+            },
+            {
+              heading: "SPAM, ENLACES Y ACCESIBILIDAD",
+              body: "Chequeos integrados de riesgo de spam, enlaces rotos y accesibilidad.",
+            },
+            {
+              heading: "REVISIÓN DE EMAIL",
+              body: "Revisa layout, copy, secciones y diseño responsive antes de exportar.",
+            },
+          ],
+        },
+        {
+          label: "Compartir y Colaborar",
+          title: "Mueve campañas en equipo",
+          blocks: [
+            {
+              heading: "INVITA CON ROLES",
+              body: "Invita a tu equipo como admins o miembros y controla qué puede ver cada uno en tu workspace.",
+            },
+            {
+              heading: "REVISIONES Y APROBACIONES",
+              body: (
+                <>
+                  Borradores, revisiones, dueños y aprobaciones quedan visibles
+                  para que las campañas avancen{" "}
+                  <Hi color="#0d9488">sin confusión</Hi>.
+                </>
+              ),
+            },
+            {
+              heading: "WORKSPACE COMPARTIDO",
+              body: "Comparte plantillas en tu workspace y entrega campañas terminadas de forma limpia antes de exportar.",
+            },
+          ],
+        },
+      ],
+    },
     templates: {
       title: "Explora plantillas",
       description:
         "Empieza plantillas probadas por la comunidad y ajusta copy, layout, tono y audiencia con IA",
+      browseAll: "Ver todas las plantillas",
+      galleryTitle: "Plantillas de Email",
+      galleryDescription:
+        "Plantillas de email gratis y listas para usar, para cada campaña y ocasión. Elige una y hazla tuya con IA.",
+      all: "Todas",
+      searchPlaceholder: "Buscar plantillas",
+      empty: "Aún no hay plantillas en esta categoría.",
       previewAlt: "vista previa de plantilla de email",
       hover: "Detalles",
       by: "Por",
@@ -784,32 +993,6 @@ export default function HomePage({
   communityTemplates = [],
 }: HomePageProps) {
   const copy = localeCopy[locale];
-  const valueFeatures = [
-    {
-      title: copy.value.aiTitle,
-      description: copy.value.aiDescription,
-    },
-    {
-      title: copy.value.compatibilityTitle,
-      description: copy.value.compatibilityDescription,
-    },
-    {
-      title: copy.value.brandTitle,
-      description: copy.value.brandDescription,
-    },
-    {
-      title: copy.value.workflowTitle,
-      description: copy.value.workflowDescription,
-    },
-    {
-      title: copy.value.integrationsTitle,
-      description: copy.value.integrationsDescription,
-    },
-    {
-      title: copy.value.qaTitle,
-      description: copy.value.qaDescription,
-    },
-  ];
   const localizedFallbackTemplateCards: TemplateShowcaseCard[] =
     templateCards.map((template, index) => ({
       ...template,
@@ -839,21 +1022,24 @@ export default function HomePage({
   // Show only real community templates when any exist. The hardcoded sample
   // cards are a fallback for an empty gallery, not padding to a minimum count —
   // padding made decorative cards look like real DB templates.
-  const localizedTemplateCards: TemplateShowcaseCard[] =
-    communityTemplateCards.length > 0
-      ? communityTemplateCards
-      : localizedFallbackTemplateCards;
-  const templateMasonryColumnCount = useResponsiveMasonryColumnCount(
-    localizedTemplateCards.length,
-    5,
-  );
-  const templateMasonryColumns =
-    templateMasonryColumnCount > 0
-      ? buildTemplateMasonryColumns(
-        localizedTemplateCards,
-        templateMasonryColumnCount,
-      )
-      : [];
+  const hasCommunityTemplates = communityTemplateCards.length > 0;
+  // Homepage showcase: one card per category (up to 5) so the section reads as a
+  // category overview. The full gallery lives on /templates.
+  const categoryShowcase = pickCategoryShowcase(communityTemplateCards, 5);
+  // Product-features section: tabs switch the copy and a matching product visual.
+  // Designs & Layouts is the first tab and the default selection.
+  const [activeFeatureTab, setActiveFeatureTab] = useState(0);
+  const activeTab =
+    copy.productFeatures.tabs[activeFeatureTab] ??
+    copy.productFeatures.tabs[0]!;
+  const activeFeatureImage =
+    featureTabImages[activeFeatureTab] ?? featureTabImages[0]!;
+  // Designs & Layouts collage: three fixed template designs that show range.
+  const featureCollageImages = [
+    "/product/design-newsletter.png",
+    "/product/design-bac.png",
+    "/product/design-anthropic.png",
+  ];
   const [prompt, setPrompt] = useState("");
   const [promptOptionValues, setPromptOptionValues] = useState<
     Record<string, string>
@@ -1025,6 +1211,43 @@ export default function HomePage({
           ) : null}
         </div>
       </div>
+    </article>
+  );
+
+  // Category showcase card: a representative preview with the category name as a
+  // bold caption below, mirroring the homepage category overview row.
+  const renderShowcaseCard = (
+    template: TemplateShowcaseCard,
+    index: number,
+  ) => (
+    <article
+      key={template.id ?? template.name}
+      role="button"
+      tabIndex={0}
+      onClick={() => openTemplatePreview(template)}
+      onKeyDown={onTemplateCardKeyDown(template)}
+      className="group flex min-w-0 cursor-pointer flex-col outline-none"
+    >
+      <div className="relative">
+        <TemplatePreviewImage
+          src={template.imageSrc ?? "/templates/news-letter.png"}
+          alt={`${template.name} ${copy.templates.previewAlt}`}
+          defaultHeightRatio={
+            templateDefaultHeightRatios[
+              index % templateDefaultHeightRatios.length
+            ]
+          }
+        />
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-madoo-ink/0 opacity-0 transition duration-200 group-hover:bg-madoo-ink/12 group-hover:opacity-100">
+          <span className="rounded-full bg-white px-4 py-2 text-xs font-medium text-madoo-ink shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.18)]">
+            {copy.templates.hover}
+          </span>
+        </div>
+      </div>
+
+      <p className="mt-4 font-ibm-plex-sans text-sm font-semibold uppercase tracking-[0.14em] text-[#171717]">
+        {template.category}
+      </p>
     </article>
   );
 
@@ -1295,175 +1518,142 @@ export default function HomePage({
           </div>
         </div>
 
-        <section className="madoo-paper-section relative z-10 w-full px-4 pb-16 pt-20 sm:px-8 sm:pb-24 sm:pt-32 lg:pt-64 xl:px-0">
+        <section className="madoo-paper-section relative z-10 w-full px-4 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-64 xl:px-0">
           <div className="mx-auto w-full max-w-7xl font-ibm-plex-sans">
-            <div className="flex w-full flex-col justify-between gap-5 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5b63ff]">
-                  {copy.value.eyebrow}
-                </p>
-                <h2 className="mt-3 max-w-3xl text-3xl font-semibold leading-[0.98] tracking-normal text-[#171717] sm:text-5xl">
-                  {copy.value.title}
-                </h2>
-                <p className="mt-4 max-w-2xl text-base leading-7 text-[#6f6961]">
-                  {copy.value.description}
-                </p>
-              </div>
+            <div
+              className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:gap-x-4"
+              role="tablist"
+              aria-label={copy.value.title}
+            >
+              {copy.productFeatures.tabs.map((tab, index) => {
+                const active = index === activeFeatureTab;
+                return (
+                  <button
+                    key={tab.label}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setActiveFeatureTab(index)}
+                    className={cx(
+                      "h-10 cursor-pointer rounded-full border-0 px-4 text-sm font-medium transition",
+                      active
+                        ? "madoo-paper-border bg-white text-[#171717]"
+                        : "bg-transparent text-[#6f6961] hover:text-[#171717]",
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="mt-10 grid gap-4 lg:grid-cols-12">
-              <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
-                {valueFeatures.map((feature, index) => {
-                  const Icon =
-                    workflowSteps[index % workflowSteps.length]?.icon ??
-                    AiIdeaIcon;
+            <div className="mt-12 grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-8">
+              <div
+                key={`feature-copy-${activeFeatureTab}`}
+                className="madoo-tab-panel flex flex-col"
+              >
+                <h2 className="max-w-xl text-4xl font-semibold uppercase leading-[0.95] tracking-tight text-[#171717] sm:text-5xl">
+                  {activeTab.title}
+                </h2>
 
-                  return (
-                    <article
-                      key={feature.title}
-                      className="madoo-paper-border madoo-paper-border-hover group min-h-47.5 rounded-lg bg-white p-5 transition"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f3faff] text-[#071b38] transition group-hover:bg-[rgb(var(--rule-rgb)/0.06)]">
-                        <HugeiconsIcon
-                          icon={Icon}
-                          size={20}
-                          strokeWidth={1.6}
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <h3 className="mt-6 text-[15px] font-semibold leading-tight text-[#171717]">
-                        {feature.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-[#6f6961]">
-                        {feature.description}
-                      </p>
-                    </article>
-                  );
-                })}
-              </div>
-
-              <div className="madoo-paper-border relative overflow-hidden rounded-lg bg-[#101114] p-5 text-white lg:col-span-5">
                 <div
-                  className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(90deg,rgba(91,99,255,0.45),rgba(79,209,197,0.28),rgba(255,255,255,0))]"
-                  aria-hidden="true"
-                />
-
-                <div className="relative">
-                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-                    <div>
-                      <h3 className="text-lg font-semibold leading-tight">
-                        {copy.value.compatibilityTitle}
-                      </h3>
-                      <p className="mt-2 max-w-sm text-sm leading-6 text-white/65">
-                        {copy.value.compatibilityDescription}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-white/10 px-3 py-2 text-left shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)] sm:text-right">
-                      <p className="text-[11px] uppercase tracking-[0.14em] text-white/50">
-                        QA
-                      </p>
-                      <p className="mt-1 text-sm font-semibold">
-                        {copy.value.readyLabel}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-2 xl:grid-cols-5">
-                    {copy.value.clients.map((client) => (
-                      <div
-                        key={client}
-                        className="rounded-lg bg-white/6 px-3 py-3 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)]"
-                      >
-                        <div className="mb-3 h-1.5 w-8 rounded-full bg-[#7dd3fc]" />
-                        <p className="text-xs font-medium text-white">
-                          {client}
-                        </p>
-                        <p className="mt-1 text-[11px] text-white/45">
-                          {copy.value.previewLabel}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 rounded-lg bg-white/6 p-4 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)]">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {copy.value.flow.map((step, index) => (
-                        <div key={step} className="flex items-center gap-2">
-                          <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#101114]">
-                            {step}
-                          </span>
-                          {index < copy.value.flow.length - 1 ? (
-                            <span
-                              className="hidden h-px w-5 bg-white/25 sm:block"
+                  className={cx(
+                    "mt-8 grid",
+                    activeTab.blocks.length >= 3 ? "gap-10" : "gap-12",
+                  )}
+                >
+                  {activeTab.blocks.map((block, blockIndex) => {
+                    const icon =
+                      featureTabIcons[activeFeatureTab]?.[blockIndex];
+                    return (
+                      <div className="madoo-feature-block" key={block.heading}>
+                        <div className="flex items-center gap-2.5">
+                          {icon ? (
+                            <HugeiconsIcon
+                              icon={icon}
+                              size={22}
+                              strokeWidth={2}
+                              className="madoo-feature-icon shrink-0 text-[#171717]"
                               aria-hidden="true"
                             />
                           ) : null}
+                          <h3 className="text-xl font-bold uppercase tracking-tight text-[#171717]">
+                            {block.heading}
+                          </h3>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_1.1fr]">
-                    <div className="rounded-lg bg-white/6 p-4 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)]">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-                        {copy.value.brandTitle}
-                      </p>
-                      <div className="mt-4 flex gap-2">
-                        {["#071b38", "#5b63ff", "#4fd1c5", "#ffffff"].map(
-                          (color) => (
-                            <span
-                              key={color}
-                              className="h-8 w-8 rounded-full shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.20)]"
-                              style={{ backgroundColor: color }}
-                            />
-                          ),
-                        )}
+                        <p className="mt-2 max-w-xl text-lg leading-8 text-[#6f6961]">
+                          {block.body}
+                        </p>
                       </div>
-                      <div className="mt-4 space-y-2">
-                        {copy.value.controls.slice(0, 3).map((control) => (
-                          <div
-                            key={control}
-                            className="h-2 rounded-full bg-white/15"
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg bg-white/6 p-4 shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.10)]">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-                        {copy.value.integrationsTitle}
-                      </p>
-                      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                        {exportProviders.slice(0, 6).map((provider, index) => (
-                          <div
-                            key={provider.name}
-                            className="flex items-center gap-2 rounded-lg bg-white px-2 py-2"
-                          >
-                            <span
-                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                              style={{
-                                backgroundColor:
-                                  providerLogoSwatches[
-                                  index % providerLogoSwatches.length
-                                  ],
-                              }}
-                            >
-                              <img
-                                src={provider.iconSrc}
-                                alt={`${provider.name} logo`}
-                                className="h-4 w-4 object-contain"
-                                loading="lazy"
-                              />
-                            </span>
-                            <span className="truncate text-[11px] font-semibold text-[#101114]">
-                              {provider.name}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    signedIn
+                      ? window.location.assign(clientHomeUrl())
+                      : openAuthDialog()
+                  }
+                  className="mt-8 inline-flex h-12 w-fit cursor-pointer items-center justify-center rounded-full bg-madoo-ink px-7 text-sm font-semibold text-white transition hover:bg-madoo-ink-hover"
+                >
+                  {copy.productFeatures.cta}
+                </button>
+              </div>
+
+              <div
+                key={`feature-media-${activeFeatureTab}`}
+                className={cx(
+                  "madoo-tab-panel relative mx-auto w-full",
+                  activeFeatureImage.collage
+                    ? "h-104 max-w-md sm:h-136 lg:max-w-none"
+                    : "max-w-xl",
+                )}
+              >
+                {activeFeatureImage.collage ? (
+                  <>
+                    {featureCollageImages[0] ? (
+                      <div className="madoo-paper-border absolute left-0 top-[8%] z-10 w-[36%] overflow-hidden rounded-sm bg-white">
+                        <img
+                          src={featureCollageImages[0]}
+                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
+                          loading="lazy"
+                          className="aspect-3/4 w-full object-cover object-top"
+                        />
+                      </div>
+                    ) : null}
+                    {featureCollageImages[1] ? (
+                      <div className="madoo-paper-border absolute right-0 top-[6%] z-10 w-[36%] overflow-hidden rounded-sm bg-white">
+                        <img
+                          src={featureCollageImages[1]}
+                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
+                          loading="lazy"
+                          className="aspect-3/4 w-full object-cover object-top"
+                        />
+                      </div>
+                    ) : null}
+                    {featureCollageImages[2] ? (
+                      <div className="madoo-paper-border absolute left-1/2 top-48 z-20 w-[38%] -translate-x-1/2 overflow-hidden rounded-sm bg-white">
+                        <img
+                          src={featureCollageImages[2]}
+                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
+                          loading="lazy"
+                          className="aspect-3/4 w-full object-cover object-top"
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="relative aspect-square w-full overflow-hidden rounded-[2rem] bg-white">
+                    <img
+                      src={activeFeatureImage.src}
+                      alt={activeFeatureImage.alt}
+                      loading="lazy"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1483,33 +1673,27 @@ export default function HomePage({
                   {copy.templates.description}
                 </h4>
               </div>
+              <Link
+                href="/templates"
+                className="madoo-paper-border madoo-paper-border-hover inline-flex h-10 w-fit shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-white px-4 font-ibm-plex-sans text-sm font-medium text-madoo-ink transition"
+              >
+                {copy.templates.browseAll}
+                <HugeiconsIcon
+                  icon={ArrowRight01Icon}
+                  size={15}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+              </Link>
             </div>
 
-            {templateMasonryColumnCount === 0 ? (
-              <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                {localizedTemplateCards.map(renderTemplateCard)}
+            {hasCommunityTemplates ? (
+              <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+                {categoryShowcase.map(renderShowcaseCard)}
               </div>
             ) : (
-              <div
-                className="mt-10 grid justify-start gap-4"
-                style={{
-                  // Masonry decides the real width; this max is only a guard so a
-                  // small gallery (e.g. 2 templates) never stretches a card across
-                  // half the screen. With more cards the columns shrink below the
-                  // cap to fit (min 0), so the cap is a no-op then.
-                  gridTemplateColumns: `repeat(${templateMasonryColumns.length}, minmax(0, 280px))`,
-                }}
-              >
-                {templateMasonryColumns.map((column, columnIndex) => (
-                  <div
-                    key={columnIndex}
-                    className="flex min-w-0 flex-col gap-4"
-                  >
-                    {column.entries.map(({ index, template }) =>
-                      renderTemplateCard(template, index),
-                    )}
-                  </div>
-                ))}
+              <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {localizedFallbackTemplateCards.map(renderTemplateCard)}
               </div>
             )}
           </div>
@@ -1549,7 +1733,7 @@ export default function HomePage({
                   className="madoo-prompt-textarea mr-3 max-h-56 min-h-20 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
                 />
 
-                <div className="flex flex-col gap-3 px-3.5 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center justify-between gap-3 px-3.5 pb-3">
                   <AttachMenu
                     label={copy.hero.addAttachment}
                     onUploadFile={openFilePicker}
