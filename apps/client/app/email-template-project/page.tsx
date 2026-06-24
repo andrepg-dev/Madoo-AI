@@ -20,6 +20,7 @@ import { AiMessage } from "@/components/project/editor/AiMessage";
 import { ConversationTitleDropdown } from "@/components/project/editor/ConversationTitleDropdown";
 import { DislikeFeedbackModal } from "@/components/project/editor/DislikeFeedbackModal";
 import { EmailPreviewSidebar } from "@/components/project/editor/EmailPreviewSidebar";
+import { EmailSkeleton } from "@/components/project/editor/EmailSkeleton";
 import { ErrorMessage } from "@/components/project/editor/ErrorMessage";
 import { ExportProviderModal } from "@/components/project/editor/ExportProviderModal";
 import { HumanMessage } from "@/components/project/editor/HumanMessage";
@@ -213,6 +214,7 @@ function EmailTemplateProjectInner() {
 
   const previewSrcDoc = streamedHtml ?? activeVariant?.compiledHtml ?? null;
   const hasPreview = Boolean(previewSrcDoc);
+  const isGenerating = isStreaming || email?.status === "GENERATING";
   const highlightedPreviewSrcDoc = useMemo(
     () => highlightMergeTags(previewSrcDoc),
     [previewSrcDoc],
@@ -1086,6 +1088,10 @@ function EmailTemplateProjectInner() {
               variant={activeVariant}
               width={previewWidth}
             />
+          </div>
+        ) : !hasPreview && isGenerating ? (
+          <div className="hidden min-h-0 w-full lg:flex lg:w-110 lg:shrink-0">
+            <EmailSkeleton />
           </div>
         ) : null}
       </div>
