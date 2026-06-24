@@ -134,6 +134,13 @@ type ClientPromptBoxProps = {
   disabled?: boolean;
   onSubmit?: (input: PromptSubmitInput) => void | Promise<void>;
   variant?: "home" | "chat";
+  /**
+   * Externally-driven credit-limit warning (e.g. a daily-cap error from a failed
+   * generation). When set, the floating yellow alert above the box shows this
+   * message with the Upgrade link instead of surfacing as a red chat error.
+   */
+  creditLimitMessage?: string | null;
+  onDismissCreditLimit?: () => void;
 };
 
 export type PromptSubmitInput = {
@@ -195,6 +202,8 @@ export function ClientPromptBox({
   disabled = false,
   onSubmit,
   variant = "home",
+  creditLimitMessage = null,
+  onDismissCreditLimit,
 }: ClientPromptBoxProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -248,7 +257,14 @@ export function ClientPromptBox({
   const outOfCredits = Boolean(
     aiUsage && aiUsage.limit !== -1 && aiUsage.used >= aiUsage.limit,
   );
-  const showCreditsAlert = outOfCredits && !creditsAlertDismissed;
+  // External credit-limit message (e.g. daily cap from a failed generation) wins
+  // over the internal monthly check and shows its own text.
+  const creditAlertMessage = creditLimitMessage
+    ? creditLimitMessage
+    : outOfCredits && !creditsAlertDismissed
+      ? "Out of credits."
+      : null;
+  const showCreditsAlert = Boolean(creditAlertMessage);
 
   // Re-surface the alert whenever the workspace regains credits then runs out again.
   useEffect(() => {
@@ -640,7 +656,7 @@ export function ClientPromptBox({
             aria-hidden="true"
           />
           <p className="min-w-0 flex-1">
-            <span className="font-medium">Out of credits.</span>
+            <span className="font-medium">{creditAlertMessage}</span>
             {upgradeCtaLabel ? (
               <>
                 {" "}
@@ -661,7 +677,10 @@ export function ClientPromptBox({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setCreditsAlertDismissed(true)}
+            onClick={() => {
+              if (creditLimitMessage) onDismissCreditLimit?.();
+              else setCreditsAlertDismissed(true);
+            }}
             aria-label="Dismiss out of credits alert"
             className="-mr-1 h-6 w-6 shrink-0 p-0!"
           >
