@@ -6,8 +6,8 @@ import {
   fetchEmailChat,
   setEmailChatMessageFeedback,
   truncateEmailChat,
-  uploadEmailImage,
 } from "@/actions/emails";
+import { uploadEmailImage } from "@/lib/upload-email-image";
 import { consumePendingPrompt } from "@/actions/prompts";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
 import { ClientPromptBox } from "@/components/home/ClientPromptBox";
@@ -65,6 +65,12 @@ import {
 import "streamdown/styles.css";
 import posthog from "posthog-js";
 
+// A credit/quota error (daily or monthly cap) should surface as the floating
+// upgrade alert above the prompt box, not as a red error bubble in the chat.
+function isCreditLimitError(message: string): boolean {
+  return /credit limit reached|credits per (day|month)/i.test(message);
+}
+
 function EmailTemplateProjectInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +90,10 @@ function EmailTemplateProjectInner() {
     string | null
   >(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  // Credit/quota cap message shown as the floating upgrade alert above the box.
+  const [creditLimitMessage, setCreditLimitMessage] = useState<string | null>(
+    null,
+  );
   // Which response version is shown per regenerated group (groupId → index).
   const [selectedVersions, setSelectedVersions] = useState<
     Record<string, number>
@@ -388,6 +398,13 @@ function EmailTemplateProjectInner() {
         }
 
         if (event.type === "error") {
+          // Credit-cap errors become the floating upgrade alert; drop the live
+          // timeline instead of leaving a red bubble in the conversation.
+          if (isCreditLimitError(event.message)) {
+            setCreditLimitMessage(event.message);
+            setMessages((current) => finishTimeline(current, timelineId));
+            return;
+          }
           setMessages((current) =>
             upsertMessage(finishTimeline(current, timelineId), {
               id: `${mode}-${Date.now()}-error`,
@@ -425,16 +442,22 @@ function EmailTemplateProjectInner() {
         // input's enabled state) on a refetch that could stall.
         void invalidateEmailState(emailId);
       } catch (error) {
-        setMessages((current) =>
-          upsertMessage(finishTimeline(current, timelineId), {
-            id: `${mode}-${Date.now()}-error`,
-            role: "error",
-            content:
-              error instanceof Error ? error.message : "Email stream failed.",
-            seq: Date.now(),
-            emailId,
-          }),
-        );
+        const message =
+          error instanceof Error ? error.message : "Email stream failed.";
+        if (isCreditLimitError(message)) {
+          setCreditLimitMessage(message);
+          setMessages((current) => finishTimeline(current, timelineId));
+        } else {
+          setMessages((current) =>
+            upsertMessage(finishTimeline(current, timelineId), {
+              id: `${mode}-${Date.now()}-error`,
+              role: "error",
+              content: message,
+              seq: Date.now(),
+              emailId,
+            }),
+          );
+        }
       } finally {
         setIsStreaming(false);
       }
@@ -445,6 +468,8 @@ function EmailTemplateProjectInner() {
   const submitChatPrompt = useCallback(
     async (input: PromptSubmitInput) => {
       if (isStreaming) return;
+      // A fresh attempt clears any prior credit-cap alert.
+      setCreditLimitMessage(null);
       const files = input.images ?? [];
       // Local previews for attached images (display only — not yet persisted).
       const previewUrls = files.map((file) => URL.createObjectURL(file));
@@ -1019,6 +1044,8 @@ function EmailTemplateProjectInner() {
               disabled={isStreaming}
               onSubmit={submitChatPrompt}
               variant="chat"
+              creditLimitMessage={creditLimitMessage}
+              onDismissCreditLimit={() => setCreditLimitMessage(null)}
             />
           </div>
         </section>

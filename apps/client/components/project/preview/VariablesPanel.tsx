@@ -1,9 +1,7 @@
 "use client";
 
-import {
-  updateEmailVariantVariableSchema,
-  uploadEmailImage,
-} from "@/actions/emails";
+import { updateEmailVariantVariableSchema } from "@/actions/emails";
+import { uploadEmailImage } from "@/lib/upload-email-image";
 import { cn } from "@/lib/utils";
 import {
   Cancel01Icon,

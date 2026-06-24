@@ -5,7 +5,6 @@ import {
   CreateEmailFromTemplateSchema,
   CreateEmailSchema,
   EmailChatMessageDtoSchema,
-  EmailImageUploadResponseSchema,
   EmailDtoSchema,
   EmailShareDtoSchema,
   PublicEmailDtoSchema,
@@ -69,16 +68,9 @@ export async function fetchEmailChat(
   return EmailChatMessageListSchema.parse(raw);
 }
 
-export async function uploadEmailImage(
-  emailId: string,
-  formData: FormData,
-): Promise<string> {
-  const raw = await FetchWrapper<unknown>(`/emails/${emailId}/images`, {
-    method: "POST",
-    body: formData,
-  });
-  return EmailImageUploadResponseSchema.parse(raw).url;
-}
+// NOTE: image upload moved to the `/api/emails/[id]/images` route handler +
+// `@/lib/upload-email-image` client helper. Server Actions silently failed to
+// reach the backend in production, so the multipart upload never landed.
 
 export async function truncateEmailChat(
   emailId: string,
