@@ -303,17 +303,18 @@ export function BillingPanel() {
   const cancelBusy = cancelMutation.isPending || resumeMutation.isPending;
   const dailyReset = formatResetDate(usage.dailyAiGenerations.resetsAt);
   const monthlyReset = formatResetDate(usage.aiGenerations.resetsAt, "days");
+  const showStatusBadge = subscription.status !== "ACTIVE";
 
-  const planLine =
+  const planDetail =
     subscription.status === "TRIALING" && trialEnds
-      ? `Free trial ends ${trialEnds}`
+      ? `Trial ends ${trialEnds}`
       : subscription.cancelAtPeriodEnd && periodEnd
-        ? `Cancels on ${periodEnd}`
+        ? `Cancels ${periodEnd}`
         : periodEnd
-          ? `Renews on ${periodEnd}`
+          ? `Renews ${periodEnd}`
           : subscription.plan === "FREE"
-            ? "You're on the free plan — no billing."
-            : `You're on the ${planName} plan.`;
+            ? "Free plan"
+            : null;
 
   const onCancel = () => {
     if (
@@ -329,7 +330,6 @@ export function BillingPanel() {
     <div className="grid gap-4">
       <PanelCard
         title="Your plan"
-        description={planLine}
         action={
           showPlanAction ? (
             <div className="flex flex-wrap gap-2">
@@ -352,13 +352,27 @@ export function BillingPanel() {
           ) : undefined
         }
       >
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-2xl font-semibold leading-none text-madoo-ink">
-            {planName}
-          </span>
-          <Badge tone={STATUS_TONE[subscription.status]}>
-            {STATUS_LABEL[subscription.status]}
-          </Badge>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-(length:--font-size-sm) leading-none text-madoo-ink-muted">
+              Current plan
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <span className="text-2xl font-semibold leading-none text-madoo-ink">
+                {planName}
+              </span>
+              {showStatusBadge ? (
+                <Badge tone={STATUS_TONE[subscription.status]}>
+                  {STATUS_LABEL[subscription.status]}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+          {planDetail ? (
+            <p className="text-(length:--font-size-sm) font-medium leading-none text-madoo-ink-muted">
+              {planDetail}
+            </p>
+          ) : null}
         </div>
 
         {isPaid ? (
