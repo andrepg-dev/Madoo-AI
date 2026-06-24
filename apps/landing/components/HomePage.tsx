@@ -34,7 +34,6 @@ import {
   Dropdown,
   DropdownContent,
   DropdownItem,
-  Select,
   cx,
 } from "@madoo/design-system";
 import type { VariableSchemaRoot } from "@madoo/shared";
@@ -335,18 +334,6 @@ export const localeCopy = {
       addAttachment: "Add attachment",
       microphone: "Use microphone",
     },
-    promptOptions: [
-      {
-        label: "Tone",
-        options: ["Friendly", "Professional", "Bold", "Luxury"],
-        menuWidth: 160,
-      },
-      {
-        label: "Length",
-        options: ["Short", "Medium", "Long"],
-        menuWidth: 144,
-      },
-    ],
     workflow: {
       title: "Prompt. Design. Export.",
       description:
@@ -601,18 +588,6 @@ export const localeCopy = {
       addAttachment: "Añadir adjunto",
       microphone: "Usar micrófono",
     },
-    promptOptions: [
-      {
-        label: "Tono",
-        options: ["Cercano", "Profesional", "Directo", "Premium"],
-        menuWidth: 168,
-      },
-      {
-        label: "Longitud",
-        options: ["Corta", "Media", "Larga"],
-        menuWidth: 152,
-      },
-    ],
     workflow: {
       title: "Prompt. Diseño. Exportación.",
       description:
@@ -1040,9 +1015,6 @@ export default function HomePage({
     "/product/design-anthropic.png",
   ];
   const [prompt, setPrompt] = useState("");
-  const [promptOptionValues, setPromptOptionValues] = useState<
-    Record<string, string>
-  >({});
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
@@ -1058,12 +1030,6 @@ export default function HomePage({
   const attachmentsRef = useRef<PromptAttachment[]>([]);
   attachmentsRef.current = attachments;
   const hasPrompt = prompt.trim().length > 0;
-  const toneLabel = copy.promptOptions[0]?.label;
-  const lengthLabel = copy.promptOptions[1]?.label;
-  const selectedTone = toneLabel ? promptOptionValues[toneLabel] : undefined;
-  const selectedLength = lengthLabel
-    ? promptOptionValues[lengthLabel]
-    : undefined;
   const heroPlaceholderBody = useTypingPlaceholder(copy.hero.placeholders);
   const ctaPlaceholderBody = useTypingPlaceholder(copy.cta.placeholders);
   const heroPlaceholder = `${copy.hero.placeholderPrefix}${heroPlaceholderBody}`;
@@ -1097,9 +1063,7 @@ export default function HomePage({
 
     const trimmed = prompt.trim();
     window.location.assign(
-      trimmed
-        ? clientPromptUrl(trimmed, selectedTone, selectedLength)
-        : clientHomeUrl(),
+      trimmed ? clientPromptUrl(trimmed) : clientHomeUrl(),
     );
   };
 
@@ -1280,22 +1244,11 @@ export default function HomePage({
 
     const nextSearch = getNextSearchParams(incomingNext);
     const incomingPrompt = nextSearch?.get("prompt");
-    const incomingTone = nextSearch?.get("tone");
-    const incomingLength = nextSearch?.get("length");
 
     if (incomingPrompt) setPrompt(incomingPrompt);
-    if (incomingTone || incomingLength) {
-      setPromptOptionValues((current) => ({
-        ...current,
-        ...(toneLabel && incomingTone ? { [toneLabel]: incomingTone } : {}),
-        ...(lengthLabel && incomingLength
-          ? { [lengthLabel]: incomingLength }
-          : {}),
-      }));
-    }
 
     setAuthDialogOpen(true);
-  }, [lengthLabel, toneLabel]);
+  }, []);
 
   return (
     <>
@@ -1304,8 +1257,6 @@ export default function HomePage({
         onClose={closeAuthDialog}
         locale={locale}
         prompt={prompt}
-        tone={selectedTone}
-        length={selectedLength}
         nextUrl={nextUrl}
       />
 
@@ -1421,27 +1372,6 @@ export default function HomePage({
                       onUploadFile={openFilePicker}
                       onUploadImage={openImagePicker}
                     />
-
-                    <div className="hidden min-w-0 flex-wrap items-center gap-1.5 sm:flex">
-                      {copy.promptOptions.map((option) => (
-                        <Select
-                          key={option.label}
-                          value={promptOptionValues[option.label] ?? ""}
-                          options={option.options}
-                          placeholder={option.label}
-                          menuTitle={option.label}
-                          menuWidth={option.menuWidth}
-                          size="sm"
-                          variant="ghost"
-                          onChange={(value) =>
-                            setPromptOptionValues((current) => ({
-                              ...current,
-                              [option.label]: value,
-                            }))
-                          }
-                        />
-                      ))}
-                    </div>
                   </div>
 
                   <div className="flex shrink-0 items-center justify-end gap-2">
