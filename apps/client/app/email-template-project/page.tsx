@@ -495,11 +495,7 @@ function EmailTemplateProjectInner() {
         if (files.length === 0) return [];
         try {
           return await Promise.all(
-            files.map((file) => {
-              const form = new FormData();
-              form.append("file", file);
-              return uploadEmailImage(emailId, form);
-            }),
+            files.map((file) => uploadEmailImage(emailId, file)),
           );
         } catch {
           return [];
@@ -777,11 +773,7 @@ function EmailTemplateProjectInner() {
         if (pendingImages.length > 0) {
           try {
             uploaded = await Promise.all(
-              pendingImages.map((file) => {
-                const form = new FormData();
-                form.append("file", file);
-                return uploadEmailImage(created.id, form);
-              }),
+              pendingImages.map((file) => uploadEmailImage(created.id, file)),
             );
           } catch {
             uploaded = [];

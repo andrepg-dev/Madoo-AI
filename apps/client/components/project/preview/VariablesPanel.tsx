@@ -262,9 +262,7 @@ function ImageUploader({
     }
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      onUploaded(await uploadEmailImage(emailId, form));
+      onUploaded(await uploadEmailImage(emailId, file));
     } catch (error) {
       toast({
         tone: "danger",
