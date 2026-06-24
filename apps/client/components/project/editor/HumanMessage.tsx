@@ -17,8 +17,19 @@ export function HumanMessage({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(children);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const text = children.trim();
+
+  // Close the image lightbox on Escape.
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLightbox(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
 
   const autoGrow = (element: HTMLTextAreaElement) => {
     element.style.height = "auto";
@@ -88,13 +99,37 @@ export function HumanMessage({
       {images && images.length > 0 ? (
         <div className="mb-1.5 flex max-w-xl flex-wrap justify-end gap-2">
           {images.map((url) => (
-            <img
+            <button
               key={url}
-              src={url}
-              alt="Attached"
-              className="h-20 w-20 rounded-lg object-cover shadow-madoo-border"
-            />
+              type="button"
+              onClick={() => setLightbox(url)}
+              aria-label="Open image"
+              className="cursor-zoom-in overflow-hidden rounded-lg shadow-madoo-border transition hover:opacity-90"
+            >
+              <img
+                src={url}
+                alt="Attached"
+                className="h-20 w-20 object-cover"
+              />
+            </button>
           ))}
+        </div>
+      ) : null}
+
+      {lightbox ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image preview"
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 p-6 backdrop-blur-sm"
+        >
+          <img
+            src={lightbox}
+            alt="Attached"
+            onClick={(event) => event.stopPropagation()}
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+          />
         </div>
       ) : null}
 
