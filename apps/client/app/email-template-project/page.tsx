@@ -664,6 +664,21 @@ function EmailTemplateProjectInner() {
         );
         if (keepsUserMessage) return previous;
       }
+      // Same idea for the just-streamed assistant reply: the post-stream chat
+      // refetch lands a beat later, so rebuilding now would briefly drop the
+      // answer (it isn't a preserved client-only row) and snap it back in —
+      // a visible flicker + layout shift. Hold the current messages until the
+      // server has caught up with the assistant turn we already show. Scoped to
+      // the active email so switching projects still resets.
+      const serverAssistants = merged.filter(
+        (message) => message.role === "assistant",
+      ).length;
+      const shownAssistants = previous.filter(
+        (message) =>
+          message.role === "assistant" &&
+          (!message.emailId || message.emailId === currentEmailId),
+      ).length;
+      if (serverAssistants < shownAssistants) return previous;
       return merged;
     });
   }, [chatQuery.data, currentEmailId, email, isStreaming, selectedVersions]);
