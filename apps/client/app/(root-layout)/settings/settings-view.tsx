@@ -26,6 +26,7 @@ import {
 } from "@/lib/storage";
 import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
+import { useFeedbackStore } from "@/stores/feedback-store";
 import {
   Avatar,
   Badge,
@@ -1021,6 +1022,7 @@ function SupportPanel({
   activeWorkspace: MyWorkspace | null;
 }) {
   const { toast } = useToast();
+  const openFeedback = useFeedbackStore((s) => s.setOpen);
   const { data: user } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
@@ -1060,6 +1062,24 @@ function SupportPanel({
   return (
     <SettingsCard description="Tell us what's going on — pick a category and we'll route it to the right place.">
       <div className="grid gap-4">
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-madoo-bg-2 p-3.5 shadow-madoo-border">
+          <div className="min-w-0">
+            <p className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
+              Quick feedback
+            </p>
+            <p className="mt-1.5 text-(length:--font-size-sm) leading-snug text-madoo-ink-muted">
+              Just want to rate us or drop a quick note? Send feedback instead.
+            </p>
+          </div>
+          <Button
+            size="md"
+            variant="secondary"
+            className="shrink-0"
+            onClick={() => openFeedback(true)}
+          >
+            Send feedback
+          </Button>
+        </div>
         {ticketId ? (
           <div className="flex items-start gap-2.5 rounded-lg bg-madoo-bg-2 p-3.5 shadow-madoo-border">
             <span className="mt-0.5 text-madoo-accent-deep" aria-hidden="true">

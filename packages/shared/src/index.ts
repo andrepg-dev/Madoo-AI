@@ -11,6 +11,7 @@ export * from "./referrals";
 export * from "./pricing";
 export * from "./assistant";
 export * from "./support";
+export * from "./feedback";
 export * from "./invites";
 export * from "./exports";
 export * from "./connections";
