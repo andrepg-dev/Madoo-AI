@@ -127,15 +127,15 @@ const STATIC_INSTRUCTION = [
   "For a brand logo or hero image, render an <Img> bound to an image variable (role=image, scope=static) with a sensible placeholder image URL default, so the user can upload their own image in Madoo. Don't fake a logo with text/emoji when a real image fits.",
   "IMAGE ATTACHMENTS: The user may attach images, which you can SEE directly (vision). Each attached image also has a public hosted URL listed in the message text. When the email needs a visual that matches an attached image (logo, hero, product shot, banner, screenshot), use that exact URL as the <Img src> default — do NOT invent a placeholder URL and do NOT describe the image as text. Look at the attached image to choose alt text, layout, colors, and where it fits. If an attached image is clearly a logo, place it in the header; a product/hero shot belongs in the hero section.",
   "Even for 'simple' briefs keep the full skeleton (header, hero, CTA, footer with unsubscribe). Simple means less copy and fewer sections — not missing structure.",
-  "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl} with scope=static (the same destination for everyone). The footer unsubscribe link uses href={unsubscribeUrl} with scope=dynamic (role=url) so the sending platform can inject the real opt-out URL. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
+  "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl} with scope=static (the same destination for everyone). The footer unsubscribe link uses href={unsubscribeUrl} with scope=static (role=url) by default. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
   "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",
   "Each variable name must be camelCase and valid as a JS identifier.",
   "Every variable must include a string default value.",
   "role is optional and must only be one of: text, url, image, date. Never use role for variable identity such as recipient_name or company_name; put identity in name.",
   "Every variable must set scope: dynamic or static.",
-  "Use scope=dynamic for personalized data that may be replaced outside Madoo (recipientName, companyName, unsubscribeUrl, planName, invoiceNumber, dates from CRM).",
+  "Use scope=dynamic for personalized data that may be replaced outside Madoo (recipientName, companyName, planName, invoiceNumber, dates from CRM).",
   "Use scope=static for template constants that stay fixed across uses (heroTitle, offerText, footerLine, buttonLabel, feature bullets).",
-  "Links/URLs are generally NOT dynamic: a URL variable (role=url) defaults to scope=static because the same link is shown to every recipient (ctaUrl, store/product/landing links, social links). Use scope=dynamic for a URL ONLY when each recipient gets a different value injected by the sending platform — primarily unsubscribeUrl (and per-recipient tracked links if the user explicitly asks for them).",
+  "Links/URLs are NOT dynamic by default: every URL variable (role=url) — including unsubscribeUrl — defaults to scope=static because the same link is shown to every recipient (ctaUrl, unsubscribeUrl, store/product/landing links, social links). Use scope=dynamic for a URL ONLY when the user explicitly asks for it (e.g. per-recipient opt-out or tracked links injected by the sending platform).",
   "Variable discipline: use only a small set of meaningful merge fields, usually 3-6 and never more than 8 unless the user explicitly asks for many personalized fields.",
   "Create variables only for important personalized or template-specific parts: recipientName, companyName, productName, offer, discountCode, eventDate, ctaUrl, unsubscribeUrl, senderName.",
   "Do not create variables for CTA/button labels, closing text, feature bullets, generic body sentences, every headline fragment, colors, spacing, layout styles, decorative labels, or text that should stay fixed for all recipients.",
@@ -299,6 +299,11 @@ function isRetryableLlmError(error: unknown): boolean {
 function formatLlmError(error: unknown): string {
   if (error instanceof Anthropic.APIError) {
     const status = error.status;
+    // Surface the real Anthropic reason server-side; the user only sees the
+    // short message below, but we need the raw body to diagnose 4xx rejections.
+    console.error(
+      `[GenerationService] Anthropic APIError status=${status}: ${error.message}`,
+    );
     if (status === 429) {
       return "The AI service is rate-limited right now. Please wait a moment and try again.";
     }
@@ -352,6 +357,17 @@ export class GenerationService {
       return undefined;
     }
     return { type: "adaptive", display: "summarized" };
+  }
+
+  /**
+   * Effort caps how much the model thinks/explores. Sonnet 4.6 defaults to
+   * `high` when unset — too much for email edits and the main cost driver.
+   * Default `medium`; override with `ANTHROPIC_EFFORT` (low|medium|high|max).
+   */
+  private effortLevel(): "low" | "medium" | "high" | "max" {
+    const raw = (this.config.get<string>("ANTHROPIC_EFFORT") ?? "medium").toLowerCase();
+    if (raw === "low" || raw === "high" || raw === "max") return raw;
+    return "medium";
   }
 
   private async loadRecentChatContext(
@@ -1308,8 +1324,14 @@ export class GenerationService {
       model: this.model,
       max_tokens: maxTokens,
       ...(thinking ? { thinking } : {}),
+      output_config: { effort: this.effortLevel() },
       system: args.systemBlocks,
       tools: [INSPECT_WEBSITE_BRAND_TOOL, EMIT_EMAIL_TOOL],
+      // The tool loop pairs a tool_result for exactly one tool_use per turn.
+      // Parallel tool use (e.g. inspect_website_brand + emit_email together)
+      // leaves the second tool_use unpaired on replay → Anthropic 400. Force
+      // at most one tool call per assistant turn.
+      tool_choice: { type: "auto", disable_parallel_tool_use: true },
       messages: args.modelMessages,
     });
 
