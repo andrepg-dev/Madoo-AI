@@ -31,7 +31,7 @@ export default function TemplateCard({
     <article
       className={cx(
         // Borderless: white padded card, no outline — just a compact preview box.
-        "group w-full min-w-0 rounded-lg bg-white p-3 text-left",
+        "group w-full min-w-0 rounded-lg bg-white text-left",
         disabled && "pointer-events-none opacity-70",
       )}
     >
