@@ -500,7 +500,7 @@ export const localeCopy = {
     templates: {
       title: "Explore templates",
       description:
-        "Start from community-tested templates, then adjust copy, layout, tone, and audience with AI.",
+        "Start from community-tested templates, then refine copy and layout with AI.",
       browseAll: "Browse all templates",
       galleryTitle: "Email Templates",
       galleryDescription:

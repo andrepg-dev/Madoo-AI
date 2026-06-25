@@ -1,5 +1,5 @@
 import { Icon, cx } from "@madoo/design-system";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 type TemplateCardProps = {
   badge?: string;
@@ -14,25 +14,9 @@ type TemplateCardProps = {
   title: string;
 };
 
-// Default tile heights (height / width) used before the preview image loads,
-// kept varied so the masonry stays lively while previews stream in. These
-// mirror `templateMasonryWeights` in the gallery so column balancing matches.
-const defaultHeightRatios = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
-// Once the real screenshot loads we size the tile to its true aspect ratio so a
-// long email reads as a long card instead of being squeezed into a short box.
-// Clamp the extremes so a near-landscape email stays usable and an unusually
-// long one doesn't dominate its column (its top is shown via object-cover).
-const MIN_HEIGHT_RATIO = 0.6;
-const MAX_HEIGHT_RATIO = 2.3;
-
-function clampHeightRatio(ratio: number): number {
-  return Math.min(MAX_HEIGHT_RATIO, Math.max(MIN_HEIGHT_RATIO, ratio));
-}
-
 export default function TemplateCard({
   badge,
   disabled,
-  masonryIndex,
   menu,
   onClick,
   onToggleStar,
@@ -42,19 +26,13 @@ export default function TemplateCard({
   title,
 }: TemplateCardProps) {
   const hasActions = Boolean(onToggleStar || menu);
-  const defaultHeightRatio =
-    typeof masonryIndex === "number"
-      ? defaultHeightRatios[masonryIndex % defaultHeightRatios.length]
-      : 1.25;
-  const [heightRatio, setHeightRatio] = useState<number>(defaultHeightRatio);
 
   return (
     <article
       className={cx(
-        // max-w caps the card so the masonry still decides its real width but a
-        // sparse grid never stretches a card across the column. Matches the
-        // landing gallery cards.
-        "group w-full min-w-0 max-w-85 text-left",
+        // Match the /dashboard/projects card: white padded card with a soft
+        // border (background) and a compact preview box (size).
+        "group w-full min-w-0 rounded-lg bg-white p-3 text-left shadow-madoo-border",
         disabled && "pointer-events-none opacity-70",
       )}
     >
@@ -69,22 +47,18 @@ export default function TemplateCard({
         type="button"
       >
         <div
-          className="relative flex items-center justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition-[box-shadow] duration-150 group-focus-within:shadow-[inset_0_0_0_1.5px_var(--accent)] group-hover:shadow-[inset_0_0_0_1px_rgb(12_52_106/0.22)]"
-          style={{ aspectRatio: 1 / heightRatio }}
+          className={cx(
+            "relative flex w-full items-center justify-center overflow-hidden rounded-lg shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)]",
+            // Image previews follow the email's real height; empty cards get a
+            // compact placeholder box (matches /dashboard/projects sizing).
+            previewUrl ? "bg-white" : "aspect-[16/11] bg-madoo-bg-2",
+          )}
         >
           {previewUrl ? (
             <img
               alt=""
-              className="h-full w-full object-cover object-top"
+              className="block h-auto max-h-[620px] w-full object-cover object-top"
               loading="lazy"
-              onLoad={(event) => {
-                const { naturalWidth, naturalHeight } = event.currentTarget;
-                if (naturalWidth > 0 && naturalHeight > 0) {
-                  setHeightRatio(
-                    clampHeightRatio(naturalHeight / naturalWidth),
-                  );
-                }
-              }}
               src={previewUrl}
             />
           ) : (

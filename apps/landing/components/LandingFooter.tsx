@@ -26,9 +26,8 @@ const footerContent: Array<{
           title: "Company",
           links: [
             { label: "About", href: "/" },
-            { label: "Security", href: "/" },
+            { label: "Security", href: "/security" },
             { label: "Trust center", href: "/" },
-            { label: "Contact", href: "/" },
           ],
         },
         {
@@ -49,7 +48,6 @@ const footerContent: Array<{
             { label: "Learn", href: "/" },
             { label: "Guides", href: "/" },
             { label: "Blog", href: "/" },
-            { label: "Support", href: "/" },
             { label: "Reviews", href: "/" },
             { label: "Sitemap", href: "/sitemap.xml" },
           ],
@@ -57,20 +55,19 @@ const footerContent: Array<{
         {
           title: "Legal",
           links: [
-            { label: "Privacy policy", href: "/" },
+            { label: "Privacy policy", href: "/privacy" },
             { label: "Cookie settings", href: "/" },
-            { label: "Terms", href: "/" },
-            { label: "Report abuse", href: "/" },
-            { label: "Report security concerns", href: "/" },
+            { label: "Terms", href: "/terms" },
+            { label: "Report security concerns", href: "/security" },
           ],
         },
         {
           title: "Community",
           links: [
-            { label: "Discord", href: "/" },
-            { label: "X / Twitter", href: "/" },
-            { label: "LinkedIn", href: "/" },
-            { label: "YouTube", href: "/" },
+            { label: "Discord", href: "https://discord.gg/5NQarNVRNA" },
+            { label: "X / Twitter", href: "https://x.com/madooai" },
+            { label: "LinkedIn", href: "https://linkedin.com/company/madooai" },
+            { label: "YouTube", href: "https://www.youtube.com/@madooai" },
           ],
         },
       ],
@@ -82,9 +79,8 @@ const footerContent: Array<{
           title: "Compañía",
           links: [
             { label: "Acerca de", href: "/es" },
-            { label: "Seguridad", href: "/es" },
+            { label: "Seguridad", href: "/es/security" },
             { label: "Centro de confianza", href: "/es" },
-            { label: "Contacto", href: "/es" },
           ],
         },
         {
@@ -105,7 +101,6 @@ const footerContent: Array<{
             { label: "Aprender", href: "/es" },
             { label: "Guías", href: "/es" },
             { label: "Blog", href: "/es" },
-            { label: "Soporte", href: "/es" },
             { label: "Reseñas", href: "/es" },
             { label: "Sitemap", href: "/sitemap.xml" },
           ],
@@ -113,20 +108,19 @@ const footerContent: Array<{
         {
           title: "Legal",
           links: [
-            { label: "Privacidad", href: "/es" },
+            { label: "Privacidad", href: "/es/privacy" },
             { label: "Cookies", href: "/es" },
-            { label: "Términos", href: "/es" },
-            { label: "Reportar abuso", href: "/es" },
-            { label: "Reportar seguridad", href: "/es" },
+            { label: "Términos", href: "/es/terms" },
+            { label: "Reportar seguridad", href: "/es/security" },
           ],
         },
         {
           title: "Comunidad",
           links: [
-            { label: "Discord", href: "/es" },
-            { label: "X / Twitter", href: "/es" },
-            { label: "LinkedIn", href: "/es" },
-            { label: "YouTube", href: "/es" },
+            { label: "Discord", href: "https://discord.gg/5NQarNVRNA" },
+            { label: "X / Twitter", href: "https://x.com/madooai" },
+            { label: "LinkedIn", href: "https://linkedin.com/company/madooai" },
+            { label: "YouTube", href: "https://www.youtube.com/@madooai" },
           ],
         },
       ],
@@ -178,13 +172,22 @@ export function LandingFooter() {
             <div key={column.title}>
               <h3 className="mb-5 text-sm font-medium text-[#6b6963]">{column.title}</h3>
               <ul className="space-y-3.5">
-                {column.links.map((link) => (
-                  <li key={link.label}>
-                    <Link className="text-sm text-[#24221f] transition hover:text-[#5b63ff]" href={link.href}>
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+                {column.links.map((link) => {
+                  const external = link.href.startsWith("http");
+                  return (
+                    <li key={link.label}>
+                      <Link
+                        className="text-sm text-[#24221f] transition hover:text-[#5b63ff]"
+                        href={link.href}
+                        {...(external
+                          ? { target: "_blank", rel: "noopener noreferrer" }
+                          : {})}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

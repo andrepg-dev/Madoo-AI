@@ -1,3 +1,4 @@
+import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 import { MobileTopBar } from "./MobileTopBar";
 import { Sidebar } from "./Sidebar";
 
@@ -13,6 +14,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <FeedbackWidget />
     </div>
   );
 }

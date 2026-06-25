@@ -34,6 +34,7 @@ model User {
   authAccounts             AuthAccount[]
   providerConnections      ProviderConnection[]
   supportTickets           SupportTicket[]
+  feedback                 Feedback[]
   sentWorkspaceInvites     WorkspaceInvite[]       @relation("WorkspaceInviteInviter")
   acceptedWorkspaceInvites WorkspaceInvite[]       @relation("WorkspaceInviteAcceptedBy")
   communityTemplates       CommunityTemplate[]
@@ -435,6 +436,25 @@ model SupportTicket {
   @@index([emailId, createdAt])
   @@index([userId, createdAt])
   @@index([status, createdAt])
+}
+
+/// Lightweight in-app feedback: a 1–5 star rating plus a free-text message.
+/// Distinct from SupportTicket (which is a categorized support request) — this
+/// is the quick "how are we doing" signal surfaced in the admin panel.
+model Feedback {
+  id          String   @id @default(cuid())
+  userId      String
+  userEmail   String
+  rating      Int
+  message     String   @db.Text
+  page        String?
+  workspaceId String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([rating, createdAt])
 }
 
 model WorkspaceInvite {
