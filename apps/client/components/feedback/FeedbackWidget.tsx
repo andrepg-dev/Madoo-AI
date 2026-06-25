@@ -4,9 +4,10 @@ import { createFeedback } from "@/actions/feedback";
 import { useFeedbackStore } from "@/stores/feedback-store";
 import { Button, Icon, Modal, Textarea, cx, useToast } from "@madoo/design-system";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const RATINGS = [1, 2, 3, 4, 5] as const;
+const SENT_KEY = "madoo.feedback.sent";
 
 export function FeedbackWidget() {
   const open = useFeedbackStore((s) => s.open);
@@ -17,6 +18,14 @@ export function FeedbackWidget() {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [message, setMessage] = useState("");
+  // Once the user has sent feedback, hide the floating bubble so it stops
+  // nagging. They can still reopen it from Settings → Support. Persisted so it
+  // stays hidden across reloads; read after mount to avoid hydration mismatch.
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    setSent(localStorage.getItem(SENT_KEY) === "1");
+  }, []);
 
   function reset() {
     setRating(0);
@@ -46,6 +55,8 @@ export function FeedbackWidget() {
     // Close immediately so the bubble dismisses the moment they send; the
     // request finishes in the background and only surfaces on failure.
     close();
+    setSent(true);
+    localStorage.setItem(SENT_KEY, "1");
     toast({ tone: "success", title: "Thanks for the feedback!" });
     createFeedback(payload).catch((error) => {
       toast({
@@ -58,15 +69,17 @@ export function FeedbackWidget() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Send feedback"
-        className="fixed bottom-4 right-4 z-[var(--z-modal)] hidden items-center gap-2 rounded-full bg-madoo-ink px-4 py-2.5 text-sm font-medium text-white shadow-lg transition hover:bg-madoo-ink-hover md:inline-flex"
-      >
-        <Icon name="message" size={16} />
-        Feedback
-      </button>
+      {!sent ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Send feedback"
+          className="fixed bottom-4 right-4 z-[var(--z-modal)] hidden items-center gap-2 rounded-full bg-madoo-ink px-4 py-2.5 text-sm font-medium text-white shadow-lg transition hover:bg-madoo-ink-hover md:inline-flex"
+        >
+          <Icon name="message" size={16} />
+          Feedback
+        </button>
+      ) : null}
 
       <Modal
         open={open}
