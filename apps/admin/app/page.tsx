@@ -47,6 +47,21 @@ export default async function FeedbackPage({
         </div>
       );
     }
+    if (error instanceof AdminApiError && error.status === 503) {
+      return (
+        <div className="container">
+          <div className="topbar">
+            <h1>Madoo Admin</h1>
+            <form action={logoutAction}>
+              <button className="btn" type="submit">
+                Sign out
+              </button>
+            </form>
+          </div>
+          <p className="empty">{error.message}</p>
+        </div>
+      );
+    }
     throw error;
   }
 

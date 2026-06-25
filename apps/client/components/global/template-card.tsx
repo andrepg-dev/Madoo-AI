@@ -30,9 +30,8 @@ export default function TemplateCard({
   return (
     <article
       className={cx(
-        // Match the /dashboard/projects card: white padded card with a soft
-        // border (background) and a compact preview box (size).
-        "group w-full min-w-0 rounded-lg bg-white p-3 text-left shadow-madoo-border",
+        // Borderless: white padded card, no outline — just a compact preview box.
+        "group w-full min-w-0 rounded-lg bg-white p-3 text-left",
         disabled && "pointer-events-none opacity-70",
       )}
     >

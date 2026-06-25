@@ -17,7 +17,6 @@ export function FeedbackWidget() {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [message, setMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   function reset() {
     setRating(0);
@@ -30,7 +29,7 @@ export function FeedbackWidget() {
     reset();
   }
 
-  async function submit() {
+  function submit() {
     if (rating < 1) {
       toast({ tone: "danger", title: "Pick a rating first" });
       return;
@@ -39,24 +38,22 @@ export function FeedbackWidget() {
       toast({ tone: "danger", title: "Add a short message" });
       return;
     }
-    setSubmitting(true);
-    try {
-      await createFeedback({
-        rating,
-        message: message.trim(),
-        page: pathname ?? undefined,
-      });
-      toast({ tone: "success", title: "Thanks for the feedback!" });
-      close();
-    } catch (error) {
+    const payload = {
+      rating,
+      message: message.trim(),
+      page: pathname ?? undefined,
+    };
+    // Close immediately so the bubble dismisses the moment they send; the
+    // request finishes in the background and only surfaces on failure.
+    close();
+    toast({ tone: "success", title: "Thanks for the feedback!" });
+    createFeedback(payload).catch((error) => {
       toast({
         tone: "danger",
         title: "Could not send feedback",
         body: error instanceof Error ? error.message : undefined,
       });
-    } finally {
-      setSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -77,11 +74,11 @@ export function FeedbackWidget() {
         title="Send feedback"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="md" onClick={close} disabled={submitting}>
+            <Button variant="secondary" size="md" onClick={close}>
               Cancel
             </Button>
-            <Button size="md" onClick={submit} disabled={submitting}>
-              {submitting ? "Sending…" : "Send"}
+            <Button size="md" onClick={submit}>
+              Send
             </Button>
           </div>
         }
