@@ -45,6 +45,9 @@ export default function Page() {
   const [headlineMessage, setHeadlineMessage] = useState<
     (typeof headlineMessages)[number]
   >(headlineMessages[0]);
+  // Shuffled after mount so the provider logos sit in a fresh order each visit
+  // (purely cosmetic). Start from the static order to avoid a hydration mismatch.
+  const [providers, setProviders] = useState(emailProviders);
   const firstName =
     user?.name?.trim().split(/\s+/)[0] || user?.email?.split("@")[0] || "";
 
@@ -57,6 +60,7 @@ export default function Page() {
   useEffect(() => {
     const nextIndex = Math.floor(Math.random() * headlineMessages.length);
     setHeadlineMessage(headlineMessages[nextIndex]);
+    setProviders((prev) => [...prev].sort(() => Math.random() - 0.5));
   }, []);
 
   return (
@@ -77,7 +81,7 @@ export default function Page() {
       <div className="relative z-40 flex flex-col gap-5 h-[75vh] justify-center pt-24 sm:pt-36">
         <div className="rounded-2xl ring-2! ring-white/20 sm:rounded-full backdrop-blur-md bg-white/60 select-none p-2 px-4 madoo-paper-border w-max max-w-[calc(100vw-2rem)] text-xs sm:text-sm flex flex-wrap items-center justify-center text-center gap-2 mx-auto">
           <div className="flex h-5 -space-x-1.5">
-            {emailProviders.map((provider) => (
+            {providers.map((provider) => (
               <div
                 key={provider.name}
                 className="h-full aspect-square overflow-hidden rounded-full bg-white shadow-madoo-border"
