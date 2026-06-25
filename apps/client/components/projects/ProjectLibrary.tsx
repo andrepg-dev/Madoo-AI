@@ -222,7 +222,7 @@ function ProjectGridCard({
   const title = projectTitle(email);
 
   return (
-    <article className="w-full min-w-0 rounded-lg bg-white p-3 shadow-madoo-border">
+    <article className="w-full min-w-0 rounded-lg bg-white p-3">
       <button
         aria-label={`Open ${title}`}
         className="group block w-full min-w-0 cursor-pointer border-0 bg-transparent p-0 text-left focus-visible:outline-none"
