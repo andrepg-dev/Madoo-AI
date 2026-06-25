@@ -31,11 +31,19 @@ export async function adminFetch<T>(
     headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
   }
 
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+      cache: "no-store",
+    });
+  } catch {
+    throw new AdminApiError(
+      503,
+      `Could not reach the Madoo backend at ${API_URL}. Start @madoo/backend or check NEXT_PUBLIC_API_URL.`,
+    );
+  }
 
   if (!res.ok) {
     const data = (await res.json().catch(() => null)) as {
