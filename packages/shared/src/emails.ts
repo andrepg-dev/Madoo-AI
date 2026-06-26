@@ -540,6 +540,8 @@ export type CommunityTemplateDetailDto = z.infer<
 /** Input to publish one of the workspace's emails to the community gallery. */
 export const ShareEmailToCommunitySchema = z.object({
   emailId: z.string().min(1),
+  /** 1-based version (EmailVariant.seq) to publish; defaults to the latest. */
+  variantSeq: z.number().int().positive().optional(),
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(280).optional().nullable(),
   category: z.string().trim().max(48).optional().nullable(),

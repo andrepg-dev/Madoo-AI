@@ -248,7 +248,6 @@ export function EmailPreviewSidebar({
               <ShareProjectDropdown
                 email={email}
                 emailId={emailId}
-                onUpgrade={onOpenPricing}
               />
               <HeaderPillButton
                 className="bg-white text-[#101114] hover:bg-[#f3f4f6]"

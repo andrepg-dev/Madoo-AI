@@ -1,25 +1,32 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Avatar, Button, Dropdown, DropdownContent, DropdownTrigger, Input, useToast } from "@madoo/design-system";
+import { Avatar, Button, Dropdown, DropdownContent, DropdownTrigger, Input, Select, useToast } from "@madoo/design-system";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, Globe02Icon, LinkSquare02Icon, Share08Icon, SquareLock02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import type { EmailDto } from "@madoo/shared";
 import { fetchWorkspaces } from "@/actions/workspaces";
 import { updateEmailShare } from "@/actions/emails";
+import { shareEmailToCommunity } from "@/actions/community-templates";
 import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
 import { cn } from "@/lib/utils";
 import { AccessLevelSelect, type AccessLevel } from "@/components/project/share/AccessLevelSelect";
 import { HeaderPillButton } from "./HeaderPillButton";
 
+function getEmailTitle(email: EmailDto): string {
+  const latestVariant = email.variants[email.variants.length - 1];
+  const title =
+    latestVariant?.subject || email.title || email.prompt || "Untitled email";
+  const trimmed = title.trim() || "Untitled email";
+  return trimmed.length > 120 ? `${trimmed.slice(0, 117)}...` : trimmed;
+}
+
 export function ShareProjectDropdown({
   email,
   emailId,
-  onUpgrade,
 }: {
   email: EmailDto | null | undefined;
   emailId: string | null;
-  onUpgrade: () => void;
 }) {
   const user = useAuthStore((state) => state.user);
   const workspaceId = useClientStore((state) => state.workspaceId);
@@ -27,6 +34,21 @@ export function ShareProjectDropdown({
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("edit");
+  const [communityShared, setCommunityShared] = useState(false);
+  const [shareSeq, setShareSeq] = useState<number | null>(null);
+
+  // Versions ordered newest → oldest for the publish picker; default = latest.
+  const variantsDesc = useMemo(
+    () => [...(email?.variants ?? [])].sort((a, b) => b.seq - a.seq),
+    [email?.variants],
+  );
+  const latestSeq = variantsDesc[0]?.seq ?? null;
+  const selectedSeq = shareSeq ?? latestSeq;
+
+  useEffect(() => {
+    setCommunityShared(false);
+    setShareSeq(null);
+  }, [emailId]);
 
   const { data: workspaces = [] } = useQuery({
     queryKey: ["workspaces"],
@@ -68,6 +90,37 @@ export function ShareProjectDropdown({
       toast({
         tone: "danger",
         title: "Could not update sharing",
+        body:
+          error instanceof Error ? error.message : "Try again in a moment.",
+      });
+    },
+  });
+
+  const communityShareMutation = useMutation({
+    mutationFn: () => {
+      if (!emailId || !email) throw new Error("Generate an email first.");
+      return shareEmailToCommunity({
+        emailId,
+        variantSeq: selectedSeq ?? undefined,
+        name: getEmailTitle(email),
+        description: null,
+        category: "Other",
+        categories: ["Other"],
+      });
+    },
+    onSuccess: async () => {
+      setCommunityShared(true);
+      await queryClient.invalidateQueries({ queryKey: ["community-templates"] });
+      toast({
+        tone: "success",
+        title: "Shared to community",
+        body: "People can now discover and use this template.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Community share failed",
         body:
           error instanceof Error ? error.message : "Try again in a moment.",
       });
@@ -205,6 +258,72 @@ export function ShareProjectDropdown({
             ) : null}
           </div>
 
+          <div className="h-px bg-[rgb(var(--rule-rgb)/0.14)]" />
+
+          <div className="grid gap-2">
+            <div className="flex items-center gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-madoo-ink shadow-madoo-border">
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={Globe02Icon}
+                  primaryColor="currentColor"
+                  size={18}
+                  strokeWidth={1.7}
+                />
+              </span>
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="truncate text-sm font-medium text-madoo-ink">
+                  Community
+                </span>
+                <span className="truncate text-xs text-madoo-ink-muted">
+                  Let other Madoo users discover and use this template
+                </span>
+              </span>
+              <Button
+                className="h-8 rounded-lg"
+                disabled={
+                  !emailId ||
+                  !email ||
+                  communityShared ||
+                  variantsDesc.length === 0 ||
+                  communityShareMutation.isPending
+                }
+                onClick={() => communityShareMutation.mutate()}
+                size="sm"
+                type="button"
+                variant="secondary"
+              >
+                {communityShareMutation.isPending
+                  ? "Sharing…"
+                  : communityShared
+                    ? "Shared"
+                    : "Share"}
+              </Button>
+            </div>
+
+            {variantsDesc.length > 1 ? (
+              <div className="flex items-center gap-2 pl-12">
+                <span className="shrink-0 text-xs text-madoo-ink-muted">
+                  Publish version
+                </span>
+                <Select
+                  align="end"
+                  onChange={(value) => setShareSeq(Number(value))}
+                  options={variantsDesc.map((v) => ({
+                    value: String(v.seq),
+                    label:
+                      v.seq === latestSeq
+                        ? `Version ${v.seq} · latest`
+                        : `Version ${v.seq}`,
+                  }))}
+                  size="sm"
+                  value={String(selectedSeq ?? "")}
+                  variant="surface"
+                />
+              </div>
+            ) : null}
+          </div>
+
           <div className="grid gap-2">
             <p className="text-xs font-semibold text-madoo-ink-muted">
               Who has access
@@ -242,7 +361,6 @@ export function ShareProjectDropdown({
               </span>
               <AccessLevelSelect
                 onChange={setAccessLevel}
-                onUpgrade={onUpgrade}
                 value={accessLevel}
               />
             </div>

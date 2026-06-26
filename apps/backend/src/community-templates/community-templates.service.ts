@@ -180,6 +180,9 @@ export class CommunityTemplatesService {
       select: {
         id: true,
         variants: {
+          // When a specific version is requested, take that one; otherwise the
+          // latest. Ordering by seq desc keeps variants[0] = latest as before.
+          where: dto.variantSeq ? { seq: dto.variantSeq } : undefined,
           orderBy: { seq: "desc" },
           take: 1,
           select: {
@@ -193,7 +196,11 @@ export class CommunityTemplatesService {
     });
     const variant = email?.variants[0];
     if (!email || !variant) {
-      throw new BadRequestException("Email has no variant to share.");
+      throw new BadRequestException(
+        dto.variantSeq
+          ? `Version ${dto.variantSeq} not found for this email.`
+          : "Email has no variant to share.",
+      );
     }
 
     const author = await this.prisma.user.findUnique({

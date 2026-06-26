@@ -9,7 +9,6 @@ import {
   ViewIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Badge } from "@madoo/design-system";
 import { useEffect, useRef, useState } from "react";
 
 export type AccessLevel = "admin" | "edit" | "view";
@@ -19,7 +18,6 @@ type Option = {
   label: string;
   description: string;
   icon: IconSvgElement;
-  pro: boolean;
 };
 
 const options: Option[] = [
@@ -28,37 +26,31 @@ const options: Option[] = [
     label: "Admin",
     description: "Full access to the project",
     icon: UserLock01Icon,
-    pro: true,
   },
   {
     value: "edit",
     label: "Can edit",
     description: "Edit the project and its settings",
     icon: PencilEdit02Icon,
-    pro: false,
   },
   {
     value: "view",
     label: "Can view",
     description: "View the project but can’t modify it",
     icon: ViewIcon,
-    pro: true,
   },
 ];
 
 /**
- * Project access-level picker. The two Pro tiers are gated: selecting one calls
- * `onUpgrade` (pricing) instead of applying. Rendered as a compact popover that
- * floats over (rather than pushing) the share panel.
+ * Project access-level picker. Rendered as a compact popover that floats over
+ * (rather than pushing) the share panel.
  */
 export function AccessLevelSelect({
   value,
   onChange,
-  onUpgrade,
 }: {
   value: AccessLevel;
   onChange: (value: AccessLevel) => void;
-  onUpgrade: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -84,10 +76,6 @@ export function AccessLevelSelect({
 
   const select = (option: Option) => {
     setOpen(false);
-    if (option.pro) {
-      onUpgrade();
-      return;
-    }
     onChange(option.value);
   };
 
@@ -155,7 +143,6 @@ export function AccessLevelSelect({
                       <span className="text-[13px] font-medium text-madoo-ink">
                         {option.label}
                       </span>
-                      {option.pro ? <Badge tone="accent">Pro</Badge> : null}
                     </span>
                     <span className="text-[11px] leading-4 text-madoo-ink-muted">
                       {option.description}
