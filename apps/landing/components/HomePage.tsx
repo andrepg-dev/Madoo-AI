@@ -1189,7 +1189,7 @@ export default function HomePage({
       tabIndex={0}
       onClick={() => openTemplatePreview(template)}
       onKeyDown={onTemplateCardKeyDown(template)}
-      className="group flex min-w-0 cursor-pointer flex-col outline-none"
+      className="group mb-8 flex min-w-0 cursor-pointer flex-col break-inside-avoid outline-none"
     >
       <div className="relative">
         <TemplatePreviewImage
@@ -1617,7 +1617,7 @@ export default function HomePage({
             </div>
 
             {hasCommunityTemplates ? (
-              <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="mt-10 columns-2 gap-4 sm:columns-3 lg:columns-5">
                 {categoryShowcase.map(renderShowcaseCard)}
               </div>
             ) : (

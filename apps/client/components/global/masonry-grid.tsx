@@ -18,10 +18,8 @@ function requestedColumnCount(maxColumns: number) {
   if (window.matchMedia("(min-width: 1024px)").matches) {
     return Math.min(maxColumns, 3);
   }
-  if (window.matchMedia("(min-width: 640px)").matches) {
-    return Math.min(maxColumns, 2);
-  }
-  return 1;
+  // Mobile + tablet: two packed columns.
+  return Math.min(maxColumns, 2);
 }
 
 function useResponsiveColumnCount(maxColumns: number) {
