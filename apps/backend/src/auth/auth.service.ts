@@ -17,6 +17,7 @@ import { JwtService } from "@nestjs/jwt";
 import type { User } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../prisma/prisma.service";
+import { isVipProEmail } from "../billing/vip-accounts";
 import { toUserDto } from "../users/dto/user.dto";
 import { toMyWorkspaceDto } from "../workspaces/dto/workspace.dto";
 import { WorkspacesService } from "../workspaces/workspaces.service";
@@ -236,6 +237,9 @@ export class AuthService {
     // the pricing drawer offers (and checkout grants) the trial.
     await this.applyTrialClaim(user.email, user.id);
 
+    // Comped "growth" accounts (streamers/creators/partners) get PRO on signup.
+    await this.applyVipPlan(user.email, user.id);
+
     let pendingPromptId: string | null = null;
     if (pending?.pendingPrompt && pending.pendingPrompt.trim()) {
       const pp = await this.prisma.pendingPrompt.create({
@@ -371,6 +375,29 @@ export class AuthService {
       });
     } catch {
       // Trial reconciliation is best-effort; never block login on it.
+    }
+  }
+
+  /**
+   * If `email` is on the VIP comp list (VIP_PRO_EMAILS), grant a PRO
+   * subscription on the user's account. Idempotent and best-effort — runs on
+   * every login so a listed user becomes PRO the moment they register. Never
+   * touches Stripe fields, so a VIP who later actually pays keeps their data.
+   */
+  private async applyVipPlan(email: string, userId: string): Promise<void> {
+    if (!isVipProEmail(email)) return;
+    try {
+      await this.prisma.billingSubscription.upsert({
+        where: { userId },
+        create: {
+          userId,
+          plan: "PRO",
+          status: "ACTIVE",
+        },
+        update: { plan: "PRO", status: "ACTIVE" },
+      });
+    } catch {
+      // Comp grant is best-effort; never block login on it.
     }
   }
 
