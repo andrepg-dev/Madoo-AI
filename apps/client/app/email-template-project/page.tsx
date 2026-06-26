@@ -38,6 +38,7 @@ import {
 import type {
   AiMessageFeedback,
   ChatMessage,
+  MessagePart,
   ToolCallView,
 } from "@/components/project/editor/types";
 import {
@@ -263,6 +264,7 @@ function EmailTemplateProjectInner() {
       let thinkingStartedAt: number | null = null;
       let thinkingFinishedAt: number | null = null;
       let toolCalls: ToolCallView[] = [];
+      let parts: MessagePart[] = [];
 
       const upsertAssistant = (current: ChatMessage[]) =>
         upsertMessage(current, {
@@ -272,6 +274,7 @@ function EmailTemplateProjectInner() {
           seq: Date.now(),
           emailId,
           toolCalls: toolCalls.length ? toolCalls : undefined,
+          parts: parts.length ? parts : undefined,
           thinking: thinkingText || undefined,
           thinkingSeconds: thinkingStartedAt
             ? Math.max(
@@ -320,6 +323,15 @@ function EmailTemplateProjectInner() {
           const idx = toolCalls.findIndex((c) => c.id === next.id);
           if (idx === -1) toolCalls = [...toolCalls, next];
           else toolCalls = toolCalls.map((c, i) => (i === idx ? next : c));
+          // Keep the same call in the ordered parts list (interleaved view).
+          const pIdx = parts.findIndex(
+            (p) => p.kind === "tool" && p.call.id === next.id,
+          );
+          if (pIdx === -1) parts = [...parts, { kind: "tool", call: next }];
+          else
+            parts = parts.map((p, i) =>
+              i === pIdx ? { kind: "tool", call: next } : p,
+            );
           setMessages((current) => upsertAssistant(current));
           return;
         }
@@ -341,6 +353,24 @@ function EmailTemplateProjectInner() {
         if (event.type === "assistant-chunk") {
           const firstChunk = assistantText.length === 0;
           assistantText += event.value;
+          // Append to the trailing text part, or start a new one (e.g. after a
+          // tool call) so segments interleave: text → tool → text → tool.
+          const last = parts[parts.length - 1];
+          if (last && last.kind === "text") {
+            parts = [
+              ...parts.slice(0, -1),
+              { ...last, text: last.text + event.value },
+            ];
+          } else {
+            parts = [
+              ...parts,
+              {
+                kind: "text",
+                id: `text-${Date.now()}-${parts.length}`,
+                text: event.value,
+              },
+            ];
+          }
           // First visible answer token marks the end of the reasoning phase.
           if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
             thinkingFinishedAt = Date.now();
@@ -403,6 +433,7 @@ function EmailTemplateProjectInner() {
               seq: Date.now(),
               emailId,
               toolCalls: toolCalls.length ? toolCalls : undefined,
+              parts: parts.length ? parts : undefined,
               thinking: thinkingText || undefined,
               thinkingSeconds: thinkingStartedAt
                 ? Math.max(
@@ -935,6 +966,7 @@ function EmailTemplateProjectInner() {
         thinkingActive={message.thinkingActive}
         thinkingSeconds={message.thinkingSeconds}
         toolCalls={message.toolCalls}
+        parts={message.parts}
         versionIndex={message.versionIndex}
         versions={message.versions}
       >

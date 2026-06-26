@@ -21,6 +21,11 @@ export type ToolCallView = {
   images?: string[];
 };
 
+/** An ordered segment of an assistant turn: a run of text or a tool call. */
+export type MessagePart =
+  | { kind: "text"; id: string; text: string }
+  | { kind: "tool"; call: ToolCallView };
+
 export type AiMessageFeedback = "LIKE" | "DISLIKE";
 
 export type ChatMessage = {
@@ -53,6 +58,8 @@ export type ChatMessage = {
   steps?: TimelineStep[];
   /** Tool calls made during this turn, shown at the bottom of the message. */
   toolCalls?: ToolCallView[];
+  /** Ordered text/tool segments for live turns (interleaved rendering). */
+  parts?: MessagePart[];
   startedAt?: number;
   finishedAt?: number;
 };

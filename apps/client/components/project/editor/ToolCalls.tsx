@@ -15,7 +15,7 @@ function iconFor(name: string): IconSvgElement {
   return Search01Icon;
 }
 
-function ToolCallCard({ call }: { call: ToolCallView }) {
+export function ToolCallCard({ call }: { call: ToolCallView }) {
   const running = call.status === "running";
   return (
     <div className="rounded-lg border border-madoo-border bg-madoo-ink/[0.02] px-3 py-2">

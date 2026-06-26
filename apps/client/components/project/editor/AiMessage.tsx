@@ -5,8 +5,8 @@ import { Streamdown } from "streamdown";
 import { ActionButton } from "./ActionButton";
 import { CopyActionButton } from "./CopyActionButton";
 import { ThinkingBlock } from "./ThinkingBlock";
-import { ToolCalls } from "./ToolCalls";
-import type { AiMessageFeedback, ToolCallView } from "./types";
+import { ToolCallCard, ToolCalls } from "./ToolCalls";
+import type { AiMessageFeedback, MessagePart, ToolCallView } from "./types";
 
 export function AiMessage({
   children,
@@ -15,6 +15,7 @@ export function AiMessage({
   thinkingSeconds,
   thinkingActive,
   toolCalls,
+  parts,
   versions,
   versionIndex = 0,
   onFeedback,
@@ -28,6 +29,7 @@ export function AiMessage({
   thinkingSeconds?: number;
   thinkingActive?: boolean;
   toolCalls?: ToolCallView[];
+  parts?: MessagePart[];
   versions?: {
     id: string;
     content: string;
@@ -54,11 +56,31 @@ export function AiMessage({
           text={thinkingText}
         />
       ) : null}
-      <Streamdown className="ai-conversation-markdown font-figtree leading-6">
-        {children}
-      </Streamdown>
-
-      <ToolCalls calls={toolCalls} />
+      {parts && parts.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {parts.map((part) =>
+            part.kind === "text" ? (
+              part.text.trim() ? (
+                <Streamdown
+                  className="ai-conversation-markdown font-figtree leading-6"
+                  key={part.id}
+                >
+                  {part.text}
+                </Streamdown>
+              ) : null
+            ) : (
+              <ToolCallCard call={part.call} key={part.call.id} />
+            ),
+          )}
+        </div>
+      ) : (
+        <>
+          <Streamdown className="ai-conversation-markdown font-figtree leading-6">
+            {children}
+          </Streamdown>
+          <ToolCalls calls={toolCalls} />
+        </>
+      )}
 
       {showActions ? (
         <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
