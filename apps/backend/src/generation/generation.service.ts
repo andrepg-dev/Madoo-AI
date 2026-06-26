@@ -127,6 +127,23 @@ const FIND_IMAGES_TOOL: Tool = {
   },
 };
 
+const GET_EMAIL_VERSION_TOOL: Tool = {
+  name: "get_email_version",
+  description:
+    "Fetch the full TSX componentCode and variableSchema of a previously saved version of THIS email by its version number. Every save creates a numbered version; the user sees them as 'Version N · latest'. You normally only receive the CURRENT version's code. Call this whenever the user asks to revert, restore, undo back to, or reuse anything from an earlier version (e.g. 'put the image back as it was in version 1', 'go back to version 2', 'revert to the previous one'). Read the exact earlier code with this tool, then emit_email with the reverted or merged result. Never reconstruct an old version from memory.",
+  input_schema: {
+    type: "object",
+    properties: {
+      version: {
+        type: "number",
+        description:
+          "The 1-based version number to fetch — the same number shown to the user (1, 2, 3, …).",
+      },
+    },
+    required: ["version"],
+  },
+};
+
 const STATIC_INSTRUCTION = [
   "You are Madoo, an AI email generator for polished, production-ready email templates.",
   "Detect the language of the user's latest instruction. Write all conversational replies and recipient-facing email copy in that same language, unless the user explicitly asks for a different language.",
@@ -163,6 +180,7 @@ const STATIC_INSTRUCTION = [
   "variableSchema must match the component props exactly: every schema variable is destructured with a default, used in the component, and no extra props are invented.",
   "Component pattern must be: const Email = ({ ...defaults } = {}) => (<Html>...</Html>); export default Email;",
   "Subject line (emit_email.subject) must be normal marketing or transactional copy for the recipient. Never base it on environment variables, .env files, API keys, secrets, or other developer/deployment configuration topics—even if the user brief drifts there.",
+  "VERSION HISTORY: Each saved email is a numbered version shown to the user as 'Version N · latest'. You only receive the CURRENT version's TSX. When the user asks to revert, restore, undo back to, or reuse anything from an earlier version (e.g. 'put the image as in version 1', 'go back to version 2', 'revert as before'), call get_email_version with that number to read the exact earlier code, then emit_email with the reverted or merged result. The edit prompt tells you how many versions exist. Never reconstruct an old version from memory.",
   "When the user provides a website URL or asks to match a brand/site, call inspect_website_brand before emit_email.",
   "Use inspect_website_brand results for visual direction, copy tone, brand colors, fonts, CTA language, logo URL, and image URLs.",
   "When no image is attached for a needed visual, fall back to an image variable with a sensible placeholder URL default as described above.",
@@ -847,9 +865,22 @@ export class GenerationService {
     );
     const codeContext = buildCodeContextSnippet(snapshot.componentCode, CODE_CONTEXT_LIMIT);
 
+    const latestVariant = await this.prisma.emailVariant.findFirst({
+      where: { emailId },
+      orderBy: { seq: "desc" },
+      select: { seq: true },
+    });
+    const versionCount = latestVariant?.seq ?? 0;
+    const versionLine =
+      versionCount > 0
+        ? `Saved versions: 1..${versionCount} (version ${versionCount} is the current/latest). To reuse or revert to an earlier one, call get_email_version with its number — do not guess its code.`
+        : "No earlier saved versions yet.";
+
     const editPrompt = [
       "Edit the current Madoo TSX email component according to the instruction.",
       `Instruction:\n${instruction}`,
+      "",
+      versionLine,
       "",
       "Conversation context (most recent first):",
       recentChat,
@@ -1111,6 +1142,60 @@ export class GenerationService {
             images.length
               ? { images }
               : { images: [], note: "No images found. Use a sensible placeholder image URL instead." },
+          );
+        } else if (requestedTool.name === "get_email_version") {
+          const input = requestedTool.input as { version?: unknown };
+          const version =
+            typeof input.version === "number" ? Math.trunc(input.version) : NaN;
+          if (!Number.isFinite(version) || version < 1) {
+            throw new BadRequestException(
+              "get_email_version requires a positive version number.",
+            );
+          }
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "get_email_version",
+            status: "running",
+            title: "Reading version",
+            detail: `Version ${version}`,
+          });
+          const variant = await this.prisma.emailVariant.findUnique({
+            where: { emailId_seq: { emailId, seq: version } },
+            select: {
+              seq: true,
+              subject: true,
+              componentCode: true,
+              variableSchema: true,
+            },
+          });
+          const latest = await this.prisma.emailVariant.findFirst({
+            where: { emailId },
+            orderBy: { seq: "desc" },
+            select: { seq: true },
+          });
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "get_email_version",
+            status: "done",
+            title: variant
+              ? `Read version ${version}`
+              : `Version ${version} not found`,
+            detail: `Version ${version}`,
+          });
+          toolResultContent = JSON.stringify(
+            variant
+              ? {
+                  version: variant.seq,
+                  subject: variant.subject,
+                  componentCode: variant.componentCode,
+                  variableSchema: variant.variableSchema,
+                }
+              : {
+                  error: `Version ${version} does not exist.`,
+                  latestVersion: latest?.seq ?? 0,
+                },
           );
         } else {
           throw new BadRequestException(`Unsupported tool requested: ${requestedTool.name}`);
@@ -1454,7 +1539,12 @@ export class GenerationService {
       ...(thinking ? { thinking } : {}),
       output_config: { effort: this.effortLevel() },
       system: args.systemBlocks,
-      tools: [INSPECT_WEBSITE_BRAND_TOOL, FIND_IMAGES_TOOL, EMIT_EMAIL_TOOL],
+      tools: [
+        INSPECT_WEBSITE_BRAND_TOOL,
+        FIND_IMAGES_TOOL,
+        GET_EMAIL_VERSION_TOOL,
+        EMIT_EMAIL_TOOL,
+      ],
       // The tool loop pairs a tool_result for exactly one tool_use per turn.
       // Parallel tool use (e.g. inspect_website_brand + emit_email together)
       // leaves the second tool_use unpaired on replay → Anthropic 400. Force

@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Cancel01Icon,
   CheckmarkBadge01Icon,
+  Clock01Icon,
   Globe02Icon,
   Image01Icon,
   Loading03Icon,
@@ -15,6 +16,7 @@ import type { ToolCallView } from "./types";
 function iconFor(name: string): IconSvgElement {
   if (name === "find_images") return Image01Icon;
   if (name === "inspect_website_brand") return Globe02Icon;
+  if (name === "get_email_version") return Clock01Icon;
   return Search01Icon;
 }
 
