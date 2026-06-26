@@ -1029,7 +1029,6 @@ export class GenerationService {
             throw new BadRequestException("inspect_website_brand requires a URL.");
           }
           const url = input.url.trim();
-          emit({ type: "step", message: "Inspecting brand website..." });
           emit({
             type: "tool_call",
             id: requestedTool.id,
@@ -1071,7 +1070,6 @@ export class GenerationService {
             throw new BadRequestException("find_images requires a query.");
           }
           const query = input.query.trim();
-          emit({ type: "step", message: `Searching images for "${query}"...` });
           emit({
             type: "tool_call",
             id: requestedTool.id,
