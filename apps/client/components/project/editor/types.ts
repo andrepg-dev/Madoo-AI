@@ -60,6 +60,10 @@ export type ChatMessage = {
   toolCalls?: ToolCallView[];
   /** Ordered text/tool segments for live turns (interleaved rendering). */
   parts?: MessagePart[];
+  /** True while this turn is still streaming (hides actions, shows loader). */
+  generating?: boolean;
+  /** True once the email component code has started streaming. */
+  buildingEmail?: boolean;
   startedAt?: number;
   finishedAt?: number;
 };

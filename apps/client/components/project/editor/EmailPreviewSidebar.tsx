@@ -27,6 +27,7 @@ export function EmailPreviewSidebar({
   onToggleExpanded,
   open,
   setMode,
+  showUpgradeButton,
   srcDoc,
   setTheme,
   setWidth,
@@ -49,6 +50,7 @@ export function EmailPreviewSidebar({
   onToggleExpanded: () => void;
   open: boolean;
   setMode: (mode: PreviewMode) => void;
+  showUpgradeButton: boolean;
   srcDoc: string;
   setTheme: (theme: TemplateTheme) => void;
   setWidth: (width: number) => void;
@@ -256,15 +258,17 @@ export function EmailPreviewSidebar({
               >
                 Preview
               </HeaderPillButton>
-              <HeaderPillButton
-                className="text-white shadow-none"
-                label="Upgrade exports"
-                leftIcon={CrownPlusIcon}
-                onClick={onOpenPricing}
-                style={{ backgroundColor: "#101114", color: "#ffffff" }}
-              >
-                Upgrade
-              </HeaderPillButton>
+              {showUpgradeButton ? (
+                <HeaderPillButton
+                  className="text-white shadow-none"
+                  label="Upgrade exports"
+                  leftIcon={CrownPlusIcon}
+                  onClick={onOpenPricing}
+                  style={{ backgroundColor: "#101114", color: "#ffffff" }}
+                >
+                  Upgrade
+                </HeaderPillButton>
+              ) : null}
               <HeaderPillButton
                 className="text-white shadow-none"
                 label="Test email"

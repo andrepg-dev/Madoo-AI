@@ -7,6 +7,7 @@ import {
   setEmailChatMessageFeedback,
   truncateEmailChat,
 } from "@/actions/emails";
+import { fetchBillingOverview } from "@/actions/billing";
 import { uploadEmailImage } from "@/lib/upload-email-image";
 import { consumePendingPrompt } from "@/actions/prompts";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
@@ -82,6 +83,7 @@ function EmailTemplateProjectInner() {
   const setSidebarOpen = useClientStore((state) => state.setSidebarOpen);
   const pricingOpen = useClientStore((state) => state.pricingOpen);
   const setPricingOpen = useClientStore((state) => state.setPricingOpen);
+  const workspaceId = useClientStore((state) => state.workspaceId);
   const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     mapChatMessages(undefined, null),
@@ -149,6 +151,11 @@ function EmailTemplateProjectInner() {
     queryKey: ["email-chat", currentEmailId],
     queryFn: () => fetchEmailChat(currentEmailId!),
     enabled: Boolean(currentEmailId),
+  });
+  const { data: billingOverview } = useQuery({
+    queryKey: ["billing-overview", workspaceId],
+    queryFn: fetchBillingOverview,
+    enabled: Boolean(workspaceId),
   });
 
   const feedbackMutation = useMutation({
@@ -221,6 +228,8 @@ function EmailTemplateProjectInner() {
   );
   const previewSubject =
     streamedSubject ?? activeVariant?.subject ?? "Untitled email";
+  const currentPlan = billingOverview?.subscription.plan;
+  const showUpgradeButton = currentPlan === "FREE";
   const storedConversationTitle =
     email?.title && email.title !== variant?.subject ? email.title : null;
   const conversationTitle =
@@ -265,6 +274,8 @@ function EmailTemplateProjectInner() {
       let thinkingFinishedAt: number | null = null;
       let toolCalls: ToolCallView[] = [];
       let parts: MessagePart[] = [];
+      let generating = true;
+      let buildingEmail = false;
 
       const upsertAssistant = (current: ChatMessage[]) =>
         upsertMessage(current, {
@@ -275,6 +286,8 @@ function EmailTemplateProjectInner() {
           emailId,
           toolCalls: toolCalls.length ? toolCalls : undefined,
           parts: parts.length ? parts : undefined,
+          generating,
+          buildingEmail,
           thinking: thinkingText || undefined,
           thinkingSeconds: thinkingStartedAt
             ? Math.max(
@@ -394,7 +407,14 @@ function EmailTemplateProjectInner() {
         }
 
         if (event.type === "code-chunk") {
-          showTimelineProgress("Writing the email template…");
+          // Email component code is streaming — show the inline "Building your
+          // email…" loader on the message instead of the top timeline spinner.
+          if (!buildingEmail) {
+            buildingEmail = true;
+            setMessages((current) =>
+              upsertAssistant(finishTimeline(current, timelineId)),
+            );
+          }
           return;
         }
 
@@ -420,10 +440,14 @@ function EmailTemplateProjectInner() {
           if (event.conversationTitle) {
             setStreamedConversationTitle(event.conversationTitle);
           }
+          // Turn is over: clear the live-loading flags so the build loader
+          // disappears and the action buttons appear.
+          generating = false;
+          buildingEmail = false;
           // Keep the timeline in the conversation as a record; finalize it.
           setMessages((current) => {
             const finished = finishTimeline(current, timelineId);
-            if (assistantText.trim()) return finished;
+            if (assistantText.trim()) return upsertAssistant(finished);
             return upsertMessage(finished, {
               id: assistantId,
               role: "assistant",
@@ -450,6 +474,14 @@ function EmailTemplateProjectInner() {
         }
 
         if (event.type === "error") {
+          // Stop any live-loading state on the partial assistant message.
+          generating = false;
+          buildingEmail = false;
+          setMessages((current) =>
+            assistantText.trim() || parts.length
+              ? upsertAssistant(current)
+              : current,
+          );
           // Credit-cap errors become the floating upgrade alert; drop the live
           // timeline instead of leaving a red bubble in the conversation.
           if (isCreditLimitError(event.message)) {
@@ -967,6 +999,8 @@ function EmailTemplateProjectInner() {
         thinkingSeconds={message.thinkingSeconds}
         toolCalls={message.toolCalls}
         parts={message.parts}
+        generating={message.generating}
+        buildingEmail={message.buildingEmail}
         versionIndex={message.versionIndex}
         versions={message.versions}
       >
@@ -1132,6 +1166,7 @@ function EmailTemplateProjectInner() {
               onToggleExpanded={togglePreviewExpanded}
               open={sidebarOpen}
               setMode={setPreviewMode}
+              showUpgradeButton={showUpgradeButton}
               srcDoc={highlightedPreviewSrcDoc ?? ""}
               setTheme={setTemplateTheme}
               setWidth={updatePreviewWidth}

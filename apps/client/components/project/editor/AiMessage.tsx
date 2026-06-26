@@ -16,6 +16,8 @@ export function AiMessage({
   thinkingActive,
   toolCalls,
   parts,
+  generating,
+  buildingEmail,
   versions,
   versionIndex = 0,
   onFeedback,
@@ -30,6 +32,8 @@ export function AiMessage({
   thinkingActive?: boolean;
   toolCalls?: ToolCallView[];
   parts?: MessagePart[];
+  generating?: boolean;
+  buildingEmail?: boolean;
   versions?: {
     id: string;
     content: string;
@@ -45,7 +49,7 @@ export function AiMessage({
   const hasVersions = total > 1;
   const thinkingText = thinking ?? "";
   const showThinking = thinkingText.length > 0 && Boolean(thinkingActive);
-  const showActions = !showThinking;
+  const showActions = !showThinking && !generating;
 
   return (
     <div className="group mb-3.5 mr-auto rounded text-left">
@@ -81,6 +85,13 @@ export function AiMessage({
           <ToolCalls calls={toolCalls} />
         </>
       )}
+
+      {generating && buildingEmail ? (
+        <div className="mt-2 flex items-center gap-2 text-xs text-madoo-ink-muted">
+          <span className="block size-3.5 animate-spin rounded-full border-2 border-madoo-border border-t-madoo-ink" />
+          Building your email…
+        </div>
+      ) : null}
 
       {showActions ? (
         <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
