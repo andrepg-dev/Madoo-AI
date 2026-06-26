@@ -109,6 +109,8 @@ function EmailTemplateProjectInner() {
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
   const [isNarrowEditor, setIsNarrowEditor] = useState(false);
   const processedStartupRef = useRef<string | null>(null);
+  // Aborts the in-flight generation stream when the user hits Stop.
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
@@ -533,16 +535,34 @@ function EmailTemplateProjectInner() {
                 ...(hasImages ? { imageUrls } : {}),
               })
               : undefined;
+        const controller = new AbortController();
+        abortRef.current = controller;
         await consumeEmailSseStream(
           `/api/emails/${emailId}/${mode}`,
           handleEvent,
-          undefined,
+          controller.signal,
           requestBody,
         );
         // Refresh in the background — never gate the streaming flag (and thus the
         // input's enabled state) on a refetch that could stall.
         void invalidateEmailState(emailId);
       } catch (error) {
+        // User pressed Stop — settle the message quietly, no error row. Keep any
+        // partial text but drop the loader / "generating" state.
+        if (
+          (error instanceof Error && error.name === "AbortError") ||
+          abortRef.current?.signal.aborted
+        ) {
+          setMessages((current) =>
+            finishTimeline(current, timelineId).map((m) =>
+              m.id === assistantId
+                ? { ...m, generating: false, buildingEmail: false }
+                : m,
+            ),
+          );
+          void invalidateEmailState(emailId);
+          return;
+        }
         const message =
           error instanceof Error ? error.message : "Email stream failed.";
         if (isCreditLimitError(message)) {
@@ -560,11 +580,18 @@ function EmailTemplateProjectInner() {
           );
         }
       } finally {
+        abortRef.current = null;
         setIsStreaming(false);
       }
     },
     [invalidateEmailState, setSidebarOpen],
   );
+
+  const stopGeneration = useCallback(() => {
+    abortRef.current?.abort(
+      new DOMException("Generation stopped by user.", "AbortError"),
+    );
+  }, []);
 
   const submitChatPrompt = useCallback(
     async (input: PromptSubmitInput) => {
@@ -1154,6 +1181,8 @@ function EmailTemplateProjectInner() {
                 textarea: "min-h-17 rounded-t-2xl px-4.5 pt-4.25",
               }}
               disabled={isStreaming}
+              isStreaming={isStreaming}
+              onStop={stopGeneration}
               onSubmit={submitChatPrompt}
               variant="chat"
               creditLimitMessage={creditLimitMessage}

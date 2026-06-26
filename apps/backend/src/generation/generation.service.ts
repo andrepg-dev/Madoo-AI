@@ -436,6 +436,22 @@ function assertStaticSubject(subject: string, variableSchema: VariableSchemaRoot
 
 /** Transient Anthropic failures worth retrying: overloaded, 5xx, rate-limit,
  *  connection drops/timeouts. */
+/** Thrown when the user stops generation (stop button / client disconnect). */
+class GenerationAbortedError extends Error {
+  constructor() {
+    super("Generation stopped.");
+    this.name = "GenerationAbortedError";
+  }
+}
+
+/** True for any abort: our own GenerationAbortedError, the SDK's
+ *  APIUserAbortError, or a DOM/AbortController AbortError. */
+function isAbortError(error: unknown): boolean {
+  if (error instanceof GenerationAbortedError) return true;
+  if (error instanceof Anthropic.APIUserAbortError) return true;
+  return error instanceof Error && error.name === "AbortError";
+}
+
 function isRetryableLlmError(error: unknown): boolean {
   if (error instanceof Anthropic.APIConnectionError) return true;
   if (error instanceof Anthropic.APIError) {
@@ -624,6 +640,7 @@ export class GenerationService {
     body?: { prompt?: string; imageUrls?: string[] },
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
+      const ac = new AbortController();
       void (async () => {
         try {
           subscriber.next({
@@ -637,15 +654,22 @@ export class GenerationService {
             undefined,
             body?.imageUrls,
             body?.prompt,
+            ac.signal,
           );
           subscriber.complete();
         } catch (e) {
+          if (isAbortError(e)) {
+            subscriber.complete();
+            return;
+          }
           subscriber.next({
             data: JSON.stringify({ type: "error", message: formatLlmError(e) }),
           } as MessageEvent);
           subscriber.complete();
         }
       })();
+      // Client disconnect / stop button → Nest unsubscribes → abort the stream.
+      return () => ac.abort(new GenerationAbortedError());
     });
   }
 
@@ -655,22 +679,34 @@ export class GenerationService {
     body: { instruction: string; baseVariantId?: string; imageUrls?: string[] },
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
+      const ac = new AbortController();
       void (async () => {
         try {
           subscriber.next({
             data: JSON.stringify({ type: "step", message: "Applying AI edits..." }),
           } as MessageEvent);
-          await this.runEdit(emailId, workspaceId, body, (payload) =>
-            subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+          await this.runEdit(
+            emailId,
+            workspaceId,
+            body,
+            (payload) =>
+              subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+            undefined,
+            ac.signal,
           );
           subscriber.complete();
         } catch (e) {
+          if (isAbortError(e)) {
+            subscriber.complete();
+            return;
+          }
           subscriber.next({
             data: JSON.stringify({ type: "error", message: formatLlmError(e) }),
           } as MessageEvent);
           subscriber.complete();
         }
       })();
+      return () => ac.abort(new GenerationAbortedError());
     });
   }
 
@@ -679,6 +715,7 @@ export class GenerationService {
     workspaceId: string,
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
+      const ac = new AbortController();
       void (async () => {
         try {
           subscriber.next({
@@ -687,17 +724,26 @@ export class GenerationService {
               message: "Regenerating response...",
             }),
           } as MessageEvent);
-          await this.regenerate(emailId, workspaceId, (payload) =>
-            subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+          await this.regenerate(
+            emailId,
+            workspaceId,
+            (payload) =>
+              subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+            ac.signal,
           );
           subscriber.complete();
         } catch (e) {
+          if (isAbortError(e)) {
+            subscriber.complete();
+            return;
+          }
           subscriber.next({
             data: JSON.stringify({ type: "error", message: formatLlmError(e) }),
           } as MessageEvent);
           subscriber.complete();
         }
       })();
+      return () => ac.abort(new GenerationAbortedError());
     });
   }
 
@@ -711,6 +757,7 @@ export class GenerationService {
     emailId: string,
     workspaceId: string,
     emit: (p: Record<string, unknown>) => void,
+    signal?: AbortSignal,
   ): Promise<void> {
     await this.assertEmailInWorkspace(emailId, workspaceId);
 
@@ -743,7 +790,15 @@ export class GenerationService {
     const isFirstTurn =
       userMessages.length === 1 && rows[0]?.id === lastUser.id;
     if (isFirstTurn) {
-      await this.runInitial(emailId, workspaceId, emit, groupId);
+      await this.runInitial(
+        emailId,
+        workspaceId,
+        emit,
+        groupId,
+        undefined,
+        undefined,
+        signal,
+      );
     } else {
       await this.runEdit(
         emailId,
@@ -751,6 +806,7 @@ export class GenerationService {
         { instruction: lastUser.content },
         emit,
         { groupId, skipUserMessage: true, contextUpTo: lastUser.createdAt },
+        signal,
       );
     }
   }
@@ -828,6 +884,7 @@ export class GenerationService {
     groupId?: string,
     imageUrls?: string[],
     promptOverride?: string,
+    signal?: AbortSignal,
   ): Promise<void> {
     await this.billing.assertCanGenerate(workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
@@ -902,6 +959,7 @@ export class GenerationService {
         audience: ctx.audience,
       },
       emit,
+      signal,
     });
 
     await this.appendChatMessage({
@@ -935,6 +993,7 @@ export class GenerationService {
     body: { instruction: string; baseVariantId?: string; imageUrls?: string[] },
     emit: (p: Record<string, unknown>) => void,
     opts?: { groupId?: string; skipUserMessage?: boolean; contextUpTo?: Date },
+    signal?: AbortSignal,
   ): Promise<void> {
     // Each edit/chat message consumes one AI credit, same as an initial generation.
     await this.billing.assertCanGenerate(workspaceId);
@@ -1033,6 +1092,7 @@ export class GenerationService {
       ],
       fullCodeForRetry: snapshot.componentCode,
       emit,
+      signal,
     });
 
     if (result.applied && result.componentCode && result.variantId) {
@@ -1080,6 +1140,7 @@ export class GenerationService {
       audience?: string | null;
     };
     emit: (p: Record<string, unknown>) => void;
+    signal?: AbortSignal;
   }): Promise<{
     assistantText: string;
     thinkingText: string;
@@ -1095,6 +1156,7 @@ export class GenerationService {
       fullCodeForRetry,
       titleContext,
       emit,
+      signal,
     } = params;
 
     if (!this.anthropic) {
@@ -1143,10 +1205,12 @@ export class GenerationService {
       let turnMessages = [...modelMessages];
 
       for (let toolTurn = 0; toolTurn < 4; toolTurn += 1) {
+        if (signal?.aborted) throw new GenerationAbortedError();
         response = await this.runStreamWithRetry({
           modelMessages: turnMessages,
           systemBlocks,
           emit,
+          signal,
         });
         assistantText += response.assistantText;
         thinkingText += response.thinkingText;
@@ -1628,6 +1692,7 @@ export class GenerationService {
     modelMessages: MessageParam[];
     systemBlocks: MessageCreateParams["system"];
     emit: (p: Record<string, unknown>) => void;
+    signal?: AbortSignal;
   }): Promise<Awaited<ReturnType<typeof this.runStream>>> {
     const maxAttempts = 3;
     for (let attempt = 1; ; attempt += 1) {
@@ -1647,6 +1712,10 @@ export class GenerationService {
       try {
         return await this.runStream({ ...args, emit: guardedEmit });
       } catch (error) {
+        // User aborted (stop button / disconnect) — don't retry, just bubble up.
+        if (args.signal?.aborted || isAbortError(error)) {
+          throw error;
+        }
         if (
           attempt >= maxAttempts ||
           emittedVisible ||
@@ -1668,6 +1737,7 @@ export class GenerationService {
     modelMessages: MessageParam[];
     systemBlocks: MessageCreateParams["system"];
     emit: (p: Record<string, unknown>) => void;
+    signal?: AbortSignal;
   }): Promise<{
     content: Message["content"];
     usage: Message["usage"] | undefined;
@@ -1681,7 +1751,8 @@ export class GenerationService {
     const thinking = this.extendedThinkingConfig();
     const maxTokens = thinking ? 20_000 : 16_384;
 
-    const stream = this.anthropic.messages.stream({
+    const stream = this.anthropic.messages.stream(
+      {
       model: this.model,
       max_tokens: maxTokens,
       ...(thinking ? { thinking } : {}),
@@ -1700,7 +1771,9 @@ export class GenerationService {
       // at most one tool call per assistant turn.
       tool_choice: { type: "auto", disable_parallel_tool_use: true },
       messages: args.modelMessages,
-    });
+      },
+      args.signal ? { signal: args.signal } : undefined,
+    );
 
     let lastComponentCode = "";
     let subjectEmitted = false;

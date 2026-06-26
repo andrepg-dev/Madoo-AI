@@ -8,6 +8,7 @@ import {
   Cancel01Icon,
   Image01Icon,
   Mic02Icon,
+  Square01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
@@ -134,6 +135,9 @@ type ClientPromptBoxProps = {
   disabled?: boolean;
   onSubmit?: (input: PromptSubmitInput) => void | Promise<void>;
   variant?: "home" | "chat";
+  /** While true, the send button becomes a Stop button that calls onStop. */
+  isStreaming?: boolean;
+  onStop?: () => void;
   /**
    * Externally-driven credit-limit warning (e.g. a daily-cap error from a failed
    * generation). When set, the floating yellow alert above the box shows this
@@ -202,6 +206,8 @@ export function ClientPromptBox({
   disabled = false,
   onSubmit,
   variant = "home",
+  isStreaming = false,
+  onStop,
   creditLimitMessage = null,
   onDismissCreditLimit,
 }: ClientPromptBoxProps) {
@@ -861,30 +867,53 @@ export function ClientPromptBox({
               />
             </button>
 
-            <button
-              type="button"
-              onClick={() => void submitPrompt()}
-              disabled={!hasPrompt || submitDisabled}
-              className={cn(
-                "inline-flex items-center justify-center rounded-full text-xs text-white transition",
-                hasPrompt && !submitDisabled
-                  ? "cursor-pointer bg-black"
-                  : "cursor-not-allowed bg-[#7d7d7a] opacity-80",
-                isChatVariant ? "h-7 w-7" : "h-8 px-4",
-              )}
-              aria-label="Generate email"
-            >
-              {isChatVariant ? (
-                <HugeiconsIcon
-                  icon={ArrowUp01Icon}
-                  size={14}
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
-              ) : (
-                "Generate email"
-              )}
-            </button>
+            {isStreaming && onStop ? (
+              <button
+                type="button"
+                onClick={onStop}
+                className={cn(
+                  "inline-flex cursor-pointer items-center justify-center rounded-full bg-black text-xs text-white transition hover:opacity-90",
+                  isChatVariant ? "h-7 w-7" : "h-8 px-4",
+                )}
+                aria-label="Stop generating"
+              >
+                {isChatVariant ? (
+                  <HugeiconsIcon
+                    icon={Square01Icon}
+                    size={13}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  "Stop"
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void submitPrompt()}
+                disabled={!hasPrompt || submitDisabled}
+                className={cn(
+                  "inline-flex items-center justify-center rounded-full text-xs text-white transition",
+                  hasPrompt && !submitDisabled
+                    ? "cursor-pointer bg-black"
+                    : "cursor-not-allowed bg-[#7d7d7a] opacity-80",
+                  isChatVariant ? "h-7 w-7" : "h-8 px-4",
+                )}
+                aria-label="Generate email"
+              >
+                {isChatVariant ? (
+                  <HugeiconsIcon
+                    icon={ArrowUp01Icon}
+                    size={14}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  "Generate email"
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
