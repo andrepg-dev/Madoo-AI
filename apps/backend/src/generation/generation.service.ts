@@ -144,6 +144,117 @@ const GET_EMAIL_VERSION_TOOL: Tool = {
   },
 };
 
+const GENERATE_CHART_TOOL: Tool = {
+  name: "generate_chart",
+  description:
+    "Render a data chart as a static PNG image (hosted on our CDN) and return its URL for use as an <Img src>. Email clients cannot run JS/SVG, so charts MUST be images — call this whenever the user asks for a chart, graph, plot, or data visualization (revenue bars, growth line, breakdown pie/doughnut, etc.). Use brand colors. Return the URL as the <Img src> default with an explicit width and descriptive alt text.",
+  input_schema: {
+    type: "object",
+    properties: {
+      type: {
+        type: "string",
+        enum: ["bar", "line", "pie", "doughnut", "radar", "polarArea"],
+        description: "Chart type.",
+      },
+      title: { type: "string", description: "Optional chart title." },
+      labels: {
+        type: "array",
+        items: { type: "string" },
+        description: "X-axis / slice labels, e.g. ['Jan','Feb','Mar'].",
+      },
+      datasets: {
+        type: "array",
+        description:
+          "One or more series. For pie/doughnut/polarArea use a single dataset; its values map to the labels.",
+        items: {
+          type: "object",
+          properties: {
+            label: { type: "string", description: "Series name (legend)." },
+            data: {
+              type: "array",
+              items: { type: "number" },
+              description: "Numeric values, one per label.",
+            },
+            colors: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Hex colors. For bar/line, the first color is used for the series. For pie/doughnut/polarArea, one color per slice (per label).",
+            },
+          },
+          required: ["data"],
+        },
+      },
+      width: { type: "number", description: "Image width px (default 560)." },
+      height: { type: "number", description: "Image height px (default 300)." },
+    },
+    required: ["type", "labels", "datasets"],
+  },
+};
+
+type ChartToolInput = {
+  type: "bar" | "line" | "pie" | "doughnut" | "radar" | "polarArea";
+  title?: string;
+  labels?: string[];
+  datasets?: Array<{ label?: string; data: number[]; colors?: string[] }>;
+  width?: number;
+  height?: number;
+};
+
+const CHART_PALETTE = [
+  "#0D0D0D",
+  "#2f6fea",
+  "#16a34a",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#cccccc",
+];
+
+/** Build a QuickChart.io PNG URL from the structured chart tool input. */
+function buildQuickChartUrl(input: ChartToolInput): string {
+  const isPie =
+    input.type === "pie" ||
+    input.type === "doughnut" ||
+    input.type === "polarArea";
+  const datasets = (input.datasets ?? []).map((ds, i) => {
+    const colors = ds.colors && ds.colors.length > 0 ? ds.colors : CHART_PALETTE;
+    if (isPie) {
+      return { label: ds.label, data: ds.data, backgroundColor: colors };
+    }
+    if (input.type === "line") {
+      return {
+        label: ds.label,
+        data: ds.data,
+        borderColor: colors[0] ?? CHART_PALETTE[i % CHART_PALETTE.length],
+        backgroundColor: colors[0] ?? CHART_PALETTE[i % CHART_PALETTE.length],
+        fill: false,
+      };
+    }
+    return {
+      label: ds.label,
+      data: ds.data,
+      backgroundColor: colors[0] ?? CHART_PALETTE[i % CHART_PALETTE.length],
+    };
+  });
+
+  const config = {
+    type: input.type,
+    data: { labels: input.labels ?? [], datasets },
+    options: input.title
+      ? { title: { display: true, text: input.title } }
+      : {},
+  };
+
+  const params = new URLSearchParams({
+    w: String(Math.min(Math.max(input.width ?? 560, 120), 1200)),
+    h: String(Math.min(Math.max(input.height ?? 300, 120), 800)),
+    bkg: "white",
+    c: JSON.stringify(config),
+  });
+  return `https://quickchart.io/chart?${params.toString()}`;
+}
+
 const STATIC_INSTRUCTION = [
   "You are Madoo, an AI email generator for polished, production-ready email templates.",
   "Detect the language of the user's latest instruction. Write all conversational replies and recipient-facing email copy in that same language, unless the user explicitly asks for a different language.",
@@ -181,6 +292,7 @@ const STATIC_INSTRUCTION = [
   "Component pattern must be: const Email = ({ ...defaults } = {}) => (<Html>...</Html>); export default Email;",
   "Subject line (emit_email.subject) must be normal marketing or transactional copy for the recipient. Never base it on environment variables, .env files, API keys, secrets, or other developer/deployment configuration topics—even if the user brief drifts there.",
   "VERSION HISTORY: Each saved email is a numbered version shown to the user as 'Version N · latest'. You only receive the CURRENT version's TSX. When the user asks to revert, restore, undo back to, or reuse anything from an earlier version (e.g. 'put the image as in version 1', 'go back to version 2', 'revert as before'), call get_email_version with that number to read the exact earlier code, then emit_email with the reverted or merged result. The edit prompt tells you how many versions exist. Never reconstruct an old version from memory.",
+  "CHARTS: Email clients cannot run JS/SVG, so never hand-build charts with divs or inline SVG. When the user wants a chart, graph, plot, or data visualization, call generate_chart with the type, labels, and datasets (use brand colors), then place the returned PNG URL as an <Img src> default with an explicit width and descriptive alt text. Bind it to an image variable like any other image.",
   "When the user provides a website URL or asks to match a brand/site, call inspect_website_brand before emit_email.",
   "Use inspect_website_brand results for visual direction, copy tone, brand colors, fonts, CTA language, logo URL, and image URLs.",
   "When no image is attached for a needed visual, fall back to an image variable with a sensible placeholder URL default as described above.",
@@ -1197,6 +1309,39 @@ export class GenerationService {
                   latestVersion: latest?.seq ?? 0,
                 },
           );
+        } else if (requestedTool.name === "generate_chart") {
+          const input = requestedTool.input as ChartToolInput;
+          if (!input.type || !Array.isArray(input.datasets) || input.datasets.length === 0) {
+            throw new BadRequestException(
+              "generate_chart requires a type and at least one dataset.",
+            );
+          }
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "generate_chart",
+            status: "running",
+            title: "Generating chart",
+            detail: input.title || input.type,
+          });
+          const sourceUrl = buildQuickChartUrl(input);
+          const hosted = await this.rehostImageUrl(sourceUrl);
+          const chartUrl = hosted ?? sourceUrl;
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "generate_chart",
+            status: "done",
+            title: "Generated chart",
+            detail: input.title || input.type,
+            summary: `${input.type} chart`,
+            images: [chartUrl],
+          });
+          toolResultContent = JSON.stringify({
+            chartUrl,
+            type: input.type,
+            note: "Use this URL as the <Img src> default (give it an explicit width and descriptive alt). It is a static PNG safe for all email clients.",
+          });
         } else {
           throw new BadRequestException(`Unsupported tool requested: ${requestedTool.name}`);
         }
@@ -1543,6 +1688,7 @@ export class GenerationService {
         INSPECT_WEBSITE_BRAND_TOOL,
         FIND_IMAGES_TOOL,
         GET_EMAIL_VERSION_TOOL,
+        GENERATE_CHART_TOOL,
         EMIT_EMAIL_TOOL,
       ],
       // The tool loop pairs a tool_result for exactly one tool_use per turn.

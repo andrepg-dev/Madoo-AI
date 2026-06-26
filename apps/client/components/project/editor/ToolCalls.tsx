@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Cancel01Icon,
+  Chart01Icon,
   CheckmarkBadge01Icon,
   Clock01Icon,
   Globe02Icon,
@@ -17,6 +18,7 @@ function iconFor(name: string): IconSvgElement {
   if (name === "find_images") return Image01Icon;
   if (name === "inspect_website_brand") return Globe02Icon;
   if (name === "get_email_version") return Clock01Icon;
+  if (name === "generate_chart") return Chart01Icon;
   return Search01Icon;
 }
 
