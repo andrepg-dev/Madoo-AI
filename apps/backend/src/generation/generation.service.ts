@@ -990,7 +990,16 @@ export class GenerationService {
           if (typeof input.url !== "string" || !input.url.trim()) {
             throw new BadRequestException("inspect_website_brand requires a URL.");
           }
+          const url = input.url.trim();
           emit({ type: "step", message: "Inspecting brand website..." });
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "inspect_website_brand",
+            status: "running",
+            title: "Inspecting brand site",
+            detail: url,
+          });
           const brandContext = await this.websiteBrand.inspect(
             input.url,
             typeof input.purpose === "string" ? input.purpose : undefined,
@@ -1002,15 +1011,51 @@ export class GenerationService {
             colors: brandContext.colors.map((color) => color.hex),
             imageCount: brandContext.imageUrls.length,
           });
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "inspect_website_brand",
+            status: "done",
+            title: "Inspected brand site",
+            detail: brandContext.url,
+            summary: [
+              brandContext.brandName ?? undefined,
+              `${brandContext.colors.length} colors`,
+              `${brandContext.imageUrls.length} images`,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          });
           toolResultContent = JSON.stringify(brandContext);
         } else if (requestedTool.name === "find_images") {
           const input = requestedTool.input as { query?: unknown };
           if (typeof input.query !== "string" || !input.query.trim()) {
             throw new BadRequestException("find_images requires a query.");
           }
-          emit({ type: "step", message: `Searching images for "${input.query.trim()}"...` });
-          const images = await this.websiteBrand.searchImages(input.query);
-          emit({ type: "image_search", query: input.query.trim(), imageCount: images.length });
+          const query = input.query.trim();
+          emit({ type: "step", message: `Searching images for "${query}"...` });
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "find_images",
+            status: "running",
+            title: "Searching images",
+            detail: query,
+          });
+          const images = await this.websiteBrand.searchImages(query);
+          emit({ type: "image_search", query, imageCount: images.length });
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "find_images",
+            status: "done",
+            title: "Searched images",
+            detail: query,
+            summary: images.length
+              ? `Found ${images.length} image${images.length === 1 ? "" : "s"}`
+              : "No images found — using a placeholder",
+            images: images.slice(0, 4).map((img) => img.url),
+          });
           toolResultContent = JSON.stringify(
             images.length
               ? { images }
