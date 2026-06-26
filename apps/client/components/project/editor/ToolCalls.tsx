@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Cancel01Icon,
   CheckmarkBadge01Icon,
   Globe02Icon,
   Image01Icon,
@@ -17,6 +20,7 @@ function iconFor(name: string): IconSvgElement {
 
 export function ToolCallCard({ call }: { call: ToolCallView }) {
   const running = call.status === "running";
+  const [preview, setPreview] = useState<string | null>(null);
   return (
     <div className="rounded-lg border border-madoo-border bg-madoo-ink/[0.02] px-3 py-2">
       <div className="flex items-center gap-2">
@@ -66,18 +70,76 @@ export function ToolCallCard({ call }: { call: ToolCallView }) {
       {call.images && call.images.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1.5 pl-[23px]">
           {call.images.slice(0, 4).map((url) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <button
+              className="rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-madoo-ink/40"
               key={url}
-              alt=""
-              className="size-12 rounded-md border border-madoo-border object-cover"
-              loading="lazy"
-              src={url}
-            />
+              onClick={() => setPreview(url)}
+              type="button"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt="Search result"
+                className="size-12 rounded-md border border-madoo-border object-cover"
+                loading="lazy"
+                src={url}
+              />
+            </button>
           ))}
         </div>
       ) : null}
+
+      <ImageLightbox onClose={() => setPreview(null)} src={preview} />
     </div>
+  );
+}
+
+/** Fullscreen overlay showing a single image at full size; click/Esc to close. */
+function ImageLightbox({
+  src,
+  onClose,
+}: {
+  src: string | null;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!src) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [src, onClose]);
+
+  if (!src || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+      onClick={onClose}
+      role="presentation"
+    >
+      <button
+        aria-label="Close"
+        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+        onClick={onClose}
+        type="button"
+      >
+        <HugeiconsIcon
+          icon={Cancel01Icon}
+          primaryColor="currentColor"
+          size={20}
+          strokeWidth={2}
+        />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt="Search result"
+        className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        src={src}
+      />
+    </div>,
+    document.body,
   );
 }
 
