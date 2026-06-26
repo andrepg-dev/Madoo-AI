@@ -5,7 +5,8 @@ import { Streamdown } from "streamdown";
 import { ActionButton } from "./ActionButton";
 import { CopyActionButton } from "./CopyActionButton";
 import { ThinkingBlock } from "./ThinkingBlock";
-import type { AiMessageFeedback } from "./types";
+import { ToolCalls } from "./ToolCalls";
+import type { AiMessageFeedback, ToolCallView } from "./types";
 
 export function AiMessage({
   children,
@@ -13,6 +14,7 @@ export function AiMessage({
   thinking,
   thinkingSeconds,
   thinkingActive,
+  toolCalls,
   versions,
   versionIndex = 0,
   onFeedback,
@@ -25,6 +27,7 @@ export function AiMessage({
   thinking?: string;
   thinkingSeconds?: number;
   thinkingActive?: boolean;
+  toolCalls?: ToolCallView[];
   versions?: {
     id: string;
     content: string;
@@ -54,6 +57,8 @@ export function AiMessage({
       <Streamdown className="ai-conversation-markdown font-figtree leading-6">
         {children}
       </Streamdown>
+
+      <ToolCalls calls={toolCalls} />
 
       {showActions ? (
         <div className="mt-1.5 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">

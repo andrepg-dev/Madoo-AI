@@ -26,6 +26,16 @@ export type StreamEmailEvent =
       colors?: string[];
       imageCount?: number;
     }
+  | {
+      type: "tool_call";
+      id: string;
+      name: string;
+      status: "running" | "done";
+      title: string;
+      detail?: string;
+      summary?: string;
+      images?: string[];
+    }
   | { type: "preview_url"; value: string }
   | {
       type: "done";

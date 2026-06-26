@@ -38,6 +38,7 @@ import {
 import type {
   AiMessageFeedback,
   ChatMessage,
+  ToolCallView,
 } from "@/components/project/editor/types";
 import {
   consumeEmailSseStream,
@@ -261,6 +262,7 @@ function EmailTemplateProjectInner() {
       let thinkingText = "";
       let thinkingStartedAt: number | null = null;
       let thinkingFinishedAt: number | null = null;
+      let toolCalls: ToolCallView[] = [];
 
       const upsertAssistant = (current: ChatMessage[]) =>
         upsertMessage(current, {
@@ -269,6 +271,7 @@ function EmailTemplateProjectInner() {
           content: assistantText,
           seq: Date.now(),
           emailId,
+          toolCalls: toolCalls.length ? toolCalls : undefined,
           thinking: thinkingText || undefined,
           thinkingSeconds: thinkingStartedAt
             ? Math.max(
@@ -301,6 +304,23 @@ function EmailTemplateProjectInner() {
       const handleEvent = (event: StreamEmailEvent) => {
         if (event.type === "step") {
           showTimelineProgress(event.message);
+          return;
+        }
+
+        if (event.type === "tool_call") {
+          const next: ToolCallView = {
+            id: event.id,
+            name: event.name,
+            title: event.title,
+            status: event.status,
+            detail: event.detail,
+            summary: event.summary,
+            images: event.images,
+          };
+          const idx = toolCalls.findIndex((c) => c.id === next.id);
+          if (idx === -1) toolCalls = [...toolCalls, next];
+          else toolCalls = toolCalls.map((c, i) => (i === idx ? next : c));
+          setMessages((current) => upsertAssistant(current));
           return;
         }
 
@@ -382,6 +402,7 @@ function EmailTemplateProjectInner() {
                 : `Generated email${event.subject ? `: ${event.subject}` : "."}`,
               seq: Date.now(),
               emailId,
+              toolCalls: toolCalls.length ? toolCalls : undefined,
               thinking: thinkingText || undefined,
               thinkingSeconds: thinkingStartedAt
                 ? Math.max(
@@ -913,6 +934,7 @@ function EmailTemplateProjectInner() {
         thinking={message.thinking}
         thinkingActive={message.thinkingActive}
         thinkingSeconds={message.thinkingSeconds}
+        toolCalls={message.toolCalls}
         versionIndex={message.versionIndex}
         versions={message.versions}
       >

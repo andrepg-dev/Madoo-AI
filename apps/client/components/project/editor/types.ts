@@ -6,6 +6,21 @@ export type TimelineStep = {
   state: "active" | "done";
 };
 
+export type ToolCallView = {
+  id: string;
+  /** Raw tool name from the backend, e.g. "find_images". */
+  name: string;
+  /** Human title, e.g. "Searching images". */
+  title: string;
+  status: "running" | "done";
+  /** Primary argument shown inline, e.g. the query or URL. */
+  detail?: string;
+  /** One-line result summary, e.g. "Found 6 images". */
+  summary?: string;
+  /** Preview image URLs (find_images). */
+  images?: string[];
+};
+
 export type AiMessageFeedback = "LIKE" | "DISLIKE";
 
 export type ChatMessage = {
@@ -36,6 +51,8 @@ export type ChatMessage = {
   /** True while reasoning is still streaming; drives the live label. */
   thinkingActive?: boolean;
   steps?: TimelineStep[];
+  /** Tool calls made during this turn, shown at the bottom of the message. */
+  toolCalls?: ToolCallView[];
   startedAt?: number;
   finishedAt?: number;
 };
