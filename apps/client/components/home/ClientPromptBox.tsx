@@ -872,7 +872,7 @@ export function ClientPromptBox({
                 type="button"
                 onClick={onStop}
                 className={cn(
-                  "inline-flex cursor-pointer items-center justify-center rounded-full bg-black text-xs text-white transition hover:opacity-90",
+                  "inline-flex cursor-pointer items-center justify-center rounded-full border border-madoo-border bg-transparent text-xs text-madoo-ink transition hover:bg-madoo-ink/[0.06]",
                   isChatVariant ? "h-7 w-7" : "h-8 px-4",
                 )}
                 aria-label="Stop generating"
