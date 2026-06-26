@@ -365,9 +365,9 @@ export const localeCopy = {
       compatibilityTitle: "Client compatibility",
       compatibilityDescription:
         "Review your email layout, copy, structure, and responsive presentation before export.",
-      brandTitle: "Brand systems",
+      brandTitle: "Add your brand kit",
       brandDescription:
-        "Reusable templates, layout rules, colors, type, blocks, and saved campaign patterns.",
+        "Upload your logo, colors, and fonts — Madoo generates on-brand emails every time.",
       workflowTitle: "Team workflow",
       workflowDescription:
         "Approvals, reviews, ownership, and campaign handoff stay visible before export.",
@@ -403,8 +403,8 @@ export const localeCopy = {
               ),
             },
             {
-              heading: "BRAND SYSTEMS",
-              body: "Reusable templates, colors, type, and saved blocks keep every campaign consistent. Refine copy, sections, and layout until it's exactly right.",
+              heading: "ADD YOUR BRAND KIT",
+              body: "Upload your logo, colors, and fonts, and Madoo generates on-brand emails every time. Refine copy, sections, and layout until it's exactly right.",
             },
           ],
         },
@@ -620,9 +620,9 @@ export const localeCopy = {
       compatibilityTitle: "Compatibilidad",
       compatibilityDescription:
         "Revisa layout, copy, estructura y presentación responsive antes de exportar.",
-      brandTitle: "Sistemas de marca",
+      brandTitle: "Agrega tu brand kit",
       brandDescription:
-        "Plantillas reutilizables, reglas de layout, colores, tipografías, bloques y patrones guardados.",
+        "Sube tu logo, colores y tipografías — Madoo genera emails con tu marca siempre.",
       workflowTitle: "Flujo de equipo",
       workflowDescription:
         "Aprobaciones, revisiones, dueños y handoff de campaña se mantienen visibles antes de exportar.",
@@ -664,8 +664,8 @@ export const localeCopy = {
               ),
             },
             {
-              heading: "SISTEMAS DE MARCA",
-              body: "Plantillas reutilizables, colores, tipografías y bloques guardados mantienen cada campaña consistente. Ajusta copy, secciones y layout hasta dejarlo perfecto.",
+              heading: "AGREGA TU BRAND KIT",
+              body: "Sube tu logo, colores y tipografías, y Madoo genera emails con tu marca siempre. Ajusta copy, secciones y layout hasta dejarlo perfecto.",
             },
           ],
         },
