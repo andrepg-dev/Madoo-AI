@@ -18,26 +18,30 @@ function requestedColumnCount(maxColumns: number) {
   if (window.matchMedia("(min-width: 1024px)").matches) {
     return Math.min(maxColumns, 3);
   }
-  return 0;
+  if (window.matchMedia("(min-width: 640px)").matches) {
+    return Math.min(maxColumns, 2);
+  }
+  return 1;
 }
 
 function useResponsiveColumnCount(maxColumns: number) {
-  const [columnCount, setColumnCount] = useState(0);
+  // 0 only during SSR; computed from the viewport on the first client paint so
+  // narrow widths still get packed columns (not a row-aligned grid with gaps).
+  const [columnCount, setColumnCount] = useState(() =>
+    typeof window === "undefined" ? 0 : requestedColumnCount(maxColumns),
+  );
 
   useEffect(() => {
     const queries = [
       window.matchMedia("(min-width: 1280px)"),
       window.matchMedia("(min-width: 1024px)"),
+      window.matchMedia("(min-width: 640px)"),
     ];
 
     const updateColumnCount = () => {
-      const requested = requestedColumnCount(maxColumns);
-      if (requested === 0) {
-        setColumnCount(0);
-        return;
-      }
-
-      setColumnCount(Math.max(1, Math.min(maxColumns, requested)));
+      setColumnCount(
+        Math.max(1, Math.min(maxColumns, requestedColumnCount(maxColumns))),
+      );
     };
 
     updateColumnCount();
@@ -95,8 +99,10 @@ export function MasonryGrid<T>({
   if (items.length === 0) return null;
 
   if (columnCount === 0) {
+    // SSR / first paint before the viewport is known — single column avoids the
+    // row-aligned gaps a CSS grid would create.
     return (
-      <div className={cx("grid gap-4 grid-cols-2", responsiveClassName)}>
+      <div className={cx("flex flex-col gap-4", responsiveClassName)}>
         {items.map((item, index) => (
           <Fragment key={index}>{renderItem(item, index)}</Fragment>
         ))}
