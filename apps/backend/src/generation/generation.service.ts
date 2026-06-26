@@ -368,6 +368,44 @@ export class GenerationService {
       : null;
   }
 
+  /**
+   * Web images (from find_images) are often hotlink-protected, expiring, or
+   * blocked to server-side fetchers — they render in the browser editor but
+   * break in the screenshot pipeline, exported HTML, and recipient inboxes.
+   * Download and rehost on our own S3 so every render path gets a stable URL.
+   * Returns null on any failure so the caller can skip the candidate.
+   */
+  private async rehostImageUrl(sourceUrl: string): Promise<string | null> {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8_000);
+      let res: Response;
+      try {
+        res = await fetch(sourceUrl, {
+          signal: controller.signal,
+          headers: {
+            // Browser-like UA + referer so hotlink checks behave as in-app.
+            "User-Agent":
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+            Accept: "image/avif,image/webp,image/png,image/jpeg,*/*",
+          },
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!res.ok) return null;
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.startsWith("image/")) return null;
+      const arrayBuffer = await res.arrayBuffer();
+      // Skip absurdly large assets (> 8 MB) to keep emails light.
+      if (arrayBuffer.byteLength > 8 * 1024 * 1024) return null;
+      const buffer = Buffer.from(arrayBuffer);
+      return await this.s3.uploadBuffer(buffer, contentType, "found-images");
+    } catch {
+      return null;
+    }
+  }
+
   /** Extended thinking (model-level). Off if `ANTHROPIC_EXTENDED_THINKING=false`. */
   private extendedThinkingConfig(): ThinkingConfigParam | undefined {
     const raw = this.config.get<string>("ANTHROPIC_EXTENDED_THINKING");
@@ -1042,7 +1080,21 @@ export class GenerationService {
             title: "Searching images",
             detail: query,
           });
-          const images = await this.websiteBrand.searchImages(query);
+          const found = await this.websiteBrand.searchImages(query);
+          // Rehost on our S3 so the chosen image renders everywhere (screenshot,
+          // export, inbox) — raw web URLs are hotlink-protected and break.
+          const rehosted = await Promise.all(
+            found.slice(0, 4).map(async (img) => {
+              const url = await this.rehostImageUrl(img.url);
+              return url
+                ? { url, description: img.description }
+                : null;
+            }),
+          );
+          const images = rehosted.filter((img) => img !== null) as Array<{
+            url: string;
+            description?: string;
+          }>;
           emit({ type: "image_search", query, imageCount: images.length });
           emit({
             type: "tool_call",
