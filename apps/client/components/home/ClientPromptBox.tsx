@@ -8,7 +8,7 @@ import {
   Cancel01Icon,
   Image01Icon,
   Mic02Icon,
-  Square01Icon,
+  StopIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
@@ -879,8 +879,8 @@ export function ClientPromptBox({
               >
                 {isChatVariant ? (
                   <HugeiconsIcon
-                    icon={Square01Icon}
-                    size={13}
+                    icon={StopIcon}
+                    size={15}
                     strokeWidth={2}
                     aria-hidden="true"
                   />
