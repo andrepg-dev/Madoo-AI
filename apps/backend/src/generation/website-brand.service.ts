@@ -29,6 +29,20 @@ type TavilySearchResponse = {
   images?: Array<TavilySearchImage | string>;
 };
 
+type PexelsPhoto = {
+  alt?: string;
+  src?: {
+    original?: string;
+    large2x?: string;
+    large?: string;
+    medium?: string;
+  };
+};
+
+type PexelsSearchResponse = {
+  photos?: PexelsPhoto[];
+};
+
 export type ImageSearchResult = {
   url: string;
   description?: string;
@@ -469,11 +483,72 @@ export class WebsiteBrandService {
   }
 
   /**
-   * Search the web for real, hosted images matching a query (Tavily image
-   * search). Returns direct image URLs the model can drop into an <Img src>.
-   * Empty array when no key / no results — never throws on a miss.
+   * Search for real, hosted images matching a query. Tries Pexels first
+   * (curated, stable CDN, free for commercial use), then falls back to Tavily
+   * web image search. Returns direct image URLs the model can drop into an
+   * <Img src>. Empty array when no key / no results — never throws on a miss.
    */
   async searchImages(query: string, count = 6): Promise<ImageSearchResult[]> {
+    const q = query.trim();
+    if (!q) return [];
+
+    const pexels = await this.searchImagesPexels(q, count);
+    if (pexels.length > 0) return pexels;
+
+    return this.searchImagesTavily(q, count);
+  }
+
+  /**
+   * Pexels image search — curated stock photos on a stable CDN, free for
+   * commercial use with no attribution required. Empty array on no key / miss.
+   */
+  private async searchImagesPexels(
+    query: string,
+    count: number,
+  ): Promise<ImageSearchResult[]> {
+    const apiKey = this.config.get<string>("PEXELS_API_KEY");
+    if (!apiKey) return [];
+
+    const url = new URL("https://api.pexels.com/v1/search");
+    url.searchParams.set("query", query);
+    url.searchParams.set("per_page", String(Math.min(Math.max(count, 1), 80)));
+
+    let res: Response;
+    try {
+      res = await fetch(url.toString(), {
+        headers: { Authorization: apiKey },
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch {
+      return [];
+    }
+
+    if (res.status === 401) {
+      throw new InternalServerErrorException("PEXELS_API_KEY is invalid.");
+    }
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as PexelsSearchResponse;
+    const out: ImageSearchResult[] = [];
+    for (const photo of data.photos ?? []) {
+      const src = photo.src;
+      const picked =
+        src?.large2x ?? src?.large ?? src?.original ?? src?.medium;
+      if (typeof picked !== "string" || !/^https:\/\//i.test(picked)) continue;
+      out.push({ url: picked, description: photo.alt || undefined });
+      if (out.length >= count) break;
+    }
+    return out;
+  }
+
+  /**
+   * Tavily web image search (fallback). Returns direct image URLs.
+   * Empty array when no key / no results — never throws on a miss.
+   */
+  private async searchImagesTavily(
+    query: string,
+    count: number,
+  ): Promise<ImageSearchResult[]> {
     const apiKey = this.config.get<string>("TAVILY_API_KEY");
     const q = query.trim();
     if (!apiKey || !q) return [];
