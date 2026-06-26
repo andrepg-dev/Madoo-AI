@@ -310,6 +310,16 @@ function EmailTemplateProjectInner() {
         if (thinkingStartedAt !== null && thinkingFinishedAt === null) {
           thinkingFinishedAt = Date.now();
         }
+        // Once the answer has started streaming or the email is building, the
+        // inline content (text, tool cards, "Building your email…" loader) is
+        // the progress indicator — don't bring the top timeline spinner back
+        // for late backend steps like "Rendering HTML preview…".
+        if (buildingEmail || assistantText.trim() || parts.length) {
+          setMessages((current) =>
+            upsertAssistant(finishTimeline(current, timelineId)),
+          );
+          return;
+        }
         setMessages((current) =>
           thinkingText || assistantText
             ? upsertAssistant(appendTimelineStep(current, timelineId, label))
@@ -436,6 +446,13 @@ function EmailTemplateProjectInner() {
               setMobileTab("preview");
             }
           }
+          // Refresh the email now that the variant is persisted, rather than
+          // waiting for the SSE stream to close (the post-stream refetch below
+          // only runs once the connection ends, which can lag well behind this
+          // event). Without this, the freshly created variant never reaches the
+          // cache promptly, so the variant-gated Variables button stays hidden
+          // until a manual reload — most visible on the very first generation.
+          void invalidateEmailState(emailId);
           if (event.subject) setStreamedSubject(event.subject);
           if (event.conversationTitle) {
             setStreamedConversationTitle(event.conversationTitle);
