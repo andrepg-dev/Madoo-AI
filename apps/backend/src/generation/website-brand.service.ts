@@ -20,6 +20,20 @@ type TavilyExtractResponse = {
   usage?: { credits?: number };
 };
 
+type TavilySearchImage = {
+  url?: string;
+  description?: string;
+};
+
+type TavilySearchResponse = {
+  images?: Array<TavilySearchImage | string>;
+};
+
+export type ImageSearchResult = {
+  url: string;
+  description?: string;
+};
+
 type BrandColor = {
   hex: string;
   usage: "background" | "text" | "button" | "accent" | "unknown";
@@ -452,6 +466,54 @@ export class WebsiteBrandService {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  /**
+   * Search the web for real, hosted images matching a query (Tavily image
+   * search). Returns direct image URLs the model can drop into an <Img src>.
+   * Empty array when no key / no results — never throws on a miss.
+   */
+  async searchImages(query: string, count = 6): Promise<ImageSearchResult[]> {
+    const apiKey = this.config.get<string>("TAVILY_API_KEY");
+    const q = query.trim();
+    if (!apiKey || !q) return [];
+
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: q,
+        include_images: true,
+        include_image_descriptions: true,
+        max_results: 1,
+        search_depth: "basic",
+        timeout: 10,
+      }),
+    });
+
+    if (res.status === 401) {
+      throw new InternalServerErrorException("TAVILY_API_KEY is invalid.");
+    }
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as TavilySearchResponse;
+    const out: ImageSearchResult[] = [];
+    for (const img of data.images ?? []) {
+      const url = typeof img === "string" ? img : img.url;
+      if (typeof url !== "string" || !/^https:\/\//i.test(url)) continue;
+      out.push({
+        url,
+        description:
+          typeof img === "object" && img.description
+            ? img.description
+            : undefined,
+      });
+      if (out.length >= count) break;
+    }
+    return out;
   }
 
   private async extractWithTavily(

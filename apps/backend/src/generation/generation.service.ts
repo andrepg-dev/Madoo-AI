@@ -110,6 +110,23 @@ const INSPECT_WEBSITE_BRAND_TOOL: Tool = {
   },
 };
 
+const FIND_IMAGES_TOOL: Tool = {
+  name: "find_images",
+  description:
+    "Search the web for real, publicly-hosted images and return direct image URLs (with short descriptions). Use this when the user asks to find, add, or pick an image/photo/illustration from the internet (e.g. 'find a good protein image', 'add a product photo') and no suitable attached image or brand image URL exists. Pick the most relevant returned URL and use it as the <Img src> default. Never invent image URLs — call this tool instead.",
+  input_schema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description:
+          "Concise visual search query, e.g. 'protein powder scoop', 'healthy breakfast bowl', 'modern office team'.",
+      },
+    },
+    required: ["query"],
+  },
+};
+
 const STATIC_INSTRUCTION = [
   "You are Madoo, an AI email generator for polished, production-ready email templates.",
   "Detect the language of the user's latest instruction. Write all conversational replies and recipient-facing email copy in that same language, unless the user explicitly asks for a different language.",
@@ -125,6 +142,7 @@ const STATIC_INSTRUCTION = [
   "Set borderRadius: 0 on every element by default — Container, Sections, cards, Buttons, Images, and dividers. Sharp 90-degree corners are the house style. Use a non-zero border-radius ONLY when the user explicitly asks for rounded/soft corners, or for an element that must be round (e.g. a circular avatar). When in doubt, keep it 0.",
   "Do not use emojis anywhere — not in the subject, headings, body, buttons, eyebrow, or footer. Use real words, and an <Img> when a visual is needed. Include an emoji only if the user explicitly asks for one.",
   "For a brand logo or hero image, render an <Img> bound to an image variable (role=image, scope=static) with a sensible placeholder image URL default, so the user can upload their own image in Madoo. Don't fake a logo with text/emoji when a real image fits.",
+  "FINDING IMAGES: When the user asks to find/add/pick an image, photo, or illustration from the internet and there is no suitable attached image or brand image URL, call the find_images tool with a concise visual query, then use the most relevant returned URL as the <Img src> default. Do NOT invent or guess image URLs, and do NOT tell the user you cannot fetch images — use find_images. If it returns no results, fall back to a sensible placeholder image URL.",
   "IMAGE ATTACHMENTS: The user may attach images, which you can SEE directly (vision). Each attached image also has a public hosted URL listed in the message text. When the email needs a visual that matches an attached image (logo, hero, product shot, banner, screenshot), use that exact URL as the <Img src> default — do NOT invent a placeholder URL and do NOT describe the image as text. Look at the attached image to choose alt text, layout, colors, and where it fits. If an attached image is clearly a logo, place it in the header; a product/hero shot belongs in the hero section.",
   "Even for 'simple' briefs keep the full skeleton (header, hero, CTA, footer with unsubscribe). Simple means less copy and fewer sections — not missing structure.",
   "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl} with scope=static (the same destination for everyone). The footer unsubscribe link uses href={unsubscribeUrl} with scope=static (role=url) by default. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
@@ -939,7 +957,7 @@ export class GenerationService {
       let thinkingText = "";
       let turnMessages = [...modelMessages];
 
-      for (let toolTurn = 0; toolTurn < 3; toolTurn += 1) {
+      for (let toolTurn = 0; toolTurn < 4; toolTurn += 1) {
         response = await this.runStreamWithRetry({
           modelMessages: turnMessages,
           systemBlocks,
@@ -966,27 +984,41 @@ export class GenerationService {
         if (!requestedTool || requestedTool.type !== "tool_use") break;
         if (requestedTool.name === "emit_email") break;
 
-        if (requestedTool.name !== "inspect_website_brand") {
+        let toolResultContent: string;
+        if (requestedTool.name === "inspect_website_brand") {
+          const input = requestedTool.input as { url?: unknown; purpose?: unknown };
+          if (typeof input.url !== "string" || !input.url.trim()) {
+            throw new BadRequestException("inspect_website_brand requires a URL.");
+          }
+          emit({ type: "step", message: "Inspecting brand website..." });
+          const brandContext = await this.websiteBrand.inspect(
+            input.url,
+            typeof input.purpose === "string" ? input.purpose : undefined,
+          );
+          emit({
+            type: "brand_context",
+            url: brandContext.url,
+            brandName: brandContext.brandName,
+            colors: brandContext.colors.map((color) => color.hex),
+            imageCount: brandContext.imageUrls.length,
+          });
+          toolResultContent = JSON.stringify(brandContext);
+        } else if (requestedTool.name === "find_images") {
+          const input = requestedTool.input as { query?: unknown };
+          if (typeof input.query !== "string" || !input.query.trim()) {
+            throw new BadRequestException("find_images requires a query.");
+          }
+          emit({ type: "step", message: `Searching images for "${input.query.trim()}"...` });
+          const images = await this.websiteBrand.searchImages(input.query);
+          emit({ type: "image_search", query: input.query.trim(), imageCount: images.length });
+          toolResultContent = JSON.stringify(
+            images.length
+              ? { images }
+              : { images: [], note: "No images found. Use a sensible placeholder image URL instead." },
+          );
+        } else {
           throw new BadRequestException(`Unsupported tool requested: ${requestedTool.name}`);
         }
-
-        const input = requestedTool.input as { url?: unknown; purpose?: unknown };
-        if (typeof input.url !== "string" || !input.url.trim()) {
-          throw new BadRequestException("inspect_website_brand requires a URL.");
-        }
-
-        emit({ type: "step", message: "Inspecting brand website..." });
-        const brandContext = await this.websiteBrand.inspect(
-          input.url,
-          typeof input.purpose === "string" ? input.purpose : undefined,
-        );
-        emit({
-          type: "brand_context",
-          url: brandContext.url,
-          brandName: brandContext.brandName,
-          colors: brandContext.colors.map((color) => color.hex),
-          imageCount: brandContext.imageUrls.length,
-        });
 
         turnMessages = [
           ...turnMessages,
@@ -1000,7 +1032,7 @@ export class GenerationService {
               {
                 type: "tool_result",
                 tool_use_id: requestedTool.id,
-                content: JSON.stringify(brandContext),
+                content: toolResultContent,
               },
             ],
           } as MessageParam,
@@ -1326,7 +1358,7 @@ export class GenerationService {
       ...(thinking ? { thinking } : {}),
       output_config: { effort: this.effortLevel() },
       system: args.systemBlocks,
-      tools: [INSPECT_WEBSITE_BRAND_TOOL, EMIT_EMAIL_TOOL],
+      tools: [INSPECT_WEBSITE_BRAND_TOOL, FIND_IMAGES_TOOL, EMIT_EMAIL_TOOL],
       // The tool loop pairs a tool_result for exactly one tool_use per turn.
       // Parallel tool use (e.g. inspect_website_brand + emit_email together)
       // leaves the second tool_use unpaired on replay → Anthropic 400. Force
