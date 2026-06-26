@@ -27,6 +27,7 @@ import {
   Input,
   Modal,
   SegmentedControl,
+  Select,
   Textarea,
   cx,
   useToast,
@@ -788,7 +789,7 @@ function MakePrivateModal({
   );
 }
 
-function ShareToCommunityModal({
+export function ShareToCommunityModal({
   email,
   isPending,
   onClose,
@@ -808,7 +809,18 @@ function ShareToCommunityModal({
     CommunityTemplateCategory[]
   >([]);
   const [confirming, setConfirming] = useState(false);
+  const [variantSeq, setVariantSeq] = useState<number | null>(null);
 
+  // Versions newest → oldest for the publish picker; default = latest.
+  const variantsDesc = useMemo(
+    () => [...(email?.variants ?? [])].sort((a, b) => b.seq - a.seq),
+    [email?.variants],
+  );
+  const latestSeq = variantsDesc[0]?.seq ?? null;
+  const selectedSeq = variantSeq ?? latestSeq;
+
+  // Reset only when the target email actually changes — keying on the object
+  // identity reset the form (and wiped category clicks) on every re-render.
   useEffect(() => {
     if (!email) return;
     const suggestions = suggestCommunityCategories(email);
@@ -817,7 +829,8 @@ function ShareToCommunityModal({
     setSelectedCategories(suggestions);
     setSuggestedCategories(suggestions);
     setConfirming(false);
-  }, [email]);
+    setVariantSeq(null);
+  }, [email?.id]);
 
   const submit = () => {
     if (!email || !name.trim() || selectedCategories.length === 0) return;
@@ -827,6 +840,7 @@ function ShareToCommunityModal({
     }
     onSubmit({
       emailId: email.id,
+      variantSeq: selectedSeq ?? undefined,
       name: name.trim(),
       description: description.trim() || null,
       category: selectedCategories[0] ?? null,
@@ -932,6 +946,25 @@ function ShareToCommunityModal({
             onChange={(event) => setName(event.target.value)}
             value={name}
           />
+          {variantsDesc.length > 1 ? (
+            <div className="grid gap-1.5">
+              <span className="text-sm font-medium text-madoo-ink">
+                Version to publish
+              </span>
+              <Select
+                onChange={(value) => setVariantSeq(Number(value))}
+                options={variantsDesc.map((v) => ({
+                  value: String(v.seq),
+                  label:
+                    v.seq === latestSeq
+                      ? `Version ${v.seq} · latest`
+                      : `Version ${v.seq}`,
+                }))}
+                value={String(selectedSeq ?? "")}
+                variant="surface"
+              />
+            </div>
+          ) : null}
           <Textarea
             label="Description"
             noResize

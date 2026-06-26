@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Avatar, Button, Dropdown, DropdownContent, DropdownTrigger, Input, Select, useToast } from "@madoo/design-system";
+import { Avatar, Button, Dropdown, DropdownContent, DropdownTrigger, Input, useToast } from "@madoo/design-system";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, Globe02Icon, LinkSquare02Icon, Share08Icon, SquareLock02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
-import type { EmailDto } from "@madoo/shared";
+import type { EmailDto, ShareEmailToCommunityInput } from "@madoo/shared";
 import { fetchWorkspaces } from "@/actions/workspaces";
 import { updateEmailShare } from "@/actions/emails";
 import { shareEmailToCommunity } from "@/actions/community-templates";
@@ -11,15 +11,8 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useClientStore } from "@/stores/client-store";
 import { cn } from "@/lib/utils";
 import { AccessLevelSelect, type AccessLevel } from "@/components/project/share/AccessLevelSelect";
+import { ShareToCommunityModal } from "@/components/home/project-show-case";
 import { HeaderPillButton } from "./HeaderPillButton";
-
-function getEmailTitle(email: EmailDto): string {
-  const latestVariant = email.variants[email.variants.length - 1];
-  const title =
-    latestVariant?.subject || email.title || email.prompt || "Untitled email";
-  const trimmed = title.trim() || "Untitled email";
-  return trimmed.length > 120 ? `${trimmed.slice(0, 117)}...` : trimmed;
-}
 
 export function ShareProjectDropdown({
   email,
@@ -35,19 +28,11 @@ export function ShareProjectDropdown({
   const [copied, setCopied] = useState(false);
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("edit");
   const [communityShared, setCommunityShared] = useState(false);
-  const [shareSeq, setShareSeq] = useState<number | null>(null);
-
-  // Versions ordered newest → oldest for the publish picker; default = latest.
-  const variantsDesc = useMemo(
-    () => [...(email?.variants ?? [])].sort((a, b) => b.seq - a.seq),
-    [email?.variants],
-  );
-  const latestSeq = variantsDesc[0]?.seq ?? null;
-  const selectedSeq = shareSeq ?? latestSeq;
+  const [communityModalOpen, setCommunityModalOpen] = useState(false);
 
   useEffect(() => {
     setCommunityShared(false);
-    setShareSeq(null);
+    setCommunityModalOpen(false);
   }, [emailId]);
 
   const { data: workspaces = [] } = useQuery({
@@ -97,19 +82,11 @@ export function ShareProjectDropdown({
   });
 
   const communityShareMutation = useMutation({
-    mutationFn: () => {
-      if (!emailId || !email) throw new Error("Generate an email first.");
-      return shareEmailToCommunity({
-        emailId,
-        variantSeq: selectedSeq ?? undefined,
-        name: getEmailTitle(email),
-        description: null,
-        category: "Other",
-        categories: ["Other"],
-      });
-    },
+    mutationFn: (input: ShareEmailToCommunityInput) =>
+      shareEmailToCommunity(input),
     onSuccess: async () => {
       setCommunityShared(true);
+      setCommunityModalOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["community-templates"] });
       toast({
         tone: "success",
@@ -260,68 +237,40 @@ export function ShareProjectDropdown({
 
           <div className="h-px bg-[rgb(var(--rule-rgb)/0.14)]" />
 
-          <div className="grid gap-2">
-            <div className="flex items-center gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-madoo-ink shadow-madoo-border">
-                <HugeiconsIcon
-                  aria-hidden="true"
-                  icon={Globe02Icon}
-                  primaryColor="currentColor"
-                  size={18}
-                  strokeWidth={1.7}
-                />
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-madoo-ink shadow-madoo-border">
+              <HugeiconsIcon
+                aria-hidden="true"
+                icon={Globe02Icon}
+                primaryColor="currentColor"
+                size={18}
+                strokeWidth={1.7}
+              />
+            </span>
+            <span className="grid min-w-0 flex-1 gap-0.5">
+              <span className="truncate text-sm font-medium text-madoo-ink">
+                Community
               </span>
-              <span className="grid min-w-0 flex-1 gap-0.5">
-                <span className="truncate text-sm font-medium text-madoo-ink">
-                  Community
-                </span>
-                <span className="truncate text-xs text-madoo-ink-muted">
-                  Let other Madoo users discover and use this template
-                </span>
+              <span className="truncate text-xs text-madoo-ink-muted">
+                Let other Madoo users discover and use this template
               </span>
-              <Button
-                className="h-8 rounded-lg"
-                disabled={
-                  !emailId ||
-                  !email ||
-                  communityShared ||
-                  variantsDesc.length === 0 ||
-                  communityShareMutation.isPending
-                }
-                onClick={() => communityShareMutation.mutate()}
-                size="sm"
-                type="button"
-                variant="secondary"
-              >
-                {communityShareMutation.isPending
-                  ? "Sharing…"
-                  : communityShared
-                    ? "Shared"
-                    : "Share"}
-              </Button>
-            </div>
-
-            {variantsDesc.length > 1 ? (
-              <div className="flex items-center gap-2 pl-12">
-                <span className="shrink-0 text-xs text-madoo-ink-muted">
-                  Publish version
-                </span>
-                <Select
-                  align="end"
-                  onChange={(value) => setShareSeq(Number(value))}
-                  options={variantsDesc.map((v) => ({
-                    value: String(v.seq),
-                    label:
-                      v.seq === latestSeq
-                        ? `Version ${v.seq} · latest`
-                        : `Version ${v.seq}`,
-                  }))}
-                  size="sm"
-                  value={String(selectedSeq ?? "")}
-                  variant="surface"
-                />
-              </div>
-            ) : null}
+            </span>
+            <Button
+              className="h-8 rounded-lg"
+              disabled={
+                !emailId ||
+                !email ||
+                communityShared ||
+                (email?.variants.length ?? 0) === 0 ||
+                communityShareMutation.isPending
+              }
+              onClick={() => setCommunityModalOpen(true)}
+              size="sm"
+              type="button"
+              variant="secondary"
+            >
+              {communityShared ? "Shared" : "Share"}
+            </Button>
           </div>
 
           <div className="grid gap-2">
@@ -367,6 +316,15 @@ export function ShareProjectDropdown({
           </div>
         </div>
       </DropdownContent>
+
+      <ShareToCommunityModal
+        email={communityModalOpen ? (email ?? null) : null}
+        isPending={communityShareMutation.isPending}
+        onClose={() => {
+          if (!communityShareMutation.isPending) setCommunityModalOpen(false);
+        }}
+        onSubmit={(input) => communityShareMutation.mutate(input)}
+      />
     </Dropdown>
   );
 }
