@@ -18,10 +18,12 @@ image — every card the same height regardless of the real email shape.
   natural ratio (tall emails = tall cards). Hover scale + overflow-hidden kept.
 - No-preview placeholder keeps `aspect-3/4` so empty cards stay sensibly sized.
 
-## Note
-No reserved aspect before image load → minor layout shift as previews stream in
-(homepage avoids this via `TemplatePreviewImage` default ratios). Acceptable for
-the gallery; revisit if CLS matters.
+## Follow-up — layout shift fixed
+`GalleryCard` now reserves each tile's aspect ratio before the image loads
+(`useState` seeded from `TEMPLATE_DEFAULT_HEIGHT_RATIOS`, cycled by index) and
+snaps to the screenshot's true, clamped ratio `onLoad` — same approach as the
+homepage `TemplatePreviewImage`. Image is back to `h-full object-cover` inside
+the aspect-locked button, so no CLS as previews stream in.
 
 ## Files
 - `apps/landing/components/TemplatesGallery.tsx`

@@ -21,6 +21,20 @@ type Locale = "en" | "es";
 
 const ALL_CATEGORY = "all";
 
+// Tile heights (height / width) used before the preview loads so the masonry
+// reserves space and doesn't shift as screenshots stream in. Once the real
+// image loads the tile snaps to its true (clamped) aspect ratio.
+const TEMPLATE_DEFAULT_HEIGHT_RATIOS = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
+const TEMPLATE_MIN_HEIGHT_RATIO = 0.6;
+const TEMPLATE_MAX_HEIGHT_RATIO = 2.3;
+
+function clampTemplateHeightRatio(ratio: number): number {
+  return Math.min(
+    TEMPLATE_MAX_HEIGHT_RATIO,
+    Math.max(TEMPLATE_MIN_HEIGHT_RATIO, ratio),
+  );
+}
+
 export default function TemplatesGallery({
   locale = "en",
   templates,
@@ -174,10 +188,11 @@ export default function TemplatesGallery({
 
         {filteredTemplates.length ? (
           <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5">
-            {filteredTemplates.map((template) => (
+            {filteredTemplates.map((template, index) => (
               <GalleryCard
                 key={template.id}
                 template={template}
+                index={index}
                 previewAlt={copy.templates.previewAlt}
                 onOpen={() => openPreview(template)}
               />
@@ -244,14 +259,21 @@ function CategoryChip({
 
 function GalleryCard({
   template,
+  index,
   previewAlt,
   onOpen,
 }: {
   template: LandingCommunityTemplate;
+  index: number;
   previewAlt: string;
   onOpen: () => void;
 }) {
   const category = template.categories[0] ?? template.category;
+  const [heightRatio, setHeightRatio] = useState<number>(
+    TEMPLATE_DEFAULT_HEIGHT_RATIOS[
+      index % TEMPLATE_DEFAULT_HEIGHT_RATIOS.length
+    ],
+  );
 
   return (
     <article className="group mb-7 block min-w-0 break-inside-avoid">
@@ -260,16 +282,25 @@ function GalleryCard({
         onClick={onOpen}
         aria-label={template.name}
         className="madoo-paper-border madoo-paper-border-hover relative block w-full cursor-pointer overflow-hidden rounded-lg bg-white p-0 transition focus-visible:outline-none focus-visible:shadow-[0_0_0_1.5px_rgb(91_99_255/0.5)]"
+        style={{ aspectRatio: 1 / heightRatio }}
       >
         {template.previewUrl ? (
           <img
             src={template.previewUrl}
             alt={`${template.name} ${previewAlt}`}
             loading="lazy"
-            className="block h-auto w-full object-cover object-top brightness-[1.03] transition duration-200 group-hover:scale-[1.02]"
+            className="h-full w-full object-cover object-top brightness-[1.03] transition duration-200 group-hover:scale-[1.02]"
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget;
+              if (naturalWidth > 0 && naturalHeight > 0) {
+                setHeightRatio(
+                  clampTemplateHeightRatio(naturalHeight / naturalWidth),
+                );
+              }
+            }}
           />
         ) : (
-          <div className="grid aspect-3/4 w-full place-items-center bg-madoo-neutral-50 text-xs text-madoo-muted">
+          <div className="grid h-full w-full place-items-center bg-madoo-neutral-50 text-xs text-madoo-muted">
             {template.name}
           </div>
         )}
