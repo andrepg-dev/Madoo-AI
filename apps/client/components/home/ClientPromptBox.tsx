@@ -757,7 +757,7 @@ export function ClientPromptBox({
                   data-madoo-control
                   onClick={() => setPreviewImage(image)}
                   aria-label={`Open ${image.file.name}`}
-                  className="block h-full w-full cursor-zoom-in"
+                  className="block h-full w-full cursor-pointer"
                 >
                   <img
                     src={image.url}
