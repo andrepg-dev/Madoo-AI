@@ -1138,7 +1138,7 @@ export default function HomePage({
       tabIndex={0}
       onClick={() => openTemplatePreview(template)}
       onKeyDown={onTemplateCardKeyDown(template)}
-      className="group w-full min-w-0 cursor-pointer outline-none"
+      className="group mb-8 block w-full min-w-0 cursor-pointer break-inside-avoid outline-none"
     >
       <TemplatePreviewImage
         src={template.imageSrc ?? "/templates/news-letter.png"}
@@ -1621,7 +1621,7 @@ export default function HomePage({
                 {categoryShowcase.map(renderShowcaseCard)}
               </div>
             ) : (
-              <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-10 columns-2 gap-4 sm:columns-3 lg:columns-5">
                 {localizedFallbackTemplateCards.map(renderTemplateCard)}
               </div>
             )}

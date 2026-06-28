@@ -173,7 +173,7 @@ export default function TemplatesGallery({
         ) : null}
 
         {filteredTemplates.length ? (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5">
             {filteredTemplates.map((template) => (
               <GalleryCard
                 key={template.id}
@@ -254,22 +254,22 @@ function GalleryCard({
   const category = template.categories[0] ?? template.category;
 
   return (
-    <article className="group min-w-0">
+    <article className="group mb-7 block min-w-0 break-inside-avoid">
       <button
         type="button"
         onClick={onOpen}
         aria-label={template.name}
-        className="madoo-paper-border madoo-paper-border-hover relative block aspect-3/4 w-full cursor-pointer overflow-hidden rounded-lg bg-white p-0 transition focus-visible:outline-none focus-visible:shadow-[0_0_0_1.5px_rgb(91_99_255/0.5)]"
+        className="madoo-paper-border madoo-paper-border-hover relative block w-full cursor-pointer overflow-hidden rounded-lg bg-white p-0 transition focus-visible:outline-none focus-visible:shadow-[0_0_0_1.5px_rgb(91_99_255/0.5)]"
       >
         {template.previewUrl ? (
           <img
             src={template.previewUrl}
             alt={`${template.name} ${previewAlt}`}
             loading="lazy"
-            className="h-full w-full object-cover object-top brightness-[1.03] transition duration-200 group-hover:scale-[1.02]"
+            className="block h-auto w-full object-cover object-top brightness-[1.03] transition duration-200 group-hover:scale-[1.02]"
           />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-madoo-neutral-50 text-xs text-madoo-muted">
+          <div className="grid aspect-3/4 w-full place-items-center bg-madoo-neutral-50 text-xs text-madoo-muted">
             {template.name}
           </div>
         )}
