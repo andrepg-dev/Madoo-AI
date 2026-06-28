@@ -53,7 +53,7 @@ import { useClientStore } from "@/stores/client-store";
 import { ArrowDown02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, useToast } from "@madoo/design-system";
-import type { EmailChatMessageDto } from "@madoo/shared";
+import type { EmailChatMessageDto, EmailDto } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -244,6 +244,36 @@ function EmailTemplateProjectInner() {
     async (emailId: string) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["email", emailId] }),
+        queryClient.invalidateQueries({ queryKey: ["email-chat", emailId] }),
+        queryClient.invalidateQueries({ queryKey: ["emails"] }),
+        queryClient.invalidateQueries({ queryKey: ["billing-overview"] }),
+      ]);
+    },
+    [queryClient],
+  );
+
+  // Pull the freshly generated email into cache after a `done` event. The
+  // variant is persisted on the backend right before `done`, but a read replica
+  // can briefly lag the write — and a plain invalidate fires a single refetch
+  // that, if it lands on the lagging replica, caches an empty `variants: []` and
+  // never retries. That left the variant-gated Variables button + panel hidden
+  // until a manual reload, most visibly on the very first generation. Refetch
+  // directly and retry until the variant shows up, seeding the cache each pass.
+  const refreshEmailWithVariant = useCallback(
+    async (emailId: string) => {
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        try {
+          const fresh = await fetchEmail(emailId);
+          queryClient.setQueryData<EmailDto>(["email", emailId], fresh);
+          if (latestVariant(fresh)) break;
+        } catch {
+          // Swallow transient read errors and retry.
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 400));
+      }
+      // Refresh the surrounding state (chat, list, billing) without re-fetching
+      // the email — we already seeded it with a variant-bearing snapshot above.
+      await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["email-chat", emailId] }),
         queryClient.invalidateQueries({ queryKey: ["emails"] }),
         queryClient.invalidateQueries({ queryKey: ["billing-overview"] }),
@@ -447,14 +477,13 @@ function EmailTemplateProjectInner() {
             if (window.matchMedia("(max-width: 1023px)").matches) {
               setMobileTab("preview");
             }
+            // Pull the persisted variant into cache now (retrying past replica
+            // lag) so the Variables button + panel show without a reload.
+            void refreshEmailWithVariant(emailId);
+          } else {
+            // Chat-only turn produced no variant — a plain refresh is enough.
+            void invalidateEmailState(emailId);
           }
-          // Refresh the email now that the variant is persisted, rather than
-          // waiting for the SSE stream to close (the post-stream refetch below
-          // only runs once the connection ends, which can lag well behind this
-          // event). Without this, the freshly created variant never reaches the
-          // cache promptly, so the variant-gated Variables button stays hidden
-          // until a manual reload — most visible on the very first generation.
-          void invalidateEmailState(emailId);
           if (event.subject) setStreamedSubject(event.subject);
           if (event.conversationTitle) {
             setStreamedConversationTitle(event.conversationTitle);
@@ -584,7 +613,7 @@ function EmailTemplateProjectInner() {
         setIsStreaming(false);
       }
     },
-    [invalidateEmailState, setSidebarOpen],
+    [invalidateEmailState, refreshEmailWithVariant, setSidebarOpen],
   );
 
   const stopGeneration = useCallback(() => {
