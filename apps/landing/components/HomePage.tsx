@@ -154,24 +154,15 @@ const templateCards = [
   },
 ];
 
-// Tile heights (height / width) used before the preview image loads so the
-// showcase stays lively while screenshots stream in.
+// Tile height (height / width) used only before the preview image loads so the
+// showcase reserves space and stays lively while screenshots stream in. Once
+// the real preview loads the tile grows to the screenshot's full natural height
+// so a long email reads as a tall card instead of being cropped into a box.
 const templateDefaultHeightRatios = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
-// Once the real preview loads we size the tile to its true aspect ratio so a
-// long email reads as a long card instead of being cropped into a short box.
-const TEMPLATE_MIN_HEIGHT_RATIO = 0.6;
-const TEMPLATE_MAX_HEIGHT_RATIO = 2.3;
-
-function clampTemplateHeightRatio(ratio: number): number {
-  return Math.min(
-    TEMPLATE_MAX_HEIGHT_RATIO,
-    Math.max(TEMPLATE_MIN_HEIGHT_RATIO, ratio),
-  );
-}
 
 /**
  * Preview image whose tile grows to the screenshot's real aspect ratio, so long
- * email templates render as tall cards instead of being squeezed flat.
+ * email templates render in full as tall cards instead of being cropped flat.
  */
 function TemplatePreviewImage({
   src,
@@ -182,26 +173,19 @@ function TemplatePreviewImage({
   alt: string;
   defaultHeightRatio: number;
 }) {
-  const [heightRatio, setHeightRatio] = useState(defaultHeightRatio);
+  const [loaded, setLoaded] = useState(false);
 
   return (
     <div
-      className="relative max-w-62 flex min-h-0 items-start justify-center overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40"
-      style={{ aspectRatio: 1 / heightRatio }}
+      className="relative max-w-62 overflow-hidden rounded-lg bg-white shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.16)] transition group-hover:shadow-[inset_0_0_0_0.5px_rgb(12_52_106/0.28)] group-focus-visible:ring-2 group-focus-visible:ring-[#5b63ff]/40"
+      style={loaded ? undefined : { aspectRatio: 1 / defaultHeightRatio }}
     >
       <img
         src={src}
         alt={alt}
-        className="h-full w-full object-cover object-top brightness-[1.05] contrast-[1.02] saturate-[1.03]"
+        className="block h-auto w-full brightness-[1.05] contrast-[1.02] saturate-[1.03]"
         loading="lazy"
-        onLoad={(event) => {
-          const { naturalWidth, naturalHeight } = event.currentTarget;
-          if (naturalWidth > 0 && naturalHeight > 0) {
-            setHeightRatio(
-              clampTemplateHeightRatio(naturalHeight / naturalWidth),
-            );
-          }
-        }}
+        onLoad={() => setLoaded(true)}
       />
     </div>
   );
