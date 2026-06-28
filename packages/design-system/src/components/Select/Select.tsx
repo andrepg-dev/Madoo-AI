@@ -117,12 +117,23 @@ export function Select({
   const displayValue = selected?.label ?? (value || placeholder);
   const menuPresent = useSelectPresence(open);
 
+  const setSelectOpen = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      const active = document.activeElement;
+      const listbox = ref.current?.querySelector('[role="listbox"]');
+      if (active instanceof HTMLElement && listbox?.contains(active)) {
+        active.blur();
+      }
+    }
+    setOpen(nextOpen);
+  };
+
   useEffect(() => {
     const onDoc = (event: MouseEvent) => {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+      if (!ref.current?.contains(event.target as Node)) setSelectOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") setSelectOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
@@ -153,7 +164,7 @@ export function Select({
         aria-expanded={open}
         aria-controls={menuPresent ? listboxId : undefined}
         data-state={open ? "open" : "closed"}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => setSelectOpen(!open)}
       >
         <span className="overflow-hidden text-ellipsis">{displayValue}</span>
         <span
@@ -197,7 +208,7 @@ export function Select({
                 onClick={() => {
                   if (option.disabled) return;
                   onChange(option.value);
-                  setOpen(false);
+                  setSelectOpen(false);
                 }}
               >
                 <span>{option.label}</span>

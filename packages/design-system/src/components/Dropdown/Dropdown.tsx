@@ -71,6 +71,13 @@ export function Dropdown({
   const open = controlledOpen ?? uncontrolledOpen;
 
   const setOpen = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      const active = document.activeElement;
+      const menu = rootRef.current?.querySelector('[role="menu"]');
+      if (active instanceof HTMLElement && menu?.contains(active)) {
+        active.blur();
+      }
+    }
     if (controlledOpen === undefined) setUncontrolledOpen(nextOpen);
     onOpenChange?.(nextOpen);
   };
