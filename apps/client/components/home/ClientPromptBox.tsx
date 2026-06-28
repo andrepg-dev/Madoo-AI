@@ -226,6 +226,7 @@ export function ClientPromptBox({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [images, setImages] = useState<PromptImage[]>([]);
+  const [previewImage, setPreviewImage] = useState<PromptImage | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -303,6 +304,7 @@ export function ClientPromptBox({
   };
 
   const removeImage = (id: string) => {
+    setPreviewImage((current) => (current?.id === id ? null : current));
     setImages((current) => {
       const target = current.find((image) => image.id === id);
       if (target) URL.revokeObjectURL(target.url);
@@ -501,6 +503,16 @@ export function ClientPromptBox({
       void startAudioRecordingFallback();
     }
   };
+
+  // Close the image lightbox on Escape.
+  useEffect(() => {
+    if (!previewImage) return;
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewImage(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [previewImage]);
 
   // Revoke any leftover object URLs when the box unmounts.
   useEffect(() => {
@@ -740,11 +752,19 @@ export function ClientPromptBox({
                 key={image.id}
                 className="group relative h-16 w-16 overflow-hidden rounded-lg shadow-madoo-border"
               >
-                <img
-                  src={image.url}
-                  alt={image.file.name}
-                  className="h-full w-full object-cover"
-                />
+                <button
+                  type="button"
+                  data-madoo-control
+                  onClick={() => setPreviewImage(image)}
+                  aria-label={`Open ${image.file.name}`}
+                  className="block h-full w-full cursor-zoom-in"
+                >
+                  <img
+                    src={image.url}
+                    alt={image.file.name}
+                    className="h-full w-full object-cover"
+                  />
+                </button>
                 <button
                   type="button"
                   onClick={() => removeImage(image.id)}
@@ -917,6 +937,36 @@ export function ClientPromptBox({
           </div>
         </div>
       </div>
+
+      {previewImage ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={previewImage.file.name}
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+        >
+          <img
+            src={previewImage.url}
+            alt={previewImage.file.name}
+            onClick={(event) => event.stopPropagation()}
+            className="max-h-full max-w-full cursor-default rounded-xl object-contain shadow-2xl"
+          />
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            aria-label="Close image preview"
+            className="absolute right-4 top-4 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black"
+          >
+            <HugeiconsIcon
+              icon={Cancel01Icon}
+              size={18}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
