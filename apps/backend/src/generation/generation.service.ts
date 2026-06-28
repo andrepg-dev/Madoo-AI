@@ -1445,7 +1445,38 @@ export class GenerationService {
         (b) => b.type === "tool_use" && b.name !== "emit_email",
       );
       if (pendingToolBlock?.type === "tool_use") {
-        throw new BadRequestException("AI inspected context but did not return the email.");
+        // The tool-turn budget ran out while the model was still gathering
+        // context (e.g. several find_images turns). The last tool result is
+        // already appended to turnMessages, so do one final turn forcing
+        // emit_email rather than discarding all that work.
+        emit({ type: "step", message: "Finalizing the email…" });
+        response = await this.runStreamWithRetry({
+          modelMessages: turnMessages,
+          systemBlocks,
+          emit,
+          signal,
+          toolChoice: {
+            type: "tool",
+            name: "emit_email",
+            disable_parallel_tool_use: true,
+          },
+        });
+        assistantText += response.assistantText;
+        thinkingText += response.thinkingText;
+        const u = response.usage;
+        if (u) {
+          usageTotals = {
+            input_tokens: usageTotals.input_tokens + (u.input_tokens ?? 0),
+            output_tokens: usageTotals.output_tokens + (u.output_tokens ?? 0),
+            cache_creation_input_tokens:
+              usageTotals.cache_creation_input_tokens +
+              (u.cache_creation_input_tokens ?? 0),
+            cache_read_input_tokens:
+              usageTotals.cache_read_input_tokens +
+              (u.cache_read_input_tokens ?? 0),
+          };
+        }
+        emit({ type: "token_usage", ...usageTotals });
       }
 
       const toolBlock = response.content.find(
@@ -1693,6 +1724,7 @@ export class GenerationService {
     systemBlocks: MessageCreateParams["system"];
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
+    toolChoice?: MessageCreateParams["tool_choice"];
   }): Promise<Awaited<ReturnType<typeof this.runStream>>> {
     const maxAttempts = 3;
     for (let attempt = 1; ; attempt += 1) {
@@ -1738,6 +1770,7 @@ export class GenerationService {
     systemBlocks: MessageCreateParams["system"];
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
+    toolChoice?: MessageCreateParams["tool_choice"];
   }): Promise<{
     content: Message["content"];
     usage: Message["usage"] | undefined;
@@ -1748,7 +1781,11 @@ export class GenerationService {
       throw new InternalServerErrorException("ANTHROPIC_API_KEY is not configured.");
     }
 
-    const thinking = this.extendedThinkingConfig();
+    // Forcing a specific tool (or "any") is incompatible with extended thinking
+    // on Anthropic — it 400s. Disable thinking when we force emit_email.
+    const forcedTool =
+      args.toolChoice?.type === "tool" || args.toolChoice?.type === "any";
+    const thinking = forcedTool ? undefined : this.extendedThinkingConfig();
     const maxTokens = thinking ? 20_000 : 16_384;
 
     const stream = this.anthropic.messages.stream(
@@ -1769,7 +1806,7 @@ export class GenerationService {
       // Parallel tool use (e.g. inspect_website_brand + emit_email together)
       // leaves the second tool_use unpaired on replay → Anthropic 400. Force
       // at most one tool call per assistant turn.
-      tool_choice: { type: "auto", disable_parallel_tool_use: true },
+      tool_choice: args.toolChoice ?? { type: "auto", disable_parallel_tool_use: true },
       messages: args.modelMessages,
       },
       args.signal ? { signal: args.signal } : undefined,

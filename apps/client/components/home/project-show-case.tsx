@@ -478,8 +478,8 @@ export function ProjectShowCase() {
         ) : null}
 
         {loading ? (
-          <div className="grid min-h-60 place-items-center rounded-lg bg-white text-sm text-madoo-ink-muted shadow-madoo-border">
-            Loading
+          <div className="grid min-h-60 place-items-center rounded-lg bg-white text-sm text-madoo-ink-muted">
+            Loading...
           </div>
         ) : activeCount ? (
           <>
