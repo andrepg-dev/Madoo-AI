@@ -21,12 +21,6 @@ type Locale = "en" | "es";
 
 const ALL_CATEGORY = "all";
 
-// Tile heights (height / width) used only before the preview loads so the
-// masonry reserves space and doesn't shift as screenshots stream in. Once the
-// real image loads the card grows to the screenshot's full natural height so a
-// long email reads as a tall card instead of being cropped into a short box.
-const TEMPLATE_DEFAULT_HEIGHT_RATIOS = [1.25, 1.4, 1.33, 1.43, 1.5] as const;
-
 export default function TemplatesGallery({
   locale = "en",
   templates,
@@ -179,12 +173,11 @@ export default function TemplatesGallery({
         ) : null}
 
         {filteredTemplates.length ? (
-          <div className="columns-1 gap-4 xs:columns-2 sm:columns-2 lg:columns-3 xl:columns-5">
-            {filteredTemplates.map((template, index) => (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {filteredTemplates.map((template) => (
               <GalleryCard
                 key={template.id}
                 template={template}
-                index={index}
                 previewAlt={copy.templates.previewAlt}
                 onOpen={() => openPreview(template)}
               />
@@ -251,41 +244,32 @@ function CategoryChip({
 
 function GalleryCard({
   template,
-  index,
   previewAlt,
   onOpen,
 }: {
   template: LandingCommunityTemplate;
-  index: number;
   previewAlt: string;
   onOpen: () => void;
 }) {
   const category = template.categories[0] ?? template.category;
-  const [loaded, setLoaded] = useState(false);
-  const placeholderRatio =
-    TEMPLATE_DEFAULT_HEIGHT_RATIOS[
-      index % TEMPLATE_DEFAULT_HEIGHT_RATIOS.length
-    ];
 
   return (
-    <article className="group mb-7 block min-w-0 break-inside-avoid">
+    <article className="group min-w-0">
       <button
         type="button"
         onClick={onOpen}
         aria-label={template.name}
-        className="madoo-paper-border madoo-paper-border-hover relative block w-full cursor-pointer overflow-hidden rounded-lg bg-white p-0 transition focus-visible:outline-none focus-visible:shadow-[0_0_0_1.5px_rgb(91_99_255/0.5)]"
-        style={loaded ? undefined : { aspectRatio: 1 / placeholderRatio }}
+        className="madoo-paper-border madoo-paper-border-hover relative block aspect-3/4 w-full cursor-pointer overflow-hidden rounded-lg bg-white p-0 transition focus-visible:outline-none focus-visible:shadow-[0_0_0_1.5px_rgb(91_99_255/0.5)]"
       >
         {template.previewUrl ? (
           <img
             src={template.previewUrl}
             alt={`${template.name} ${previewAlt}`}
             loading="lazy"
-            className="block h-auto w-full brightness-[1.03] transition duration-200 group-hover:scale-[1.02]"
-            onLoad={() => setLoaded(true)}
+            className="h-full w-full object-cover object-top brightness-[1.03] transition duration-200 group-hover:scale-[1.02]"
           />
         ) : (
-          <div className="grid aspect-[3/4] w-full place-items-center bg-madoo-neutral-50 text-xs text-madoo-muted">
+          <div className="grid h-full w-full place-items-center bg-madoo-neutral-50 text-xs text-madoo-muted">
             {template.name}
           </div>
         )}
