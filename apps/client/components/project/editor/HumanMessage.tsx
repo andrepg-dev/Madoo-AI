@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@madoo/design-system";
-import { Edit02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Edit02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { ActionButton } from "./ActionButton";
 import { CopyActionButton } from "./CopyActionButton";
 
@@ -17,6 +18,7 @@ export function HumanMessage({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(children);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const text = children.trim();
 
@@ -32,6 +34,16 @@ export function HumanMessage({
     element.setSelectionRange(element.value.length, element.value.length);
     autoGrow(element);
   }, [editing]);
+
+  // Close the image lightbox on Escape.
+  useEffect(() => {
+    if (!previewUrl) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewUrl(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [previewUrl]);
 
   const startEditing = () => {
     setDraft(children);
@@ -88,12 +100,19 @@ export function HumanMessage({
       {images && images.length > 0 ? (
         <div className="mb-1.5 flex max-w-xl flex-wrap justify-end gap-2">
           {images.map((url) => (
-            <img
+            <button
               key={url}
-              src={url}
-              alt="Attached"
-              className="h-20 w-20 rounded-lg object-cover shadow-madoo-border"
-            />
+              type="button"
+              onClick={() => setPreviewUrl(url)}
+              aria-label="Open attached image"
+              className="h-20 w-20 cursor-pointer overflow-hidden rounded-lg shadow-madoo-border"
+            >
+              <img
+                src={url}
+                alt="Attached"
+                className="h-full w-full object-cover"
+              />
+            </button>
           ))}
         </div>
       ) : null}
@@ -110,6 +129,36 @@ export function HumanMessage({
         />
         <CopyActionButton label="Copy message" text={text} />
       </div>
+
+      {previewUrl ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Attached image"
+          onClick={() => setPreviewUrl(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+        >
+          <img
+            src={previewUrl}
+            alt="Attached"
+            onClick={(event) => event.stopPropagation()}
+            className="max-h-full max-w-full cursor-default rounded-xl object-contain shadow-2xl"
+          />
+          <button
+            type="button"
+            onClick={() => setPreviewUrl(null)}
+            aria-label="Close image preview"
+            className="absolute right-4 top-4 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black"
+          >
+            <HugeiconsIcon
+              icon={Cancel01Icon}
+              size={18}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
