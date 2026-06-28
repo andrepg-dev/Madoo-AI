@@ -179,7 +179,7 @@ export default function TemplatesGallery({
         ) : null}
 
         {filteredTemplates.length ? (
-          <div className="columns-1 gap-4 xs:columns-2 sm:columns-2 lg:columns-3 xl:columns-4">
+          <div className="columns-1 gap-4 xs:columns-2 sm:columns-2 lg:columns-3 xl:columns-5">
             {filteredTemplates.map((template, index) => (
               <GalleryCard
                 key={template.id}
