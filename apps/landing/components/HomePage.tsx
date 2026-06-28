@@ -498,7 +498,7 @@ export const localeCopy = {
       ],
     },
     templates: {
-      title: "Explore templates",
+      title: "Emails from a single prompt",
       description:
         "Start from community-tested templates, then refine copy and layout with AI.",
       browseAll: "Browse all templates",
@@ -1595,10 +1595,10 @@ export default function HomePage({
           <div className="mx-auto w-full max-w-7xl">
             <div className="flex w-full flex-col justify-between gap-6 sm:flex-row sm:items-end">
               <div>
-                <h2 className="font-ibm-plex-sans text-3xl font-semibold text-[#171717] sm:text-5xl">
+                <h2 className="font-figtree text-3xl font-semibold text-[#171717] sm:text-5xl">
                   {copy.templates.title}
                 </h2>
-                <h4 className="mt-3 max-w-xl font-ibm-plex-sans text-zinc-600">
+                <h4 className="mt-3 max-w-xl font-figtree text-zinc-600">
                   {copy.templates.description}
                 </h4>
               </div>
