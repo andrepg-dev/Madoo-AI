@@ -52,23 +52,52 @@ export class ScreenshotService {
   }
 
   /**
-   * `domcontentloaded` fires before `<img>` resources finish downloading, so a
-   * naive capture renders blank/missing images. Wait until every image has
+   * `domcontentloaded` fires before image resources finish downloading, so a
+   * naive capture renders blank/missing images. Wait until every asset has
    * settled (load or error) and web fonts are ready, bounded by a timeout so a
    * slow/broken asset can't hang the capture forever. Runs as a string so the
    * browser-context DOM globals don't need the TS `dom` lib on the backend.
+   *
+   * Covers BOTH `<img>` elements AND CSS `background-image` URLs — email heroes
+   * and cards are frequently built with `background-image`, which `document.images`
+   * does not track. Without preloading those, the capture fires before the
+   * background downloads and the element renders as its flat fallback color.
    */
   private async waitForAssets(page: Page): Promise<void> {
     const script = `(async () => {
-      const images = Array.from(document.images).map((img) =>
-        img.complete
-          ? Promise.resolve()
-          : new Promise((resolve) => {
-              img.addEventListener('load', resolve, { once: true });
-              img.addEventListener('error', resolve, { once: true });
-            }),
-      );
-      await Promise.all(images);
+      const waiters = [];
+
+      for (const img of Array.from(document.images)) {
+        if (img.complete) continue;
+        waiters.push(new Promise((resolve) => {
+          img.addEventListener('load', resolve, { once: true });
+          img.addEventListener('error', resolve, { once: true });
+        }));
+      }
+
+      // Collect every CSS background-image URL (a value can hold several layers
+      // and gradients, e.g. "linear-gradient(...), url(a), url(b)").
+      const urls = new Set();
+      const re = /url\\(\\s*(['"]?)([^'")]+)\\1\\s*\\)/g;
+      for (const el of Array.from(document.querySelectorAll('*'))) {
+        const bg = getComputedStyle(el).backgroundImage;
+        if (!bg || bg === 'none') continue;
+        let m;
+        while ((m = re.exec(bg)) !== null) {
+          const u = m[2];
+          if (u && !u.startsWith('data:')) urls.add(u);
+        }
+      }
+      for (const u of urls) {
+        waiters.push(new Promise((resolve) => {
+          const im = new Image();
+          im.addEventListener('load', resolve, { once: true });
+          im.addEventListener('error', resolve, { once: true });
+          im.src = u;
+        }));
+      }
+
+      await Promise.all(waiters);
       if (document.fonts && document.fonts.ready) {
         try { await document.fonts.ready; } catch (e) {}
       }
