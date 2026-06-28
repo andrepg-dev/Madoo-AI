@@ -32,16 +32,40 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const title = "Madoo | AI Email Template Builder";
+const description =
+  "Export your email templates design to MailChimp or any provider of your preference.";
+const ogImage = {
+  url: "/og-image.png",
+  width: 2934,
+  height: 1674,
+  alt: "Madoo AI email builder landing page preview",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://madooai.com"),
-  title: "Madoo | AI Email Template Builder",
-  description: "Export your email templates design to MailChimp or any provider of your preference. ",
+  title,
+  description,
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
       { url: "/icon.png", type: "image/png", sizes: "64x64" },
     ],
     apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+  },
+  openGraph: {
+    title,
+    description,
+    url: "/",
+    siteName: "Madoo AI",
+    images: [ogImage],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: [ogImage.url],
   },
   robots: {
     index: true,
