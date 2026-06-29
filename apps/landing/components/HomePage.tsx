@@ -549,7 +549,7 @@ export const localeCopy = {
       ],
     },
     cta: {
-      eyebrow: "Madoo | AI Email Design Company",
+      eyebrow: "Madoo | AI Email Template Design Company",
       title: "Ready to craft?",
       placeholderPrefix: "Hi Madoo, ",
       placeholders: [
