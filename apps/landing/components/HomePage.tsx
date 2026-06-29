@@ -41,6 +41,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type {
   ChangeEvent,
+  ClipboardEvent,
   KeyboardEvent,
   ReactNode,
   SVGAttributes,
@@ -1109,6 +1110,21 @@ export default function HomePage({
     event.target.value = "";
   };
 
+  const onPromptPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    const files = Array.from(items)
+      .filter((item) => item.kind === "file")
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
+    if (files.length === 0) return;
+    // Stop the pasted image's name/markup from also landing in the textarea.
+    event.preventDefault();
+    const transfer = new DataTransfer();
+    files.forEach((file) => transfer.items.add(file));
+    addFiles(transfer.files);
+  };
+
   const removeAttachment = (id: string) => {
     setAttachments((current) => {
       const target = current.find((attachment) => attachment.id === id);
@@ -1361,6 +1377,7 @@ export default function HomePage({
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
                   onKeyDown={onPromptKeyDown}
+                  onPaste={onPromptPaste}
                   placeholder={hasPrompt ? "" : heroPlaceholder}
                   className="madoo-prompt-textarea mr-3 max-h-80 min-h-24 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
                 />
@@ -1658,6 +1675,7 @@ export default function HomePage({
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
                   onKeyDown={onPromptKeyDown}
+                  onPaste={onPromptPaste}
                   placeholder={hasPrompt ? "" : ctaPlaceholder}
                   className="madoo-prompt-textarea mr-3 max-h-56 min-h-20 w-[calc(100%-0.75rem)] resize-none rounded-t-3xl bg-transparent px-5 pr-10 pt-5 text-sm text-[#101114] outline-none placeholder:text-zinc-500"
                 />
@@ -1819,11 +1837,24 @@ function AttachmentPreviewList({
             key={attachment.id}
             className="group relative h-16 w-16 overflow-hidden rounded-lg shadow-madoo-border"
           >
-            <img
-              src={attachment.url}
-              alt={attachment.file.name}
-              className="h-full w-full object-cover"
-            />
+            <button
+              type="button"
+              onClick={() =>
+                window.open(
+                  attachment.url!,
+                  "_blank",
+                  "noopener,noreferrer",
+                )
+              }
+              aria-label={`Open ${attachment.file.name}`}
+              className="block h-full w-full cursor-pointer"
+            >
+              <img
+                src={attachment.url}
+                alt={attachment.file.name}
+                className="h-full w-full object-cover"
+              />
+            </button>
             <button
               type="button"
               onClick={() => onRemove(attachment.id)}
