@@ -490,6 +490,19 @@ export const COMMUNITY_TEMPLATE_CATEGORIES = [
   "Internal / HR",
   "Education / Tutorial",
   "Thank You",
+  // E-commerce (Klaviyo / Stripo / Really Good Emails)
+  "Order Confirmation",
+  "Shipping & Delivery",
+  "Receipt / Invoice",
+  "Back in Stock",
+  "Price Drop",
+  "Browse Abandonment",
+  "Post-Purchase",
+  "Cross-sell / Upsell",
+  "Loyalty & Rewards",
+  "Birthday & Anniversary",
+  "Sale / Flash Sale",
+  "Review Request",
   "Other",
 ] as const;
 

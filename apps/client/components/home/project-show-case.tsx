@@ -64,6 +64,54 @@ const categorySuggestionRules: Array<{
     pattern: /\b(abandoned\s+cart|cart\s+recovery)\b/i,
   },
   {
+    category: "Browse Abandonment",
+    pattern: /\b(browse\s+abandon\w*|browsed|viewed\s+product|still\s+looking)\b/i,
+  },
+  {
+    category: "Back in Stock",
+    pattern: /\b(back\s+in\s+stock|restock\w*|now\s+available|in\s+stock\s+again)\b/i,
+  },
+  {
+    category: "Price Drop",
+    pattern: /\b(price\s+drop|price\s+cut|now\s+cheaper|lower\s+price|reduced\s+price)\b/i,
+  },
+  {
+    category: "Order Confirmation",
+    pattern: /\b(order\s+confirm\w*|order\s+placed|order\s+received|your\s+order)\b/i,
+  },
+  {
+    category: "Shipping & Delivery",
+    pattern: /\b(shipp\w*|shipped|on\s+its\s+way|out\s+for\s+delivery|tracking|delivered|delivery)\b/i,
+  },
+  {
+    category: "Receipt / Invoice",
+    pattern: /\b(receipt|invoice|payment\s+confirm\w*|paid|billing)\b/i,
+  },
+  {
+    category: "Post-Purchase",
+    pattern: /\b(post[-\s]?purchase|after\s+your\s+purchase|how\s+to\s+use|getting\s+started\s+with\s+your)\b/i,
+  },
+  {
+    category: "Cross-sell / Upsell",
+    pattern: /\b(cross[-\s]?sell|up[-\s]?sell|you\s+may\s+also\s+like|complete\s+the\s+look|recommended\s+for\s+you|pairs\s+well)\b/i,
+  },
+  {
+    category: "Loyalty & Rewards",
+    pattern: /\b(loyalty|rewards?|points|vip|membership|perks|tier)\b/i,
+  },
+  {
+    category: "Birthday & Anniversary",
+    pattern: /\b(birthday|anniversary|happy\s+birthday)\b/i,
+  },
+  {
+    category: "Review Request",
+    pattern: /\b(review\s+request|leave\s+a\s+review|rate\s+your|how\s+did\s+we\s+do|share\s+your\s+experience)\b/i,
+  },
+  {
+    category: "Sale / Flash Sale",
+    pattern: /\b(flash\s+sale|clearance|limited\s+time|ends\s+(tonight|soon|today)|while\s+supplies\s+last|markdown)\b/i,
+  },
+  {
     category: "Events & Webinars",
     pattern: /\b(event|webinar|conference|workshop|invite|invitation)\b/i,
   },
