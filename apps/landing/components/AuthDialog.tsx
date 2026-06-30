@@ -3,6 +3,7 @@
 import { CLIENT_APP_URL, GITHUB_CLIENT_ID, GOOGLE_CLIENT_ID } from "@/lib/env";
 import { loadGsiScript, type GsiCredentialResponse } from "@/lib/google-gsi";
 import { getStoredReferralCode } from "@/lib/referral";
+import { uploadPromptImages } from "@/lib/upload-prompt-image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -14,6 +15,9 @@ type AuthDialogProps = {
   tone?: string;
   length?: string;
   audience?: string;
+  /** Images pasted/attached on the landing prompt box before sign-in. Uploaded
+   * after the session is created (anonymous visitors can't upload before then). */
+  imageFiles?: File[];
   nextUrl?: string | null;
 };
 
@@ -169,6 +173,7 @@ export default function AuthDialog({
   tone,
   length,
   audience,
+  imageFiles,
   nextUrl,
 }: AuthDialogProps) {
   const copy = authCopy[locale];
@@ -181,6 +186,9 @@ export default function AuthDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const hasPendingImages =
+    (imageFiles?.length ?? 0) > 0 && Boolean(prompt?.trim());
+
   const pendingPayload: PendingPayload = useMemo(
     () => ({
       pendingPrompt: prompt?.trim() || undefined,
@@ -189,6 +197,58 @@ export default function AuthDialog({
       pendingAudience: audience || undefined,
     }),
     [audience, length, prompt, tone],
+  );
+
+  // SPA logins (Google, email/password) keep the page alive, so for the image
+  // case we skip issueSession's text-only pending prompt and build the real one
+  // post-login in `finishAuth` (with uploaded image URLs) instead.
+  const spaPendingPayload: PendingPayload = hasPendingImages
+    ? {}
+    : pendingPayload;
+
+  // After a session exists, upload the pre-login images and create a pending
+  // prompt carrying their URLs, then hand its id to the app. Falls back to the
+  // normal redirect (text only) if anything fails.
+  const finishAuth = useCallback(
+    async (result: AuthResult) => {
+      const trimmedPrompt = prompt?.trim();
+      if (hasPendingImages && trimmedPrompt) {
+        try {
+          const imageUrls = await uploadPromptImages(imageFiles ?? []);
+          const res = await fetch("/api/pending-prompt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              prompt: trimmedPrompt,
+              tone: tone || undefined,
+              length: length || undefined,
+              audience: audience || undefined,
+              imageUrls,
+            }),
+          });
+          if (res.ok) {
+            const data = (await res.json()) as { id?: unknown };
+            if (typeof data.id === "string") {
+              const url = new URL("/email-template-project", CLIENT_APP_URL);
+              url.searchParams.set("pendingPromptId", data.id);
+              window.location.assign(url.toString());
+              return;
+            }
+          }
+        } catch {
+          // Ignore — fall back to handing over the text prompt below.
+        }
+        // Image carry failed: don't drop the prompt, send the text on its own
+        // (no server pending prompt was created for the image case).
+        const url = new URL("/email-template-project", CLIENT_APP_URL);
+        url.searchParams.set("prompt", trimmedPrompt);
+        window.location.assign(url.toString());
+        return;
+      }
+      redirectAfterAuth(result, nextUrl);
+    },
+    [audience, hasPendingImages, imageFiles, length, nextUrl, prompt, tone],
   );
 
   useEffect(() => {
@@ -219,7 +279,7 @@ export default function AuthDialog({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...payload,
-            ...pendingPayload,
+            ...spaPendingPayload,
             ...(referralCode ? { referralCode } : {}),
           }),
         });
@@ -237,13 +297,13 @@ export default function AuthDialog({
           );
         }
 
-        redirectAfterAuth((raw ?? {}) as AuthResult, nextUrl);
+        await finishAuth((raw ?? {}) as AuthResult);
       } catch (err) {
         setIsSubmitting(false);
         setError(err instanceof Error ? err.message : copy.authFailed);
       }
     },
-    [copy.authFailed, nextUrl, pendingPayload],
+    [copy.authFailed, finishAuth, spaPendingPayload],
   );
 
   useEffect(() => {

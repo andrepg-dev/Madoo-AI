@@ -23,15 +23,21 @@ export function clientUseTemplateUrl(id: string): string {
 
 // Already-signed-in visitors own a session on the app, so their prompt is handed
 // straight to the app to start generating instead of through the login dialog.
+// Pasted/attached images are uploaded first and passed as public S3 URLs, since
+// File objects can't survive the cross-subdomain navigation.
 export function clientPromptUrl(
   prompt: string,
   tone?: string,
   length?: string,
+  imageUrls?: string[],
 ): string {
   const url = new URL("/email-template-project", CLIENT_APP_URL);
   url.searchParams.set("prompt", prompt);
   if (tone) url.searchParams.set("tone", tone);
   if (length) url.searchParams.set("length", length);
+  for (const imageUrl of imageUrls ?? []) {
+    url.searchParams.append("imageUrls", imageUrl);
+  }
   return url.toString();
 }
 

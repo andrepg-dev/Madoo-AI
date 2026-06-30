@@ -8,6 +8,7 @@ import {
 } from "@/lib/client-app";
 import type { LandingCommunityTemplate } from "@/lib/community-templates";
 import { CLIENT_APP_URL } from "@/lib/env";
+import { uploadPromptImages } from "@/lib/upload-prompt-image";
 import { useDictation } from "@/lib/use-dictation";
 import {
   Add01Icon,
@@ -1030,6 +1031,10 @@ export default function HomePage({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachmentsRef = useRef<PromptAttachment[]>([]);
   attachmentsRef.current = attachments;
+  const [submitting, setSubmitting] = useState(false);
+  // Image attachments handed to the login dialog so an anonymous visitor's paste
+  // survives the sign-in round trip (uploaded once they have a session).
+  const [pendingImageFiles, setPendingImageFiles] = useState<File[]>([]);
   const hasPrompt = prompt.trim().length > 0;
   const heroPlaceholderBody = useTypingPlaceholder(copy.hero.placeholders);
   const ctaPlaceholderBody = useTypingPlaceholder(copy.cta.placeholders);
@@ -1055,16 +1060,41 @@ export default function HomePage({
   const closeAuthDialog = () => setAuthDialogOpen(false);
 
   // The prompt CTAs open the login dialog for anonymous visitors, but send
-  // already-signed-in visitors straight into the app (carrying their prompt).
-  const handlePromptSubmit = () => {
+  // already-signed-in visitors straight into the app (carrying their prompt and
+  // any attached images). A File can't ride the cross-subdomain navigation, so
+  // signed-in visitors upload first and pass public image URLs; anonymous ones
+  // hand the File objects to the dialog, which uploads after they get a session.
+  const handlePromptSubmit = async () => {
+    if (submitting) return;
+    const imageFiles = attachmentsRef.current
+      .map((attachment) => attachment.file)
+      .filter((file) => file.type.startsWith("image/"));
+
     if (!signedIn) {
+      setPendingImageFiles(imageFiles);
       openAuthDialog();
       return;
     }
 
     const trimmed = prompt.trim();
+    if (!trimmed) {
+      window.location.assign(clientHomeUrl());
+      return;
+    }
+
+    let imageUrls: string[] = [];
+    if (imageFiles.length > 0) {
+      setSubmitting(true);
+      try {
+        imageUrls = await uploadPromptImages(imageFiles);
+      } catch {
+        // Best effort: a failed upload still carries the text prompt across.
+        imageUrls = [];
+      }
+    }
+
     window.location.assign(
-      trimmed ? clientPromptUrl(trimmed) : clientHomeUrl(),
+      clientPromptUrl(trimmed, undefined, undefined, imageUrls),
     );
   };
 
@@ -1233,7 +1263,7 @@ export default function HomePage({
   const onPromptKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      handlePromptSubmit();
+      void handlePromptSubmit();
     }
   };
 
@@ -1273,6 +1303,7 @@ export default function HomePage({
         onClose={closeAuthDialog}
         locale={locale}
         prompt={prompt}
+        imageFiles={pendingImageFiles}
         nextUrl={nextUrl}
       />
 
@@ -1412,8 +1443,9 @@ export default function HomePage({
 
                     <button
                       type="button"
-                      onClick={handlePromptSubmit}
-                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt
+                      onClick={() => void handlePromptSubmit()}
+                      disabled={submitting}
+                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${hasPrompt
                           ? "bg-black"
                           : "bg-[#7d7d7a] hover:bg-[#666663]"
                         }`}
@@ -1708,8 +1740,9 @@ export default function HomePage({
 
                     <button
                       type="button"
-                      onClick={handlePromptSubmit}
-                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition ${hasPrompt
+                      onClick={() => void handlePromptSubmit()}
+                      disabled={submitting}
+                      className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-full px-4 text-xs text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${hasPrompt
                           ? "bg-black"
                           : "bg-[#7d7d7a] hover:bg-[#666663]"
                         }`}

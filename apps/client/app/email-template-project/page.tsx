@@ -873,6 +873,9 @@ function EmailTemplateProjectInner() {
           if (!pendingPrompt.emailId) {
             throw new Error("Pending prompt did not create an email.");
           }
+          // Images attached on the landing prompt box were uploaded before the
+          // handoff; carry their public URLs into this first generation.
+          const pendingImageUrls = pendingPrompt.imageUrls ?? [];
           setCurrentEmailId(pendingPrompt.emailId);
           router.replace(`/email-template-project?id=${pendingPrompt.emailId}`);
           setMessages([
@@ -880,6 +883,8 @@ function EmailTemplateProjectInner() {
               id: `${pendingPrompt.emailId}-prompt`,
               role: "user",
               content: pendingPrompt.prompt,
+              images:
+                pendingImageUrls.length > 0 ? pendingImageUrls : undefined,
             },
           ]);
           await invalidateEmailState(pendingPrompt.emailId);
@@ -893,7 +898,13 @@ function EmailTemplateProjectInner() {
             existingEmail.status === "DRAFT" &&
             existingEmail.variants.length === 0
           ) {
-            await startStream(pendingPrompt.emailId, "generate");
+            await startStream(
+              pendingPrompt.emailId,
+              "generate",
+              undefined,
+              undefined,
+              pendingImageUrls,
+            );
           }
         })
         .catch((error) => {
@@ -918,10 +929,15 @@ function EmailTemplateProjectInner() {
     const length = searchParams.get("length") ?? undefined;
     const audience = searchParams.get("audience") ?? undefined;
 
-    // Images attached in the home prompt box are handed over via the store, since
-    // the URL can't carry File objects. Upload + attach them to this generation.
+    // Images attached in the home prompt box are handed over via the store (same
+    // origin, File objects). Images attached on the landing page are uploaded
+    // before the cross-subdomain handoff and arrive as public URLs in the query.
     const pendingImages = useClientStore.getState().consumePendingPromptImages();
-    const previewUrls = pendingImages.map((file) => URL.createObjectURL(file));
+    const queryImageUrls = searchParams.getAll("imageUrls").filter(Boolean);
+    const storePreviewUrls = pendingImages.map((file) =>
+      URL.createObjectURL(file),
+    );
+    const previewUrls = [...queryImageUrls, ...storePreviewUrls];
 
     setMessages([
       {
@@ -936,14 +952,17 @@ function EmailTemplateProjectInner() {
       .then(async (created) => {
         setCurrentEmailId(created.id);
         router.replace(`/email-template-project?id=${created.id}`);
-        let uploaded: string[] = [];
+        let uploaded: string[] = [...queryImageUrls];
         if (pendingImages.length > 0) {
           try {
-            uploaded = await Promise.all(
-              pendingImages.map((file) => uploadEmailImage(created.id, file)),
-            );
+            uploaded = [
+              ...uploaded,
+              ...(await Promise.all(
+                pendingImages.map((file) => uploadEmailImage(created.id, file)),
+              )),
+            ];
           } catch {
-            uploaded = [];
+            // Keep any landing URLs already collected above.
           }
         }
         await startStream(created.id, "generate", undefined, undefined, uploaded);

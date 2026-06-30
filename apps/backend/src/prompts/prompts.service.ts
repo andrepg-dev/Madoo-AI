@@ -3,16 +3,52 @@ import {
   type CreatePendingPromptInput,
   type PendingPrompt,
 } from "@madoo/shared";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { EmailsService } from "../emails/emails.service";
+import { S3Service } from "../s3/s3.service";
+
+const ALLOWED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+];
 
 @Injectable()
 export class PromptsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emails: EmailsService,
+    private readonly s3: S3Service,
   ) {}
+
+  /** Upload a landing prompt-box attachment to S3 and return its public URL.
+   * Not tied to an email yet — the URL is carried into generation later. */
+  async uploadAttachment(
+    file: { buffer: Buffer; mimetype: string } | undefined,
+  ): Promise<{ url: string }> {
+    if (!file) {
+      throw new BadRequestException("No image file provided.");
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException("Image must be PNG, JPEG, WEBP, or GIF.");
+    }
+    if (file.buffer.byteLength > 8 * 1024 * 1024) {
+      throw new BadRequestException("Image must be smaller than 8 MB.");
+    }
+    const url = await this.s3.uploadBuffer(
+      file.buffer,
+      file.mimetype,
+      "prompt-attachments",
+    );
+    return { url };
+  }
+
   async create(
     userId: string,
     dto: CreatePendingPromptInput,
@@ -24,6 +60,7 @@ export class PromptsService {
         tone: dto.tone ?? null,
         length: dto.length ?? null,
         audience: dto.audience ?? null,
+        imageUrls: dto.imageUrls ?? [],
       },
     });
     return PendingPromptSchema.parse({

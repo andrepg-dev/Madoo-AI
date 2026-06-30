@@ -94,6 +94,7 @@ model PendingPrompt {
   tone      String?
   length    String?
   audience  String?
+  imageUrls String[] @default([])
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
 
