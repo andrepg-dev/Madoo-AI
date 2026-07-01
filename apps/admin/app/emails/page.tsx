@@ -83,12 +83,24 @@ function EmailsTable({ data }: { data: AdminEmailList }) {
           {data.items.map((email) => (
             <tr key={email.id} className="linkrow">
               <td>
-                <Link
-                  href={`/emails/${email.id}`}
-                  style={{ display: "block", textDecoration: "none" }}
-                >
-                  <strong>{email.title ?? email.latestSubject ?? "Untitled email"}</strong>
-                  <span className="clamp">{email.prompt}</span>
+                <Link href={`/emails/${email.id}`} className="email-cell">
+                  {email.previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className="email-thumb"
+                      src={email.previewUrl}
+                      alt=""
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="email-thumb email-thumb-empty" />
+                  )}
+                  <span className="email-cell-text">
+                    <strong>
+                      {email.title ?? email.latestSubject ?? "Untitled email"}
+                    </strong>
+                    <span className="clamp">{email.prompt}</span>
+                  </span>
                 </Link>
               </td>
               <td>

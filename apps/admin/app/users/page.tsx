@@ -45,14 +45,14 @@ function Kpi({
   hint: string;
 }) {
   return (
-    <div className="rounded-xl bg-madoo-paper p-4 shadow-[0_0_0_0.5px_rgb(17_24_39/0.1)]">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-madoo-faint">
+    <div className="rounded-xl bg-madoo-paper p-3.5 shadow-[0_0_0_0.5px_rgb(17_24_39/0.1)]">
+      <p className="text-[10.5px] font-bold uppercase tracking-wide text-madoo-faint">
         {label}
       </p>
-      <p className="mt-1.5 text-3xl font-semibold leading-none text-madoo-text">
+      <p className="mt-1 text-xl font-semibold leading-none text-madoo-text">
         {value}
       </p>
-      <p className="mt-2 text-xs leading-snug text-madoo-muted">{hint}</p>
+      <p className="mt-1.5 text-[11.5px] leading-snug text-madoo-muted">{hint}</p>
     </div>
   );
 }
@@ -170,7 +170,7 @@ function Retention({ data }: { data: AdminRetentionOverview }) {
                   style={{ width: `${Math.min(100, bucket.rate)}%` }}
                 />
               </div>
-              <p className="mt-2 text-2xl font-semibold text-madoo-text">
+              <p className="mt-2 text-xl font-semibold text-madoo-text">
                 {bucket.rate}%
               </p>
               <p className="text-xs text-madoo-muted">
