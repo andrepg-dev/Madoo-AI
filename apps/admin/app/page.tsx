@@ -11,8 +11,9 @@ import type {
   Feedback,
 } from "@madoo/shared";
 import { redirect } from "next/navigation";
-import { logoutAction } from "@/actions/auth";
 import { fetchDashboard } from "@/actions/dashboard";
+import { AreaChart } from "@/components/charts";
+import { Shell } from "@/components/shell";
 import { AdminApiError } from "@/lib/api";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
@@ -38,31 +39,6 @@ function formatDateTime(value: string | null): string {
 function changeLabel(delta: AdminMetricDelta): string {
   const sign = delta.changePercent > 0 ? "+" : "";
   return `${sign}${formatPercent(delta.changePercent)} vs prev`;
-}
-
-function Shell({
-  children,
-  title = "Madoo Admin",
-}: {
-  children: React.ReactNode;
-  title?: string;
-}) {
-  return (
-    <div className="container">
-      <div className="topbar">
-        <div>
-          <p className="eyebrow">Internal admin</p>
-          <h1>{title}</h1>
-        </div>
-        <form action={logoutAction}>
-          <button className="btn" type="submit">
-            Sign out
-          </button>
-        </form>
-      </div>
-      {children}
-    </div>
-  );
 }
 
 function MetricCard({
@@ -119,40 +95,22 @@ function RetentionCard({
   );
 }
 
-function TrendBars({ points }: { points: AdminTimeseriesPoint[] }) {
-  const max = Math.max(
-    1,
-    ...points.map(
-      (point) =>
-        point.signups +
-        point.loginEvents +
-        point.emailsCreated +
-        point.templatesCreated +
-        point.feedbackSubmitted,
-    ),
-  );
+function TrendChart({ points }: { points: AdminTimeseriesPoint[] }) {
+  const data = points.map((point) => ({
+    label: point.date.slice(5),
+    value:
+      point.signups +
+      point.loginEvents +
+      point.emailsCreated +
+      point.templatesCreated +
+      point.feedbackSubmitted,
+  }));
 
   return (
-    <div className="trend-bars" aria-label="14 day activity trend">
-      {points.map((point) => {
-        const total =
-          point.signups +
-          point.loginEvents +
-          point.emailsCreated +
-          point.templatesCreated +
-          point.feedbackSubmitted;
-        const height = Math.max(8, Math.round((total / max) * 96));
-        return (
-          <div className="trend-column" key={point.date}>
-            <div
-              className="trend-bar"
-              style={{ height }}
-              title={`${point.date}: ${total} events`}
-            />
-            <span>{point.date.slice(5)}</span>
-          </div>
-        );
-      })}
+    <div className="chart-card">
+      <h3>Activity — last 14 days</h3>
+      <p className="chart-sub">Signups, logins, emails, templates & feedback</p>
+      <AreaChart data={data} />
     </div>
   );
 }
@@ -306,7 +264,7 @@ function Dashboard({ data }: { data: AdminDashboard }) {
         </div>
         <div>
           <h2>Daily motion</h2>
-          <TrendBars points={data.timeseries} />
+          <TrendChart points={data.timeseries} />
         </div>
       </section>
 
@@ -382,7 +340,7 @@ export default async function AdminPage() {
     }
     if (error instanceof AdminApiError && error.status === 403) {
       return (
-        <Shell>
+        <Shell active="dashboard">
           <p className="empty">
             This account is not an admin. Add its email to ADMIN_EMAILS on the backend.
           </p>
@@ -391,7 +349,7 @@ export default async function AdminPage() {
     }
     if (error instanceof AdminApiError && error.status === 503) {
       return (
-        <Shell>
+        <Shell active="dashboard">
           <p className="empty">{error.message}</p>
         </Shell>
       );
@@ -400,7 +358,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <Shell title="Product dashboard">
+    <Shell active="dashboard" title="Product dashboard">
       <Dashboard data={data} />
     </Shell>
   );

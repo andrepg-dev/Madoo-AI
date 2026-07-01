@@ -141,3 +141,115 @@ export const AdminDashboardSchema = z.object({
 });
 
 export type AdminDashboard = z.infer<typeof AdminDashboardSchema>;
+
+// ---------------------------------------------------------------------------
+// Emails browser — list generated emails, render them, read their chat history.
+// ---------------------------------------------------------------------------
+
+export const AdminEmailStatusEnum = z.enum([
+  "DRAFT",
+  "GENERATING",
+  "READY",
+  "ERROR",
+]);
+export type AdminEmailStatus = z.infer<typeof AdminEmailStatusEnum>;
+
+export const AdminEmailListItemSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().nullable(),
+  prompt: z.string(),
+  status: AdminEmailStatusEnum,
+  tone: z.string().nullable(),
+  length: z.string().nullable(),
+  audience: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  userEmail: z.string().nullable(),
+  userName: z.string().nullable(),
+  workspaceName: z.string().nullable(),
+  variantCount: z.number().int().nonnegative(),
+  chatMessageCount: z.number().int().nonnegative(),
+  latestSubject: z.string().nullable(),
+  previewUrl: z.string().nullable(),
+});
+export type AdminEmailListItem = z.infer<typeof AdminEmailListItemSchema>;
+
+export const AdminEmailStatusCountSchema = z.object({
+  status: AdminEmailStatusEnum,
+  count: z.number().int().nonnegative(),
+});
+export type AdminEmailStatusCount = z.infer<typeof AdminEmailStatusCountSchema>;
+
+export const AdminEmailVolumePointSchema = z.object({
+  date: z.string().min(1),
+  count: z.number().int().nonnegative(),
+});
+export type AdminEmailVolumePoint = z.infer<typeof AdminEmailVolumePointSchema>;
+
+export const AdminEmailListSchema = z.object({
+  items: z.array(AdminEmailListItemSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  statusBreakdown: z.array(AdminEmailStatusCountSchema),
+  dailyVolume: z.array(AdminEmailVolumePointSchema),
+});
+export type AdminEmailList = z.infer<typeof AdminEmailListSchema>;
+
+export const AdminEmailVariantSchema = z.object({
+  id: z.string().min(1),
+  seq: z.number().int(),
+  subject: z.string(),
+  compiledHtml: z.string(),
+  previewUrl: z.string().nullable(),
+  createdAt: z.string().datetime(),
+});
+export type AdminEmailVariant = z.infer<typeof AdminEmailVariantSchema>;
+
+export const AdminEmailChatMessageSchema = z.object({
+  id: z.string().min(1),
+  role: z.enum(["USER", "ASSISTANT", "SYSTEM"]),
+  kind: z.enum(["TEXT", "THINKING", "STATUS"]),
+  content: z.string(),
+  imageUrls: z.array(z.string()),
+  feedback: z.enum(["LIKE", "DISLIKE"]).nullable(),
+  feedbackComment: z.string().nullable(),
+  createdAt: z.string().datetime(),
+});
+export type AdminEmailChatMessage = z.infer<
+  typeof AdminEmailChatMessageSchema
+>;
+
+export const AdminEmailRunSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["INITIAL", "EDIT"]),
+  status: z.enum(["STARTED", "STREAMING", "COMPLETED", "FAILED"]),
+  inputTokens: z.number().int().nullable(),
+  outputTokens: z.number().int().nullable(),
+  cachedTokens: z.number().int().nullable(),
+  latencyMs: z.number().int().nullable(),
+  errorMessage: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  completedAt: z.string().datetime().nullable(),
+});
+export type AdminEmailRun = z.infer<typeof AdminEmailRunSchema>;
+
+export const AdminEmailDetailSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().nullable(),
+  prompt: z.string(),
+  tone: z.string().nullable(),
+  length: z.string().nullable(),
+  audience: z.string().nullable(),
+  status: AdminEmailStatusEnum,
+  visibility: z.enum(["PRIVATE", "PUBLIC"]),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  userEmail: z.string().nullable(),
+  userName: z.string().nullable(),
+  workspaceName: z.string().nullable(),
+  variants: z.array(AdminEmailVariantSchema),
+  chatMessages: z.array(AdminEmailChatMessageSchema),
+  runs: z.array(AdminEmailRunSchema),
+});
+export type AdminEmailDetail = z.infer<typeof AdminEmailDetailSchema>;

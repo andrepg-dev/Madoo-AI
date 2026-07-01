@@ -4,10 +4,12 @@ import { AuthModule } from "../auth/auth.module";
 import { PrismaModule } from "../prisma/prisma.module";
 import { AdminAnalyticsController } from "./admin-analytics.controller";
 import { AdminAnalyticsService } from "./admin-analytics.service";
+import { AdminEmailsController } from "./admin-emails.controller";
+import { AdminEmailsService } from "./admin-emails.service";
 
 @Module({
   imports: [AuthModule, PrismaModule],
-  controllers: [AdminAnalyticsController],
-  providers: [AdminAnalyticsService, AdminGuard],
+  controllers: [AdminAnalyticsController, AdminEmailsController],
+  providers: [AdminAnalyticsService, AdminEmailsService, AdminGuard],
 })
 export class AdminAnalyticsModule {}
