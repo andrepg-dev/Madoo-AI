@@ -11,9 +11,26 @@ import type {
 } from "@madoo/shared";
 import { redirect } from "next/navigation";
 import { fetchDashboard } from "@/actions/dashboard";
-import { AreaChart } from "@/components/charts";
+import { LineChart } from "@/components/charts-interactive";
 import { Shell } from "@/components/shell";
 import { AdminApiError } from "@/lib/api";
+
+function shortDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function longDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
@@ -95,21 +112,29 @@ function RetentionCard({
 }
 
 function TrendChart({ points }: { points: AdminTimeseriesPoint[] }) {
-  const data = points.map((point) => ({
-    label: point.date.slice(5),
-    value:
-      point.signups +
-      point.loginEvents +
-      point.emailsCreated +
-      point.templatesCreated +
-      point.feedbackSubmitted,
-  }));
+  const total = (point: AdminTimeseriesPoint) =>
+    point.signups +
+    point.loginEvents +
+    point.emailsCreated +
+    point.templatesCreated +
+    point.feedbackSubmitted;
 
   return (
     <div className="chart-card">
       <h3>Activity — last 14 days</h3>
       <p className="chart-sub">Signups, logins, emails, templates & feedback</p>
-      <AreaChart data={data} />
+      <LineChart
+        labels={points.map((point) => shortDate(point.date))}
+        tooltipLabels={points.map((point) => longDate(point.date))}
+        series={[
+          {
+            name: "Events",
+            color: "#7c3aed",
+            points: points.map(total),
+          },
+        ]}
+        area
+      />
     </div>
   );
 }

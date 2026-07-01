@@ -8,6 +8,23 @@ import { BarChart, LineChart } from "@/components/charts-interactive";
 import { Shell } from "@/components/shell";
 import { AdminApiError } from "@/lib/api";
 
+function shortDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function longDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 function relativeDays(days: number | null): string {
   if (days === null) return "—";
   if (days <= 0) return "Today";
@@ -76,7 +93,8 @@ function Card({
 }
 
 function Retention({ data }: { data: AdminRetentionOverview }) {
-  const labels = data.dailyActive.map((point) => point.date.slice(5));
+  const labels = data.dailyActive.map((point) => shortDate(point.date));
+  const tooltipLabels = data.dailyActive.map((point) => longDate(point.date));
   const returnRate = `${Math.round(data.totals.returnRate)}%`;
 
   return (
@@ -111,6 +129,7 @@ function Retention({ data }: { data: AdminRetentionOverview }) {
         >
           <LineChart
             labels={labels}
+            tooltipLabels={tooltipLabels}
             series={[
               {
                 name: "Active",
@@ -146,7 +165,7 @@ function Retention({ data }: { data: AdminRetentionOverview }) {
               value: bucket.count,
               hint: bucket.label,
             }))}
-            color="#2563eb"
+            color="#f59e0b"
           />
         </Card>
       </section>
@@ -280,11 +299,7 @@ export default async function UsersPage() {
   }
 
   return (
-    <Shell
-      active="users"
-      title="User retention"
-      subtitle="Who comes back to Madoo, how often, and when — so you can tell one-time visitors from real, sticky users."
-    >
+    <Shell active="users" title="User retention">
       <Retention data={data} />
     </Shell>
   );

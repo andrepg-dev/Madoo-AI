@@ -186,6 +186,21 @@ export const AdminEmailVolumePointSchema = z.object({
 });
 export type AdminEmailVolumePoint = z.infer<typeof AdminEmailVolumePointSchema>;
 
+/** One cell of the "when are emails created" heatmap (UTC weekday × hour). */
+export const AdminEmailHeatCellSchema = z.object({
+  weekday: z.number().int().min(0).max(6),
+  hour: z.number().int().min(0).max(23),
+  count: z.number().int().nonnegative(),
+});
+export type AdminEmailHeatCell = z.infer<typeof AdminEmailHeatCellSchema>;
+
+export const AdminPlanBreakdownSchema = z.object({
+  paid: z.number().int().nonnegative(),
+  trial: z.number().int().nonnegative(),
+  free: z.number().int().nonnegative(),
+});
+export type AdminPlanBreakdown = z.infer<typeof AdminPlanBreakdownSchema>;
+
 export const AdminEmailListSchema = z.object({
   items: z.array(AdminEmailListItemSchema),
   total: z.number().int().nonnegative(),
@@ -193,6 +208,8 @@ export const AdminEmailListSchema = z.object({
   pageSize: z.number().int().positive(),
   statusBreakdown: z.array(AdminEmailStatusCountSchema),
   dailyVolume: z.array(AdminEmailVolumePointSchema),
+  heatmap: z.array(AdminEmailHeatCellSchema),
+  plans: AdminPlanBreakdownSchema,
 });
 export type AdminEmailList = z.infer<typeof AdminEmailListSchema>;
 

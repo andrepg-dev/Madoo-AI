@@ -28,8 +28,10 @@ export class AdminEmailsService {
     search?: string;
   }): Promise<AdminEmailList> {
     const page = Math.max(1, Math.floor(params.page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Math.floor(params.pageSize) || 20));
+    // The UI shows one scrollable list (no pagination), so allow a large page.
+    const pageSize = Math.min(1000, Math.max(1, Math.floor(params.pageSize) || 500));
     const search = params.search?.trim();
+    const now = new Date();
 
     const where: Prisma.EmailWhereInput = search
       ? {
@@ -43,34 +45,71 @@ export class AdminEmailsService {
 
     const seriesStart = startOfUtcDay(new Date(Date.now() - (VOLUME_DAYS - 1) * DAY_MS));
 
-    const [total, rows, statusRows, volumeRows] = await Promise.all([
-      this.prisma.email.count({ where }),
-      this.prisma.email.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
-          createdBy: { select: { email: true, name: true } },
-          workspace: { select: { name: true } },
-          _count: { select: { variants: true, chatMessages: true } },
-          variants: {
-            orderBy: { seq: "desc" },
-            take: 1,
-            select: { subject: true, previewUrl: true },
+    const [total, rows, statusRows, volumeRows, heatRows, userCount, subs] =
+      await Promise.all([
+        this.prisma.email.count({ where }),
+        this.prisma.email.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          include: {
+            createdBy: { select: { email: true, name: true } },
+            workspace: { select: { name: true } },
+            _count: { select: { variants: true, chatMessages: true } },
+            variants: {
+              orderBy: { seq: "desc" },
+              take: 1,
+              select: { subject: true, previewUrl: true },
+            },
           },
-        },
-      }),
-      this.prisma.email.groupBy({ by: ["status"], _count: { _all: true } }),
-      this.prisma.$queryRaw<{ date: string; count: number }[]>`
-        SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS date,
-               count(*)::int AS count
-        FROM "Email"
-        WHERE "createdAt" >= ${seriesStart}
-        GROUP BY 1
-        ORDER BY 1
-      `,
-    ]);
+        }),
+        this.prisma.email.groupBy({ by: ["status"], _count: { _all: true } }),
+        this.prisma.$queryRaw<{ date: string; count: number }[]>`
+          SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS date,
+                 count(*)::int AS count
+          FROM "Email"
+          WHERE "createdAt" >= ${seriesStart}
+          GROUP BY 1
+          ORDER BY 1
+        `,
+        this.prisma.$queryRaw<
+          { weekday: number; hour: number; count: number }[]
+        >`
+          SELECT EXTRACT(DOW FROM "createdAt")::int AS weekday,
+                 EXTRACT(HOUR FROM "createdAt")::int AS hour,
+                 count(*)::int AS count
+          FROM "Email"
+          GROUP BY 1, 2
+        `,
+        this.prisma.user.count(),
+        this.prisma.billingSubscription.findMany({
+          select: { plan: true, status: true, trialEndsAt: true },
+        }),
+      ]);
+
+    const heatmap = heatRows.map((row) => ({
+      weekday: Number(row.weekday),
+      hour: Number(row.hour),
+      count: Number(row.count),
+    }));
+
+    const trial = subs.filter(
+      (sub) =>
+        sub.status === "TRIALING" ||
+        (sub.trialEndsAt !== null && sub.trialEndsAt > now),
+    ).length;
+    const paid = subs.filter(
+      (sub) =>
+        sub.status === "ACTIVE" &&
+        sub.plan !== "FREE" &&
+        !(sub.trialEndsAt !== null && sub.trialEndsAt > now),
+    ).length;
+    const plans = {
+      paid,
+      trial,
+      free: Math.max(0, userCount - paid - trial),
+    };
 
     const statusMap = new Map<string, number>(
       statusRows.map((row) => [row.status, row._count._all]),
@@ -94,6 +133,8 @@ export class AdminEmailsService {
       pageSize,
       statusBreakdown,
       dailyVolume,
+      heatmap,
+      plans,
       items: rows.map((email) => ({
         id: email.id,
         title: email.title,

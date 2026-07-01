@@ -2,19 +2,17 @@ import type { AdminEmailList, AdminEmailStatus } from "@madoo/shared";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { fetchEmails } from "@/actions/emails";
-import { AreaChart, ChartLegend, DonutChart } from "@/components/charts";
+import { DonutChart, Heatmap, LineChart } from "@/components/charts-interactive";
 import { Shell } from "@/components/shell";
 import { AdminApiError } from "@/lib/api";
-
-const PAGE_SIZE = 20;
 
 const STATUS_META: Record<
   AdminEmailStatus,
   { label: string; color: string; badge: string }
 > = {
   READY: { label: "Ready", color: "#0f9f6e", badge: "ready" },
-  ERROR: { label: "Error", color: "#d92d20", badge: "error" },
-  GENERATING: { label: "Generating", color: "#b7791f", badge: "generating" },
+  ERROR: { label: "Error", color: "#dc2626", badge: "error" },
+  GENERATING: { label: "Generating", color: "#f59e0b", badge: "generating" },
   DRAFT: { label: "Draft", color: "#94a3b8", badge: "draft" },
 };
 
@@ -27,38 +25,106 @@ function formatDateTime(value: string): string {
   });
 }
 
+function shortDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function longDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function Card({
+  title,
+  desc,
+  children,
+}: {
+  title: string;
+  desc?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl bg-madoo-paper p-5 shadow-[0_0_0_0.5px_rgb(17_24_39/0.1)]">
+      <h2 className="text-sm font-bold text-madoo-text">{title}</h2>
+      {desc ? (
+        <p className="mb-4 mt-0.5 text-xs leading-snug text-madoo-muted">
+          {desc}
+        </p>
+      ) : (
+        <div className="mb-4" />
+      )}
+      {children}
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: AdminEmailStatus }) {
   const meta = STATUS_META[status];
   return <span className={`badge ${meta.badge}`}>{meta.label}</span>;
 }
 
 function Charts({ data }: { data: AdminEmailList }) {
-  const segments = data.statusBreakdown.map((entry) => ({
-    label: STATUS_META[entry.status].label,
-    value: entry.count,
-    color: STATUS_META[entry.status].color,
-  }));
-  const volume = data.dailyVolume.map((point) => ({
-    label: point.date.slice(5),
-    value: point.count,
-  }));
+  const statusSegments = data.statusBreakdown
+    .filter((entry) => entry.count > 0)
+    .map((entry) => ({
+      label: STATUS_META[entry.status].label,
+      value: entry.count,
+      color: STATUS_META[entry.status].color,
+    }));
+
+  const planSegments = [
+    { label: "Paid", value: data.plans.paid, color: "#7c3aed" },
+    { label: "Free trial", value: data.plans.trial, color: "#f59e0b" },
+    { label: "Free", value: data.plans.free, color: "#cbd5e1" },
+  ];
 
   return (
-    <section className="split-section">
-      <div className="chart-card">
-        <h3>Emails created — last 14 days</h3>
-        <p className="chart-sub">{data.total} emails total</p>
-        <AreaChart data={volume} color="#2563eb" />
+    <div className="mb-5 flex flex-col gap-4">
+      <Card
+        title="Emails created — last 14 days"
+        desc={`${data.total} emails total. Hover any point for the exact count.`}
+      >
+        <LineChart
+          labels={data.dailyVolume.map((p) => shortDate(p.date))}
+          tooltipLabels={data.dailyVolume.map((p) => longDate(p.date))}
+          series={[
+            {
+              name: "Emails",
+              color: "#7c3aed",
+              points: data.dailyVolume.map((p) => p.count),
+            },
+          ]}
+          area
+        />
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card title="Status breakdown" desc="All emails, by generation status.">
+          <DonutChart segments={statusSegments} centerLabel="Emails" />
+        </Card>
+        <Card
+          title="User plans"
+          desc="How many accounts are paying, on a free trial, or free."
+        >
+          <DonutChart segments={planSegments} centerLabel="Users" />
+        </Card>
       </div>
-      <div className="chart-card">
-        <h3>Status breakdown</h3>
-        <p className="chart-sub">Across all emails</p>
-        <div className="donut-row">
-          <DonutChart segments={segments} total={data.total} />
-          <ChartLegend segments={segments} />
-        </div>
-      </div>
-    </section>
+
+      <Card
+        title="When emails are created"
+        desc="Darker = more emails. Rows are weekdays, columns are the hour of day (UTC). Hover a cell for the count."
+      >
+        <Heatmap cells={data.heatmap} />
+      </Card>
+    </div>
   );
 }
 
@@ -67,7 +133,10 @@ function EmailsTable({ data }: { data: AdminEmailList }) {
     return <p className="empty">No emails match this search.</p>;
   }
   return (
-    <div className="table-wrap">
+    <div
+      className="table-wrap"
+      style={{ maxHeight: "72vh", overflowY: "auto" }}
+    >
       <table>
         <thead>
           <tr>
@@ -126,22 +195,21 @@ function EmailsTable({ data }: { data: AdminEmailList }) {
 export default async function EmailsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, Number(params.page) || 1);
   const search = params.q?.trim() || "";
 
   let data: AdminEmailList;
   try {
-    data = await fetchEmails({ page, pageSize: PAGE_SIZE, search });
+    data = await fetchEmails({ page: 1, pageSize: 500, search });
   } catch (error) {
     if (error instanceof AdminApiError && error.status === 401) {
       redirect("/login");
     }
     if (error instanceof AdminApiError && error.status === 403) {
       return (
-        <Shell active="emails">
+        <Shell active="emails" title="Emails">
           <p className="empty">
             This account is not an admin. Add its email to ADMIN_EMAILS on the
             backend.
@@ -151,22 +219,13 @@ export default async function EmailsPage({
     }
     if (error instanceof AdminApiError && error.status === 503) {
       return (
-        <Shell active="emails">
+        <Shell active="emails" title="Emails">
           <p className="empty">{error.message}</p>
         </Shell>
       );
     }
     throw error;
   }
-
-  const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
-  const qs = (target: number) => {
-    const sp = new URLSearchParams();
-    if (search) sp.set("q", search);
-    if (target > 1) sp.set("page", String(target));
-    const str = sp.toString();
-    return str ? `/emails?${str}` : "/emails";
-  };
 
   return (
     <Shell active="emails" title="Generated emails">
@@ -186,24 +245,10 @@ export default async function EmailsPage({
       <Charts data={data} />
 
       <section>
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2>{data.items.length} emails</h2>
+        </div>
         <EmailsTable data={data} />
-        {totalPages > 1 ? (
-          <div className="pager">
-            {page > 1 ? (
-              <Link className="btn" href={qs(page - 1)}>
-                Previous
-              </Link>
-            ) : null}
-            <span className="btn" aria-disabled style={{ cursor: "default" }}>
-              Page {page} of {totalPages}
-            </span>
-            {page < totalPages ? (
-              <Link className="btn" href={qs(page + 1)}>
-                Next
-              </Link>
-            ) : null}
-          </div>
-        ) : null}
       </section>
     </Shell>
   );
