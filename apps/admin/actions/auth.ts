@@ -1,43 +1,36 @@
 "use server";
 
-import {
-  AuthSessionResponseSchema,
-  PasswordLoginInputSchema,
-} from "@madoo/shared";
+import { AuthSessionResponseSchema } from "@madoo/shared";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ADMIN_TOKEN_COOKIE, API_URL } from "@/lib/env";
 
-export type LoginState = { error: string | null };
+export type LoginResult = { error: string } | undefined;
 
 /**
- * Logs in against the backend with email + password, stores the returned token
- * in this app's own httpOnly cookie, then redirects to the dashboard. Admin
- * authorization itself is enforced by the backend's AdminGuard — a non-admin
- * can log in but every admin endpoint returns 403.
+ * Exchanges a Google ID token (from Google Identity Services in the browser)
+ * for a backend session, then stores the returned token in this app's own
+ * httpOnly cookie and redirects to the dashboard. Google is the only sign-in
+ * method — admin authorization itself is enforced by the backend's AdminGuard
+ * (ADMIN_EMAILS), so a non-admin can sign in but every admin endpoint 403s.
  */
-export async function loginAction(
-  _prev: LoginState,
-  formData: FormData,
-): Promise<LoginState> {
-  const parsed = PasswordLoginInputSchema.safeParse({
-    email: String(formData.get("email") ?? ""),
-    password: String(formData.get("password") ?? ""),
-  });
-  if (!parsed.success) {
-    return { error: "Enter a valid email and password." };
+export async function loginWithGoogleAction(
+  idToken: string,
+): Promise<LoginResult> {
+  if (!idToken) {
+    return { error: "Missing Google credential. Try again." };
   }
 
   let token: string;
   try {
-    const res = await fetch(`${API_URL}/auth/login`, {
+    const res = await fetch(`${API_URL}/auth/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(parsed.data),
+      body: JSON.stringify({ idToken }),
       cache: "no-store",
     });
     if (!res.ok) {
-      return { error: "Invalid email or password." };
+      return { error: "Google sign-in failed. Try again." };
     }
     const session = AuthSessionResponseSchema.parse(await res.json());
     token = session.token;
