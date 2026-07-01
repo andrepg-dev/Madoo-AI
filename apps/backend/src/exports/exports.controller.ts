@@ -46,6 +46,12 @@ export class ExportsController {
       req.workspace.id,
       variantId || undefined,
     );
+    await this.exports.recordExport({
+      emailId: id,
+      workspaceId: req.workspace.id,
+      userId: req.user?.sub ?? null,
+      format: "html",
+    });
     sendAttachment(res, filename, "text/html; charset=utf-8", Buffer.from(html, "utf8"));
   }
 
@@ -64,6 +70,12 @@ export class ExportsController {
       parsed,
       variantId || undefined,
     );
+    await this.exports.recordExport({
+      emailId: id,
+      workspaceId: req.workspace.id,
+      userId: req.user?.sub ?? null,
+      format: `image:${parsed}`,
+    });
     sendAttachment(res, filename, contentType, buffer);
   }
 
@@ -79,6 +91,12 @@ export class ExportsController {
       req.workspace.id,
       variantId || undefined,
     );
+    await this.exports.recordExport({
+      emailId: id,
+      workspaceId: req.workspace.id,
+      userId: req.user?.sub ?? null,
+      format: "pdf",
+    });
     sendAttachment(res, filename, "application/pdf", buffer);
   }
 
@@ -97,6 +115,12 @@ export class ExportsController {
       parsed,
       variantId || undefined,
     );
+    await this.exports.recordExport({
+      emailId: id,
+      workspaceId: req.workspace.id,
+      userId: req.user?.sub ?? null,
+      format: `esp:${parsed}`,
+    });
     sendAttachment(res, filename, "text/html; charset=utf-8", Buffer.from(html, "utf8"));
   }
 
@@ -112,6 +136,12 @@ export class ExportsController {
       req.workspace.id,
       variantId || undefined,
     );
+    await this.exports.recordExport({
+      emailId: id,
+      workspaceId: req.workspace.id,
+      userId: req.user?.sub ?? null,
+      format: "payload",
+    });
     const json = JSON.stringify(data, null, 2);
     sendAttachment(
       res,
@@ -137,6 +167,12 @@ export class ExportsController {
       subject: variant.subject,
       html: this.exports.inlineCss(variant.compiledHtml),
     });
+    await this.exports.recordExport({
+      emailId: id,
+      workspaceId: req.workspace.id,
+      userId: user.sub,
+      format: "gmail-draft",
+    });
     return CreateDraftResponseSchema.parse(result);
   }
 
@@ -155,6 +191,12 @@ export class ExportsController {
     const result = await this.connections.createOutlookDraft(user.sub, {
       subject: variant.subject,
       html: this.exports.inlineCss(variant.compiledHtml),
+    });
+    await this.exports.recordExport({
+      emailId: id,
+      workspaceId: req.workspace.id,
+      userId: user.sub,
+      format: "outlook-draft",
     });
     return CreateDraftResponseSchema.parse(result);
   }

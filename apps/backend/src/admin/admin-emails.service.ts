@@ -45,8 +45,16 @@ export class AdminEmailsService {
 
     const seriesStart = startOfUtcDay(new Date(Date.now() - (VOLUME_DAYS - 1) * DAY_MS));
 
-    const [total, rows, statusRows, volumeRows, heatRows, userCount, subs] =
-      await Promise.all([
+    const [
+      total,
+      rows,
+      statusRows,
+      volumeRows,
+      heatRows,
+      userCount,
+      subs,
+      exportRows,
+    ] = await Promise.all([
         this.prisma.email.count({ where }),
         this.prisma.email.findMany({
           where,
@@ -86,6 +94,12 @@ export class AdminEmailsService {
         this.prisma.billingSubscription.findMany({
           select: { plan: true, status: true, trialEndsAt: true },
         }),
+        this.prisma.$queryRaw<{ total: number; emails: number }[]>`
+          SELECT count(*)::int AS total,
+                 count(DISTINCT properties->>'emailId')::int AS emails
+          FROM "ProductEvent"
+          WHERE name = 'email.exported'
+        `,
       ]);
 
     const heatmap = heatRows.map((row) => ({
@@ -109,6 +123,12 @@ export class AdminEmailsService {
       paid,
       trial,
       free: Math.max(0, userCount - paid - trial),
+    };
+
+    const exportRow = exportRows[0];
+    const exports = {
+      totalExports: Number(exportRow?.total ?? 0),
+      emailsExported: Number(exportRow?.emails ?? 0),
     };
 
     const statusMap = new Map<string, number>(
@@ -135,6 +155,7 @@ export class AdminEmailsService {
       dailyVolume,
       heatmap,
       plans,
+      exports,
       items: rows.map((email) => ({
         id: email.id,
         title: email.title,

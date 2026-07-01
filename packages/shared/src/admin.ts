@@ -201,6 +201,14 @@ export const AdminPlanBreakdownSchema = z.object({
 });
 export type AdminPlanBreakdown = z.infer<typeof AdminPlanBreakdownSchema>;
 
+export const AdminExportStatsSchema = z.object({
+  /** Total `email.exported` events (an email can be exported many times). */
+  totalExports: z.number().int().nonnegative(),
+  /** Distinct emails that have been exported at least once. */
+  emailsExported: z.number().int().nonnegative(),
+});
+export type AdminExportStats = z.infer<typeof AdminExportStatsSchema>;
+
 export const AdminEmailListSchema = z.object({
   items: z.array(AdminEmailListItemSchema),
   total: z.number().int().nonnegative(),
@@ -210,6 +218,7 @@ export const AdminEmailListSchema = z.object({
   dailyVolume: z.array(AdminEmailVolumePointSchema),
   heatmap: z.array(AdminEmailHeatCellSchema),
   plans: AdminPlanBreakdownSchema,
+  exports: AdminExportStatsSchema,
 });
 export type AdminEmailList = z.infer<typeof AdminEmailListSchema>;
 

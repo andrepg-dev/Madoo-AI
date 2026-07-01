@@ -152,6 +152,32 @@ export class ExportsService {
       })),
     };
   }
+
+  /**
+   * Records an `email.exported` product event so the admin can count how many
+   * emails have been exported (and in which format). Best-effort: a failure
+   * here must never break the actual export/download.
+   */
+  async recordExport(input: {
+    emailId: string;
+    workspaceId: string;
+    userId: string | null;
+    format: string;
+  }): Promise<void> {
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId: input.userId,
+          workspaceId: input.workspaceId,
+          name: "email.exported",
+          source: "exports",
+          properties: { emailId: input.emailId, format: input.format },
+        },
+      });
+    } catch {
+      // Swallow — export tracking is not worth failing a download over.
+    }
+  }
 }
 
 function slugify(input: string): string {

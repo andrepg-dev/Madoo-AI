@@ -66,7 +66,7 @@ export function LineChart({
   return (
     <div className="flex">
       <div
-        className="flex flex-col justify-between pr-2 text-right text-[10px] leading-none text-madoo-faint"
+        className="flex flex-col justify-between pr-2 text-right text-xs leading-none text-madoo-faint"
         style={{ height, paddingTop: padY - 4, paddingBottom: padY - 4 }}
       >
         {ticks.map((t, i) => (
@@ -163,7 +163,7 @@ export function LineChart({
 
           {hover !== null ? (
             <div
-              className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-lg bg-madoo-ink px-2.5 py-1.5 text-xs text-white shadow-[0_0_0_0.5px_rgb(17_24_39/0.4)]"
+              className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-lg bg-madoo-ink px-2.5 py-1.5 text-sm text-white shadow-[0_0_0_0.5px_rgb(17_24_39/0.4)]"
               style={{ left: `${n <= 1 ? 50 : (hover / (n - 1)) * 100}%` }}
             >
               <div className="mb-0.5 font-semibold">
@@ -188,7 +188,7 @@ export function LineChart({
             </div>
           ) : null}
         </div>
-        <div className="mt-1.5 flex justify-between text-[10px] text-madoo-faint">
+        <div className="mt-1.5 flex justify-between text-xs text-madoo-faint">
           {labels.map((label, i) =>
             i % labelEvery === 0 || i === n - 1 ? (
               <span key={i}>{label}</span>
@@ -230,14 +230,14 @@ export function BarChart({
             onMouseLeave={() => setHover(null)}
           >
             {hover === index ? (
-              <div className="pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-lg bg-madoo-ink px-2.5 py-1.5 text-xs text-white shadow-[0_0_0_0.5px_rgb(17_24_39/0.4)]">
+              <div className="pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-lg bg-madoo-ink px-2.5 py-1.5 text-sm text-white shadow-[0_0_0_0.5px_rgb(17_24_39/0.4)]">
                 <div className="font-semibold">
                   {bar.value} {bar.value === 1 ? "user" : "users"}
                 </div>
                 <div className="text-white/70">{bar.hint ?? bar.label}</div>
               </div>
             ) : null}
-            <span className="text-xs font-semibold tabular-nums text-madoo-text">
+            <span className="text-sm font-semibold tabular-nums text-madoo-text">
               {bar.value}
             </span>
             <div
@@ -247,7 +247,7 @@ export function BarChart({
                 background: `linear-gradient(180deg, ${fill}, ${fill}bb)`,
               }}
             />
-            <span className="text-center text-[11px] leading-tight text-madoo-muted">
+            <span className="text-center text-sm leading-tight text-madoo-muted">
               {bar.label}
             </span>
           </div>
@@ -391,7 +391,7 @@ export function Heatmap({
         </div>
         {rowOrder.map((w, rowIdx) => (
           <div key={w} className="mt-[2px] flex items-center">
-            <div className="w-9 shrink-0 pr-2 text-right text-[10px] text-madoo-muted">
+            <div className="w-9 shrink-0 pr-2 text-right text-xs text-madoo-muted">
               {WEEKDAYS[rowIdx]}
             </div>
             <div className="grid flex-1 gap-[2px] [grid-template-columns:repeat(24,minmax(0,1fr))]">
@@ -414,7 +414,7 @@ export function Heatmap({
                   >
                     {count > 0 ? count : ""}
                     {hover && hover.w === w && hover.h === h ? (
-                      <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg bg-madoo-ink px-2.5 py-1.5 text-[11px] text-white shadow-[0_0_0_0.5px_rgb(17_24_39/0.4)]">
+                      <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-lg bg-madoo-ink px-2.5 py-1.5 text-sm text-white shadow-[0_0_0_0.5px_rgb(17_24_39/0.4)]">
                         {WEEKDAYS[rowIdx]} {String(h).padStart(2, "0")}:00 —{" "}
                         {count} {count === 1 ? "email" : "emails"}
                       </div>

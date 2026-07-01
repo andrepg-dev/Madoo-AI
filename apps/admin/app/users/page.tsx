@@ -69,7 +69,7 @@ function Kpi({
       <p className="mt-1 text-xl font-semibold leading-none text-madoo-text">
         {value}
       </p>
-      <p className="mt-1.5 text-[11.5px] leading-snug text-madoo-muted">{hint}</p>
+      <p className="mt-1.5 text-sm leading-snug text-madoo-muted">{hint}</p>
     </div>
   );
 }
@@ -86,7 +86,7 @@ function Card({
   return (
     <div className="rounded-xl bg-madoo-paper p-5 shadow-[0_0_0_0.5px_rgb(17_24_39/0.1)]">
       <h2 className="text-sm font-bold text-madoo-text">{title}</h2>
-      <p className="mb-4 mt-0.5 text-xs leading-snug text-madoo-muted">{desc}</p>
+      <p className="mb-4 mt-0.5 text-sm leading-snug text-madoo-muted">{desc}</p>
       {children}
     </div>
   );
@@ -143,7 +143,7 @@ function Retention({ data }: { data: AdminRetentionOverview }) {
               },
             ]}
           />
-          <div className="mt-3 flex gap-4 text-xs text-madoo-muted">
+          <div className="mt-3 flex gap-4 text-sm text-madoo-muted">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-2 rounded-full bg-madoo-blue" />
               Active
@@ -192,7 +192,7 @@ function Retention({ data }: { data: AdminRetentionOverview }) {
               <p className="mt-2 text-xl font-semibold text-madoo-text">
                 {bucket.rate}%
               </p>
-              <p className="text-xs text-madoo-muted">
+              <p className="text-sm text-madoo-muted">
                 {label} · {bucket.returned}/{bucket.cohortSize}
               </p>
             </div>
@@ -237,7 +237,7 @@ function Retention({ data }: { data: AdminRetentionOverview }) {
                           {user.name ?? user.email}
                         </div>
                         {user.name ? (
-                          <div className="text-xs text-madoo-muted">
+                          <div className="text-sm text-madoo-muted">
                             {user.email}
                           </div>
                         ) : null}

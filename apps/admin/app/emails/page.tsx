@@ -55,7 +55,7 @@ function Card({
     <div className="rounded-xl bg-madoo-paper p-5 shadow-[0_0_0_0.5px_rgb(17_24_39/0.1)]">
       <h2 className="text-sm font-bold text-madoo-text">{title}</h2>
       {desc ? (
-        <p className="mb-4 mt-0.5 text-xs leading-snug text-madoo-muted">
+        <p className="mb-4 mt-0.5 text-sm leading-snug text-madoo-muted">
           {desc}
         </p>
       ) : (
@@ -69,6 +69,28 @@ function Card({
 function StatusBadge({ status }: { status: AdminEmailStatus }) {
   const meta = STATUS_META[status];
   return <span className={`badge ${meta.badge}`}>{meta.label}</span>;
+}
+
+function Kpi({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-xl bg-madoo-paper p-3.5 shadow-[0_0_0_0.5px_rgb(17_24_39/0.1)]">
+      <p className="text-[10.5px] font-bold uppercase tracking-wide text-madoo-faint">
+        {label}
+      </p>
+      <p className="mt-1 text-xl font-semibold leading-none text-madoo-text">
+        {value.toLocaleString("en-US")}
+      </p>
+      <p className="mt-1.5 text-sm leading-snug text-madoo-muted">{hint}</p>
+    </div>
+  );
 }
 
 function Charts({ data }: { data: AdminEmailList }) {
@@ -86,8 +108,26 @@ function Charts({ data }: { data: AdminEmailList }) {
     { label: "Free", value: data.plans.free, color: "#cbd5e1" },
   ];
 
+  const readyCount =
+    data.statusBreakdown.find((entry) => entry.status === "READY")?.count ?? 0;
+
   return (
     <div className="mb-5 flex flex-col gap-4">
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Kpi label="Total emails" value={data.total} hint="Created all-time" />
+        <Kpi
+          label="Emails exported"
+          value={data.exports.emailsExported}
+          hint={`${data.exports.totalExports.toLocaleString("en-US")} exports total`}
+        />
+        <Kpi label="Ready" value={readyCount} hint="Finished generating" />
+        <Kpi
+          label="Paying users"
+          value={data.plans.paid}
+          hint={`${data.plans.trial} on free trial`}
+        />
+      </section>
+
       <Card
         title="Emails created — last 14 days"
         desc={`${data.total} emails total. Hover any point for the exact count.`}
