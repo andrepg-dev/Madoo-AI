@@ -4,7 +4,6 @@ import type {
   AdminInsight,
   AdminMetricDelta,
   AdminRecentTemplate,
-  AdminRecentUser,
   AdminRetentionBucket,
   AdminTimeseriesPoint,
   AdminTopTemplate,
@@ -139,43 +138,6 @@ function Funnel({ steps }: { steps: AdminFunnelStep[] }) {
   );
 }
 
-function RecentUsers({ users }: { users: AdminRecentUser[] }) {
-  if (users.length === 0) return <p className="empty">No users yet.</p>;
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Stage</th>
-            <th>Score</th>
-            <th>Emails</th>
-            <th>Templates</th>
-            <th>Feedback</th>
-            <th>Last seen</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td>
-                <strong>{user.name ?? user.email}</strong>
-                <span>{user.name ? user.email : "No profile name"}</span>
-              </td>
-              <td>{user.stage}</td>
-              <td>{user.activationScore}</td>
-              <td>{formatNumber(user.emailCount)}</td>
-              <td>{formatNumber(user.customTemplateCount)}</td>
-              <td>{formatNumber(user.feedbackCount + user.supportTicketCount)}</td>
-              <td>{formatDateTime(user.lastActivityAt)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function TemplateActivity({ templates }: { templates: AdminRecentTemplate[] }) {
   if (templates.length === 0) {
     return <p className="empty">No template activity yet.</p>;
@@ -293,11 +255,6 @@ function Dashboard({ data }: { data: AdminDashboard }) {
           <MetricCard label="Connected users" value={formatNumber(data.usage.connectedUsersTotal)} detail={`${formatNumber(data.usage.providerConnectionsTotal)} connections`} />
           <MetricCard label="Generation failures" value={formatPercent(data.usage.generationFailureRate30d)} detail={`${formatNumber(data.usage.failedGenerationRuns30d)} of ${formatNumber(data.usage.generationRuns30d)} runs`} />
         </div>
-      </section>
-
-      <section>
-        <h2>Recent users</h2>
-        <RecentUsers users={data.recentUsers} />
       </section>
 
       <section className="split-section">

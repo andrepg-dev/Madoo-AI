@@ -253,3 +253,60 @@ export const AdminEmailDetailSchema = z.object({
   runs: z.array(AdminEmailRunSchema),
 });
 export type AdminEmailDetail = z.infer<typeof AdminEmailDetailSchema>;
+
+// ---------------------------------------------------------------------------
+// Retention — which users come back, and how often.
+// ---------------------------------------------------------------------------
+
+export const AdminRetentionUserSchema = z.object({
+  id: z.string().min(1),
+  email: z.string().email(),
+  name: z.string().nullable(),
+  firstSeenAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime().nullable(),
+  /** Distinct days the user was active (a proxy for "visits"). */
+  activeDays: z.number().int().nonnegative(),
+  /** activeDays − 1: how many separate days they came *back* after day one. */
+  returnVisits: z.number().int().nonnegative(),
+  daysSinceLastSeen: z.number().int().nonnegative().nullable(),
+  /** Came back on at least one day after signing up. */
+  returning: z.boolean(),
+});
+export type AdminRetentionUser = z.infer<typeof AdminRetentionUserSchema>;
+
+export const AdminReturnsBucketSchema = z.object({
+  label: z.string().min(1),
+  count: z.number().int().nonnegative(),
+});
+export type AdminReturnsBucket = z.infer<typeof AdminReturnsBucketSchema>;
+
+export const AdminDailyActiveSchema = z.object({
+  date: z.string().min(1),
+  active: z.number().int().nonnegative(),
+  returning: z.number().int().nonnegative(),
+});
+export type AdminDailyActive = z.infer<typeof AdminDailyActiveSchema>;
+
+export const AdminRetentionOverviewSchema = z.object({
+  generatedAt: z.string().datetime(),
+  totals: z.object({
+    totalUsers: z.number().int().nonnegative(),
+    returningUsers: z.number().int().nonnegative(),
+    oneTimeUsers: z.number().int().nonnegative(),
+    returnRate: z.number(),
+    avgActiveDays: z.number(),
+    activeLast7d: z.number().int().nonnegative(),
+    activeLast30d: z.number().int().nonnegative(),
+  }),
+  cohorts: z.object({
+    day1: AdminRetentionBucketSchema,
+    day7: AdminRetentionBucketSchema,
+    day30: AdminRetentionBucketSchema,
+  }),
+  returnsDistribution: z.array(AdminReturnsBucketSchema),
+  dailyActive: z.array(AdminDailyActiveSchema),
+  users: z.array(AdminRetentionUserSchema),
+});
+export type AdminRetentionOverview = z.infer<
+  typeof AdminRetentionOverviewSchema
+>;

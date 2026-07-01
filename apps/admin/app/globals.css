@@ -1,3 +1,23 @@
+/* Tailwind v4 — utilities + theme only (no preflight, so the existing
+   plain-CSS admin pages keep their styling while new pages use Tailwind). */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-madoo-page: #f3f4f6;
+  --color-madoo-paper: #ffffff;
+  --color-madoo-ink: #14181f;
+  --color-madoo-ink-hover: #232a35;
+  --color-madoo-text: #171a21;
+  --color-madoo-muted: #6b7382;
+  --color-madoo-faint: #9aa1ad;
+  --color-madoo-line: #e6e8ec;
+  --color-madoo-blue: #2563eb;
+  --color-madoo-green: #0f9f6e;
+  --color-madoo-amber: #b7791f;
+  --color-madoo-red: #d92d20;
+}
+
 :root {
   /* Madoo palette (see design.md) */
   --bg: #f3f4f6;
