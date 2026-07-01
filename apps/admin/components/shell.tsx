@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LiveUsers } from "./live-users";
 
 type NavKey = "dashboard" | "users" | "emails";
 
@@ -20,10 +21,11 @@ export function Shell({
   return (
     <div className="min-h-screen bg-madoo-page">
       <div className="mx-auto w-full max-w-[1280px] px-5 pb-16 pt-6 sm:px-7">
-        <header>
+        <header className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold leading-tight text-madoo-text">
             {title}
           </h1>
+          <LiveUsers />
         </header>
 
         <nav className="mt-4 flex gap-1 border-b border-madoo-line">

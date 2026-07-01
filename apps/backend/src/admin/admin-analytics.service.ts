@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import { AdminDashboardSchema, type AdminDashboard } from "@madoo/shared";
+import {
+  AdminDashboardSchema,
+  AdminLiveSchema,
+  type AdminDashboard,
+  type AdminLive,
+} from "@madoo/shared";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { toFeedbackDto } from "../feedback/dto/feedback.dto";
@@ -35,6 +40,66 @@ type TimeseriesBucket = {
 @Injectable()
 export class AdminAnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Near-real-time presence: distinct users with any activity event in the
+   *  last 5 / 15 / 60 minutes, plus the most recently seen users. */
+  async live(): Promise<AdminLive> {
+    const now = new Date();
+    const since = new Date(now.getTime() - 60 * 60 * 1000);
+
+    const events = await this.prisma.productEvent.findMany({
+      where: {
+        userId: { not: null },
+        name: { in: [...ACTIVITY_EVENTS] },
+        occurredAt: { gte: since },
+      },
+      select: { userId: true, occurredAt: true },
+      orderBy: { occurredAt: "desc" },
+      take: 20_000,
+    });
+
+    const latest = new Map<string, Date>();
+    for (const event of events) {
+      if (event.userId && !latest.has(event.userId)) {
+        latest.set(event.userId, event.occurredAt);
+      }
+    }
+
+    const minutesAgo = (date: Date) =>
+      (now.getTime() - date.getTime()) / 60_000;
+    const ids = [...latest.keys()];
+    const online = ids.filter((id) => minutesAgo(latest.get(id)!) <= 5).length;
+    const active15m = ids.filter((id) => minutesAgo(latest.get(id)!) <= 15)
+      .length;
+
+    const topIds = ids
+      .sort((a, b) => latest.get(b)!.getTime() - latest.get(a)!.getTime())
+      .slice(0, 12);
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: topIds } },
+      select: { id: true, email: true, name: true },
+    });
+    const byId = new Map(users.map((user) => [user.id, user]));
+    const recent = topIds
+      .filter((id) => byId.has(id))
+      .map((id) => {
+        const user = byId.get(id)!;
+        return {
+          id,
+          email: user.email,
+          name: user.name,
+          minutesAgo: Math.round(minutesAgo(latest.get(id)!)),
+        };
+      });
+
+    return AdminLiveSchema.parse({
+      generatedAt: now.toISOString(),
+      online,
+      active15m,
+      active60m: ids.length,
+      recent,
+    });
+  }
 
   async dashboard(): Promise<AdminDashboard> {
     const now = new Date();

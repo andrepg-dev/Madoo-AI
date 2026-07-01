@@ -336,3 +336,25 @@ export const AdminRetentionOverviewSchema = z.object({
 export type AdminRetentionOverview = z.infer<
   typeof AdminRetentionOverviewSchema
 >;
+
+// ---------------------------------------------------------------------------
+// Live presence — who is on the platform right now.
+// ---------------------------------------------------------------------------
+
+export const AdminLiveUserSchema = z.object({
+  id: z.string().min(1),
+  email: z.string(),
+  name: z.string().nullable(),
+  minutesAgo: z.number().int().nonnegative(),
+});
+export type AdminLiveUser = z.infer<typeof AdminLiveUserSchema>;
+
+export const AdminLiveSchema = z.object({
+  generatedAt: z.string().datetime(),
+  /** Distinct users active in the last 5 minutes. */
+  online: z.number().int().nonnegative(),
+  active15m: z.number().int().nonnegative(),
+  active60m: z.number().int().nonnegative(),
+  recent: z.array(AdminLiveUserSchema),
+});
+export type AdminLive = z.infer<typeof AdminLiveSchema>;

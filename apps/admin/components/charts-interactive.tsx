@@ -145,21 +145,23 @@ export function LineChart({
                 vectorEffect="non-scaling-stroke"
               />
             ) : null}
-            {hover !== null
-              ? series.map((s) => (
-                  <circle
-                    key={s.name}
-                    cx={x(hover)}
-                    cy={y(s.points[hover] ?? 0)}
-                    r={3.5}
-                    fill="#fff"
-                    stroke={s.color}
-                    strokeWidth={2}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ))
-              : null}
           </svg>
+
+          {/* Hover dots as HTML so they stay round (the SVG is x-stretched by
+              preserveAspectRatio="none", which would squash SVG circles). */}
+          {hover !== null
+            ? series.map((s) => (
+                <span
+                  key={s.name}
+                  className="pointer-events-none absolute z-10 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-white"
+                  style={{
+                    left: `${n <= 1 ? 50 : (hover / (n - 1)) * 100}%`,
+                    top: `${y(s.points[hover] ?? 0)}px`,
+                    borderColor: s.color,
+                  }}
+                />
+              ))
+            : null}
 
           {hover !== null ? (
             <div

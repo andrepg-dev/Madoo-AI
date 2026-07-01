@@ -17,6 +17,11 @@ export class AdminAnalyticsController {
     return this.analytics.dashboard();
   }
 
+  @Get("live")
+  live() {
+    return this.analytics.live();
+  }
+
   @Get("retention")
   retentionOverview() {
     return this.retention.overview();
