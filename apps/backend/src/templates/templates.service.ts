@@ -84,6 +84,7 @@ export class TemplatesService {
 
   async saveFromVariant(
     workspaceId: string,
+    userId: string,
     variantId: string,
     name: string,
   ): Promise<{ id: string; name: string; slug: string }> {
@@ -107,6 +108,7 @@ export class TemplatesService {
     const template = await this.prisma.template.create({
       data: {
         workspaceId,
+        createdByUserId: userId,
         slug,
         name,
         componentCode: variant.componentCode,
@@ -114,6 +116,19 @@ export class TemplatesService {
       },
       select: { id: true, name: true, slug: true },
     });
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId,
+          workspaceId,
+          name: "template.created_custom",
+          source: "templates.from_variant",
+          properties: { templateId: template.id, templateName: template.name },
+        },
+      });
+    } catch {
+      // Analytics should not block saving a reusable template.
+    }
     return template;
   }
 

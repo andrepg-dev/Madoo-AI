@@ -18,6 +18,7 @@ import {
   WorkspaceGuard,
   type WorkspaceScopedRequest,
 } from "../workspaces/workspace.guard";
+import { CurrentUser } from "../auth/current-user.decorator";
 import { TemplatesService } from "./templates.service";
 
 @Controller({ path: "templates", version: "1" })
@@ -41,10 +42,15 @@ export class TemplatesController {
   }
 
   @Post("from-variant")
-  saveFromVariant(@Req() req: WorkspaceScopedRequest, @Body() body: unknown) {
+  saveFromVariant(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Body() body: unknown,
+  ) {
     const dto = SaveTemplateFromVariantSchema.parse(body);
     return this.templates.saveFromVariant(
       req.workspace.id,
+      user.sub,
       dto.variantId,
       dto.name,
     );

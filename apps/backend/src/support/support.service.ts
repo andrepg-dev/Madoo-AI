@@ -56,6 +56,19 @@ export class SupportService {
         message: input.message.trim(),
       },
     });
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId: params.userId,
+          workspaceId: ticket.workspaceId,
+          name: "support.submitted",
+          source: "support.contact",
+          properties: { ticketId: ticket.id, category: ticket.category },
+        },
+      });
+    } catch {
+      // Support tickets must still reach the team if analytics misses a row.
+    }
 
     await this.mail.sendSupportTicket({
       id: ticket.id,

@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import type { EmailStatus } from "@prisma/client";
+import { Prisma, type EmailStatus } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import {
   EmailChatMessageDtoSchema,
@@ -97,6 +97,7 @@ export class EmailsService {
       const created = await tx.email.create({
         data: {
           workspaceId,
+          createdByUserId: userId,
           prompt,
           tone: dto.tone ?? null,
           length: dto.length ?? null,
@@ -115,6 +116,13 @@ export class EmailsService {
         },
       });
       return created;
+    });
+    await this.recordProductEvent({
+      userId,
+      workspaceId,
+      name: "email.created",
+      source: "emails.create",
+      properties: { emailId: email.id, fromTemplate: Boolean(templateId) },
     });
     return this.toDto(email.id);
   }
@@ -331,6 +339,7 @@ export class EmailsService {
    */
   async materializeTemplate({
     workspaceId,
+    userId,
     componentCode,
     variableSchema,
     prompt,
@@ -362,12 +371,14 @@ export class EmailsService {
       const created = await tx.email.create({
         data: {
           workspaceId,
+          createdByUserId: userId,
           prompt: trimmedPrompt,
           tone,
           length,
           audience,
           templateId,
           templateSavedAt: now,
+          templateSavedByUserId: userId,
           status: "READY",
         },
       });
@@ -401,6 +412,13 @@ export class EmailsService {
         },
       });
       return created;
+    });
+    await this.recordProductEvent({
+      userId,
+      workspaceId,
+      name: "template.used_seed",
+      source: "emails.from_template",
+      properties: { emailId: email.id, templateId },
     });
     return this.toDto(email.id);
   }
@@ -513,13 +531,23 @@ export class EmailsService {
       }),
       this.prisma.email.update({
         where: { id: emailId },
-        data: { templateSavedAt: new Date() },
+        data: {
+          templateSavedAt: new Date(),
+          templateSavedByUserId: userId,
+        },
       }),
       this.prisma.emailVariant.update({
         where: { id: latestVariant.id },
         data: { previewUrl },
       }),
     ]);
+    await this.recordProductEvent({
+      userId,
+      workspaceId,
+      name: "template.saved_seed",
+      source: "emails.save_template",
+      properties: { emailId, templateId: email.templateId },
+    });
   }
 
   async updateVariantVariableSchema(
@@ -592,6 +620,7 @@ export class EmailsService {
       const email = await tx.email.create({
         data: {
           workspaceId: membership.workspaceId,
+          createdByUserId: userId,
           prompt,
           tone: pp.tone ?? null,
           length: pp.length ?? null,
@@ -615,11 +644,43 @@ export class EmailsService {
         where: { id: pendingPromptId },
         data: { consumed: true },
       });
-
       return { emailId: email.id, workspaceId: membership.workspaceId };
+    });
+    await this.recordProductEvent({
+      userId,
+      workspaceId: result.workspaceId,
+      name: "email.created",
+      source: "prompts.consume",
+      properties: { emailId: result.emailId, fromPendingPrompt: true },
     });
 
     return result;
+  }
+
+  private async recordProductEvent(input: {
+    userId: string;
+    workspaceId: string;
+    name: string;
+    source: string;
+    properties?: Prisma.InputJsonValue;
+  }): Promise<void> {
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId: input.userId,
+          workspaceId: input.workspaceId,
+          name: input.name,
+          source: input.source,
+          properties: input.properties,
+        },
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Product event "${input.name}" was not recorded: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   async nextVariantSeq(emailId: string): Promise<number> {

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { LoggerModule } from "nestjs-pino";
 import { AssistantModule } from "./assistant/assistant.module";
+import { AdminAnalyticsModule } from "./admin/admin-analytics.module";
 import { AuditLogsModule } from "./audit-logs/audit-logs.module";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
@@ -61,6 +62,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
       },
     }),
     PrismaModule,
+    AdminAnalyticsModule,
     AuthModule,
     UsersModule,
     WorkspacesModule,

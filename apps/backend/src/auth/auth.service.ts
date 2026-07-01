@@ -14,7 +14,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
-import type { User } from "@prisma/client";
+import { Prisma, type User } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../prisma/prisma.service";
 import { isVipProEmail } from "../billing/vip-accounts";
@@ -77,6 +77,20 @@ export class AuthService {
 
     await this.linkAuthAccount(user.id, "GOOGLE", googleId, email);
     if (!existing) await this.attributeReferral(user.id, dto.referralCode);
+    if (!existing) {
+      await this.recordProductEvent({
+        userId: user.id,
+        name: "auth.signup",
+        source: "auth.google",
+        properties: { provider: "google" },
+      });
+    }
+    await this.recordProductEvent({
+      userId: user.id,
+      name: "auth.login",
+      source: "auth.google",
+      properties: { provider: "google", isNewUser: !existing },
+    });
 
     return this.issueSession(user, dto);
   }
@@ -100,6 +114,18 @@ export class AuthService {
     });
 
     await this.attributeReferral(user.id, dto.referralCode);
+    await this.recordProductEvent({
+      userId: user.id,
+      name: "auth.signup",
+      source: "auth.password",
+      properties: { provider: "password" },
+    });
+    await this.recordProductEvent({
+      userId: user.id,
+      name: "auth.login",
+      source: "auth.password",
+      properties: { provider: "password", isNewUser: true },
+    });
 
     return this.issueSession(user, dto);
   }
@@ -115,12 +141,18 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials.");
     }
 
-    await this.prisma.user.update({
+    const loggedInUser = await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+    await this.recordProductEvent({
+      userId: user.id,
+      name: "auth.login",
+      source: "auth.password",
+      properties: { provider: "password", isNewUser: false },
+    });
 
-    return this.issueSession(user, dto);
+    return this.issueSession(loggedInUser, dto);
   }
 
   async loginWithGithub(dto: GithubLoginInput): Promise<AuthResult> {
@@ -212,8 +244,55 @@ export class AuthService {
     });
 
     if (isNew) await this.attributeReferral(user.id, dto.referralCode);
+    if (isNew) {
+      await this.recordProductEvent({
+        userId: user.id,
+        name: "auth.signup",
+        source: "auth.github",
+        properties: { provider: "github" },
+      });
+    }
+    await this.recordProductEvent({
+      userId: user.id,
+      name: "auth.login",
+      source: "auth.github",
+      properties: { provider: "github", isNewUser: isNew },
+    });
 
     return this.issueSession(user, dto);
+  }
+
+  async recordSessionActive(userId: string): Promise<void> {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    try {
+      await this.prisma.user.updateMany({
+        where: {
+          id: userId,
+          OR: [{ lastLoginAt: null }, { lastLoginAt: { lt: today } }],
+        },
+        data: { lastLoginAt: new Date() },
+      });
+
+      const existing = await this.prisma.productEvent.findFirst({
+        where: {
+          userId,
+          name: "auth.session_active",
+          occurredAt: { gte: today },
+        },
+        select: { id: true },
+      });
+      if (existing) return;
+
+      await this.recordProductEvent({
+        userId,
+        name: "auth.session_active",
+        source: "auth.me",
+      });
+    } catch {
+      // Session analytics must never block a valid authenticated request.
+    }
   }
 
   async issueSession(
@@ -435,5 +514,27 @@ export class AuthService {
       create: { userId, provider, providerAccountId, email },
       update: { email },
     });
+  }
+
+  private async recordProductEvent(input: {
+    userId?: string;
+    workspaceId?: string;
+    name: string;
+    source?: string;
+    properties?: Prisma.InputJsonValue;
+  }): Promise<void> {
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId: input.userId,
+          workspaceId: input.workspaceId,
+          name: input.name,
+          source: input.source,
+          properties: input.properties,
+        },
+      });
+    } catch {
+      // Product analytics is best-effort; auth must stay available.
+    }
   }
 }

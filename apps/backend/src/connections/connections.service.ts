@@ -138,6 +138,18 @@ export class ConnectionsService {
       },
       create: { userId, provider: prismaProvider, ...data },
     });
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId,
+          name: "provider.connected",
+          source: "connections.exchange",
+          properties: { provider, accountEmail },
+        },
+      });
+    } catch {
+      // The connection row is authoritative; analytics is best-effort.
+    }
 
     return ProviderConnectionDtoSchema.parse({
       provider,

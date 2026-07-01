@@ -14,7 +14,7 @@ export class FeedbackService {
   }) {
     const input = CreateFeedbackInputSchema.parse(params.body);
 
-    return this.prisma.feedback.create({
+    const feedback = await this.prisma.feedback.create({
       data: {
         userId: params.userId,
         userEmail: params.userEmail,
@@ -25,6 +25,22 @@ export class FeedbackService {
       },
       include: { user: { select: { name: true } } },
     });
+
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId: params.userId,
+          workspaceId: feedback.workspaceId,
+          name: "feedback.submitted",
+          source: "feedback.widget",
+          properties: { feedbackId: feedback.id, rating: feedback.rating },
+        },
+      });
+    } catch {
+      // Feedback is the source of truth; analytics is best-effort.
+    }
+
+    return feedback;
   }
 
   async list(params: { take: number; skip: number }) {

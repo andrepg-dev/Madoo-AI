@@ -40,6 +40,10 @@ model User {
   communityTemplates       CommunityTemplate[]
   communityTemplateStars   CommunityTemplateStar[]
   referralRewards          ReferralReward[]        @relation("ReferralRewardReferrer")
+  createdEmails            Email[]                 @relation("EmailCreatedBy")
+  templateSaves            Email[]                 @relation("EmailTemplateSavedBy")
+  createdTemplates         Template[]              @relation("TemplateCreatedBy")
+  productEvents            ProductEvent[]
 
   @@index([email])
   @@index([referredByUserId])
@@ -129,6 +133,7 @@ model Workspace {
   auditLogs           AuditLog[]
   supportTickets      SupportTicket[]
   invites             WorkspaceInvite[]
+  productEvents       ProductEvent[]
 
   @@index([slug])
 }
@@ -175,18 +180,20 @@ enum EmailChatFeedback {
 }
 
 model Email {
-  id          String      @id @default(cuid())
-  workspaceId String
-  status      EmailStatus @default(DRAFT)
+  id              String      @id @default(cuid())
+  workspaceId     String
+  status          EmailStatus @default(DRAFT)
+  createdByUserId String?
 
   prompt   String
   tone     String?
   length   String?
   audience String?
 
-  title           String?
-  templateId      String?
-  templateSavedAt DateTime?
+  title                 String?
+  templateId            String?
+  templateSavedAt       DateTime?
+  templateSavedByUserId String?
 
   visibility EmailVisibility @default(PRIVATE)
   publicId   String?         @unique
@@ -199,7 +206,9 @@ model Email {
   updatedAt DateTime @updatedAt
 
   workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy           User?                @relation("EmailCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   template            Template?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateSavedBy     User?                @relation("EmailTemplateSavedBy", fields: [templateSavedByUserId], references: [id], onDelete: SetNull)
   sourcePendingPrompt PendingPrompt?       @relation(fields: [sourcePendingPromptId], references: [id])
   variants            EmailVariant[]
   generationRuns      EmailGenerationRun[]
@@ -208,6 +217,8 @@ model Email {
   supportTickets      SupportTicket[]
 
   @@index([workspaceId, createdAt])
+  @@index([createdByUserId, createdAt])
+  @@index([templateSavedByUserId, templateSavedAt])
 }
 
 model EmailVariant {
@@ -262,16 +273,16 @@ model EmailGenerationRun {
 model EmailChatMessage {
   id String @id @default(cuid())
 
-  workspaceId String
-  emailId     String
-  role        EmailChatRole
-  kind        EmailChatKind @default(TEXT)
-  content     String        @db.Text
+  workspaceId     String
+  emailId         String
+  role            EmailChatRole
+  kind            EmailChatKind      @default(TEXT)
+  content         String             @db.Text
   // Public S3 URLs of images the user attached to this turn, so the chat can be
   // restored with its attachments after a reload.
-  imageUrls   String[]      @default([])
-  feedback    EmailChatFeedback?
-  feedbackComment String? @db.Text
+  imageUrls       String[]           @default([])
+  feedback        EmailChatFeedback?
+  feedbackComment String?            @db.Text
 
   // Response-version group. Assistant rows produced by regenerating the same
   // turn share a groupId so the UI can offer ‹x/y› version navigation.
@@ -310,11 +321,12 @@ model EmailVfsSnapshot {
 model Template {
   id String @id @default(cuid())
 
-  workspaceId String
-  slug        String
-  name        String
-  category    String?
-  description String?
+  workspaceId     String
+  createdByUserId String?
+  slug            String
+  name            String
+  category        String?
+  description     String?
 
   componentCode  String @db.Text
   variableSchema Json?
@@ -323,10 +335,30 @@ model Template {
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("TemplateCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   emails    Email[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId])
+  @@index([createdByUserId, createdAt])
+}
+
+model ProductEvent {
+  id          String   @id @default(cuid())
+  userId      String?
+  workspaceId String?
+  name        String
+  source      String?
+  properties  Json?
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([name, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([workspaceId, occurredAt])
 }
 
 /// A template shared to the global, cross-workspace community gallery.

@@ -82,6 +82,7 @@ export class AuthController {
   @Get("me")
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() current: { sub: string }) {
+    await this.auth.recordSessionActive(current.sub);
     const user = await this.users.findByIdOrThrow(current.sub);
     return toUserDto(user);
   }

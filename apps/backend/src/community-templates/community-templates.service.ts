@@ -229,6 +229,22 @@ export class CommunityTemplatesService {
         },
       },
     });
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId,
+          workspaceId,
+          name: "community_template.shared",
+          source: "community_templates.share",
+          properties: {
+            communityTemplateId: created.id,
+            sourceEmailId: email.id,
+          },
+        },
+      });
+    } catch {
+      // Community sharing succeeded; analytics can lag.
+    }
     return this.toDto(created, userId);
   }
 
@@ -256,6 +272,19 @@ export class CommunityTemplatesService {
       where: { id },
       data: { useCount: { increment: 1 } },
     });
+    try {
+      await this.prisma.productEvent.create({
+        data: {
+          userId,
+          workspaceId,
+          name: "community_template.used",
+          source: "community_templates.use",
+          properties: { communityTemplateId: id, emailId: email.id },
+        },
+      });
+    } catch {
+      // Template use is already counted on the source row; event stream is best-effort.
+    }
     return email;
   }
 

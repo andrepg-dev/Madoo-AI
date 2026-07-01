@@ -1,12 +1,15 @@
 :root {
-  --bg: #fafaf9;
+  --bg: #f6f8fb;
   --surface: #ffffff;
-  --border: #e7e5e4;
-  --text: #1c1917;
-  --muted: #78716c;
-  --ink: #1c1917;
-  --accent: #f59e0b;
-  --danger: #dc2626;
+  --surface-soft: #eef6f2;
+  --border: #d8dee9;
+  --text: #171a21;
+  --muted: #647084;
+  --blue: #2563eb;
+  --green: #0f9f6e;
+  --amber: #b7791f;
+  --red: #d92d20;
+  --ink: #171a21;
 }
 
 * {
@@ -30,44 +33,146 @@ a {
   color: inherit;
 }
 
+button,
+input {
+  font: inherit;
+}
+
 .container {
-  max-width: 960px;
+  width: min(1280px, 100%);
   margin: 0 auto;
-  padding: 32px 20px;
+  padding: 28px 20px 48px;
 }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
 .topbar h1 {
-  font-size: 20px;
+  font-size: 24px;
+  line-height: 1.1;
   margin: 0;
 }
 
-.card {
+.eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.generated {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 18px;
+}
+
+section {
+  margin-top: 28px;
+}
+
+section h2 {
+  font-size: 16px;
+  line-height: 1.2;
+  margin: 0 0 12px;
+}
+
+.metric-grid,
+.insight-grid,
+.delta-grid,
+.split-section {
+  display: grid;
+  gap: 12px;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.metric-grid.secondary {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.insight-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.delta-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.split-section {
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  align-items: start;
+}
+
+.metric-card,
+.card,
+.insight-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: 8px;
 }
 
-.feedback-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.metric-card {
+  min-height: 118px;
+  padding: 14px;
+}
+
+.metric-card span,
+.insight-card span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
   margin-bottom: 8px;
+  text-transform: uppercase;
 }
 
-.stars {
-  color: var(--accent);
-  letter-spacing: 2px;
-  font-size: 16px;
+.metric-card strong,
+.compact-card strong,
+.insight-card strong {
+  display: block;
+  font-size: 30px;
+  line-height: 1.05;
+}
+
+.metric-card p,
+.compact-card p,
+.insight-card p {
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+.card {
+  padding: 14px;
+}
+
+.compact-card {
+  min-height: 100px;
+}
+
+.insight-card {
+  min-height: 132px;
+  padding: 14px;
+  border-top-width: 4px;
+}
+
+.insight-card.good {
+  border-top-color: var(--green);
+}
+
+.insight-card.warning {
+  border-top-color: var(--red);
+}
+
+.insight-card.neutral {
+  border-top-color: var(--blue);
 }
 
 .muted {
@@ -75,51 +180,227 @@ a {
   font-size: 12px;
 }
 
-.message {
-  margin: 8px 0 0;
+.change {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.change.good {
+  color: var(--green);
+}
+
+.change.warning {
+  color: var(--red);
+}
+
+.trend-bars {
+  align-items: end;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(14, minmax(18px, 1fr));
+  min-height: 152px;
+  padding: 16px 14px 10px;
+}
+
+.trend-column {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: end;
+  min-width: 0;
+}
+
+.trend-bar {
+  background: linear-gradient(180deg, var(--blue), var(--green));
+  border-radius: 5px 5px 2px 2px;
+  width: 100%;
+}
+
+.trend-column span {
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.funnel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+}
+
+.funnel-row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(180px, 0.95fr) minmax(120px, 1fr) 54px;
+  padding: 12px 0;
+}
+
+.funnel-row + .funnel-row {
+  border-top: 1px solid var(--border);
+}
+
+.funnel-label strong,
+.funnel-label span {
+  display: block;
+}
+
+.funnel-label span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.funnel-step-rate {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.progress {
+  background: #e8edf5;
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.progress span {
+  background: var(--blue);
+  display: block;
+  height: 100%;
+  min-width: 2px;
+}
+
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  min-width: 860px;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+td strong,
+td span {
+  display: block;
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}
+
+td span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.activity-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.activity-row {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.activity-row + .activity-row {
+  border-top: 1px solid var(--border);
+}
+
+.activity-row strong,
+.activity-row span,
+.activity-row p {
+  overflow-wrap: anywhere;
+}
+
+.activity-row span,
+.activity-row time {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+}
+
+.activity-row time {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.feedback-row p {
+  margin: 6px 0;
   white-space: pre-wrap;
 }
 
 .btn {
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 14px;
+  color: var(--text);
   cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 14px;
   text-decoration: none;
 }
 
 .btn-primary {
   background: var(--ink);
-  color: #fff;
   border-color: var(--ink);
+  color: #fff;
 }
 
 .login-wrap {
-  min-height: 100dvh;
-  display: flex;
   align-items: center;
+  display: flex;
   justify-content: center;
+  min-height: 100dvh;
   padding: 20px;
 }
 
 .login-card {
-  width: 100%;
-  max-width: 360px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 8px;
+  max-width: 360px;
   padding: 24px;
+  width: 100%;
 }
 
 .login-card h1 {
-  margin: 0 0 16px;
   font-size: 18px;
+  margin: 0 0 16px;
 }
 
 .field {
@@ -128,30 +409,31 @@ a {
 }
 
 .field span {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 12px;
   color: var(--muted);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
 }
 
 .field input {
-  width: 100%;
-  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 14px;
+  padding: 10px 12px;
+  width: 100%;
 }
 
 .error {
-  color: var(--danger);
+  color: var(--red);
   font-size: 13px;
   margin: 0 0 12px;
 }
 
 .empty {
   color: var(--muted);
+  margin: 0;
+  padding: 32px 0;
   text-align: center;
-  padding: 48px 0;
 }
 
 .pager {
@@ -159,4 +441,62 @@ a {
   gap: 8px;
   justify-content: center;
   margin-top: 16px;
+}
+
+@media (max-width: 1120px) {
+  .metric-grid,
+  .metric-grid.secondary,
+  .insight-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .split-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .container {
+    padding: 22px 14px 36px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metric-card strong,
+  .compact-card strong,
+  .insight-card strong {
+    font-size: 26px;
+  }
+
+  .metric-grid,
+  .metric-grid.secondary,
+  .insight-grid,
+  .delta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .funnel-row {
+    grid-template-columns: 1fr;
+  }
+
+  .funnel-step-rate,
+  .activity-row time {
+    text-align: left;
+  }
+
+  .activity-row {
+    flex-direction: column;
+  }
+
+  .trend-bars {
+    gap: 4px;
+    overflow-x: auto;
+  }
+
+  .trend-column {
+    min-width: 24px;
+  }
 }
