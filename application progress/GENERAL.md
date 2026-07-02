@@ -1,109 +1,97 @@
 # Madoo AI — General Vision
 
+> **Source of truth:** the public landing page (`apps/landing`). This document
+> tracks the product as it is positioned and sold today, not an older roadmap.
+
 ## What is Madoo AI?
 
-Madoo AI is an **AI-native email marketing platform**. The user describes the email they want in plain language; Madoo writes it, designs it, and ships it. The product collapses three roles — copywriter, designer, and email-ops engineer — into a single conversational interface.
+Madoo AI is an **AI-native email template *design* company**. The user describes
+the email they want in plain language; Madoo writes the copy, designs the layout,
+and produces a polished, on-brand, **production-ready HTML email template** the
+user can export to whatever email tool they already use.
 
-The bet: most email tools (Mailchimp, Klaviyo, ActiveCampaign) are *form-driven*. Madoo is *prompt-driven*. The form-driven era treated emails as templates to be filled in. Madoo treats them as outputs to be generated, edited, and iterated on like a doc in ChatGPT.
+Madoo is the **design + export layer that sits upstream of the ESP**. It does
+**not** try to be the ESP. The user creates the email in Madoo, then exports it
+into Mailchimp, Klaviyo, HubSpot, Salesforce, Brevo, MailerLite, ConvertKit,
+ActiveCampaign, Customer.io, Braze, Marketo, etc.
+
+The bet: most email builders are *form-driven* drag-and-drop editors. Madoo is
+*prompt-driven*. You describe the audience, offer, tone, and goal; Madoo returns
+a finished branded email you refine by chatting, then export. No blank page, no
+building sections by hand.
 
 ## Core Value Proposition
 
-> **"Describe it in plain words. Madoo writes, designs, and ships it."**
+> **"Describe it in plain words. Madoo designs a production-ready email template
+> and you export it anywhere."**
 
-Users do not learn a builder. They type, hit Enter, get a finished branded email, edit anything by chatting with the AI, then send it to a real audience from their own verified domain.
+## In Scope (what Madoo actually does)
 
-## The Full Stack of Capabilities
+1. **AI email builder** — prompt → subject + body + branded layout. Refine copy,
+   sections, tone, and layout by chatting. Image attachments / vision prompts.
+2. **Brand kit** — upload logo, colors, fonts → consistently on-brand emails.
+3. **Community templates** — start from a gallery of community-tested templates
+   (categories incl. e-commerce), then let AI adapt copy/tone/audience.
+4. **One-click export** — clean, portable, standards-based **HTML** (also JPEG /
+   PDF). No lock-in; renders the same wherever pasted.
+5. **Test email engine** — send real test emails; verify the generated HTML is
+   valid; built-in checks for spam risk, broken links, and accessibility; review
+   layout/copy/responsive before export.
+6. **Team workspaces & collaboration** — invite teammates with roles (admin /
+   member), drafts / reviews / ownership / approvals, shared workspace, shareable
+   preview-template links.
 
-A real email SaaS — not just a generator — requires six pillars:
+## Explicitly OUT of Scope
 
-1. **AI Generation** ✅ *(prototype complete)*
-   Prompt → subject + body + layout, with controls for tone / length / audience.
+Madoo is **not** a full email-marketing platform. It deliberately does **not** do:
 
-2. **Editor + Preview** ✅ *(prototype complete)*
-   Live preview of the rendered email, AI-assisted edits, variant browsing (v1 / v2 / v3 — naturally pairs with subject-line A/B testing later).
+- Contact / list management or segmentation.
+- Sending campaigns to an audience (no SMTP/sending infra beyond *test* emails).
+- Analytics (opens / clicks / bounces / unsubscribes).
+- Compliance footers, unsubscribe handling, GDPR/CAN-SPAM/CASL audit data.
+- Domain connection, SPF/DKIM/DMARC, IP warm-up.
+- Automations, drip campaigns, lifecycle flows.
 
-3. **Sending Infrastructure** ⬅️ *the next big build*
-   Madoo does **not** run its own SMTP. It rides on top of **Resend / Postmark / Amazon SES** under the hood and presents a single branded surface to the user.
-   - Madoo handles: verified domains, SPF / DKIM / DMARC automation, IP warm-up.
-   - User sees: *"Connect your domain → Send."*
+All of the above stay with the user's existing ESP. Madoo hands off a finished
+template and gets out of the way.
 
-4. **Contacts & Audiences**
-   - CSV import.
-   - Basic segmentation (tags, behavior).
-   - Sync API for Shopify / Stripe / the user's own app.
+## Use Cases (from the landing page)
 
-5. **Analytics**
-   - Open rate, click rate, bounce rate, unsubscribes.
-   - A/B testing on subject lines — slots cleanly into the existing `v1 / v2 / v3` variant model in the editor.
+- **E-commerce** — launches, discounts, abandoned-cart, win-back offers.
+- **SaaS** — onboarding, feature announcements, trial nudges, churn-save.
+- **Agencies** — client-ready drafts, review/approve, clean handoff.
+- **Creators** — newsletters, product drops, sponsor mentions.
+- **Startups** — waitlist updates, beta invites, launch & milestone emails.
 
-6. **Compliance**
-   - Automatic unsubscribe link.
-   - GDPR / CAN-SPAM / CASL footers and audit data.
-   - Optional double opt-in.
+## Pricing (credit-based — no contact tiers)
 
-## Roadmap
+AI usage is metered in **credits** (generations and edits consume credits). Plans
+gate credits, stored templates, members, workspaces, and test-email volume — not
+contact counts. Yearly billing saves ~16%; 7-day free trial; a free tier exists.
 
-### MVP — months 1–4
-- AI generation + editor (done in the prototype).
-- Sending via Resend API under the hood.
-- CSV import + lists.
-- Basic analytics (opens / clicks).
-- **Pricing:** $19/mo up to 1k contacts, $49/mo up to 5k.
+| Plan   | $/mo | Monthly credits | Stored templates | Members | Workspaces | Test emails/day |
+| ------ | ---- | --------------- | ---------------- | ------- | ---------- | --------------- |
+| Basic  | $25  | 100             | 50               | 2       | 5          | 50              |
+| Medium | $50  | 250             | 150              | 3       | 15         | 100             |
+| Pro    | $95  | 550             | 300              | 5       | Unlimited  | 300             |
 
-### v2 — month 6
-- Premium templates (freemium model).
-- Segmentation + tags.
-- Automated A/B testing.
-
-### v3 — month 12
-- Automations (welcome series, drip campaigns).
-- Integrations (Shopify, Stripe webhooks).
-
-## Screens Already in the Prototype
-
-The frontend at `apps/frontend` already mirrors the full vision so the product story is legible end-to-end, even where the backend is not yet wired:
-
-| Screen        | Route          | Purpose                                                                                                  |
-| ------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
-| Home          | `/`            | Hero prompt + tone/length/audience pills + template gallery. Entry point of the AI generation flow.      |
-| Generating    | (state)        | Loading state while the model produces subject + body + layout.                                          |
-| Editor        | (state)        | Live preview, AI-assisted edits, variant switching (v1 / v2 / v3).                                       |
-| Contacts      | `/contacts`    | Lists, segments, CSV import surface, tags. Closes the "who do I send to" half of the loop.               |
-| Campaigns     | `/campaigns`   | Schedule, pick audience, A/B test, 5-step compose modal. Closes the "create → send" loop.                |
-| Analytics     | `/analytics`   | Post-send dashboard — opens, clicks, bounces, unsubscribes.                                              |
-| Domain        | `/domain`      | "Connect your domain" flow with DNS records — the gate that turns Madoo into a real sender, not a toy.   |
-
-The recommendation that drove screen prioritization: **Contacts and Campaigns first**, because together they close the *"I created an email → I sent it"* loop. Analytics and Domain layer on once the loop is real.
+All plans: export to HTML / JPEG / PDF, share preview-template links.
 
 ## Authentication Philosophy
 
-Login is not a wall in front of the product. A first-time visitor can:
-
-1. Land on the home screen.
-2. Type their prompt.
-3. Press Enter.
-
-**Only at that moment** — when the user has expressed real intent to send something — does Madoo prompt them to sign in. The prompt is preserved across the login round-trip via `localStorage` + a `PendingPrompt` row on the backend, so the user lands exactly where they left off, with their message intact. Login is Google-popup-only (Google Identity Services, in-page) — never a full-page redirect, never a flow break.
-
-This is a deliberate growth design: zero friction to *try*, friction only at the *commit*.
+Login is not a wall in front of the product. A first-time visitor lands on the
+home screen, types their prompt, and presses Enter. **Only then** — at real intent
+— does Madoo prompt sign-in (Google in-page popup). The prompt is preserved across
+the login round-trip so the user lands exactly where they left off. Zero friction
+to *try*, friction only at the *commit*.
 
 ## Tech Stack (current)
 
 - **Monorepo:** Turborepo + pnpm workspaces.
-- **Frontend:** Next.js 15 (App Router) + React 19 + TypeScript. Inline styles + CSS variables for design fidelity (no Tailwind in the prototype).
-- **Backend:** NestJS 10 + TypeScript, URI versioning at `/api/v1`, global `ValidationPipe`, JWT sessions.
-- **Database:** PostgreSQL 16 via `docker-compose`, accessed through Prisma 5.
-- **Auth:** Google Identity Services (in-page popup) → `google-auth-library` ID-token verification on the backend → JWT.
-- **Sending (planned):** Resend (default), with Postmark / SES as alternative drivers behind the same internal interface.
-
-## Success Criteria for the MVP
-
-A user with no prior email-marketing experience must be able to:
-
-1. Land on Madoo, type a prompt, see a rendered branded email in under 30 seconds.
-2. Sign in with Google in one click without losing their prompt.
-3. Connect their own domain (DNS-verified, SPF/DKIM/DMARC auto-configured).
-4. Import a CSV of contacts.
-5. Send the email and see opens + clicks within 24 hours.
-
-If those five steps work without any documentation, Madoo is shippable.
+- **Apps:** `landing` (public, Next.js, EN/ES), `client` (authenticated app, work
+  target), `frontend` (reference-only), `backend` (NestJS + Prisma), `admin`.
+- **Frontend:** Next.js (App Router) + React + TypeScript.
+- **Backend:** NestJS + TypeScript, `/api/v1`, global `ValidationPipe`, JWT.
+- **Database:** PostgreSQL via Prisma.
+- **Auth:** Google Identity Services (in-page popup) → ID-token verification → JWT.
+- **Billing:** Stripe (7-day free trial, credit-based plans).
