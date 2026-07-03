@@ -11,8 +11,9 @@ import {
   type PricingPlan,
 } from "@madoo/shared";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
+import { clientCheckoutUrl, isLikelySignedIn } from "@/lib/client-app";
 
 type BillingInterval = PricingBillingInterval;
 
@@ -175,6 +176,19 @@ function PlanCard({
           : "madoo-paper-border madoo-paper-border-hover bg-madoo-paper text-madoo-ink hover:bg-madoo-ink hover:text-white"
           }`}
         href="/"
+        onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+          // Signed-in visitors skip the home/signup flow and go straight to
+          // Stripe with this plan preselected. Anyone else keeps the default
+          // href ("/"), where the app prompts them to sign up first.
+          if (!isLikelySignedIn()) return;
+          event.preventDefault();
+          window.location.assign(
+            clientCheckoutUrl(
+              plan.checkoutPlan,
+              billingInterval === "yearly" ? "ANNUAL" : "MONTHLY",
+            ),
+          );
+        }}
       >
         {plan.cta}
       </Link>

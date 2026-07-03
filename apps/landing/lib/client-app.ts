@@ -44,3 +44,17 @@ export function clientPromptUrl(
 export function clientHomeUrl(): string {
   return new URL("/", CLIENT_APP_URL).toString();
 }
+
+// Already-signed-in visitors own a session on the app, so a plan they pick on
+// the marketing pricing page is handed to the app's `/upgrade` route, which
+// creates the Stripe checkout session (authenticated by the shared cookie) and
+// redirects them straight to payment — no login dialog, no drawer.
+export function clientCheckoutUrl(
+  plan: "BASIC" | "MEDIUM" | "PRO",
+  interval: "MONTHLY" | "ANNUAL",
+): string {
+  const url = new URL("/upgrade", CLIENT_APP_URL);
+  url.searchParams.set("plan", plan);
+  url.searchParams.set("interval", interval);
+  return url.toString();
+}
