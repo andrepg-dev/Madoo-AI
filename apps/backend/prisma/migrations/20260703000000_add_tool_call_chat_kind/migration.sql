@@ -1,0 +1,1 @@
+ALTER TYPE "EmailChatKind" ADD VALUE 'TOOL_CALL';

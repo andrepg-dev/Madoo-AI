@@ -172,6 +172,7 @@ enum EmailChatKind {
   TEXT
   THINKING
   STATUS
+  TOOL_CALL
 }
 
 enum EmailChatFeedback {

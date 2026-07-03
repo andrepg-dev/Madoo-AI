@@ -1,5 +1,9 @@
-import type { EmailChatMessageDto, EmailDto } from "@madoo/shared";
-import type { AiMessageFeedback, ChatMessage } from "./types";
+import {
+  EmailChatToolCallPayloadSchema,
+  type EmailChatMessageDto,
+  type EmailDto,
+} from "@madoo/shared";
+import type { AiMessageFeedback, ChatMessage, ToolCallView } from "./types";
 
 export function createTimelineMessage(
   emailId: string,
@@ -107,7 +111,36 @@ export function mapChatMessages(
     }
   }
 
-  const rows = chat?.filter((message) => message.kind !== "THINKING") ?? [];
+  const toolCallsByText = new Map<string, ToolCallView[]>();
+  let pendingToolCalls: ToolCallView[] = [];
+  for (const row of chat ?? []) {
+    if (row.role === "ASSISTANT" && row.kind === "TOOL_CALL") {
+      try {
+        const parsed = EmailChatToolCallPayloadSchema.safeParse(
+          JSON.parse(row.content),
+        );
+        if (!parsed.success) continue;
+        pendingToolCalls.push({
+          ...parsed.data,
+          status: "done",
+        });
+      } catch {
+        continue;
+      }
+    } else if (row.role === "ASSISTANT" && row.kind === "TEXT") {
+      if (pendingToolCalls.length) {
+        toolCallsByText.set(row.id, pendingToolCalls);
+      }
+      pendingToolCalls = [];
+    } else if (row.role === "USER") {
+      pendingToolCalls = [];
+    }
+  }
+
+  const rows =
+    chat?.filter(
+      (message) => message.kind !== "THINKING" && message.kind !== "TOOL_CALL",
+    ) ?? [];
 
   // Collect assistant response-version siblings, oldest → newest (chat is asc).
   const groups = new Map<string, EmailChatMessageDto[]>();
@@ -149,6 +182,7 @@ export function mapChatMessages(
         versionIndex: selected,
         thinking: thinkingByText.get(siblings[selected].id),
         feedback: siblings[selected].feedback ?? null,
+        toolCalls: toolCallsByText.get(siblings[selected].id),
       });
       continue;
     }
@@ -172,6 +206,10 @@ export function mapChatMessages(
           : undefined,
       feedback:
         message.role === "ASSISTANT" ? (message.feedback ?? null) : undefined,
+      toolCalls:
+        message.role === "ASSISTANT"
+          ? toolCallsByText.get(message.id)
+          : undefined,
     });
   }
 

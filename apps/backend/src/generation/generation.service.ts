@@ -25,6 +25,7 @@ import { Observable } from "rxjs";
 import { createHash, randomUUID } from "node:crypto";
 import {
   buildRenderVariables,
+  EmailChatToolCallPayloadSchema,
   parseVariableSchemaJson,
   type VariableSchemaRoot,
 } from "@madoo/shared";
@@ -603,8 +604,25 @@ export class GenerationService {
       .reverse()
       .map((row) => {
         const role = row.role.toLowerCase();
-        const kind = row.kind.toLowerCase();
         const compact = row.content.replace(/\s+/g, " ").trim().slice(0, 500);
+        if (row.kind === "TOOL_CALL") {
+          try {
+            const parsed = EmailChatToolCallPayloadSchema.safeParse(
+              JSON.parse(row.content),
+            );
+            if (parsed.success) {
+              const call = parsed.data;
+              const detail = call.detail ? `(${call.detail})` : "";
+              const summary =
+                call.summary ??
+                (call.images?.length ? `${call.images.length} images` : "");
+              return `${role}/tool_call: ${call.name}${detail}${summary ? ` -> ${summary}` : ""}`;
+            }
+          } catch {
+            // Fall through to raw content.
+          }
+        }
+        const kind = row.kind.toLowerCase();
         return `${role}/${kind}: ${compact}`;
       })
       .join("\n");
@@ -962,6 +980,17 @@ export class GenerationService {
       signal,
     });
 
+    for (const call of result.toolCalls) {
+      await this.appendChatMessage({
+        workspaceId,
+        emailId,
+        role: "ASSISTANT",
+        kind: "TOOL_CALL",
+        content: JSON.stringify(call),
+        groupId,
+      });
+    }
+
     await this.appendChatMessage({
       workspaceId,
       emailId,
@@ -1106,6 +1135,17 @@ export class GenerationService {
       });
     }
 
+    for (const call of result.toolCalls) {
+      await this.appendChatMessage({
+        workspaceId,
+        emailId,
+        role: "ASSISTANT",
+        kind: "TOOL_CALL",
+        content: JSON.stringify(call),
+        groupId: opts?.groupId,
+      });
+    }
+
     await this.appendChatMessage({
       workspaceId,
       emailId,
@@ -1144,6 +1184,14 @@ export class GenerationService {
   }): Promise<{
     assistantText: string;
     thinkingText: string;
+    toolCalls: Array<{
+      id: string;
+      name: string;
+      title: string;
+      detail?: string;
+      summary?: string;
+      images?: string[];
+    }>;
     componentCode?: string;
     variantId?: string;
     applied: boolean;
@@ -1202,6 +1250,14 @@ export class GenerationService {
       let response: Awaited<ReturnType<typeof this.runStream>> | null = null;
       let assistantText = "";
       let thinkingText = "";
+      const toolCalls: Array<{
+        id: string;
+        name: string;
+        title: string;
+        detail?: string;
+        summary?: string;
+        images?: string[];
+      }> = [];
       let turnMessages = [...modelMessages];
 
       for (let toolTurn = 0; toolTurn < 4; toolTurn += 1) {
@@ -1274,6 +1330,19 @@ export class GenerationService {
               .filter(Boolean)
               .join(" · "),
           });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "inspect_website_brand",
+            title: "Inspected brand site",
+            detail: brandContext.url,
+            summary: [
+              brandContext.brandName ?? undefined,
+              `${brandContext.colors.length} colors`,
+              `${brandContext.imageUrls.length} images`,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          });
           toolResultContent = JSON.stringify(brandContext);
         } else if (requestedTool.name === "find_images") {
           const input = requestedTool.input as { query?: unknown };
@@ -1310,6 +1379,16 @@ export class GenerationService {
             id: requestedTool.id,
             name: "find_images",
             status: "done",
+            title: "Searched images",
+            detail: query,
+            summary: images.length
+              ? `Found ${images.length} image${images.length === 1 ? "" : "s"}`
+              : "No images found — using a placeholder",
+            images: images.slice(0, 4).map((img) => img.url),
+          });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "find_images",
             title: "Searched images",
             detail: query,
             summary: images.length
@@ -1363,6 +1442,14 @@ export class GenerationService {
               : `Version ${version} not found`,
             detail: `Version ${version}`,
           });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "get_email_version",
+            title: variant
+              ? `Read version ${version}`
+              : `Version ${version} not found`,
+            detail: `Version ${version}`,
+          });
           toolResultContent = JSON.stringify(
             variant
               ? {
@@ -1399,6 +1486,14 @@ export class GenerationService {
             id: requestedTool.id,
             name: "generate_chart",
             status: "done",
+            title: "Generated chart",
+            detail: input.title || input.type,
+            summary: `${input.type} chart`,
+            images: [chartUrl],
+          });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "generate_chart",
             title: "Generated chart",
             detail: input.title || input.type,
             summary: `${input.type} chart`,
@@ -1513,6 +1608,7 @@ export class GenerationService {
         return {
           assistantText,
           thinkingText,
+          toolCalls,
           applied: false,
         };
       }
@@ -1691,6 +1787,7 @@ export class GenerationService {
       return {
         assistantText,
         thinkingText,
+        toolCalls,
         componentCode: input.componentCode,
         variantId: variant.id,
         applied: true,

@@ -393,7 +393,7 @@ export type TransferEmailInput = z.infer<typeof TransferEmailSchema>;
 export const EmailChatMessageDtoSchema = z.object({
   id: z.string(),
   role: z.enum(["USER", "ASSISTANT", "SYSTEM"]),
-  kind: z.enum(["TEXT", "THINKING", "STATUS"]),
+  kind: z.enum(["TEXT", "THINKING", "STATUS", "TOOL_CALL"]),
   content: z.string(),
   /** Public URLs of images the user attached to this turn. */
   imageUrls: z.array(z.string()).default([]),
@@ -405,6 +405,19 @@ export const EmailChatMessageDtoSchema = z.object({
 });
 
 export type EmailChatMessageDto = z.infer<typeof EmailChatMessageDtoSchema>;
+
+export const EmailChatToolCallPayloadSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  title: z.string(),
+  detail: z.string().optional(),
+  summary: z.string().optional(),
+  images: z.array(z.string()).optional(),
+});
+
+export type EmailChatToolCallPayload = z.infer<
+  typeof EmailChatToolCallPayloadSchema
+>;
 
 export const SetEmailChatMessageFeedbackSchema = z.object({
   feedback: z.enum(["LIKE", "DISLIKE"]).nullable(),

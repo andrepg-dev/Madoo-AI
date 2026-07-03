@@ -235,7 +235,7 @@ export type AdminEmailVariant = z.infer<typeof AdminEmailVariantSchema>;
 export const AdminEmailChatMessageSchema = z.object({
   id: z.string().min(1),
   role: z.enum(["USER", "ASSISTANT", "SYSTEM"]),
-  kind: z.enum(["TEXT", "THINKING", "STATUS"]),
+  kind: z.enum(["TEXT", "THINKING", "STATUS", "TOOL_CALL"]),
   content: z.string(),
   imageUrls: z.array(z.string()),
   feedback: z.enum(["LIKE", "DISLIKE"]).nullable(),
