@@ -8,12 +8,10 @@ import { ConfigService } from "@nestjs/config";
 import type { MessageEvent } from "@nestjs/common";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
-  ContentBlockParam,
   Message,
   MessageCreateParams,
   MessageParam,
   ThinkingConfigParam,
-  Tool,
 } from "@anthropic-ai/sdk/resources/messages";
 import type {
   EmailChatKind,
@@ -22,477 +20,46 @@ import type {
   GenerationRunStatus,
 } from "@prisma/client";
 import { Observable } from "rxjs";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import {
   buildRenderVariables,
   EmailChatToolCallPayloadSchema,
   parseVariableSchemaJson,
-  type VariableSchemaRoot,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
+import {
+  EMIT_EMAIL_TOOL,
+  FIND_IMAGES_TOOL,
+  GENERATE_CHART_TOOL,
+  GET_EMAIL_VERSION_TOOL,
+  INSPECT_WEBSITE_BRAND_TOOL,
+  buildQuickChartUrl,
+} from "./generation.tools";
+import {
+  CHAT_HISTORY_LIMIT,
+  CODE_CONTEXT_LIMIT,
+  FEW_SHOT_TEXT,
+  PREVIEW_MAX_ATTEMPTS,
+  STATIC_INSTRUCTION,
+} from "./generation.prompts";
 import { ReactToHtmlService } from "./react-to-html.service";
 import { ScreenshotService } from "./screenshot.service";
 import { S3Service } from "../s3/s3.service";
-import { SEED_TEMPLATES } from "../templates/seed-templates";
 import { WebsiteBrandService } from "./website-brand.service";
 import { ConversationTitleAgent } from "./conversation-title.agent";
-
-const EMIT_EMAIL_TOOL: Tool = {
-  name: "emit_email",
-  description:
-    "Return the final email as structured data: subject line, full TSX Madoo email component source with default export, and merge-field schema.",
-  input_schema: {
-    type: "object",
-    properties: {
-      subject: {
-        type: "string",
-        description:
-          "Recipient-facing email subject only, aligned with the user brief. Never mention environment variables, .env, API keys, secrets, or deployment/infrastructure setup.",
-      },
-      componentCode: {
-        type: "string",
-        description:
-          "Complete TSX file body for Madoo. Must export default function.",
-      },
-      variableSchema: {
-        type: "array",
-        description:
-          "Array of merge-field specs: { name, label?, default, role?, scope }. scope must be 'dynamic' or 'static'. Keep it small and only include meaningful fields.",
-        items: {
-          type: "object",
-          properties: {
-            name: {
-              type: "string",
-              description:
-                "Camel-case variable name used as the React prop, for example recipientName or ctaUrl.",
-            },
-            label: { type: "string" },
-            default: { type: "string" },
-            role: {
-              type: "string",
-              enum: ["text", "url", "image", "date"],
-              description:
-                "Data type only. Do not put variable identity values like recipient_name here.",
-            },
-            scope: {
-              type: "string",
-              enum: ["dynamic", "static"],
-            },
-          },
-          required: ["name", "default", "scope"],
-          additionalProperties: false,
-        },
-      },
-    },
-    required: ["subject", "componentCode", "variableSchema"],
-  },
-};
-
-const INSPECT_WEBSITE_BRAND_TOOL: Tool = {
-  name: "inspect_website_brand",
-  description:
-    "Inspect a public website and return compact brand context for email creation: brand name, copy snippets, CTAs, colors, fonts, logo URL, favicon URL, OpenGraph image URL, and useful image URLs. Never returns image bytes.",
-  input_schema: {
-    type: "object",
-    properties: {
-      url: {
-        type: "string",
-        description:
-          "Public website URL to inspect. Use the official brand/product site when provided by the user.",
-      },
-      purpose: {
-        type: "string",
-        description:
-          "Why this website context is needed, e.g. product launch email, newsletter, welcome email, or promotion template.",
-      },
-    },
-    required: ["url"],
-  },
-};
-
-const FIND_IMAGES_TOOL: Tool = {
-  name: "find_images",
-  description:
-    "Search the web for real, publicly-hosted images and return direct image URLs (with short descriptions). Use this when the user asks to find, add, or pick an image/photo/illustration from the internet (e.g. 'find a good protein image', 'add a product photo') and no suitable attached image or brand image URL exists. Pick the most relevant returned URL and use it as the <Img src> default. Never invent image URLs — call this tool instead.",
-  input_schema: {
-    type: "object",
-    properties: {
-      query: {
-        type: "string",
-        description:
-          "Concise visual search query, e.g. 'protein powder scoop', 'healthy breakfast bowl', 'modern office team'.",
-      },
-    },
-    required: ["query"],
-  },
-};
-
-const GET_EMAIL_VERSION_TOOL: Tool = {
-  name: "get_email_version",
-  description:
-    "Fetch the full TSX componentCode and variableSchema of a previously saved version of THIS email by its version number. Every save creates a numbered version; the user sees them as 'Version N · latest'. You normally only receive the CURRENT version's code. Call this whenever the user asks to revert, restore, undo back to, or reuse anything from an earlier version (e.g. 'put the image back as it was in version 1', 'go back to version 2', 'revert to the previous one'). Read the exact earlier code with this tool, then emit_email with the reverted or merged result. Never reconstruct an old version from memory.",
-  input_schema: {
-    type: "object",
-    properties: {
-      version: {
-        type: "number",
-        description:
-          "The 1-based version number to fetch — the same number shown to the user (1, 2, 3, …).",
-      },
-    },
-    required: ["version"],
-  },
-};
-
-const GENERATE_CHART_TOOL: Tool = {
-  name: "generate_chart",
-  description:
-    "Render a data chart as a static PNG image (hosted on our CDN) and return its URL for use as an <Img src>. Email clients cannot run JS/SVG, so charts MUST be images — call this whenever the user asks for a chart, graph, plot, or data visualization (revenue bars, growth line, breakdown pie/doughnut, etc.). Use brand colors. Return the URL as the <Img src> default with an explicit width and descriptive alt text.",
-  input_schema: {
-    type: "object",
-    properties: {
-      type: {
-        type: "string",
-        enum: ["bar", "line", "pie", "doughnut", "radar", "polarArea"],
-        description: "Chart type.",
-      },
-      title: { type: "string", description: "Optional chart title." },
-      labels: {
-        type: "array",
-        items: { type: "string" },
-        description: "X-axis / slice labels, e.g. ['Jan','Feb','Mar'].",
-      },
-      datasets: {
-        type: "array",
-        description:
-          "One or more series. For pie/doughnut/polarArea use a single dataset; its values map to the labels.",
-        items: {
-          type: "object",
-          properties: {
-            label: { type: "string", description: "Series name (legend)." },
-            data: {
-              type: "array",
-              items: { type: "number" },
-              description: "Numeric values, one per label.",
-            },
-            colors: {
-              type: "array",
-              items: { type: "string" },
-              description:
-                "Hex colors. For bar/line, the first color is used for the series. For pie/doughnut/polarArea, one color per slice (per label).",
-            },
-          },
-          required: ["data"],
-        },
-      },
-      width: { type: "number", description: "Image width px (default 560)." },
-      height: { type: "number", description: "Image height px (default 300)." },
-    },
-    required: ["type", "labels", "datasets"],
-  },
-};
-
-type ChartToolInput = {
-  type: "bar" | "line" | "pie" | "doughnut" | "radar" | "polarArea";
-  title?: string;
-  labels?: string[];
-  datasets?: Array<{ label?: string; data: number[]; colors?: string[] }>;
-  width?: number;
-  height?: number;
-};
-
-const CHART_PALETTE = [
-  "#0D0D0D",
-  "#2f6fea",
-  "#16a34a",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#cccccc",
-];
-
-/** Build a QuickChart.io PNG URL from the structured chart tool input. */
-function buildQuickChartUrl(input: ChartToolInput): string {
-  const isPie =
-    input.type === "pie" ||
-    input.type === "doughnut" ||
-    input.type === "polarArea";
-  const datasets = (input.datasets ?? []).map((ds, i) => {
-    const colors = ds.colors && ds.colors.length > 0 ? ds.colors : CHART_PALETTE;
-    if (isPie) {
-      return { label: ds.label, data: ds.data, backgroundColor: colors };
-    }
-    if (input.type === "line") {
-      return {
-        label: ds.label,
-        data: ds.data,
-        borderColor: colors[0] ?? CHART_PALETTE[i % CHART_PALETTE.length],
-        backgroundColor: colors[0] ?? CHART_PALETTE[i % CHART_PALETTE.length],
-        fill: false,
-      };
-    }
-    return {
-      label: ds.label,
-      data: ds.data,
-      backgroundColor: colors[0] ?? CHART_PALETTE[i % CHART_PALETTE.length],
-    };
-  });
-
-  const config = {
-    type: input.type,
-    data: { labels: input.labels ?? [], datasets },
-    options: input.title
-      ? { title: { display: true, text: input.title } }
-      : {},
-  };
-
-  const params = new URLSearchParams({
-    w: String(Math.min(Math.max(input.width ?? 560, 120), 1200)),
-    h: String(Math.min(Math.max(input.height ?? 300, 120), 800)),
-    bkg: "white",
-    c: JSON.stringify(config),
-  });
-  return `https://quickchart.io/chart?${params.toString()}`;
-}
-
-const STATIC_INSTRUCTION = [
-  "You are Madoo, an AI email generator for polished, production-ready email templates.",
-  "Detect the language of the user's latest instruction. Write all conversational replies and recipient-facing email copy in that same language, unless the user explicitly asks for a different language.",
-  "Output MUST call tool emit_email once when finished only when the user request include some email modification.",
-  "componentCode must be valid TSX with a single default-exported component. Do NOT write any import statements — React and all email components are already available in scope. The components you may use as JSX tags are: Html, Head, Preview, Body, Container, Section, Row, Column, Heading, Text, Button, Hr, Img, Link, Font, CodeBlock, CodeInline. Just use them directly, e.g. <Body>…</Body>.",
-  "Use <Heading> for real headings (semantic h1–h6 via the `as` prop, e.g. <Heading as=\"h1\">), not <Text>, so the email has proper structure. Keep <Text> for body copy and the eyebrow. Still style headings inline (font-size, weight, line-height, color, margin) like the rest.",
-  "Web fonts: to use a brand/Google font, add <Font> inside <Head> with fontFamily, a webFont {url,format}, and fallbackFontFamily (e.g. 'Helvetica'); then reference that fontFamily in inline styles. Always set a safe fallbackFontFamily because many email clients ignore web fonts. If unsure, just use a system font stack and skip <Font>.",
-  "Code: only when the user asks for code/snippets (developer changelogs, API/release emails). Use <CodeInline> for inline code, and <CodeBlock code={`...`} language=\"tsx\" theme={dracula} /> for blocks. The theme must be one of the globals already in scope (e.g. dracula, atomDark, oneDark, oneLight, nord) — reference it directly, do not import or invent one. Do not use code components for normal marketing emails.",
-  "Style every component with inline `style` objects (email-safe), exactly like the reference templates. Do not rely on Tailwind classes, external CSS, flexbox, grid, position, or float — email clients ignore them.",
-  "EMAIL STRUCTURE (required for every email): wrap everything in <Html lang> with <Head /> and a one-line <Preview> inbox preheader, then <Body> (page background color) > <Container> centered at maxWidth 600 (use 560-600). Put a white content surface on the inner Sections.",
-  "Inside the Container, stack clear <Section>s in this order: (1) brand header (logo <Img> or brand name), (2) hero — a small uppercase eyebrow <Text>, a large headline <Text>, and a supporting paragraph <Text>, (3) a primary <Button> CTA with href, (4) optional supporting content using <Row>/<Column> for columns or stacked cards, (5) a <Hr> divider, (6) a footer <Section> with a context line and an Unsubscribe <Link>.",
-  "Use a consistent spacing scale with generous padding (Section padding around 28-44px horizontal and comfortable vertical rhythm); never cram content edge-to-edge.",
-  "Typographic hierarchy: eyebrow ~11px uppercase, letter-spaced, muted; headline ~30-40px bold with tight line-height; body 15-16px with line-height ~1.6-1.75; footer ~11-12px muted.",
-  "Build any multi-column layout with <Row>/<Column> (table-based) so it survives Outlook/Gmail and collapses gracefully on mobile; keep the email single-column overall.",
-  "RESPONSIVE (required): make every email adapt to small screens with a mobile <style> block plus className hooks. Inline styles cannot hold media queries, so put a <style> tag inside <Head> containing an `@media only screen and (max-width: 600px)` rule, and add a `className` to the elements that must change so the rule can target them. Pattern: <Head><style>{`@media only screen and (max-width: 600px) { .body-outer { padding: 0 !important; } .section-pad { padding-left: 20px !important; padding-right: 20px !important; } .hero-img { width: 100% !important; max-width: 100% !important; } .headline { font-size: 26px !important; letter-spacing: -0.5px !important; } .col-feature { display: block !important; width: 100% !important; padding-right: 0 !important; margin-bottom: 18px !important; } }`}</style></Head>. Always use `!important` inside the media query (it must beat inline styles), keep the desktop look in the inline `style` objects, and only override on mobile what needs to change: reduce outer/section padding, set images to width:100% max-width:100%, shrink the headline font-size, and stack multi-column <Column>s by making them display:block width:100%. Give those elements matching classNames (e.g. headline, hero-img, section-pad, col-feature) so the rule applies.",
-  "Always give <Img> an explicit width and meaningful alt text; give the <Button> inline padding and display:inline-block.",
-  "Set borderRadius: 0 on every element by default — Container, Sections, cards, Buttons, Images, and dividers. Sharp 90-degree corners are the house style. Use a non-zero border-radius ONLY when the user explicitly asks for rounded/soft corners, or for an element that must be round (e.g. a circular avatar). When in doubt, keep it 0.",
-  "Do not use emojis anywhere — not in the subject, headings, body, buttons, eyebrow, or footer. Use real words, and an <Img> when a visual is needed. Include an emoji only if the user explicitly asks for one.",
-  "For a brand logo or hero image, render an <Img> bound to an image variable (role=image, scope=static) with a sensible placeholder image URL default, so the user can upload their own image in Madoo. Don't fake a logo with text/emoji when a real image fits.",
-  "FINDING IMAGES: When the user asks to find/add/pick an image, photo, or illustration from the internet and there is no suitable attached image or brand image URL, call the find_images tool with a concise visual query, then use the most relevant returned URL as the <Img src> default. Do NOT invent or guess image URLs, and do NOT tell the user you cannot fetch images — use find_images. If it returns no results, fall back to a sensible placeholder image URL.",
-  "IMAGE ATTACHMENTS: The user may attach images, which you can SEE directly (vision). Each attached image also has a public hosted URL listed in the message text. When the email needs a visual that matches an attached image (logo, hero, product shot, banner, screenshot), use that exact URL as the <Img src> default — do NOT invent a placeholder URL and do NOT describe the image as text. Look at the attached image to choose alt text, layout, colors, and where it fits. If an attached image is clearly a logo, place it in the header; a product/hero shot belongs in the hero section.",
-  "Even for 'simple' briefs keep the full skeleton (header, hero, CTA, footer with unsubscribe). Simple means less copy and fewer sections — not missing structure.",
-  "Every meaningful link must point to a URL variable, never a bare href='#'. The primary CTA uses href={ctaUrl} with scope=static (the same destination for everyone). The footer unsubscribe link uses href={unsubscribeUrl} with scope=static (role=url) by default. Add unsubscribeUrl to variableSchema whenever the email has an unsubscribe link.",
-  "Return variableSchema as an ARRAY of objects: { name, default, label?, role?, scope }.",
-  "Each variable name must be camelCase and valid as a JS identifier.",
-  "Every variable must include a string default value.",
-  "role is optional and must only be one of: text, url, image, date. Never use role for variable identity such as recipient_name or company_name; put identity in name.",
-  "Every variable must set scope: dynamic or static.",
-  "Use scope=dynamic for personalized data that may be replaced outside Madoo (recipientName, companyName, planName, invoiceNumber, dates from CRM).",
-  "Use scope=static for template constants that stay fixed across uses (heroTitle, offerText, footerLine, buttonLabel, feature bullets).",
-  "Links/URLs are NOT dynamic by default: every URL variable (role=url) — including unsubscribeUrl — defaults to scope=static because the same link is shown to every recipient (ctaUrl, unsubscribeUrl, store/product/landing links, social links). Use scope=dynamic for a URL ONLY when the user explicitly asks for it (e.g. per-recipient opt-out or tracked links injected by the sending platform).",
-  "Variable discipline: use only a small set of meaningful merge fields, usually 3-6 and never more than 8 unless the user explicitly asks for many personalized fields.",
-  "Create variables only for important personalized or template-specific parts: recipientName, companyName, productName, offer, discountCode, eventDate, ctaUrl, unsubscribeUrl, senderName.",
-  "Do not create variables for CTA/button labels, closing text, feature bullets, generic body sentences, every headline fragment, colors, spacing, layout styles, decorative labels, or text that should stay fixed for all recipients.",
-  "Banned variable examples: ctaLabel, ctaButtonLabel, buttonLabel, closingText, closingLine, feature1, feature2, feature3, featureOne, featureTwo, featureThree.",
-  "If a value is not expected to change per recipient or template use, keep it as inline copy inside componentCode instead of adding it to variableSchema.",
-  "variableSchema must match the component props exactly: every schema variable is destructured with a default, used in the component, and no extra props are invented.",
-  "Component pattern must be: const Email = ({ ...defaults } = {}) => (<Html>...</Html>); export default Email;",
-  "Subject line (emit_email.subject) must be normal marketing or transactional copy for the recipient. Never base it on environment variables, .env files, API keys, secrets, or other developer/deployment configuration topics—even if the user brief drifts there.",
-  "VERSION HISTORY: Each saved email is a numbered version shown to the user as 'Version N · latest'. You only receive the CURRENT version's TSX. When the user asks to revert, restore, undo back to, or reuse anything from an earlier version (e.g. 'put the image as in version 1', 'go back to version 2', 'revert as before'), call get_email_version with that number to read the exact earlier code, then emit_email with the reverted or merged result. The edit prompt tells you how many versions exist. Never reconstruct an old version from memory.",
-  "CHARTS: Email clients cannot run JS/SVG, so never hand-build charts with divs or inline SVG. When the user wants a chart, graph, plot, or data visualization, call generate_chart with the type, labels, and datasets (use brand colors), then place the returned PNG URL as an <Img src> default with an explicit width and descriptive alt text. Bind it to an image variable like any other image.",
-  "When the user provides a website URL or asks to match a brand/site, call inspect_website_brand before emit_email.",
-  "Use inspect_website_brand results for visual direction, copy tone, brand colors, fonts, CTA language, logo URL, and image URLs.",
-  "When no image is attached for a needed visual, fall back to an image variable with a sensible placeholder URL default as described above.",
-  "If brand inspection fails or returns partial context, continue with the available context and do not invent exact brand claims.",
-  "CRITICAL: Do not never explain to the user how your internally work."
-].join("\n");
-
-/** Drop import lines so the few-shot examples match the "no imports" rule —
- *  the runtime injects React and all email components globally. */
-function stripImports(code: string): string {
-  return code
-    .replace(/^\s*import[^\n]*\n/gm, "")
-    .replace(/^\s+/, "");
-}
-
-const FEW_SHOT_TEXT = [
-  "Reference templates (few-shot style and structure). Note: no import statements — use the components directly:",
-  `Launch:\n${stripImports(SEED_TEMPLATES.launch.componentCode)}`,
-  `Newsletter:\n${stripImports(SEED_TEMPLATES.newsletter.componentCode)}`,
-  `Sale:\n${stripImports(SEED_TEMPLATES.sale.componentCode)}`,
-  `Welcome:\n${stripImports(SEED_TEMPLATES.welcome.componentCode)}`,
-].join("\n\n");
-
-const CHAT_HISTORY_LIMIT = 8;
-const CODE_CONTEXT_LIMIT = 24_000;
-const CODE_CONTEXT_HEAD_RATIO = 0.65;
-const PREVIEW_MAX_ATTEMPTS = 3;
-const SUBJECT_PLACEHOLDER_PATTERNS = [
-  /\{\{[^}]+\}\}/,
-  /\$\{[^}]+\}/,
-  /%\{[^}]+\}/,
-  /<%[^%]+%>/,
-  /\[\[[^\]]+\]\]/,
-];
-const DISALLOWED_GENERATED_VARIABLE_PATTERNS = [
-  /cta.*(label|text|copy)/i,
-  /button.*(label|text|copy)/i,
-  /closing/i,
-  /^feature(\d+|one|two|three)$/i,
-  /feature.*(label|text|copy|title|description)/i,
-  /^(headline|subheadline|eyebrow|tagline|intro|body|paragraph|footer|signature)(Text|Copy)?$/i,
-];
-
-function shortHash(input: string): string {
-  return createHash("sha256").update(input).digest("hex").slice(0, 16);
-}
-
-function buildCodeContextSnippet(code: string, maxChars: number): string {
-  if (code.length <= maxChars) return code;
-  const headSize = Math.max(1, Math.floor(maxChars * CODE_CONTEXT_HEAD_RATIO));
-  const tailSize = Math.max(1, maxChars - headSize);
-  const head = code.slice(0, headSize);
-  const tail = code.slice(-tailSize);
-  const omitted = code.length - head.length - tail.length;
-  return [
-    head,
-    "",
-    `/* ... TRUNCATED ${omitted} chars ... */`,
-    "",
-    tail,
-  ].join("\n");
-}
-
-function escapeRegExp(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-const MAX_ATTACHED_IMAGES = 8;
-
-/**
- * Build the user message content for a model turn. With attached images, returns
- * a content-block array: each image as a vision block (URL source) plus a text
- * block that restates the prompt and lists the hosted URLs so the model can wire
- * them straight into <Img src>. With no images, returns the plain text string.
- */
-function buildUserMessageContent(
-  text: string,
-  imageUrls?: string[],
-): MessageParam["content"] {
-  const urls = (imageUrls ?? []).slice(0, MAX_ATTACHED_IMAGES);
-  if (urls.length === 0) return text;
-
-  const imageBlocks: ContentBlockParam[] = urls.map((url) => ({
-    type: "image",
-    source: { type: "url", url },
-  }));
-
-  const urlList = urls.map((url, index) => `${index + 1}. ${url}`).join("\n");
-  const textBlock: ContentBlockParam = {
-    type: "text",
-    text: [
-      text,
-      "",
-      `Attached images (${urls.length}). You can see them above. Their public hosted URLs, in the same order, are:`,
-      urlList,
-      "When the email needs a matching visual, use the exact URL as the <Img src>; do not invent placeholder image URLs for these.",
-    ].join("\n"),
-  };
-
-  return [...imageBlocks, textBlock];
-}
-
-function sanitizeGeneratedVariableSchema(schema: VariableSchemaRoot): VariableSchemaRoot {
-  return {
-    variables: schema.variables
-      .filter((variable) => {
-        const searchable = `${variable.name} ${variable.label ?? ""}`;
-        return !DISALLOWED_GENERATED_VARIABLE_PATTERNS.some((pattern) =>
-          pattern.test(searchable),
-        );
-      })
-      .slice(0, 8),
-  };
-}
-
-function assertStaticSubject(subject: string, variableSchema: VariableSchemaRoot): void {
-  const normalized = subject.trim();
-  if (!normalized) {
-    throw new BadRequestException("Subject cannot be empty.");
-  }
-
-  if (SUBJECT_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(normalized))) {
-    throw new BadRequestException(
-      "Subject must be static plain text. Do not use placeholders or template syntax.",
-    );
-  }
-
-  for (const variable of variableSchema.variables) {
-    const pattern = new RegExp(`\\b${escapeRegExp(variable.name)}\\b`, "i");
-    if (pattern.test(normalized)) {
-      throw new BadRequestException(
-        `Subject must not reference variable names. Found: ${variable.name}`,
-      );
-    }
-  }
-}
-
-
-/** Transient Anthropic failures worth retrying: overloaded, 5xx, rate-limit,
- *  connection drops/timeouts. */
-/** Thrown when the user stops generation (stop button / client disconnect). */
-class GenerationAbortedError extends Error {
-  constructor() {
-    super("Generation stopped.");
-    this.name = "GenerationAbortedError";
-  }
-}
-
-/** True for any abort: our own GenerationAbortedError, the SDK's
- *  APIUserAbortError, or a DOM/AbortController AbortError. */
-function isAbortError(error: unknown): boolean {
-  if (error instanceof GenerationAbortedError) return true;
-  if (error instanceof Anthropic.APIUserAbortError) return true;
-  return error instanceof Error && error.name === "AbortError";
-}
-
-function isRetryableLlmError(error: unknown): boolean {
-  if (error instanceof Anthropic.APIConnectionError) return true;
-  if (error instanceof Anthropic.APIError) {
-    const status = error.status;
-    if (typeof status !== "number") return true;
-    return status === 408 || status === 409 || status === 429 || status >= 500;
-  }
-  return false;
-}
-
-/** Turn an LLM/SDK failure into a short, human message — never the raw JSON
- *  error body, which otherwise lands verbatim in the chat. */
-function formatLlmError(error: unknown): string {
-  if (error instanceof Anthropic.APIError) {
-    const status = error.status;
-    // Surface the real Anthropic reason server-side; the user only sees the
-    // short message below, but we need the raw body to diagnose 4xx rejections.
-    console.error(
-      `[GenerationService] Anthropic APIError status=${status}: ${error.message}`,
-    );
-    if (status === 429) {
-      return "The AI service is rate-limited right now. Please wait a moment and try again.";
-    }
-    if (status === 529) {
-      return "The AI service is overloaded right now. Please try again shortly.";
-    }
-    if (typeof status === "number" && status >= 500) {
-      return "The AI service hit a temporary error. Please try again.";
-    }
-    if (typeof status === "number" && status >= 400) {
-      return "The AI request was rejected. Please tweak your message and try again.";
-    }
-    return "The AI service is unavailable right now. Please try again.";
-  }
-  const message = error instanceof Error ? error.message : String(error);
-  if (!message || /^[[{]/.test(message.trim())) {
-    return "Something went wrong while generating. Please try again.";
-  }
-  return message;
-}
+import type { ChartToolInput } from "./generation.tools";
+import {
+  GenerationAbortedError,
+  assertStaticSubject,
+  buildCodeContextSnippet,
+  buildUserMessageContent,
+  formatLlmError,
+  isAbortError,
+  isRetryableLlmError,
+  sanitizeGeneratedVariableSchema,
+  shortHash,
+} from "./generation.util";
 
 
 @Injectable()
