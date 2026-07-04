@@ -64,6 +64,14 @@ export function latestVariant(email: EmailDto | null | undefined) {
   return email?.variants[email.variants.length - 1] ?? null;
 }
 
+function orderChatRows(chat: EmailChatMessageDto[] | undefined) {
+  return [...(chat ?? [])].sort((a, b) => {
+    const timeDelta = Date.parse(a.createdAt) - Date.parse(b.createdAt);
+    if (timeDelta !== 0) return timeDelta;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 export function applyAiMessageFeedback(
   list: ChatMessage[],
   messageId: string,
@@ -96,11 +104,13 @@ export function mapChatMessages(
   email: EmailDto | null | undefined,
   selectedVersions: Record<string, number> = {},
 ): ChatMessage[] {
+  const orderedChat = orderChatRows(chat);
+
   // Pair each assistant THINKING row with the answer that immediately follows
   // it (same turn), so the reasoning can hang off its response message.
   const thinkingByText = new Map<string, string>();
   let pendingThinking: string | null = null;
-  for (const row of chat ?? []) {
+  for (const row of orderedChat) {
     if (row.role === "ASSISTANT" && row.kind === "THINKING") {
       pendingThinking = row.content;
     } else if (row.role === "ASSISTANT" && row.kind === "TEXT") {
@@ -113,7 +123,7 @@ export function mapChatMessages(
 
   const toolCallsByText = new Map<string, ToolCallView[]>();
   let pendingToolCalls: ToolCallView[] = [];
-  for (const row of chat ?? []) {
+  for (const row of orderedChat) {
     if (row.role === "ASSISTANT" && row.kind === "TOOL_CALL") {
       try {
         const parsed = EmailChatToolCallPayloadSchema.safeParse(
@@ -138,9 +148,9 @@ export function mapChatMessages(
   }
 
   const rows =
-    chat?.filter(
+    orderedChat.filter(
       (message) => message.kind !== "THINKING" && message.kind !== "TOOL_CALL",
-    ) ?? [];
+    );
 
   // Collect assistant response-version siblings, oldest → newest (chat is asc).
   const groups = new Map<string, EmailChatMessageDto[]>();

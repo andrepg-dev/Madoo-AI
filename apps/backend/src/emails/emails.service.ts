@@ -159,7 +159,7 @@ export class EmailsService {
     await this.assertEmailInWorkspace(emailId, workspaceId);
     const rows = await this.prisma.emailChatMessage.findMany({
       where: { emailId, workspaceId },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
     return rows.map((row) =>
       EmailChatMessageDtoSchema.parse({
