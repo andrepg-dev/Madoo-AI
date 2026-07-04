@@ -211,10 +211,14 @@ export function BarChart({
   bars,
   color = "#2563eb",
   height = 200,
+  unitSingular = "user",
+  unitPlural = "users",
 }: {
   bars: Bar[];
   color?: string;
   height?: number;
+  unitSingular?: string;
+  unitPlural?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(1, ...bars.map((b) => b.value));
@@ -234,7 +238,7 @@ export function BarChart({
             {hover === index ? (
               <div className="pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-lg bg-madoo-ink px-2.5 py-1.5 text-sm text-white shadow-[0_0_0_0.5px_rgb(17_24_39/0.4)]">
                 <div className="font-semibold">
-                  {bar.value} {bar.value === 1 ? "user" : "users"}
+                  {bar.value} {bar.value === 1 ? unitSingular : unitPlural}
                 </div>
                 <div className="text-white/70">{bar.hint ?? bar.label}</div>
               </div>

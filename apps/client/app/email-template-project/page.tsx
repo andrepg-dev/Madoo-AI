@@ -4,7 +4,9 @@ import {
   createEmail,
   fetchEmail,
   fetchEmailChat,
+  getEmailRating,
   setEmailChatMessageFeedback,
+  submitEmailRating,
   truncateEmailChat,
 } from "@/actions/emails";
 import { fetchBillingOverview } from "@/actions/billing";
@@ -21,6 +23,7 @@ import { AiMessage } from "@/components/project/editor/AiMessage";
 import { ConversationTitleDropdown } from "@/components/project/editor/ConversationTitleDropdown";
 import { DislikeFeedbackModal } from "@/components/project/editor/DislikeFeedbackModal";
 import { EmailPreviewSidebar } from "@/components/project/editor/EmailPreviewSidebar";
+import { EmailRatingCard } from "@/components/project/editor/EmailRatingCard";
 import { ErrorMessage } from "@/components/project/editor/ErrorMessage";
 import { ExportProviderModal } from "@/components/project/editor/ExportProviderModal";
 import { HumanMessage } from "@/components/project/editor/HumanMessage";
@@ -53,7 +56,11 @@ import { useClientStore } from "@/stores/client-store";
 import { ArrowDown02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, useToast } from "@madoo/design-system";
-import type { EmailChatMessageDto, EmailDto } from "@madoo/shared";
+import type {
+  EmailChatMessageDto,
+  EmailDto,
+  EmailRatingInput,
+} from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -159,6 +166,15 @@ function EmailTemplateProjectInner() {
     queryFn: fetchBillingOverview,
     enabled: Boolean(workspaceId),
   });
+  const email = emailQuery.data;
+  const canRateEmail = Boolean(
+    currentEmailId && email?.status === "READY" && email.variants.length > 0,
+  );
+  const ratingQuery = useQuery({
+    queryKey: ["email-rating", currentEmailId],
+    queryFn: () => getEmailRating(currentEmailId!),
+    enabled: canRateEmail,
+  });
 
   const feedbackMutation = useMutation({
     mutationFn: (input: {
@@ -208,7 +224,29 @@ function EmailTemplateProjectInner() {
     },
   });
 
-  const email = emailQuery.data;
+  const ratingMutation = useMutation({
+    mutationFn: (input: EmailRatingInput) =>
+      submitEmailRating(currentEmailId!, input),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["email-rating", currentEmailId], updated);
+      posthog.capture("email_rating_submitted", {
+        email_id: currentEmailId,
+        rating: updated.rating,
+      });
+      toast({
+        tone: "success",
+        title: "Rating saved",
+      });
+    },
+    onError: () => {
+      toast({
+        tone: "danger",
+        title: "Rating not saved",
+        body: "Try again.",
+      });
+    },
+  });
+
   const variant = latestVariant(email);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     null,
@@ -1221,6 +1259,14 @@ function EmailTemplateProjectInner() {
                   strokeWidth={1.6}
                 />
               </Button>
+            ) : null}
+            {canRateEmail ? (
+              <EmailRatingCard
+                loading={ratingQuery.isLoading}
+                onSubmit={(input) => ratingMutation.mutate(input)}
+                pending={ratingMutation.isPending}
+                rating={ratingQuery.data}
+              />
             ) : null}
             <ClientPromptBox
               classNames={{

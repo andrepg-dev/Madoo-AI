@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   Sse,
   UploadedFile,
@@ -27,6 +28,7 @@ import {
   CreateEmailFromTemplateSchema,
   CreateEmailSchema,
   EditEmailSchema,
+  EmailRatingInputSchema,
   GenerateEmailSchema,
   RenameEmailSchema,
   SetEmailChatMessageFeedbackSchema,
@@ -77,6 +79,26 @@ export class EmailsController {
     @Param("id") id: string,
   ) {
     return this.emails.getById(id, req.workspace.id, user.sub);
+  }
+
+  @Get(":id/rating")
+  getRating(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+  ) {
+    return this.emails.getRating(id, req.workspace.id, user.sub);
+  }
+
+  @Put(":id/rating")
+  setRating(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const dto = EmailRatingInputSchema.parse(body);
+    return this.emails.setRating(id, req.workspace.id, user.sub, dto);
   }
 
   @Get(":id/chat")

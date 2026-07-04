@@ -16,6 +16,17 @@ export const ACTIVITY_EVENTS = [
 
 export type CountRow = { count: number };
 export type TopTemplateRow = { name: string; count: number };
+export type RatingDistributionRow = {
+  rating: number;
+  _count: { _all: number };
+};
+export type TemplateRatingRow = {
+  rating: number;
+  email: {
+    templateId: string | null;
+    template: { name: string } | null;
+  };
+};
 export type TimeseriesBucket = {
   date: string;
   signups: number;
@@ -59,6 +70,58 @@ export function metricDelta(current: number, previous: number) {
 
 export function scalarCount(rows: CountRow[]): number {
   return Number(rows[0]?.count ?? 0);
+}
+
+export function roundOneDecimal(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+export function buildRatingDistribution(rows: RatingDistributionRow[]) {
+  const counts = new Map(rows.map((row) => [row.rating, row._count._all]));
+  return [1, 2, 3, 4, 5].map((stars) => ({
+    stars,
+    count: counts.get(stars) ?? 0,
+  }));
+}
+
+export function buildPerTemplateRatingStats(rows: TemplateRatingRow[]) {
+  const groups = new Map<
+    string,
+    { templateId: string | null; name: string; sum: number; count: number }
+  >();
+
+  rows.forEach((row) => {
+    const templateId = row.email.templateId;
+    const key = templateId ?? "__none__";
+    const current =
+      groups.get(key) ??
+      {
+        templateId,
+        name:
+          templateId === null
+            ? "No template"
+            : (row.email.template?.name ?? "Unknown template"),
+        sum: 0,
+        count: 0,
+      };
+    current.sum += row.rating;
+    current.count += 1;
+    groups.set(key, current);
+  });
+
+  return [...groups.values()]
+    .map((group) => ({
+      templateId: group.templateId,
+      name: group.name,
+      average: roundOneDecimal(group.sum / group.count),
+      count: group.count,
+    }))
+    .sort(
+      (a, b) =>
+        b.count - a.count ||
+        b.average - a.average ||
+        a.name.localeCompare(b.name),
+    );
 }
 
 export function incrementBucket(

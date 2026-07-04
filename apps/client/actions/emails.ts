@@ -6,6 +6,8 @@ import {
   CreateEmailSchema,
   EmailChatMessageDtoSchema,
   EmailDtoSchema,
+  EmailRatingDtoSchema,
+  EmailRatingInputSchema,
   EmailShareDtoSchema,
   PublicEmailDtoSchema,
   RenameEmailSchema,
@@ -19,6 +21,8 @@ import {
   type EditEmailInput,
   type EmailChatMessageDto,
   type EmailDto,
+  type EmailRatingDto,
+  type EmailRatingInput,
   type EmailShareDto,
   type PublicEmailDto,
   type RenameEmailInput,
@@ -35,6 +39,8 @@ export type {
   EditEmailInput,
   EmailChatMessageDto,
   EmailDto,
+  EmailRatingDto,
+  EmailRatingInput,
   EmailShareDto,
   PublicEmailDto,
   RenameEmailInput,
@@ -46,6 +52,7 @@ export type {
 
 const EmailListDtoSchema = z.array(EmailDtoSchema);
 const EmailChatMessageListSchema = z.array(EmailChatMessageDtoSchema);
+const NullableEmailRatingDtoSchema = EmailRatingDtoSchema.nullable();
 
 export async function createEmail(input: CreateEmailInput): Promise<EmailDto> {
   const body = CreateEmailSchema.parse(input);
@@ -96,6 +103,25 @@ export async function setEmailChatMessageFeedback(
     },
   );
   return EmailChatMessageDtoSchema.parse(raw);
+}
+
+export async function getEmailRating(
+  emailId: string,
+): Promise<EmailRatingDto | null> {
+  const raw = await FetchWrapper<unknown>(`/emails/${emailId}/rating`);
+  return NullableEmailRatingDtoSchema.parse(raw);
+}
+
+export async function submitEmailRating(
+  emailId: string,
+  input: EmailRatingInput,
+): Promise<EmailRatingDto> {
+  const body = EmailRatingInputSchema.parse(input);
+  const raw = await FetchWrapper<unknown>(`/emails/${emailId}/rating`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  return EmailRatingDtoSchema.parse(raw);
 }
 
 export async function fetchEmails(): Promise<EmailDto[]> {

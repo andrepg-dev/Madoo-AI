@@ -35,6 +35,7 @@ model User {
   providerConnections      ProviderConnection[]
   supportTickets           SupportTicket[]
   feedback                 Feedback[]
+  emailRatings             EmailRating[]
   sentWorkspaceInvites     WorkspaceInvite[]       @relation("WorkspaceInviteInviter")
   acceptedWorkspaceInvites WorkspaceInvite[]       @relation("WorkspaceInviteAcceptedBy")
   communityTemplates       CommunityTemplate[]
@@ -216,10 +217,30 @@ model Email {
   chatMessages        EmailChatMessage[]
   vfsSnapshot         EmailVfsSnapshot?
   supportTickets      SupportTicket[]
+  ratings             EmailRating[]
 
   @@index([workspaceId, createdAt])
   @@index([createdByUserId, createdAt])
   @@index([templateSavedByUserId, templateSavedAt])
+}
+
+model EmailRating {
+  id          String   @id @default(cuid())
+  emailId     String
+  workspaceId String
+  userId      String
+  userEmail   String
+  rating      Int
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([emailId, userId])
+  @@index([emailId])
+  @@index([rating, createdAt])
 }
 
 model EmailVariant {

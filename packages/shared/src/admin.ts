@@ -77,6 +77,29 @@ export const AdminTopTemplateSchema = z.object({
 
 export type AdminTopTemplate = z.infer<typeof AdminTopTemplateSchema>;
 
+export const AdminRatingStatsSchema = z.object({
+  average: z.number().nullable(),
+  total: z.number().int().nonnegative(),
+  distribution: z
+    .array(
+      z.object({
+        stars: z.number().int().min(1).max(5),
+        count: z.number().int().nonnegative(),
+      }),
+    )
+    .length(5),
+  perTemplate: z.array(
+    z.object({
+      templateId: z.string().nullable(),
+      name: z.string().min(1),
+      average: z.number(),
+      count: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export type AdminRatingStats = z.infer<typeof AdminRatingStatsSchema>;
+
 export const AdminInsightSchema = z.object({
   label: z.string().min(1),
   value: z.string().min(1),
@@ -137,6 +160,7 @@ export const AdminDashboardSchema = z.object({
   recentFeedback: z.array(FeedbackSchema),
   recentTemplates: z.array(AdminRecentTemplateSchema),
   topTemplates: z.array(AdminTopTemplateSchema),
+  ratingStats: AdminRatingStatsSchema,
   insights: z.array(AdminInsightSchema),
 });
 

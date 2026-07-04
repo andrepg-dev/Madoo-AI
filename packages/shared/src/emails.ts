@@ -344,6 +344,22 @@ export const EmailDtoSchema = z.object({
 
 export type EmailDto = z.infer<typeof EmailDtoSchema>;
 
+export const EmailRatingInputSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(2000).optional(),
+});
+
+export type EmailRatingInput = z.infer<typeof EmailRatingInputSchema>;
+
+export const EmailRatingDtoSchema = z.object({
+  id: z.string(),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export type EmailRatingDto = z.infer<typeof EmailRatingDtoSchema>;
+
 /** Input for starring/unstarring a project. */
 export const SetEmailStarredSchema = z.object({
   starred: z.boolean(),

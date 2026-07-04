@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import {
   EmailChatMessageDtoSchema,
   EmailDtoSchema,
+  EmailRatingDtoSchema,
   EmailShareDtoSchema,
   PublicEmailDtoSchema,
   buildRenderVariables,
@@ -20,6 +21,8 @@ import {
   type CreateEmailInput,
   type EmailChatMessageDto,
   type EmailDto,
+  type EmailRatingDto,
+  type EmailRatingInput,
   type EmailShareDto,
   type EmailVariantDto,
   type PublicEmailDto,
@@ -261,6 +264,95 @@ export class EmailsService {
       feedbackComment: updated.feedbackComment,
       groupId: updated.groupId,
       createdAt: updated.createdAt.toISOString(),
+    });
+  }
+
+  async getRating(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<EmailRatingDto | null> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    await this.assertEmailInWorkspace(emailId, workspaceId);
+    const row = await this.prisma.emailRating.findFirst({
+      where: { emailId, workspaceId, userId },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+      },
+    });
+    return row ? this.toEmailRatingDto(row) : null;
+  }
+
+  async setRating(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: EmailRatingInput,
+  ): Promise<EmailRatingDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    const [email, user] = await Promise.all([
+      this.prisma.email.findFirst({
+        where: { id: emailId, workspaceId },
+        select: {
+          id: true,
+          status: true,
+          variants: { select: { id: true }, take: 1 },
+        },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      }),
+    ]);
+    if (!email) throw new NotFoundException("Email not found.");
+    if (!user) throw new NotFoundException("User not found.");
+    if (email.status !== "READY" || email.variants.length === 0) {
+      throw new BadRequestException("Email is not ready to rate.");
+    }
+
+    const trimmedComment = dto.comment?.trim();
+    const comment = trimmedComment ? trimmedComment : null;
+    const row = await this.prisma.emailRating.upsert({
+      where: { emailId_userId: { emailId, userId } },
+      create: {
+        emailId,
+        workspaceId,
+        userId,
+        userEmail: user.email,
+        rating: dto.rating,
+        comment,
+      },
+      update: {
+        workspaceId,
+        userEmail: user.email,
+        rating: dto.rating,
+        comment,
+      },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+      },
+    });
+
+    return this.toEmailRatingDto(row);
+  }
+
+  private toEmailRatingDto(row: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    createdAt: Date;
+  }): EmailRatingDto {
+    return EmailRatingDtoSchema.parse({
+      id: row.id,
+      rating: row.rating,
+      comment: row.comment,
+      createdAt: row.createdAt.toISOString(),
     });
   }
 

@@ -3,6 +3,7 @@ import type {
   AdminFunnelStep,
   AdminInsight,
   AdminMetricDelta,
+  AdminRatingStats,
   AdminRecentTemplate,
   AdminRetentionBucket,
   AdminTimeseriesPoint,
@@ -11,7 +12,7 @@ import type {
 } from "@madoo/shared";
 import { redirect } from "next/navigation";
 import { fetchDashboard } from "@/actions/dashboard";
-import { LineChart } from "@/components/charts-interactive";
+import { BarChart, LineChart } from "@/components/charts-interactive";
 import { Shell } from "@/components/shell";
 import { AdminApiError } from "@/lib/api";
 
@@ -139,6 +140,59 @@ function TrendChart({ points }: { points: AdminTimeseriesPoint[] }) {
   );
 }
 
+function RatingStats({ stats }: { stats: AdminRatingStats }) {
+  return (
+    <section className="split-section">
+      <div>
+        <h2>Email ratings</h2>
+        <div className="metric-grid secondary">
+          <MetricCard
+            label="Average"
+            value={stats.average === null ? "None" : `${stats.average.toFixed(1)}/5`}
+            detail={`${formatNumber(stats.total)} total ratings`}
+          />
+        </div>
+        <div className="chart-card">
+          <h3>Rating distribution</h3>
+          <p className="chart-sub">1-5 stars across generated emails</p>
+          <BarChart
+            bars={stats.distribution.map((entry) => ({
+              label: `${entry.stars}`,
+              value: entry.count,
+              hint: `${entry.stars} star${entry.stars === 1 ? "" : "s"}`,
+            }))}
+            color="#f59e0b"
+            height={180}
+            unitSingular="rating"
+            unitPlural="ratings"
+          />
+        </div>
+      </div>
+      <div>
+        <h2>Ratings by template</h2>
+        {stats.perTemplate.length === 0 ? (
+          <p className="empty">No email ratings yet.</p>
+        ) : (
+          <div className="activity-list">
+            {stats.perTemplate.map((template) => (
+              <div
+                className="activity-row"
+                key={template.templateId ?? "no-template"}
+              >
+                <div>
+                  <strong>{template.name}</strong>
+                  <span>{formatNumber(template.count)} ratings</span>
+                </div>
+                <strong>{template.average.toFixed(1)}/5</strong>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function Funnel({ steps }: { steps: AdminFunnelStep[] }) {
   const total = steps[0]?.count ?? 0;
   return (
@@ -238,6 +292,8 @@ function Dashboard({ data }: { data: AdminDashboard }) {
           ))}
         </div>
       </section>
+
+      <RatingStats stats={data.ratingStats} />
 
       <section className="split-section">
         <div>

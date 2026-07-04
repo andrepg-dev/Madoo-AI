@@ -4,6 +4,7 @@ import {
   AdminLiveSchema,
   type AdminDashboard,
   type AdminLive,
+  type AdminRatingStats,
 } from "@madoo/shared";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -16,6 +17,8 @@ import {
   type TopTemplateRow,
   addDays,
   buildInsights,
+  buildPerTemplateRatingStats,
+  buildRatingDistribution,
   countByNullableUser,
   countByWorkspace,
   dateKey,
@@ -25,6 +28,7 @@ import {
   maxDateByNullableUser,
   metricDelta,
   percent,
+  roundOneDecimal,
   scalarCount,
   scoreActivation,
   startOfUtcDay,
@@ -130,6 +134,7 @@ export class AdminAnalyticsService {
       recentFeedback,
       recentTemplates,
       topTemplates,
+      ratingStats,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.workspace.count(),
@@ -161,6 +166,7 @@ export class AdminAnalyticsService {
       }),
       this.recentTemplates(),
       this.topTemplates(),
+      this.ratingStats(),
     ]);
     const funnel = await this.activationFunnel(totalUsers);
 
@@ -193,6 +199,7 @@ export class AdminAnalyticsService {
       recentFeedback: recentFeedback.map(toFeedbackDto),
       recentTemplates,
       topTemplates,
+      ratingStats,
       insights: buildInsights({
         totalUsers,
         activatedUsers: funnel.find((step) => step.key === "first_email")
@@ -717,6 +724,40 @@ export class AdminAnalyticsService {
     return result._avg.rating === null
       ? null
       : Math.round(result._avg.rating * 10) / 10;
+  }
+
+  private async ratingStats(): Promise<AdminRatingStats> {
+    const [aggregate, distributionRows, templateRows] = await Promise.all([
+      this.prisma.emailRating.aggregate({
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
+      this.prisma.emailRating.groupBy({
+        by: ["rating"],
+        _count: { _all: true },
+      }),
+      this.prisma.emailRating.findMany({
+        select: {
+          rating: true,
+          email: {
+            select: {
+              templateId: true,
+              template: { select: { name: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      average:
+        aggregate._avg.rating === null
+          ? null
+          : roundOneDecimal(aggregate._avg.rating),
+      total: aggregate._count._all,
+      distribution: buildRatingDistribution(distributionRows),
+      perTemplate: buildPerTemplateRatingStats(templateRows),
+    };
   }
 
   private async usersEverLoggedIn(): Promise<number> {
