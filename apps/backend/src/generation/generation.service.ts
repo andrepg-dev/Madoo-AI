@@ -507,6 +507,15 @@ export class GenerationService {
       }
     }
     const ctx = await this.loadGenerationContext(emailId, workspaceId);
+    const priorAssistantCount = await this.prisma.emailChatMessage.count({
+      where: {
+        emailId,
+        workspaceId,
+        role: "ASSISTANT",
+      },
+    });
+    const isFirstInitialDraftTurn =
+      ctx.variants.length === 0 && priorAssistantCount === 0;
 
     // Carry the prior conversation so a generation that follows chat-only turns
     // (e.g. the user answered the assistant's questions, then "go ahead") keeps
@@ -515,6 +524,16 @@ export class GenerationService {
     const hasPriorChat = recentChat !== "No previous chat context.";
 
     const userPrompt = [
+      isFirstInitialDraftTurn
+        ? [
+            "This is the first turn for a brand-new initial email draft.",
+            "Ask a short clarifying intake round now. Do not draft the email yet.",
+            "Do not call emit_email on this turn.",
+          ].join("\n")
+        : [
+            "This is not the first intake turn for this email.",
+            "If the user answered the intake questions or asked you to use best judgment, generate the email now.",
+          ].join("\n"),
       `User brief:\n${ctx.prompt}`,
       ctx.tone ? `Tone: ${ctx.tone}` : "",
       ctx.length ? `Length preference: ${ctx.length}` : "",
@@ -544,6 +563,7 @@ export class GenerationService {
         tone: ctx.tone,
         audience: ctx.audience,
       },
+      intakeOnly: isFirstInitialDraftTurn,
       emit,
       signal,
     });
@@ -577,7 +597,18 @@ export class GenerationService {
       kind: "TEXT",
       content:
         result.assistantText.trim() ||
-        (result.applied
+        (isFirstInitialDraftTurn
+          ? [
+              "Before I draft, quick questions:",
+              "1. What is the main goal of this email?",
+              "2. Who should receive it?",
+              "3. What brand or website should it match?",
+              "4. What offer, product, date, link, or detail must be included?",
+              "5. What should the primary CTA say and link to?",
+              "",
+              'Reply with answers, or say "go" / "use your best judgment" and I will draft with smart defaults.',
+            ].join("\n")
+          : result.applied
           ? "I drafted your email — open the preview on the right to review it, then tell me what you'd like to adjust."
           : "I added some guidance above. Ask me for a concrete draft whenever you're ready."),
       groupId,
@@ -747,6 +778,7 @@ export class GenerationService {
       tone?: string | null;
       audience?: string | null;
     };
+    intakeOnly?: boolean;
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
   }): Promise<{
@@ -771,6 +803,7 @@ export class GenerationService {
       modelMessages,
       fullCodeForRetry,
       titleContext,
+      intakeOnly,
       emit,
       signal,
     } = params;
@@ -835,6 +868,7 @@ export class GenerationService {
           systemBlocks,
           emit,
           signal,
+          allowTools: !intakeOnly,
         });
         assistantText += response.assistantText;
         thinkingText += response.thinkingText;
@@ -1453,6 +1487,7 @@ export class GenerationService {
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
     toolChoice?: MessageCreateParams["tool_choice"];
+    allowTools?: boolean;
   }): Promise<Awaited<ReturnType<typeof this.runStream>>> {
     const maxAttempts = 3;
     for (let attempt = 1; ; attempt += 1) {
@@ -1499,6 +1534,7 @@ export class GenerationService {
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
     toolChoice?: MessageCreateParams["tool_choice"];
+    allowTools?: boolean;
   }): Promise<{
     content: Message["content"];
     usage: Message["usage"] | undefined;
@@ -1515,6 +1551,23 @@ export class GenerationService {
       args.toolChoice?.type === "tool" || args.toolChoice?.type === "any";
     const thinking = forcedTool ? undefined : this.extendedThinkingConfig();
     const maxTokens = thinking ? 20_000 : 16_384;
+    const toolConfig =
+      args.allowTools === false
+        ? {}
+        : {
+            tools: [
+              INSPECT_WEBSITE_BRAND_TOOL,
+              FIND_BRAND_IMAGES_TOOL,
+              FIND_IMAGES_TOOL,
+              GET_EMAIL_VERSION_TOOL,
+              GENERATE_CHART_TOOL,
+              EMIT_EMAIL_TOOL,
+            ],
+            tool_choice: args.toolChoice ?? {
+              type: "auto",
+              disable_parallel_tool_use: true,
+            },
+          };
 
     const stream = this.anthropic.messages.stream(
       {
@@ -1523,19 +1576,11 @@ export class GenerationService {
       ...(thinking ? { thinking } : {}),
       output_config: { effort: this.effortLevel() },
       system: args.systemBlocks,
-      tools: [
-        INSPECT_WEBSITE_BRAND_TOOL,
-        FIND_BRAND_IMAGES_TOOL,
-        FIND_IMAGES_TOOL,
-        GET_EMAIL_VERSION_TOOL,
-        GENERATE_CHART_TOOL,
-        EMIT_EMAIL_TOOL,
-      ],
       // The tool loop pairs a tool_result for exactly one tool_use per turn.
       // Parallel tool use (e.g. inspect_website_brand + emit_email together)
       // leaves the second tool_use unpaired on replay → Anthropic 400. Force
       // at most one tool call per assistant turn.
-      tool_choice: args.toolChoice ?? { type: "auto", disable_parallel_tool_use: true },
+      ...toolConfig,
       messages: args.modelMessages,
       },
       args.signal ? { signal: args.signal } : undefined,
