@@ -90,6 +90,27 @@ export const FIND_IMAGES_TOOL: Tool = {
   },
 };
 
+export const FIND_BRAND_IMAGES_TOOL: Tool = {
+  name: "find_brand_images",
+  description:
+    "Find images belonging to a specific brand/website the user referenced, including products, lifestyle shots, and banners. Prefer this over find_images whenever a brand URL is known.",
+  input_schema: {
+    type: "object",
+    properties: {
+      url: {
+        type: "string",
+        description: "Brand site URL.",
+      },
+      query: {
+        type: "string",
+        description:
+          "Optional image intent, e.g. 'new arrivals product shots' or 'lifestyle banner'.",
+      },
+    },
+    required: ["url"],
+  },
+};
+
 export const GET_EMAIL_VERSION_TOOL: Tool = {
   name: "get_email_version",
   description:

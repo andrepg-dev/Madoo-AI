@@ -48,6 +48,8 @@ export type ImageSearchResult = {
   description?: string;
 };
 
+type BrandImageCandidate = ImageSearchResult;
+
 type BrandColor = {
   hex: string;
   usage: "background" | "text" | "button" | "accent" | "unknown";
@@ -77,6 +79,8 @@ export type WebsiteBrandContext = {
 
 const MAX_CONTENT_CHARS = 3_500;
 const MAX_IMAGE_URLS = 8;
+const MAX_BRAND_IMAGE_RESULTS = 20;
+const MAX_BRAND_IMAGE_CRAWL_PAGES = 4;
 const MAX_COPY_SNIPPETS = 6;
 const MAX_COLORS = 10;
 const MAX_FONTS = 6;
@@ -128,6 +132,17 @@ function getAttribute(tag: string, name: string): string | undefined {
   return tag.match(re)?.[1];
 }
 
+function getNumericAttribute(tag: string, name: string): number | undefined {
+  const raw = getAttribute(tag, name);
+  if (!raw) return undefined;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function firstSrcsetUrl(raw: string | undefined): string | undefined {
+  return raw?.split(",")[0]?.trim().split(/\s+/)[0];
+}
+
 function extractMeta(html: string, key: string): string | undefined {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const patterns = [
@@ -159,26 +174,155 @@ function extractLinkHref(html: string, relPattern: RegExp, baseUrl: string): str
 }
 
 function extractImageUrls(html: string, baseUrl: string): string[] {
-  const urls: string[] = [];
+  return extractImageCandidates(html, baseUrl)
+    .map((candidate) => candidate.url)
+    .slice(0, MAX_IMAGE_URLS);
+}
+
+function imageFilenameDescription(url: string): string | undefined {
+  try {
+    const pathname = new URL(url).pathname;
+    const filename = pathname.split("/").filter(Boolean).pop();
+    if (!filename) return undefined;
+    const withoutExtension = filename.replace(/\.[a-z0-9]+$/i, "");
+    const cleaned = normalizeWhitespace(
+      decodeURIComponent(withoutExtension)
+        .replace(/[_-]+/g, " ")
+        .replace(/\b\d{2,5}x\d{2,5}\b/gi, "")
+        .replace(/\b\d{4,}\b/g, ""),
+    );
+    return cleaned || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isExcludedBrandImage(
+  url: string,
+  metadata: string,
+  width?: number,
+  height?: number,
+): boolean {
+  const haystack = `${url} ${metadata}`.toLowerCase();
+  if (/^data:/i.test(url)) return true;
+  if (/\.(svg)(?:[?#].*)?$/i.test(url)) return true;
+  if (
+    /favicon|apple-touch-icon|icon-|sprite|tracking|pixel|spacer|blank|transparent|loader/i.test(
+      haystack,
+    )
+  ) {
+    return true;
+  }
+  if (width !== undefined && width <= 2) return true;
+  if (height !== undefined && height <= 2) return true;
+  if (
+    width !== undefined &&
+    height !== undefined &&
+    width <= 80 &&
+    height <= 80
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function extractImageCandidates(
+  html: string,
+  baseUrl: string,
+): BrandImageCandidate[] {
+  const candidates: BrandImageCandidate[] = [];
   const imgTags = html.match(/<img\b[^>]*>/gi) ?? [];
-  for (const img of imgTags) {
-    const src = getAttribute(img, "src") ?? getAttribute(img, "data-src");
-    const alt = getAttribute(img, "alt") ?? "";
+  for (const [index, img] of imgTags.entries()) {
+    const src =
+      getAttribute(img, "src") ??
+      getAttribute(img, "data-src") ??
+      getAttribute(img, "data-original") ??
+      getAttribute(img, "data-lazy-src") ??
+      getAttribute(img, "data-image") ??
+      firstSrcsetUrl(getAttribute(img, "srcset")) ??
+      firstSrcsetUrl(getAttribute(img, "data-srcset"));
+    const alt = normalizeWhitespace(getAttribute(img, "alt") ?? "");
     const className = getAttribute(img, "class") ?? "";
     const id = getAttribute(img, "id") ?? "";
+    const width = getNumericAttribute(img, "width");
+    const height = getNumericAttribute(img, "height");
     const absolute = absolutizeUrl(src, baseUrl);
     if (!absolute) continue;
+    if (isExcludedBrandImage(absolute, `${alt} ${className} ${id}`, width, height)) {
+      continue;
+    }
+    const description = alt || imageFilenameDescription(absolute);
     if (
       /logo|brand|hero|product|screenshot/i.test(
         `${absolute} ${alt} ${className} ${id}`,
       )
     ) {
-      urls.unshift(absolute);
+      candidates.unshift({
+        url: absolute,
+        description,
+      });
     } else {
-      urls.push(absolute);
+      candidates.push({
+        url: absolute,
+        description,
+      });
     }
   }
-  return unique(urls).slice(0, MAX_IMAGE_URLS);
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    if (seen.has(candidate.url)) return false;
+    seen.add(candidate.url);
+    return true;
+  });
+}
+
+function extractBrandImageLinks(html: string, baseUrl: string): string[] {
+  const base = new URL(baseUrl);
+  const links = html.match(/<a\b[^>]*>/gi) ?? [];
+  const urls: string[] = [];
+  for (const link of links) {
+    const href = getAttribute(link, "href");
+    const absolute = absolutizeUrl(href, baseUrl);
+    if (!absolute) continue;
+    const parsed = new URL(absolute);
+    parsed.hash = "";
+    if (parsed.origin !== base.origin) continue;
+    if (!/products?|collections?|shop|catalog|new/i.test(parsed.pathname)) continue;
+    urls.push(parsed.toString());
+  }
+  return unique(urls).slice(0, MAX_BRAND_IMAGE_CRAWL_PAGES);
+}
+
+function queryTerms(query?: string): string[] {
+  return unique(
+    normalizeWhitespace(query ?? "")
+      .toLowerCase()
+      .split(/[^a-z0-9]+/i)
+      .filter((term) => term.length >= 3),
+  );
+}
+
+function rankBrandImages(
+  candidates: BrandImageCandidate[],
+  query?: string,
+): ImageSearchResult[] {
+  const terms = queryTerms(query);
+  return candidates
+    .map((candidate, index) => {
+      const haystack =
+        `${candidate.description ?? ""} ${candidate.url}`.toLowerCase();
+      const score = terms.reduce(
+        (total, term) => total + (haystack.includes(term) ? 1 : 0),
+        0,
+      );
+      return { candidate, index, score };
+    })
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map(({ candidate }) => ({
+      url: candidate.url,
+      description: candidate.description,
+    }))
+    .slice(0, MAX_BRAND_IMAGE_RESULTS);
 }
 
 function extractLogoUrl(html: string, baseUrl: string, imageUrls: string[]): string | undefined {
@@ -402,6 +546,47 @@ export class WebsiteBrandService {
         tavilyCredits: tavily?.usage?.credits,
       },
     };
+  }
+
+  async findBrandImages(
+    urlInput: string,
+    query?: string,
+  ): Promise<ImageSearchResult[]> {
+    try {
+      const parsedUrl = assertInspectableUrl(urlInput);
+      await assertPublicResolvedHost(parsedUrl);
+      const url = parsedUrl.toString();
+      const html = await this.fetchHomepageHtml(url);
+      if (!html) return [];
+
+      const linkedPages = extractBrandImageLinks(html, url);
+      const crawled = await Promise.allSettled(
+        linkedPages.map(async (pageUrl) => ({
+          url: pageUrl,
+          html: await this.fetchHomepageHtml(pageUrl),
+        })),
+      );
+
+      const candidates = [
+        ...extractImageCandidates(html, url),
+        ...crawled.flatMap((result) =>
+          result.status === "fulfilled" && result.value.html
+            ? extractImageCandidates(result.value.html, result.value.url)
+            : [],
+        ),
+      ];
+
+      const seen = new Set<string>();
+      const deduped = candidates.filter((candidate) => {
+        if (seen.has(candidate.url)) return false;
+        seen.add(candidate.url);
+        return true;
+      });
+
+      return rankBrandImages(deduped, query);
+    } catch {
+      return [];
+    }
   }
 
   private async fetchHomepageHtml(url: string, redirects = 0): Promise<string> {

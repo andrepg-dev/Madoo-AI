@@ -30,6 +30,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
 import {
   EMIT_EMAIL_TOOL,
+  FIND_BRAND_IMAGES_TOOL,
   FIND_IMAGES_TOOL,
   GENERATE_CHART_TOOL,
   GET_EMAIL_VERSION_TOOL,
@@ -911,6 +912,69 @@ export class GenerationService {
               .join(" · "),
           });
           toolResultContent = JSON.stringify(brandContext);
+        } else if (requestedTool.name === "find_brand_images") {
+          const input = requestedTool.input as { url?: unknown; query?: unknown };
+          if (typeof input.url !== "string" || !input.url.trim()) {
+            throw new BadRequestException("find_brand_images requires a URL.");
+          }
+          const url = input.url.trim();
+          const query = typeof input.query === "string" ? input.query.trim() : "";
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "find_brand_images",
+            status: "running",
+            title: "Finding brand images",
+            detail: query ? `${url} · ${query}` : url,
+          });
+          const found = await this.websiteBrand.findBrandImages(url, query);
+          const rehosted = await Promise.all(
+            found.slice(0, 4).map(async (img) => {
+              const hostedUrl = await this.rehostImageUrl(img.url);
+              return hostedUrl
+                ? { url: hostedUrl, description: img.description }
+                : null;
+            }),
+          );
+          const images = rehosted.filter((img) => img !== null) as Array<{
+            url: string;
+            description?: string;
+          }>;
+          emit({
+            type: "image_search",
+            query: query || url,
+            imageCount: images.length,
+          });
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "find_brand_images",
+            status: "done",
+            title: "Found brand images",
+            detail: query ? `${url} · ${query}` : url,
+            summary: images.length
+              ? `Found ${images.length} brand image${images.length === 1 ? "" : "s"}`
+              : "No brand images found — fall back if needed",
+            images: images.slice(0, 4).map((img) => img.url),
+          });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "find_brand_images",
+            title: "Found brand images",
+            detail: query ? `${url} · ${query}` : url,
+            summary: images.length
+              ? `Found ${images.length} brand image${images.length === 1 ? "" : "s"}`
+              : "No brand images found — fall back if needed",
+            images: images.slice(0, 4).map((img) => img.url),
+          });
+          toolResultContent = JSON.stringify(
+            images.length
+              ? { images }
+              : {
+                  images: [],
+                  note: "No brand images found. Use attached images first, then stock images only if needed.",
+                },
+          );
         } else if (requestedTool.name === "find_images") {
           const input = requestedTool.input as { query?: unknown };
           if (typeof input.query !== "string" || !input.query.trim()) {
@@ -1461,6 +1525,7 @@ export class GenerationService {
       system: args.systemBlocks,
       tools: [
         INSPECT_WEBSITE_BRAND_TOOL,
+        FIND_BRAND_IMAGES_TOOL,
         FIND_IMAGES_TOOL,
         GET_EMAIL_VERSION_TOOL,
         GENERATE_CHART_TOOL,
