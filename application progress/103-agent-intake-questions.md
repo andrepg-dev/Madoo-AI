@@ -33,3 +33,11 @@ Edits still use `runEdit` and never hit the intake path.
 
 ## Verify
 `pnpm --filter @madoo/backend build` clean.
+
+## Update — soft intake only when vague
+First initial draft turns no longer disable tools. The first-turn prompt now asks
+the model to choose: draft immediately with `emit_email` when the brief is
+specific enough, or ask one short 3-5 question intake round only when key
+specifics are missing. The first-turn gate still limits the ask-or-draft
+instruction to brand-new initial drafts, so later turns and edits do not repeat
+intake.

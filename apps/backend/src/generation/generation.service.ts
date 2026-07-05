@@ -527,8 +527,10 @@ export class GenerationService {
       isFirstInitialDraftTurn
         ? [
             "This is the first turn for a brand-new initial email draft.",
-            "Ask a short clarifying intake round now. Do not draft the email yet.",
-            "Do not call emit_email on this turn.",
+            "Decide whether the brief is specific enough to draft now.",
+            "If key specifics are missing, ask 3-5 short clarifying questions and do not call emit_email this turn.",
+            "If the brief is specific enough, draft immediately and call emit_email this turn.",
+            "When unsure, prefer drafting over asking more questions.",
           ].join("\n")
         : [
             "This is not the first intake turn for this email.",
@@ -563,7 +565,6 @@ export class GenerationService {
         tone: ctx.tone,
         audience: ctx.audience,
       },
-      intakeOnly: isFirstInitialDraftTurn,
       emit,
       signal,
     });
@@ -597,7 +598,9 @@ export class GenerationService {
       kind: "TEXT",
       content:
         result.assistantText.trim() ||
-        (isFirstInitialDraftTurn
+        (result.applied
+          ? "I drafted your email — open the preview on the right to review it, then tell me what you'd like to adjust."
+          : isFirstInitialDraftTurn
           ? [
               "Before I draft, quick questions:",
               "1. What is the main goal of this email?",
@@ -608,8 +611,6 @@ export class GenerationService {
               "",
               'Reply with answers, or say "go" / "use your best judgment" and I will draft with smart defaults.',
             ].join("\n")
-          : result.applied
-          ? "I drafted your email — open the preview on the right to review it, then tell me what you'd like to adjust."
           : "I added some guidance above. Ask me for a concrete draft whenever you're ready."),
       groupId,
     });
@@ -778,7 +779,6 @@ export class GenerationService {
       tone?: string | null;
       audience?: string | null;
     };
-    intakeOnly?: boolean;
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
   }): Promise<{
@@ -803,7 +803,6 @@ export class GenerationService {
       modelMessages,
       fullCodeForRetry,
       titleContext,
-      intakeOnly,
       emit,
       signal,
     } = params;
@@ -868,7 +867,6 @@ export class GenerationService {
           systemBlocks,
           emit,
           signal,
-          allowTools: !intakeOnly,
         });
         assistantText += response.assistantText;
         thinkingText += response.thinkingText;
