@@ -1,4 +1,4 @@
-import { Download01Icon, SourceCodeIcon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Download01Icon, SourceCodeIcon } from "@hugeicons/core-free-icons";
 import type { ExportFileFormat, ExportProvider } from "./types";
 
 export const minPreviewWidthVw = 52;
@@ -93,6 +93,11 @@ export const applicationExportProviders: readonly ExportProvider[] = [
 ] as const;
 
 export const fileExportFormats: readonly ExportFileFormat[] = [
+  {
+    name: "Copy HTML",
+    description: "Copy production HTML to clipboard",
+    icon: Copy01Icon,
+  },
   {
     name: "HTML",
     description: "Production email HTML",

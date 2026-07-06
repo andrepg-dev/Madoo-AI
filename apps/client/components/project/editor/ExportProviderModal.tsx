@@ -68,6 +68,39 @@ export function ExportProviderModal({
     );
   };
 
+  const copyHtml = async () => {
+    const id = requireEmail();
+    if (!id) return;
+    setBusyKey("Copy HTML");
+    try {
+      const res = await fetch(
+        `/api/export/emails/${id}/export/html?${variantQuery}`.replace("?&", "?"),
+      );
+      if (!res.ok) throw new Error("Could not load the email HTML.");
+      const html = await res.text();
+      await navigator.clipboard.writeText(html);
+      posthog.capture("email_exported", {
+        email_id: id,
+        export_type: "file",
+        file_kind: "copy_html",
+      });
+      toast({
+        tone: "success",
+        title: "HTML copied",
+        body: "Paste it into your email tool.",
+      });
+    } catch (error) {
+      posthog.captureException(error);
+      toast({
+        tone: "danger",
+        title: "Copy failed",
+        body: error instanceof Error ? error.message : "Try again.",
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
   const handleEsp = (displayName: string) => {
     const provider = ESP_NAME_TO_PROVIDER[displayName];
     if (!provider) return;
@@ -226,13 +259,16 @@ export function ExportProviderModal({
           {tab === "file"
             ? fileExportFormats.map((format) => {
               const onClick =
-                format.name === "HTML"
-                  ? () => downloadFile("html")
-                  : format.name === "Image"
-                    ? () => downloadFile("image", "format=png")
-                    : () => downloadFile("pdf");
+                format.name === "Copy HTML"
+                  ? () => void copyHtml()
+                  : format.name === "HTML"
+                    ? () => downloadFile("html")
+                    : format.name === "Image"
+                      ? () => downloadFile("image", "format=png")
+                      : () => downloadFile("pdf");
               return (
                 <ExportFileCard
+                  busy={busyKey === format.name}
                   description={format.description}
                   icon={format.icon}
                   key={format.name}
