@@ -1262,6 +1262,7 @@ function EmailTemplateProjectInner() {
             ) : null}
             {canRateEmail ? (
               <EmailRatingCard
+                emailId={currentEmailId}
                 loading={ratingQuery.isLoading}
                 onSubmit={(input) => ratingMutation.mutate(input)}
                 pending={ratingMutation.isPending}

@@ -3,6 +3,7 @@ import type { EmailRatingDto, EmailRatingInput } from "@madoo/shared";
 import { useEffect, useState } from "react";
 
 type EmailRatingCardProps = {
+  emailId: string | null;
   loading?: boolean;
   pending?: boolean;
   rating: EmailRatingDto | null | undefined;
@@ -10,6 +11,7 @@ type EmailRatingCardProps = {
 };
 
 export function EmailRatingCard({
+  emailId,
   loading = false,
   pending = false,
   rating,
@@ -18,18 +20,32 @@ export function EmailRatingCard({
   const [selected, setSelected] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState("");
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     setSelected(rating?.rating ?? 0);
     setComment(rating?.comment ?? "");
   }, [rating]);
 
+  // Dismissal is remembered per email so a closed card stays closed on reload.
+  const dismissKey = emailId ? `madoo:rating-card-dismissed:${emailId}` : null;
+  useEffect(() => {
+    if (!dismissKey) return;
+    setDismissed(window.localStorage.getItem(dismissKey) === "1");
+  }, [dismissKey]);
+
+  const dismiss = () => {
+    if (dismissKey) window.localStorage.setItem(dismissKey, "1");
+    setDismissed(true);
+  };
+
   const activeStars = hovered || selected;
   const disabled = loading || pending;
 
   // The card exists only to collect the first rating: while the existing
-  // rating loads, and once one has been submitted, render nothing at all.
-  if (loading || rating) return null;
+  // rating loads, once one has been submitted, or after the user closes it,
+  // render nothing at all.
+  if (loading || rating || dismissed) return null;
 
   return (
     <section className="mb-3 rounded-md bg-white p-3 shadow-madoo-border">
@@ -42,30 +58,40 @@ export function EmailRatingCard({
             Help tune future output.
           </p>
         </div>
-        <div
-          aria-label="Email rating"
-          className="flex items-center gap-1"
-          onMouseLeave={() => setHovered(0)}
-          role="radiogroup"
-        >
-          {[1, 2, 3, 4, 5].map((stars) => (
-            <button
-              aria-label={`${stars} star${stars === 1 ? "" : "s"}`}
-              aria-checked={selected === stars}
-              className={cx(
-                "grid h-8 w-8 cursor-pointer place-items-center rounded-md border-0 bg-transparent text-madoo-ink-muted transition hover:bg-madoo-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-madoo-ink/20",
-                activeStars >= stars && "text-amber-500 [&_svg]:fill-current",
-              )}
-              disabled={disabled}
-              key={stars}
-              onClick={() => setSelected(stars)}
-              onMouseEnter={() => setHovered(stars)}
-              role="radio"
-              type="button"
-            >
-              <Icon name="star" size={18} />
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div
+            aria-label="Email rating"
+            className="flex items-center gap-1"
+            onMouseLeave={() => setHovered(0)}
+            role="radiogroup"
+          >
+            {[1, 2, 3, 4, 5].map((stars) => (
+              <button
+                aria-label={`${stars} star${stars === 1 ? "" : "s"}`}
+                aria-checked={selected === stars}
+                className={cx(
+                  "grid h-8 w-8 cursor-pointer place-items-center rounded-md border-0 bg-transparent text-madoo-ink-muted transition hover:bg-madoo-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-madoo-ink/20",
+                  activeStars >= stars && "text-amber-500 [&_svg]:fill-current",
+                )}
+                disabled={disabled}
+                key={stars}
+                onClick={() => setSelected(stars)}
+                onMouseEnter={() => setHovered(stars)}
+                role="radio"
+                type="button"
+              >
+                <Icon name="star" size={18} />
+              </button>
+            ))}
+          </div>
+          <button
+            aria-label="Close rating card"
+            className="grid h-8 w-8 cursor-pointer place-items-center rounded-md border-0 bg-transparent text-madoo-ink-muted transition hover:bg-madoo-bg hover:text-madoo-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-madoo-ink/20"
+            onClick={dismiss}
+            type="button"
+          >
+            <Icon name="x" size={16} />
+          </button>
         </div>
       </div>
       <textarea
