@@ -31,3 +31,4 @@
 
 Generate a new email → toggle Dark: backgrounds/text flip; toggle Light:
 original design. New emails: no all-caps eyebrows/headings/buttons.
+- Added OUTLOOK DARK MODE prompt rule: [data-ogsc]/[data-ogsb] duplicate overrides after the media query (commit follows #105).
