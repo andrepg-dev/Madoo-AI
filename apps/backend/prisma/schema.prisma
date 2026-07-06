@@ -135,8 +135,29 @@ model Workspace {
   supportTickets      SupportTicket[]
   invites             WorkspaceInvite[]
   productEvents       ProductEvent[]
+  brandProfile        WorkspaceBrandProfile?
 
   @@index([slug])
+}
+
+/// Persisted brand kit for a workspace, captured the first time a brand site is
+/// inspected during generation. Reused as visual direction on later emails so the
+/// agent stays on-brand without re-inspecting every time.
+model WorkspaceBrandProfile {
+  id          String   @id @default(cuid())
+  workspaceId String   @unique
+  url         String
+  brandName   String?
+  logoUrl     String?
+  colors      Json?
+  fonts       Json?
+  copyTone    String?
+  imageUrls   Json?
+  raw         Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 enum EmailStatus {
