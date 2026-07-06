@@ -18,14 +18,44 @@ export function EmailRatingCard({
   const [selected, setSelected] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState("");
+  // Once a rating exists the card stays collapsed to a compact pill; each
+  // successful save (rating prop refresh) collapses it again.
+  const [expanded, setExpanded] = useState(false);
 
+  // Keyed on the rating object identity: the page writes a fresh object into
+  // the query cache on every successful save, which re-collapses the card.
   useEffect(() => {
     setSelected(rating?.rating ?? 0);
     setComment(rating?.comment ?? "");
-  }, [rating?.id, rating?.rating, rating?.comment]);
+    setExpanded(false);
+  }, [rating]);
 
   const activeStars = hovered || selected;
   const disabled = loading || pending;
+
+  // Don't flash the full card while the existing rating is still loading —
+  // rated emails would briefly show the editor before collapsing to the pill.
+  if (loading) return null;
+
+  if (rating && !expanded) {
+    return (
+      <div className="mb-3 flex items-center justify-between gap-2 rounded-md bg-white px-3 py-2 shadow-madoo-border">
+        <span className="flex items-center gap-1.5 text-xs text-madoo-ink-muted [&_svg]:fill-current">
+          <span className="text-amber-500">
+            <Icon name="star" size={14} />
+          </span>
+          Rated {rating.rating}/5
+        </span>
+        <button
+          className="cursor-pointer rounded-md border-0 bg-transparent px-2 py-1 text-xs font-semibold text-madoo-ink transition hover:bg-madoo-bg"
+          onClick={() => setExpanded(true)}
+          type="button"
+        >
+          Change rating
+        </button>
+      </div>
+    );
+  }
 
   return (
     <section className="mb-3 rounded-md bg-white p-3 shadow-madoo-border">
