@@ -71,17 +71,22 @@ export function EmailPreviewSidebar({
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   // The Dark/Light toggle emulates the email client's color scheme: force the
-  // email's own `prefers-color-scheme: dark` styles on (dark) or off (light),
-  // instead of leaving them to the viewer's OS setting. Emails without a dark
-  // block simply look the same in both modes.
-  const themedSrcDoc = useMemo(
-    () =>
-      srcDoc.replace(
+  // email's own `prefers-color-scheme` blocks on or off instead of leaving
+  // them to the viewer's OS setting. Both directions matter — light-base
+  // emails carry a dark block, dark-by-design emails carry a light block.
+  // Emails without scheme blocks simply look the same in both modes.
+  const themedSrcDoc = useMemo(() => {
+    const force = (on: boolean) => (on ? "@media all" : "@media not all");
+    return srcDoc
+      .replace(
         /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/gi,
-        theme === "dark" ? "@media all" : "@media not all",
-      ),
-    [srcDoc, theme],
-  );
+        force(theme === "dark"),
+      )
+      .replace(
+        /@media\s*\(\s*prefers-color-scheme\s*:\s*light\s*\)/gi,
+        force(theme === "light"),
+      );
+  }, [srcDoc, theme]);
 
   useEffect(() => {
     if (expanded) {
