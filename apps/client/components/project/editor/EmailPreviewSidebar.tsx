@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Button, SegmentedControl } from "@madoo/design-system";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CrownPlusIcon, EyeIcon, FileExportIcon, Moon02Icon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, Sun01Icon, TestTube02Icon } from "@hugeicons/core-free-icons";
@@ -69,6 +69,19 @@ export function EmailPreviewSidebar({
   const canEditVariables = Boolean(emailId && variant);
 
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  // The Dark/Light toggle emulates the email client's color scheme: force the
+  // email's own `prefers-color-scheme: dark` styles on (dark) or off (light),
+  // instead of leaving them to the viewer's OS setting. Emails without a dark
+  // block simply look the same in both modes.
+  const themedSrcDoc = useMemo(
+    () =>
+      srcDoc.replace(
+        /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/gi,
+        theme === "dark" ? "@media all" : "@media not all",
+      ),
+    [srcDoc, theme],
+  );
 
   useEffect(() => {
     if (expanded) {
@@ -382,7 +395,7 @@ export function EmailPreviewSidebar({
                 ref={iframeRef}
                 scrolling="no"
                 sandbox="allow-same-origin"
-                srcDoc={srcDoc}
+                srcDoc={themedSrcDoc}
                 style={{ height: iframeHeight }}
                 title="Generated email template preview"
               />
