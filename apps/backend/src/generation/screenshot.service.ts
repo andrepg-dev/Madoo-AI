@@ -152,6 +152,9 @@ export class ScreenshotService {
       type?: "png" | "jpeg";
       quality?: number;
       highlightVariables?: boolean;
+      // Cap the captured height (px). A very tall email produces a huge PNG that
+      // bloats the model's vision context; clip it while keeping width intact.
+      maxHeight?: number;
     } = {},
   ): Promise<Buffer> {
     const type = options.type ?? "png";
@@ -198,6 +201,26 @@ export class ScreenshotService {
       const element = await page.$("table, body");
       if (!element) {
         throw new InternalServerErrorException("No renderable element found in email HTML.");
+      }
+
+      // When a maxHeight is requested and the element is taller, clip the capture
+      // via a page-level screenshot bounded to the element's box.
+      if (options.maxHeight) {
+        const box = await element.boundingBox();
+        if (box && box.height > options.maxHeight) {
+          const clip = {
+            x: box.x,
+            y: box.y,
+            width: box.width,
+            height: options.maxHeight,
+          };
+          const clipped = await page.screenshot(
+            type === "jpeg"
+              ? { type: "jpeg", quality: options.quality ?? 90, clip }
+              : { type: "png", clip },
+          );
+          return Buffer.from(clipped);
+        }
       }
 
       const screenshot = await element.screenshot(

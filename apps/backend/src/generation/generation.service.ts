@@ -8,6 +8,7 @@ import { ConfigService } from "@nestjs/config";
 import type { MessageEvent } from "@nestjs/common";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
+  ContentBlockParam,
   Message,
   MessageCreateParams,
   MessageParam,
@@ -35,14 +36,15 @@ import {
   GENERATE_CHART_TOOL,
   GET_EMAIL_VERSION_TOOL,
   INSPECT_WEBSITE_BRAND_TOOL,
+  VIEW_CURRENT_EMAIL_TOOL,
   buildQuickChartUrl,
 } from "./generation.tools";
 import {
   CHAT_HISTORY_LIMIT,
   CODE_CONTEXT_LIMIT,
-  FEW_SHOT_TEXT,
   PREVIEW_MAX_ATTEMPTS,
   STATIC_INSTRUCTION,
+  buildFewShotText,
 } from "./generation.prompts";
 import { ReactToHtmlService } from "./react-to-html.service";
 import { ScreenshotService } from "./screenshot.service";
@@ -81,7 +83,7 @@ export class GenerationService {
     const key = this.config.get<string>("ANTHROPIC_API_KEY");
     this.model =
       this.config.get<string>("ANTHROPIC_MODEL") ??
-      "claude-sonnet-4-20250514";
+      "claude-sonnet-5";
     this.anthropic = key
       ? new Anthropic({ apiKey: key, maxRetries: 3 })
       : null;
@@ -135,14 +137,58 @@ export class GenerationService {
   }
 
   /**
-   * Effort caps how much the model thinks/explores. Sonnet 4.6 defaults to
-   * `high` when unset — too much for email edits and the main cost driver.
-   * Default `medium`; override with `ANTHROPIC_EFFORT` (low|medium|high|max).
+   * Effort caps how much the model thinks/explores. It is the main cost driver,
+   * so route it per run kind: INITIAL drafts get `high` (worth the extra design
+   * quality on a blank canvas), EDIT and other kinds get `medium`. Override with
+   * `ANTHROPIC_EFFORT_INITIAL` / `ANTHROPIC_EFFORT_EDIT`, then the shared
+   * `ANTHROPIC_EFFORT`, then the per-kind default. Values: low|medium|high|max.
    */
-  private effortLevel(): "low" | "medium" | "high" | "max" {
-    const raw = (this.config.get<string>("ANTHROPIC_EFFORT") ?? "medium").toLowerCase();
-    if (raw === "low" || raw === "high" || raw === "max") return raw;
-    return "medium";
+  private effortLevel(kind: GenerationRunKind): "low" | "medium" | "high" | "max" {
+    const perKindDefault: "high" | "medium" = kind === "INITIAL" ? "high" : "medium";
+    const perKindEnv =
+      kind === "INITIAL" ? "ANTHROPIC_EFFORT_INITIAL" : "ANTHROPIC_EFFORT_EDIT";
+    const raw = (
+      this.config.get<string>(perKindEnv) ??
+      this.config.get<string>("ANTHROPIC_EFFORT") ??
+      perKindDefault
+    ).toLowerCase();
+    if (raw === "low" || raw === "medium" || raw === "high" || raw === "max") {
+      return raw;
+    }
+    return perKindDefault;
+  }
+
+  /** Self-review is off unless `GENERATION_SELF_REVIEW=true`. */
+  private selfReviewEnabled(): boolean {
+    return this.config.get<string>("GENERATION_SELF_REVIEW") === "true";
+  }
+
+  /**
+   * Load the workspace's persisted brand kit as a compact prompt block, or "" if
+   * none exists. Placed in the volatile user prompt (never the cached system
+   * blocks). Bounded to keep the prompt small.
+   */
+  private async loadWorkspaceBrandBlock(workspaceId: string): Promise<string> {
+    try {
+      const profile = await this.prisma.workspaceBrandProfile.findUnique({
+        where: { workspaceId },
+      });
+      if (!profile) return "";
+      const colors = Array.isArray(profile.colors)
+        ? (profile.colors as unknown[]).map(String).slice(0, 6)
+        : [];
+      const fonts = Array.isArray(profile.fonts)
+        ? (profile.fonts as unknown[]).map(String).slice(0, 4)
+        : [];
+      const block = [
+        `Workspace brand kit (persisted from ${profile.url}):`,
+        `- name: ${profile.brandName ?? "unknown"}, logo: ${profile.logoUrl ?? "none"}, colors: [${colors.join(", ")}], fonts: [${fonts.join(", ")}], tone: ${(profile.copyTone ?? "").slice(0, 160)}`,
+        "Use it for visual direction unless the user asks for a different brand.",
+      ].join("\n");
+      return block.slice(0, 600);
+    } catch {
+      return "";
+    }
   }
 
   private async loadRecentChatContext(
@@ -522,6 +568,7 @@ export class GenerationService {
     // the full context instead of treating it as a brand-new conversation.
     const recentChat = await this.loadRecentChatContext(emailId);
     const hasPriorChat = recentChat !== "No previous chat context.";
+    const brandKitBlock = await this.loadWorkspaceBrandBlock(workspaceId);
 
     const userPrompt = [
       isFirstInitialDraftTurn
@@ -543,6 +590,7 @@ export class GenerationService {
       hasPriorChat
         ? `Conversation context (most recent first):\n${recentChat}`
         : "",
+      brandKitBlock,
       ctx.template?.componentCode
         ? `Reference Madoo email template (do not copy verbatim; adapt):\n${ctx.template.componentCode.slice(0, 12000)}`
         : "",
@@ -554,6 +602,7 @@ export class GenerationService {
       emailId,
       workspaceId,
       kind: "INITIAL",
+      briefForFewShot: ctx.prompt,
       modelMessages: [
         {
           role: "user",
@@ -679,9 +728,12 @@ export class GenerationService {
         ? `Saved versions: 1..${versionCount} (version ${versionCount} is the current/latest). To reuse or revert to an earlier one, call get_email_version with its number — do not guess its code.`
         : "No earlier saved versions yet.";
 
+    const brandKitBlock = await this.loadWorkspaceBrandBlock(workspaceId);
+
     const editPrompt = [
       "Edit the current Madoo TSX email component according to the instruction.",
       `Instruction:\n${instruction}`,
+      brandKitBlock ? `\n${brandKitBlock}` : "",
       "",
       versionLine,
       "",
@@ -713,6 +765,7 @@ export class GenerationService {
       emailId,
       workspaceId,
       kind: "EDIT",
+      briefForFewShot: ctx.prompt,
       modelMessages: [
         {
           role: "user",
@@ -772,6 +825,7 @@ export class GenerationService {
     emailId: string;
     workspaceId: string;
     kind: GenerationRunKind;
+    briefForFewShot: string;
     modelMessages: MessageParam[];
     fullCodeForRetry?: string;
     titleContext?: {
@@ -800,6 +854,7 @@ export class GenerationService {
       emailId,
       workspaceId,
       kind,
+      briefForFewShot,
       modelMessages,
       fullCodeForRetry,
       titleContext,
@@ -842,7 +897,7 @@ export class GenerationService {
         },
         {
           type: "text",
-          text: FEW_SHOT_TEXT,
+          text: buildFewShotText(briefForFewShot),
           cache_control: { type: "ephemeral" },
         },
       ];
@@ -865,6 +920,7 @@ export class GenerationService {
         response = await this.runStreamWithRetry({
           modelMessages: turnMessages,
           systemBlocks,
+          kind,
           emit,
           signal,
         });
@@ -889,7 +945,7 @@ export class GenerationService {
         if (!requestedTool || requestedTool.type !== "tool_use") break;
         if (requestedTool.name === "emit_email") break;
 
-        let toolResultContent: string;
+        let toolResultContent: string | ContentBlockParam[];
         if (requestedTool.name === "inspect_website_brand") {
           const input = requestedTool.input as { url?: unknown; purpose?: unknown };
           if (typeof input.url !== "string" || !input.url.trim()) {
@@ -943,6 +999,36 @@ export class GenerationService {
               .filter(Boolean)
               .join(" · "),
           });
+          // Persist the brand kit for this workspace so later emails stay
+          // on-brand. Fire-and-forget: a persistence failure must never break
+          // generation.
+          try {
+            const colors = brandContext.colors.map((color) => color.hex);
+            const copyTone =
+              brandContext.valueProps[0] ??
+              brandContext.copySnippets[0] ??
+              brandContext.description ??
+              null;
+            const brandData = {
+              url: brandContext.url,
+              brandName: brandContext.brandName ?? null,
+              logoUrl: brandContext.logoUrl ?? null,
+              colors,
+              fonts: brandContext.fonts,
+              copyTone: copyTone ? copyTone.slice(0, 240) : null,
+              imageUrls: brandContext.imageUrls,
+              raw: brandContext as unknown as object,
+            };
+            await this.prisma.workspaceBrandProfile.upsert({
+              where: { workspaceId },
+              create: { workspaceId, ...brandData },
+              update: brandData,
+            });
+          } catch (err) {
+            console.warn(
+              `[GenerationService] brand profile upsert failed: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
           toolResultContent = JSON.stringify(brandContext);
         } else if (requestedTool.name === "find_brand_images") {
           const input = requestedTool.input as { url?: unknown; query?: unknown };
@@ -1126,6 +1212,95 @@ export class GenerationService {
                   latestVersion: latest?.seq ?? 0,
                 },
           );
+        } else if (requestedTool.name === "view_current_email") {
+          const input = requestedTool.input as { version?: unknown };
+          const requestedVersion =
+            typeof input.version === "number" ? Math.trunc(input.version) : undefined;
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "view_current_email",
+            status: "running",
+            title: "Viewing current email design",
+            detail: requestedVersion ? `Version ${requestedVersion}` : "Latest version",
+          });
+          const variant = await this.prisma.emailVariant.findFirst({
+            where: {
+              emailId,
+              workspaceId,
+              ...(requestedVersion && requestedVersion >= 1
+                ? { seq: requestedVersion }
+                : {}),
+            },
+            orderBy: { seq: "desc" },
+            select: {
+              seq: true,
+              compiledHtml: true,
+              componentCode: true,
+              variableSchema: true,
+            },
+          });
+          if (!variant) {
+            emit({
+              type: "tool_call",
+              id: requestedTool.id,
+              name: "view_current_email",
+              status: "done",
+              title: "No saved version to view",
+              detail: requestedVersion ? `Version ${requestedVersion}` : "Latest version",
+            });
+            toolCalls.push({
+              id: requestedTool.id,
+              name: "view_current_email",
+              title: "No saved version to view",
+              detail: requestedVersion ? `Version ${requestedVersion}` : "Latest version",
+            });
+            toolResultContent = requestedVersion
+              ? `Version ${requestedVersion} has not been saved yet. Emit the email first, then view it.`
+              : "No saved version of this email exists yet. Emit the email first, then view it.";
+          } else {
+            const html =
+              variant.compiledHtml && variant.compiledHtml.trim().length > 0
+                ? variant.compiledHtml
+                : this.reactToHtml.compile(
+                    variant.componentCode,
+                    buildRenderVariables(
+                      parseVariableSchemaJson(variant.variableSchema),
+                    ),
+                  );
+            const shot = await this.screenshot.screenshotHtml(html, {
+              highlightVariables: false,
+              maxHeight: 2400,
+            });
+            emit({
+              type: "tool_call",
+              id: requestedTool.id,
+              name: "view_current_email",
+              status: "done",
+              title: "Viewed current email design",
+              detail: `Version ${variant.seq}`,
+            });
+            toolCalls.push({
+              id: requestedTool.id,
+              name: "view_current_email",
+              title: "Viewed current email design",
+              detail: `Version ${variant.seq}`,
+            });
+            toolResultContent = [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/png",
+                  data: shot.toString("base64"),
+                },
+              },
+              {
+                type: "text",
+                text: `Screenshot of version ${variant.seq}. Review the visual design critically before responding.`,
+              },
+            ];
+          }
         } else if (requestedTool.name === "generate_chart") {
           const input = requestedTool.input as ChartToolInput;
           if (!input.type || !Array.isArray(input.datasets) || input.datasets.length === 0) {
@@ -1211,6 +1386,7 @@ export class GenerationService {
         response = await this.runStreamWithRetry({
           modelMessages: turnMessages,
           systemBlocks,
+          kind,
           emit,
           signal,
           toolChoice: {
@@ -1343,6 +1519,7 @@ export class GenerationService {
               },
             ],
             systemBlocks,
+            kind,
             emit,
           });
           assistantText = retry.assistantText || assistantText;
@@ -1388,6 +1565,16 @@ export class GenerationService {
         },
       });
 
+      // Self-review may replace this with an improved second variant below; the
+      // "done" event and return value report whichever is final.
+      let finalVariant: {
+        id: string;
+        seq: number;
+        subject: string;
+        compiledHtml: string;
+      } = variant;
+      let finalComponentCode = input.componentCode;
+
       const conversationTitle =
         kind === "INITIAL" && titleContext
           ? await this.conversationTitleAgent.generateTitle({
@@ -1416,6 +1603,36 @@ export class GenerationService {
         });
       }
 
+      // Optional self-review pass (env-gated, default OFF): let the model SEE its
+      // own rendered draft and revise once if it spots visual problems.
+      if (kind === "INITIAL" && this.selfReviewEnabled()) {
+        const reviewed = await this.runSelfReview({
+          emailId,
+          workspaceId,
+          systemBlocks,
+          componentCode: finalComponentCode,
+          compiledHtml,
+          emit,
+          signal,
+        });
+        if (reviewed) {
+          finalVariant = reviewed.variant;
+          finalComponentCode = reviewed.componentCode;
+          assistantText += reviewed.assistantText;
+          usageTotals = {
+            input_tokens: usageTotals.input_tokens + reviewed.usage.input_tokens,
+            output_tokens: usageTotals.output_tokens + reviewed.usage.output_tokens,
+            cache_creation_input_tokens:
+              usageTotals.cache_creation_input_tokens +
+              reviewed.usage.cache_creation_input_tokens,
+            cache_read_input_tokens:
+              usageTotals.cache_read_input_tokens +
+              reviewed.usage.cache_read_input_tokens,
+          };
+          emit({ type: "token_usage", ...usageTotals });
+        }
+      }
+
       await this.prisma.email.update({
         where: { id: emailId },
         data: {
@@ -1441,18 +1658,18 @@ export class GenerationService {
 
       emit({
         type: "done",
-        variantId: variant.id,
-        subject: variant.subject,
+        variantId: finalVariant.id,
+        subject: finalVariant.subject,
         conversationTitle,
-        compiledHtml: variant.compiledHtml,
-        seq: variant.seq,
+        compiledHtml: finalVariant.compiledHtml,
+        seq: finalVariant.seq,
       });
       return {
         assistantText,
         thinkingText,
         toolCalls,
-        componentCode: input.componentCode,
-        variantId: variant.id,
+        componentCode: finalComponentCode,
+        variantId: finalVariant.id,
         applied: true,
       };
     } catch (e) {
@@ -1474,6 +1691,138 @@ export class GenerationService {
   }
 
   /**
+   * Env-gated self-review (Feature A): show the model a screenshot of its own
+   * rendered draft and let it revise once. Returns the improved variant when it
+   * chooses to re-emit, or null when it judges the draft final (or on any error
+   * — self-review is strictly best-effort and never breaks the saved draft).
+   */
+  private async runSelfReview(args: {
+    emailId: string;
+    workspaceId: string;
+    systemBlocks: MessageCreateParams["system"];
+    componentCode: string;
+    compiledHtml: string;
+    emit: (p: Record<string, unknown>) => void;
+    signal?: AbortSignal;
+  }): Promise<{
+    variant: { id: string; seq: number; subject: string; compiledHtml: string };
+    componentCode: string;
+    assistantText: string;
+    usage: {
+      input_tokens: number;
+      output_tokens: number;
+      cache_creation_input_tokens: number;
+      cache_read_input_tokens: number;
+    };
+  } | null> {
+    try {
+      args.emit({ type: "step", message: "Reviewing the rendered design…" });
+      const shot = await this.screenshot.screenshotHtml(args.compiledHtml, {
+        highlightVariables: false,
+        maxHeight: 2400,
+      });
+      const reviewMessages: MessageParam[] = [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: "image/png",
+                data: shot.toString("base64"),
+              },
+            },
+            {
+              type: "text",
+              text: [
+                "Here is the rendered result of your draft.",
+                "If you see visual problems (spacing, contrast, hierarchy, image fit, imbalance), call emit_email once with an improved version; if it looks good, reply briefly that it is final.",
+                "Current TSX:",
+                buildCodeContextSnippet(args.componentCode, CODE_CONTEXT_LIMIT),
+              ].join("\n"),
+            },
+          ],
+        },
+      ];
+      const resp = await this.runStream({
+        modelMessages: reviewMessages,
+        systemBlocks: args.systemBlocks,
+        kind: "INITIAL",
+        emit: args.emit,
+        signal: args.signal,
+      });
+      const usage = {
+        input_tokens: resp.usage?.input_tokens ?? 0,
+        output_tokens: resp.usage?.output_tokens ?? 0,
+        cache_creation_input_tokens: resp.usage?.cache_creation_input_tokens ?? 0,
+        cache_read_input_tokens: resp.usage?.cache_read_input_tokens ?? 0,
+      };
+      const toolBlock = resp.content.find(
+        (b) => b.type === "tool_use" && b.name === "emit_email",
+      );
+      if (!toolBlock || toolBlock.type !== "tool_use") {
+        // Model judged the draft final (or gathered no revision) — keep original.
+        return null;
+      }
+      const input = toolBlock.input as {
+        subject?: string;
+        componentCode?: string;
+        variableSchema?: unknown;
+      };
+      if (
+        !input?.subject ||
+        typeof input.componentCode !== "string" ||
+        input.variableSchema === undefined
+      ) {
+        return null;
+      }
+      const variableSchema = sanitizeGeneratedVariableSchema(
+        parseVariableSchemaJson(input.variableSchema),
+      );
+      assertStaticSubject(input.subject, variableSchema);
+      const compiledHtml = this.reactToHtml.compile(
+        input.componentCode,
+        buildRenderVariables(variableSchema),
+      );
+      const seq = await this.nextVariantSeq(args.emailId);
+      const variant = await this.prisma.emailVariant.create({
+        data: {
+          workspaceId: args.workspaceId,
+          emailId: args.emailId,
+          seq,
+          subject: input.subject,
+          componentCode: input.componentCode,
+          compiledHtml,
+          variableSchema: variableSchema as object,
+        },
+      });
+      args.emit({ type: "subject", value: variant.subject });
+      const previewUrl = await this.createAndPersistVariantPreview(
+        variant.id,
+        compiledHtml,
+      );
+      if (previewUrl) args.emit({ type: "preview_url", value: previewUrl });
+      return {
+        variant: {
+          id: variant.id,
+          seq: variant.seq,
+          subject: variant.subject,
+          compiledHtml,
+        },
+        componentCode: input.componentCode,
+        assistantText: resp.assistantText,
+        usage,
+      };
+    } catch (err) {
+      console.warn(
+        `[GenerationService] self-review skipped: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
+  }
+
+  /**
    * Run a model turn, retrying transient Anthropic errors (overloaded / 5xx /
    * rate limit / connection drops). A restart is only attempted while nothing
    * user-visible has streamed yet, so a retry can never duplicate assistant
@@ -1482,6 +1831,7 @@ export class GenerationService {
   private async runStreamWithRetry(args: {
     modelMessages: MessageParam[];
     systemBlocks: MessageCreateParams["system"];
+    kind: GenerationRunKind;
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
     toolChoice?: MessageCreateParams["tool_choice"];
@@ -1529,6 +1879,7 @@ export class GenerationService {
   private async runStream(args: {
     modelMessages: MessageParam[];
     systemBlocks: MessageCreateParams["system"];
+    kind: GenerationRunKind;
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
     toolChoice?: MessageCreateParams["tool_choice"];
@@ -1548,7 +1899,9 @@ export class GenerationService {
     const forcedTool =
       args.toolChoice?.type === "tool" || args.toolChoice?.type === "any";
     const thinking = forcedTool ? undefined : this.extendedThinkingConfig();
-    const maxTokens = thinking ? 20_000 : 16_384;
+    // Sonnet 5 tokenizes ~30% heavier than 4.6, so give both paths more headroom
+    // (previously 20k / 16k). Still streams, so latency is unaffected.
+    const maxTokens = thinking ? 32_000 : 24_000;
     const toolConfig =
       args.allowTools === false
         ? {}
@@ -1558,6 +1911,7 @@ export class GenerationService {
               FIND_BRAND_IMAGES_TOOL,
               FIND_IMAGES_TOOL,
               GET_EMAIL_VERSION_TOOL,
+              VIEW_CURRENT_EMAIL_TOOL,
               GENERATE_CHART_TOOL,
               EMIT_EMAIL_TOOL,
             ],
@@ -1572,7 +1926,7 @@ export class GenerationService {
       model: this.model,
       max_tokens: maxTokens,
       ...(thinking ? { thinking } : {}),
-      output_config: { effort: this.effortLevel() },
+      output_config: { effort: this.effortLevel(args.kind) },
       system: args.systemBlocks,
       // The tool loop pairs a tool_result for exactly one tool_use per turn.
       // Parallel tool use (e.g. inspect_website_brand + emit_email together)

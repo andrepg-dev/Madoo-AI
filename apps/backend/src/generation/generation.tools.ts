@@ -128,6 +128,22 @@ export const GET_EMAIL_VERSION_TOOL: Tool = {
   },
 };
 
+export const VIEW_CURRENT_EMAIL_TOOL: Tool = {
+  name: "view_current_email",
+  description:
+    "Render the email and return a screenshot image so you can SEE the current visual result. Call this when the user complains about how the email looks ('looks off', 'too cramped', 'ugly'), when matching an attached reference image, before a major visual redesign, or after several accumulated layout edits. Do NOT call it on every turn or for pure copy changes. Optionally pass a version number to view an earlier saved version.",
+  input_schema: {
+    type: "object",
+    properties: {
+      version: {
+        type: "number",
+        description:
+          "Optional 1-based saved version number. Omit for the current/latest version.",
+      },
+    },
+  },
+};
+
 export const GENERATE_CHART_TOOL: Tool = {
   name: "generate_chart",
   description:
