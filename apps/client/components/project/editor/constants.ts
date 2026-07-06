@@ -9,6 +9,11 @@ export const previewModeItems = [
   { value: "responsive", label: "Responsive" },
 ];
 
+export const previewThemeItems = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
+
 export const emailExportProviders: readonly ExportProvider[] = [
   {
     name: "Mailchimp",

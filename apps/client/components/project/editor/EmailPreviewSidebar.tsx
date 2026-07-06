@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Button, SegmentedControl } from "@madoo/design-system";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CrownPlusIcon, EyeIcon, FileExportIcon, Moon02Icon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, Sun01Icon, TestTube02Icon } from "@hugeicons/core-free-icons";
+import { CrownPlusIcon, EyeIcon, FileExportIcon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
 import type { EmailDto, EmailVariantDto } from "@madoo/shared";
 import { cn } from "@/lib/utils";
 import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
-import { defaultPreviewWidthVw, previewModeItems } from "./constants";
+import { defaultPreviewWidthVw, previewModeItems, previewThemeItems } from "./constants";
 import { clampPreviewWidth } from "./utils";
 import { latestVariant } from "./chat-utils";
 import type { PreviewMode, TemplateTheme } from "./types";
@@ -353,22 +353,13 @@ export function EmailPreviewSidebar({
                 value={mode}
               />
 
-              <Button
-                aria-label={`Use ${theme === "light" ? "dark" : "light"} email theme`}
-                className="h-8 gap-2 rounded-lg bg-white px-3 text-xs font-medium text-madoo-ink shadow-madoo-border hover:bg-[#f3f4f6]"
-                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-                size="sm"
-                variant="ghost"
-              >
-                <HugeiconsIcon
-                  aria-hidden="true"
-                  icon={theme === "light" ? Moon02Icon : Sun01Icon}
-                  primaryColor="currentColor"
-                  size={15}
-                  strokeWidth={1.55}
-                />
-                <span>{theme === "light" ? "Dark" : "Light"}</span>
-              </Button>
+              <SegmentedControl
+                aria-label="Email color scheme"
+                className="rounded-lg bg-madoo-surface p-1 shadow-none"
+                items={previewThemeItems}
+                onChange={(value) => setTheme(value as TemplateTheme)}
+                value={theme}
+              />
             </div>
           </div>
         </div>
