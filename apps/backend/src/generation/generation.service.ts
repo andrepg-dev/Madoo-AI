@@ -1521,6 +1521,14 @@ export class GenerationService {
             systemBlocks,
             kind,
             emit,
+            // Force the tool so the retry can't come back as plain prose —
+            // an unforced retry sometimes explained the failure in text and
+            // surfaced "Retry did not return emit_email tool output".
+            toolChoice: {
+              type: "tool",
+              name: "emit_email",
+              disable_parallel_tool_use: true,
+            },
           });
           assistantText = retry.assistantText || assistantText;
           thinkingText = retry.thinkingText || thinkingText;
@@ -1528,7 +1536,9 @@ export class GenerationService {
             (b) => b.type === "tool_use" && b.name === "emit_email",
           );
           if (!retryTool || retryTool.type !== "tool_use") {
-            throw new BadRequestException("Retry did not return emit_email tool output.");
+            throw new BadRequestException(
+              "The AI could not produce a corrected email this time — send the request again.",
+            );
           }
           const nextInput = retryTool.input as {
             subject?: string;
