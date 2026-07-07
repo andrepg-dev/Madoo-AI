@@ -16,6 +16,8 @@ const schemeItems = [
   { value: "dark", label: "Dark" },
 ];
 
+const SCHEME_STORAGE_KEY = "madoo:test-email-scheme";
+
 type YourInboxPanelProps = {
   emailId: string | null;
   disabled: boolean;
@@ -27,7 +29,20 @@ export function YourInboxPanel({ disabled, emailId }: YourInboxPanelProps) {
   const [recipient, setRecipient] = useState("");
   const [dirty, setDirty] = useState(false);
   const [sending, setSending] = useState(false);
-  const [scheme, setScheme] = useState<TestScheme>("auto");
+  const [scheme, setSchemeState] = useState<TestScheme>("auto");
+
+  // Restore after mount so SSR markup matches the first client render.
+  useEffect(() => {
+    const stored = window.localStorage.getItem(SCHEME_STORAGE_KEY);
+    if (stored === "auto" || stored === "light" || stored === "dark") {
+      setSchemeState(stored);
+    }
+  }, []);
+
+  const setScheme = (next: TestScheme) => {
+    setSchemeState(next);
+    window.localStorage.setItem(SCHEME_STORAGE_KEY, next);
+  };
 
   useEffect(() => {
     if (dirty || !meQuery.data?.email) return;
