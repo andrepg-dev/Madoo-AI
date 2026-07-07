@@ -2,6 +2,12 @@ import { z } from "zod";
 
 export const SendTestEmailInputSchema = z.object({
   to: z.string().email().optional(),
+  /**
+   * Color scheme to force on the sent HTML. "auto" (default) sends the email
+   * as-is and lets the recipient's client decide; "light"/"dark" hard-apply
+   * the matching prefers-color-scheme overrides before sending.
+   */
+  scheme: z.enum(["auto", "light", "dark"]).optional(),
 });
 
 export type SendTestEmailInput = z.infer<typeof SendTestEmailInputSchema>;

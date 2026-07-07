@@ -78,7 +78,9 @@ export class TestingService {
     const sent = await this.mail.sendTestEmail({
       to,
       subject: variant.subject,
-      html: inlineCss(variant.compiledHtml),
+      html: inlineCss(
+        forceColorScheme(variant.compiledHtml, input.body.scheme),
+      ),
     });
 
     return SendTestEmailResponseSchema.parse({
@@ -257,6 +259,31 @@ function inlineCss(html: string): string {
   } catch {
     return html;
   }
+}
+
+/**
+ * Hard-apply a color scheme before sending: the selected scheme's
+ * prefers-color-scheme block is forced on (@media all), the other forced off
+ * (@media not all) — same emulation the preview toggle uses. The color-scheme
+ * meta is stripped so the recipient's client doesn't re-adapt the forced look.
+ * "auto" (or absent) sends the email untouched.
+ */
+function forceColorScheme(
+  html: string,
+  scheme?: "auto" | "light" | "dark",
+): string {
+  if (!scheme || scheme === "auto") return html;
+  const force = (on: boolean) => (on ? "@media all" : "@media not all");
+  return html
+    .replace(
+      /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/gi,
+      force(scheme === "dark"),
+    )
+    .replace(
+      /@media\s*\(\s*prefers-color-scheme\s*:\s*light\s*\)/gi,
+      force(scheme === "light"),
+    )
+    .replace(/<meta[^>]*name=["']color-scheme["'][^>]*>/gi, "");
 }
 
 type DiscoveredLink = { url: string; label: string };

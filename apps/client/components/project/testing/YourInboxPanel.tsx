@@ -4,9 +4,17 @@ import { getMe } from "@/actions/auth";
 import { sendTestEmail } from "@/actions/testing";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button, useToast } from "@madoo/design-system";
+import { Button, SegmentedControl, useToast } from "@madoo/design-system";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+
+type TestScheme = "auto" | "light" | "dark";
+
+const schemeItems = [
+  { value: "auto", label: "Auto" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
 type YourInboxPanelProps = {
   emailId: string | null;
@@ -19,6 +27,7 @@ export function YourInboxPanel({ disabled, emailId }: YourInboxPanelProps) {
   const [recipient, setRecipient] = useState("");
   const [dirty, setDirty] = useState(false);
   const [sending, setSending] = useState(false);
+  const [scheme, setScheme] = useState<TestScheme>("auto");
 
   useEffect(() => {
     if (dirty || !meQuery.data?.email) return;
@@ -31,6 +40,7 @@ export function YourInboxPanel({ disabled, emailId }: YourInboxPanelProps) {
     try {
       const result = await sendTestEmail(emailId, {
         to: recipient.trim() || undefined,
+        ...(scheme !== "auto" ? { scheme } : {}),
       });
       toast({
         tone: result.skipped ? "warn" : "success",
@@ -88,6 +98,25 @@ export function YourInboxPanel({ disabled, emailId }: YourInboxPanelProps) {
           value={recipient}
         />
       </label>
+
+      <div>
+        <span className="text-xs font-medium text-madoo-ink-muted">
+          Color scheme
+        </span>
+        <div className="mt-2">
+          <SegmentedControl
+            aria-label="Test email color scheme"
+            className="rounded-lg bg-madoo-surface p-1 shadow-none"
+            items={schemeItems}
+            onChange={(value) => setScheme(value as TestScheme)}
+            value={scheme}
+          />
+        </div>
+        <p className="mt-1.5 text-xs text-madoo-ink-faint">
+          Auto lets the recipient&apos;s email client decide; Light or Dark
+          locks that look.
+        </p>
+      </div>
 
       <Button
         className="bg-[#16a34a] text-white hover:bg-[#15803d]"
