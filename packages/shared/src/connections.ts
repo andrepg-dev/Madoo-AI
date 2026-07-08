@@ -25,6 +25,8 @@ export type AuthorizeUrlResponse = z.infer<typeof AuthorizeUrlResponseSchema>;
 export const ExchangeConnectionInputSchema = z.object({
   code: z.string().min(1),
   redirectUri: z.string().url().optional(),
+  /** Signed anti-CSRF value issued by `GET /connections/:provider/authorize-url`. */
+  state: z.string().min(1),
 });
 export type ExchangeConnectionInput = z.infer<typeof ExchangeConnectionInputSchema>;
 

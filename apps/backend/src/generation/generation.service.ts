@@ -49,6 +49,7 @@ import {
 import { ReactToHtmlService } from "./react-to-html.service";
 import { ScreenshotService } from "./screenshot.service";
 import { S3Service } from "../s3/s3.service";
+import { assertPublicUrl } from "../common/ssrf-guard";
 import { WebsiteBrandService } from "./website-brand.service";
 import { ConversationTitleAgent } from "./conversation-title.agent";
 import type { ChartToolInput } from "./generation.tools";
@@ -102,15 +103,9 @@ export class GenerationService {
       const timer = setTimeout(() => controller.abort(), 8_000);
       let res: Response;
       try {
-        res = await fetch(sourceUrl, {
-          signal: controller.signal,
-          headers: {
-            // Browser-like UA + referer so hotlink checks behave as in-app.
-            "User-Agent":
-              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-            Accept: "image/avif,image/webp,image/png,image/jpeg,*/*",
-          },
-        });
+        // SSRF guard: URLs originate from the model / find_images tool, so
+        // validate the host (and every redirect hop) resolves to a public IP.
+        res = await this.fetchImageFollowingRedirects(sourceUrl, controller.signal);
       } finally {
         clearTimeout(timer);
       }
@@ -125,6 +120,39 @@ export class GenerationService {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Fetch an image with `redirect: "manual"`, re-validating each hop against the
+   * SSRF guard so a public URL cannot 302 into an internal host. Caps at 3 hops.
+   */
+  private async fetchImageFollowingRedirects(
+    startUrl: string,
+    signal: AbortSignal,
+    maxHops = 3,
+  ): Promise<Response> {
+    let target = (await assertPublicUrl(startUrl)).toString();
+    for (let hop = 0; hop <= maxHops; hop++) {
+      const res = await fetch(target, {
+        signal,
+        redirect: "manual",
+        headers: {
+          // Browser-like UA so hotlink checks behave as in-app.
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+          Accept: "image/avif,image/webp,image/png,image/jpeg,*/*",
+        },
+      });
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get("location");
+        if (!location || hop === maxHops) return res;
+        const next = new URL(location, target).toString();
+        target = (await assertPublicUrl(next)).toString();
+        continue;
+      }
+      return res;
+    }
+    throw new Error("Too many redirects.");
   }
 
   /** Extended thinking (model-level). Off if `ANTHROPIC_EXTENDED_THINKING=false`. */

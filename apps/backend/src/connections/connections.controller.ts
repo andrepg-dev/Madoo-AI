@@ -33,9 +33,12 @@ export class ConnectionsController {
   }
 
   @Get(":provider/authorize-url")
-  authorizeUrl(@Param("provider") provider: string): AuthorizeUrlResponse {
+  authorizeUrl(
+    @CurrentUser() user: { sub: string },
+    @Param("provider") provider: string,
+  ): AuthorizeUrlResponse {
     const parsed = ConnectionProviderSchema.parse(provider);
-    const url = this.connections.getAuthorizeUrl(parsed);
+    const url = this.connections.getAuthorizeUrl(user.sub, parsed);
     return AuthorizeUrlResponseSchema.parse({ url });
   }
 
@@ -51,6 +54,7 @@ export class ConnectionsController {
       user.sub,
       parsed,
       input.code,
+      input.state,
       input.redirectUri,
     );
   }

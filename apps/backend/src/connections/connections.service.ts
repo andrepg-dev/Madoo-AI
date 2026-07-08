@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { ConnectionProvider as PrismaConnectionProvider } from "@prisma/client";
@@ -14,7 +15,12 @@ import {
   type ProviderConnectionDto,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
-import { decryptSecret, encryptSecret } from "../common/crypto";
+import {
+  decryptSecret,
+  encryptSecret,
+  signPayload,
+  verifyPayload,
+} from "../common/crypto";
 
 const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.compose";
 const OUTLOOK_SCOPE = "offline_access https://graph.microsoft.com/Mail.ReadWrite";
@@ -73,8 +79,13 @@ export class ConnectionsService {
     );
   }
 
-  getAuthorizeUrl(provider: ConnectionProvider, redirectUriOverride?: string): string {
+  getAuthorizeUrl(
+    userId: string,
+    provider: ConnectionProvider,
+    redirectUriOverride?: string,
+  ): string {
     const redirectUri = this.redirectUri(provider, redirectUriOverride);
+    const state = this.signState(userId, provider);
     if (provider === "gmail") {
       const clientId = this.requireConfig("GOOGLE_CLIENT_ID");
       const params = new URLSearchParams({
@@ -85,6 +96,7 @@ export class ConnectionsService {
         access_type: "offline",
         prompt: "consent",
         include_granted_scopes: "true",
+        state,
       });
       return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     }
@@ -96,16 +108,45 @@ export class ConnectionsService {
       response_type: "code",
       scope: OUTLOOK_SCOPE,
       response_mode: "query",
+      state,
     });
     return `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${params.toString()}`;
+  }
+
+  /** Anti-CSRF state bound to the session user + provider, valid for 15 minutes. */
+  private signState(userId: string, provider: ConnectionProvider): string {
+    return signPayload({ u: userId, p: provider, iat: Date.now() }, this.encKey());
+  }
+
+  private verifyState(
+    state: string,
+    userId: string,
+    provider: ConnectionProvider,
+  ): void {
+    const payload = verifyPayload<{ u: string; p: string; iat: number }>(
+      state,
+      this.encKey(),
+    );
+    const STATE_TTL_MS = 15 * 60 * 1000;
+    if (
+      !payload ||
+      payload.u !== userId ||
+      payload.p !== provider ||
+      typeof payload.iat !== "number" ||
+      Date.now() - payload.iat > STATE_TTL_MS
+    ) {
+      throw new UnauthorizedException("Invalid or expired OAuth state.");
+    }
   }
 
   async exchange(
     userId: string,
     provider: ConnectionProvider,
     code: string,
+    state: string,
     redirectUriOverride?: string,
   ): Promise<ProviderConnectionDto> {
+    this.verifyState(state, userId, provider);
     const redirectUri = this.redirectUri(provider, redirectUriOverride);
     const tokens =
       provider === "gmail"

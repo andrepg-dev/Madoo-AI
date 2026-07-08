@@ -2,7 +2,9 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   randomBytes,
+  timingSafeEqual,
 } from "node:crypto";
 
 function deriveKey(secret: string): Buffer {
@@ -41,4 +43,44 @@ export function decryptSecret(cipherText: string, secret: string): string {
     decipher.final(),
   ]);
   return decrypted.toString("utf8");
+}
+
+/**
+ * Sign an arbitrary JSON payload into a compact `base64url(json).base64url(hmac)`
+ * token (HMAC-SHA256). Used for stateless anti-CSRF `state` values; the payload
+ * is not confidential, only tamper-evident.
+ */
+export function signPayload(payload: Record<string, unknown>, secret: string): string {
+  if (!secret) {
+    throw new Error("Signing secret is required.");
+  }
+  const body = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const sig = createHmac("sha256", secret).update(body).digest("base64url");
+  return `${body}.${sig}`;
+}
+
+/**
+ * Verify a token produced by {@link signPayload}. Returns the decoded payload, or
+ * `null` if the signature is missing/invalid/tampered. Uses a constant-time compare.
+ */
+export function verifyPayload<T = Record<string, unknown>>(
+  token: string,
+  secret: string,
+): T | null {
+  if (!secret || typeof token !== "string") return null;
+  const dot = token.indexOf(".");
+  if (dot <= 0) return null;
+  const body = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  const expected = createHmac("sha256", secret).update(body).digest("base64url");
+  const sigBuf = Buffer.from(sig);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+    return null;
+  }
+  try {
+    return JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as T;
+  } catch {
+    return null;
+  }
 }

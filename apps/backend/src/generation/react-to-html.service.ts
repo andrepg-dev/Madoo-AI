@@ -8,8 +8,13 @@ import * as crypto from "node:crypto";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as vm from "node:vm";
+import { assertSafeComponentSource } from "./react-code-guard";
 
-/** Deny obvious escape hatches before Babel + VM (runtime VM still has timeout). */
+/**
+ * Cheap text pre-filter run before the AST allowlist. This is defense-in-depth
+ * only — the authoritative check is {@link assertSafeComponentSource}, which
+ * blocks constructor/prototype escape gadgets that regexes cannot reliably catch.
+ */
 const BLOCKLIST: RegExp[] = [
   /\brequire\s*\(\s*['"]fs['"]\s*\)/,
   /\brequire\s*\(\s*['"]node:fs['"]\s*\)/,
@@ -40,6 +45,9 @@ function assertSafeSource(componentCode: string): void {
       throw new BadRequestException("Blocked pattern in generated component code.");
     }
   }
+  // Authoritative check: positive AST allowlist that closes constructor/prototype
+  // escape gadgets the regex pass above cannot reliably detect.
+  assertSafeComponentSource(componentCode);
 }
 
 @Injectable()
@@ -92,12 +100,16 @@ export class ReactToHtmlService {
       throw new Error(`Module not allowed: ${id}`);
     };
 
+    // No host functions in the sandbox console: even a bound `console.error`
+    // leaks the outer-realm `Function` via `.constructor`. Generated code has no
+    // legitimate need to log, so these are inert no-ops.
+    const sandboxConsole = { error() {}, warn() {}, log() {} };
     const context = vm.createContext({
       module,
       exports: module.exports,
       React,
       require: sandboxRequire,
-      console: { error: console.error, warn: console.warn },
+      console: sandboxConsole,
       // Email components are pre-injected as globals so generated code can use
       // <Body>, <Container>, <Text>, … without importing anything. The require
       // resolver above stays for backward compatibility with older variants

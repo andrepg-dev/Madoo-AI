@@ -22,6 +22,15 @@ export async function GET(
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  // Only proxy the known export shape and reject traversal segments so this
+  // cannot be repurposed as an open path-forwarder to arbitrary backend routes.
+  const segmentsOk =
+    path.length > 0 &&
+    path.every((seg) => seg.length > 0 && seg !== "." && seg !== ".." && !seg.includes("/"));
+  if (!segmentsOk || path[0] !== "emails" || !path.includes("export")) {
+    return Response.json({ message: "Not found" }, { status: 404 });
+  }
+
   const search = req.nextUrl.search;
   const upstream = await fetch(
     `${API_URL}/${path.join("/")}${search}`,
