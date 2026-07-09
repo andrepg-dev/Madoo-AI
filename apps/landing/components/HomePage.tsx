@@ -199,30 +199,24 @@ const featureTabIcons = [
 
 const featureTabImages = [
   {
-    // Designs & Layouts uses the overlapping template-preview collage.
     src: "/templates/news-letter.png",
     alt: "Email template design previews",
-    collage: true,
   },
   {
     src: "/integrations-export.png",
     alt: "HTML export connected to Mailchimp, Klaviyo, Zapier, SendGrid, Outlook, and upload anywhere",
-    collage: false,
   },
   {
     src: "/product/prompt-to-inbox-flow.png",
     alt: "AI email flow from prompt to templates to a finished email, ready to send to the inbox",
-    collage: false,
   },
   {
     src: "/product/client-compatibility.png",
     alt: "Email client compatibility checks across Desktop Gmail, Tablet Outlook, and Mobile Gmail",
-    collage: false,
   },
   {
     src: "/product/team-collaboration.png",
     alt: "Teammates collaborating in a shared Madoo workspace",
-    collage: false,
   },
 ] as const;
 
@@ -808,12 +802,6 @@ export default function HomePage({
     copy.productFeatures.tabs[0]!;
   const activeFeatureImage =
     featureTabImages[activeFeatureTab] ?? featureTabImages[0]!;
-  // Designs & Layouts collage: three fixed template designs that show range.
-  const featureCollageImages = [
-    "/product/design-newsletter.png",
-    "/product/design-bac.png",
-    "/product/design-anthropic.png",
-  ];
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -1389,56 +1377,16 @@ export default function HomePage({
 
               <div
                 key={`feature-media-${activeFeatureTab}`}
-                className={cx(
-                  "madoo-tab-panel relative mx-auto w-full",
-                  activeFeatureImage.collage
-                    ? "h-104 max-w-md sm:h-136 lg:max-w-none"
-                    : "max-w-xl",
-                )}
+                className="madoo-tab-panel relative mx-auto w-full max-w-xl"
               >
-                {activeFeatureImage.collage ? (
-                  <>
-                    {featureCollageImages[0] ? (
-                      <div className="madoo-paper-border absolute left-0 top-[8%] z-10 w-[36%] overflow-hidden rounded-sm bg-white">
-                        <img
-                          src={featureCollageImages[0]}
-                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
-                          loading="lazy"
-                          className="aspect-3/4 w-full object-cover object-top"
-                        />
-                      </div>
-                    ) : null}
-                    {featureCollageImages[1] ? (
-                      <div className="madoo-paper-border absolute right-0 top-[6%] z-10 w-[36%] overflow-hidden rounded-sm bg-white">
-                        <img
-                          src={featureCollageImages[1]}
-                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
-                          loading="lazy"
-                          className="aspect-3/4 w-full object-cover object-top"
-                        />
-                      </div>
-                    ) : null}
-                    {featureCollageImages[2] ? (
-                      <div className="madoo-paper-border absolute left-1/2 top-48 z-20 w-[38%] -translate-x-1/2 overflow-hidden rounded-sm bg-white">
-                        <img
-                          src={featureCollageImages[2]}
-                          alt={`${activeTab.title} ${copy.templates.previewAlt}`}
-                          loading="lazy"
-                          className="aspect-3/4 w-full object-cover object-top"
-                        />
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <div className="relative aspect-square w-full overflow-hidden rounded-[2rem] bg-white">
-                    <img
-                      src={activeFeatureImage.src}
-                      alt={activeFeatureImage.alt}
-                      loading="lazy"
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                )}
+                <div className="relative aspect-square w-full overflow-hidden rounded-[2rem] bg-white">
+                  <img
+                    src={activeFeatureImage.src}
+                    alt={activeFeatureImage.alt}
+                    loading="lazy"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
               </div>
             </div>
           </div>
