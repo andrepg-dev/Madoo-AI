@@ -167,7 +167,7 @@ export default function TemplateDetail({
                 "madoo-paper-border h-[600px] overflow-hidden rounded-2xl shadow-[0_20px_60px_rgb(7_17_35/0.08)] transition-colors duration-300 sm:h-[720px] lg:h-[calc(100vh-172px)]",
                 device === "mobile"
                   ? "flex items-center justify-center bg-[#F7F7F7] p-6"
-                  : "bg-white",
+                  : "flex flex-col bg-white",
               )}
             >
               {device === "mobile" ? (
@@ -185,16 +185,29 @@ export default function TemplateDetail({
                   />
                 </div>
               ) : (
-                <iframe
-                  title={template.name}
-                  srcDoc={srcDoc}
-                  sandbox=""
-                  referrerPolicy="no-referrer"
-                  className={cx(
-                    "block h-full w-full border-0",
-                    scheme === "dark" ? "bg-[#0b0b0c]" : "bg-white",
-                  )}
-                />
+                <>
+                  {/* Browser chrome mirrors the app's DeviceFramePreview. */}
+                  <div className="flex h-11 shrink-0 items-center gap-2 border-b border-black/5 bg-[#f3f4f6] px-4">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+                      <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+                      <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+                    </span>
+                    <span className="mx-auto inline-flex h-6 max-w-[60%] items-center truncate rounded-md bg-white px-3 text-xs text-[#6b7280] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.06)]">
+                      {template.name}
+                    </span>
+                  </div>
+                  <iframe
+                    title={template.name}
+                    srcDoc={srcDoc}
+                    sandbox=""
+                    referrerPolicy="no-referrer"
+                    className={cx(
+                      "min-h-0 w-full flex-1 border-0",
+                      scheme === "dark" ? "bg-[#0b0b0c]" : "bg-white",
+                    )}
+                  />
+                </>
               )}
             </div>
           </div>
