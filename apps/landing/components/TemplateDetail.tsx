@@ -130,7 +130,7 @@ export default function TemplateDetail({
         goToAppLabel={copy.nav.goToApp}
       />
 
-      <section className="relative z-10 mx-auto w-full max-w-[1440px] px-4 pb-8 pt-8 sm:px-8 sm:pt-12">
+      <section className="relative z-10 mx-auto w-full max-w-[1340px] px-4 pb-8 pt-8 sm:px-8 sm:pt-4">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-14">
           {/* Live HTML preview — the email itself, rendered in a sandboxed
               iframe so its styles can't leak into the marketing page. */}
@@ -165,14 +165,14 @@ export default function TemplateDetail({
                 background. Phone bezel mirrors the app's DeviceFramePreview. */}
             <div
               className={cx(
-                "madoo-paper-border h-[600px] overflow-hidden rounded-2xl shadow-[0_20px_60px_rgb(7_17_35/0.08)] transition-colors duration-300 sm:h-[720px] lg:h-[calc(100vh-172px)]",
+                "madoo-paper-border h-[600px] overflow-hidden  shadow-[0_20px_60px_rgb(7_17_35/0.08)] transition-colors duration-300 sm:h-[720px] lg:h-[calc(100vh-172px)]",
                 device === "mobile"
                   ? "flex items-center justify-center bg-[#F7F7F7] p-6"
                   : "flex flex-col bg-white",
               )}
             >
               {device === "mobile" ? (
-                <div className="flex h-full w-full max-w-[390px] flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)]">
+                <div className="flex h-full w-full max-w-[280px] flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)] sm:max-w-[330px] lg:max-w-[360px] 2xl:max-w-[390px]">
                   {/* iOS status bar: gives the email breathing room under the
                       Dynamic Island instead of butting against it. */}
                   <div
