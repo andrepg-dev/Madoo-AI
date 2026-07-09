@@ -50,7 +50,7 @@ function applyScheme(html: string, scheme: Scheme): string {
 function previewScrollbarStyle(scheme: Scheme): string {
   const thumb = scheme === "dark" ? "rgba(255,255,255,0.26)" : "#555555";
   const thumbHover = scheme === "dark" ? "rgba(255,255,255,0.4)" : "#3f3f3f";
-  return `<style>html{scrollbar-width:thin;scrollbar-color:${thumb} transparent;}::-webkit-scrollbar{width:20px;}::-webkit-scrollbar-track{background:transparent;margin-block:16px;}::-webkit-scrollbar-thumb{background:${thumb};border:7px solid transparent;border-right-width:9px;border-radius:999px;background-clip:padding-box;min-height:72px;}::-webkit-scrollbar-thumb:hover{background:${thumbHover};border:7px solid transparent;border-right-width:9px;background-clip:padding-box;}</style>`;
+  return `<style>html{scrollbar-width:thin;scrollbar-color:${thumb} transparent;overflow-x:hidden;}body{overflow-x:hidden;}::-webkit-scrollbar{width:20px;height:0;}::-webkit-scrollbar-track{background:transparent;margin-block:16px;}::-webkit-scrollbar-thumb{background:${thumb};border:7px solid transparent;border-right-width:9px;border-radius:999px;background-clip:padding-box;min-height:72px;}::-webkit-scrollbar-thumb:hover{background:${thumbHover};border:7px solid transparent;border-right-width:9px;background-clip:padding-box;}</style>`;
 }
 
 // Slip our style into the email's <head> (or <body>) so it wins without a
