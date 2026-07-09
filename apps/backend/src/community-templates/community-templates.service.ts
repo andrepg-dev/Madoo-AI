@@ -21,6 +21,7 @@ import {
 } from "@madoo/shared";
 import { BillingService } from "../billing/billing.service";
 import { EmailsService } from "../emails/emails.service";
+import { ReactToHtmlService } from "../generation/react-to-html.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   SEED_TEMPLATES,
@@ -50,6 +51,9 @@ type PublicCommunityTemplateDto = Omit<
   CommunityTemplateDto,
   "starred" | "viewCount" | "useCount" | "owned"
 >;
+type PublicCommunityTemplateDetailDto = PublicCommunityTemplateDto & {
+  compiledHtml: string;
+};
 type PublicCommunityTemplateRow = Omit<
   CommunityTemplateRow,
   "stars" | "viewCount" | "useCount" | "authorUserId"
@@ -103,6 +107,7 @@ export class CommunityTemplatesService {
     private readonly prisma: PrismaService,
     private readonly emails: EmailsService,
     private readonly billing: BillingService,
+    private readonly reactToHtml: ReactToHtmlService,
   ) {}
 
   async list(userId: string): Promise<CommunityTemplateDto[]> {
@@ -139,6 +144,47 @@ export class CommunityTemplatesService {
       return SEED_TEMPLATE_SLUGS.map((slug) => this.toSeedPublicDto(slug));
     }
     return rows.map((row) => this.toPublicDto(row));
+  }
+
+  // Public template detail for the marketing site. Unlike `get`, it takes no
+  // viewer and returns the compiled HTML so the landing can render the email in
+  // an iframe instead of a static screenshot. Seed slugs are compiled on the
+  // fly since the fallback gallery has no DB rows to read HTML from.
+  async getPublic(id: string): Promise<PublicCommunityTemplateDetailDto> {
+    if (id.startsWith("seed-")) {
+      const slug = id.slice("seed-".length) as SeedTemplateSlug;
+      if (!SEED_TEMPLATE_SLUGS.includes(slug)) {
+        throw new NotFoundException("Community template not found.");
+      }
+      return {
+        ...this.toSeedPublicDto(slug),
+        compiledHtml: this.reactToHtml.compile(
+          SEED_TEMPLATES[slug].componentCode,
+        ),
+      };
+    }
+
+    const row = await this.prisma.communityTemplate.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        category: true,
+        categories: true,
+        previewUrl: true,
+        variableSchema: true,
+        authorName: true,
+        createdAt: true,
+        compiledHtml: true,
+      },
+    });
+    if (!row) throw new NotFoundException("Community template not found.");
+
+    return {
+      ...this.toPublicDto(row),
+      compiledHtml: row.compiledHtml,
+    };
   }
 
   async get(id: string, userId: string): Promise<CommunityTemplateDetailDto> {
