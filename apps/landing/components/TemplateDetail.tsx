@@ -279,7 +279,7 @@ export default function TemplateDetail({
                   {category}
                 </span>
               ) : null}
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(91_99_255/0.1)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[rgb(91_99_255)]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-madoo-paper px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-madoo-accent shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.18)]">
                 <HugeiconsIcon icon={AiMagicIcon} size={13} strokeWidth={2} />
                 {t.aiGenerated}
               </span>
