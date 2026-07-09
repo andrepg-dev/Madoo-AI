@@ -171,15 +171,83 @@ export default function TemplateDetail({
               )}
             >
               {device === "mobile" ? (
-                <div className="relative flex h-full w-full max-w-[390px] flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)]">
-                  <span className="absolute left-1/2 top-2 z-10 h-6 w-32 -translate-x-1/2 rounded-full bg-[#111317]" />
+                <div className="flex h-full w-full max-w-[390px] flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)]">
+                  {/* iOS status bar: gives the email breathing room under the
+                      Dynamic Island instead of butting against it. */}
+                  <div
+                    className={cx(
+                      "relative flex h-11 shrink-0 items-center justify-between px-6 pt-1",
+                      scheme === "dark"
+                        ? "bg-[#0b0b0c] text-white"
+                        : "bg-white text-black",
+                    )}
+                  >
+                    <span className="text-[13px] font-semibold tracking-tight">
+                      9:41
+                    </span>
+                    <span className="absolute left-1/2 top-2 h-6 w-24 -translate-x-1/2 rounded-full bg-[#111317]" />
+                    <span className="flex items-center gap-1.5">
+                      <svg
+                        width="17"
+                        height="11"
+                        viewBox="0 0 17 11"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <rect x="0" y="7.5" width="3" height="3.5" rx="1" />
+                        <rect x="4.7" y="5" width="3" height="6" rx="1" />
+                        <rect x="9.3" y="2.5" width="3" height="8.5" rx="1" />
+                        <rect x="14" y="0" width="3" height="11" rx="1" />
+                      </svg>
+                      <svg
+                        width="16"
+                        height="11"
+                        viewBox="0 0 16 11"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M8 2.2c2.6 0 5 1 6.8 2.7l-1.3 1.4C12.1 4.9 10.1 4.1 8 4.1S3.9 4.9 2.5 6.3L1.2 4.9C3 3.2 5.4 2.2 8 2.2Z" />
+                        <path d="M8 5.6c1.4 0 2.7.5 3.7 1.5L8 10.8 4.3 7.1C5.3 6.1 6.6 5.6 8 5.6Z" />
+                      </svg>
+                      <svg
+                        width="25"
+                        height="12"
+                        viewBox="0 0 25 12"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <rect
+                          x="0.5"
+                          y="0.5"
+                          width="21"
+                          height="11"
+                          rx="3"
+                          stroke="currentColor"
+                          strokeOpacity="0.35"
+                        />
+                        <rect
+                          x="2"
+                          y="2"
+                          width="16"
+                          height="8"
+                          rx="1.5"
+                          fill="currentColor"
+                        />
+                        <path
+                          d="M23 4v4a2 2 0 0 0 0-4Z"
+                          fill="currentColor"
+                          fillOpacity="0.4"
+                        />
+                      </svg>
+                    </span>
+                  </div>
                   <iframe
                     title={template.name}
                     srcDoc={srcDoc}
                     sandbox=""
                     referrerPolicy="no-referrer"
                     className={cx(
-                      "h-full w-full rounded-[2rem] border-0",
+                      "min-h-0 w-full flex-1 border-0",
                       scheme === "dark" ? "bg-[#0b0b0c]" : "bg-white",
                     )}
                   />
