@@ -9,13 +9,40 @@ import type {
   LandingCommunityTemplate,
   LandingCommunityTemplateDetail,
 } from "@/lib/community-templates";
+import {
+  ComputerIcon,
+  Moon02Icon,
+  SmartPhone01Icon,
+  Sun03Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { cx } from "@madoo/design-system";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AuthDialog from "./AuthDialog";
 import { TEMPLATE_ROLE_LABELS, localeCopy } from "./HomePage";
 import { LandingHeader } from "./LandingHeader";
 
 type Locale = "en" | "es";
+type Device = "desktop" | "mobile";
+type Scheme = "light" | "dark";
+
+// Emails gate their dark styles behind `prefers-color-scheme`, which normally
+// follows the viewer's OS. Rewrite those queries to always/never match so the
+// preview toggle controls the rendered scheme deterministically — CSS-only, so
+// it works inside the fully sandboxed iframe (no scripts allowed).
+function applyScheme(html: string, scheme: Scheme): string {
+  const dark = scheme === "dark";
+  return html
+    .replace(
+      /prefers-color-scheme\s*:\s*dark/gi,
+      dark ? "min-width:0px" : "max-width:0px",
+    )
+    .replace(
+      /prefers-color-scheme\s*:\s*light/gi,
+      dark ? "max-width:0px" : "min-width:0px",
+    );
+}
 
 export default function TemplateDetail({
   locale = "en",
@@ -33,10 +60,21 @@ export default function TemplateDetail({
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [usingTemplate, setUsingTemplate] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const [device, setDevice] = useState<Device>("desktop");
+  const [scheme, setScheme] = useState<Scheme>("light");
 
   // Cookies aren't readable during SSR; detect the session after mount so the
   // header CTA doesn't cause a hydration mismatch.
   useEffect(() => setSignedIn(isLikelySignedIn()), []);
+
+  const supportsDark = useMemo(
+    () => /prefers-color-scheme\s*:\s*dark/i.test(template.html),
+    [template.html],
+  );
+  const srcDoc = useMemo(
+    () => (supportsDark ? applyScheme(template.html, scheme) : template.html),
+    [template.html, scheme, supportsDark],
+  );
 
   const variables = template.variables ?? [];
   const category = template.categories[0] ?? template.category;
@@ -85,25 +123,64 @@ export default function TemplateDetail({
           {t.detailBack}
         </Link>
 
-        <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:gap-12">
           {/* Live HTML preview — the email itself, rendered in a sandboxed
               iframe so its styles can't leak into the marketing page. */}
           <div className="min-w-0">
-            <div className="madoo-paper-border overflow-hidden rounded-2xl bg-white shadow-[0_28px_90px_rgb(7_17_35/0.10)]">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-madoo-muted">
+                {t.preview}
+              </span>
+              <div className="flex items-center gap-2">
+                {supportsDark ? (
+                  <Segmented
+                    value={scheme}
+                    onChange={setScheme}
+                    options={[
+                      { value: "light", label: t.schemeLight, icon: Sun03Icon },
+                      { value: "dark", label: t.schemeDark, icon: Moon02Icon },
+                    ]}
+                  />
+                ) : null}
+                <Segmented
+                  value={device}
+                  onChange={setDevice}
+                  options={[
+                    {
+                      value: "desktop",
+                      label: t.viewDesktop,
+                      icon: ComputerIcon,
+                    },
+                    {
+                      value: "mobile",
+                      label: t.viewMobile,
+                      icon: SmartPhone01Icon,
+                    },
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div
+              className={cx(
+                "madoo-paper-border mx-auto overflow-hidden rounded-2xl bg-white shadow-[0_28px_90px_rgb(7_17_35/0.10)] transition-[max-width] duration-300 ease-out",
+                device === "mobile" ? "max-w-[380px]" : "max-w-[600px]",
+              )}
+            >
               <div className="flex items-center gap-2 border-b border-zinc-200/70 bg-madoo-neutral-50 px-4 py-3">
                 <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
                 <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
                 <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
-                <span className="ml-2 text-[11px] font-medium uppercase tracking-[0.14em] text-madoo-muted">
-                  {t.preview}
-                </span>
               </div>
               <iframe
                 title={template.name}
-                srcDoc={template.html}
+                srcDoc={srcDoc}
                 sandbox=""
                 referrerPolicy="no-referrer"
-                className="h-[560px] w-full border-0 bg-white sm:h-[680px] lg:h-[calc(100vh-190px)]"
+                className={cx(
+                  "h-[560px] w-full border-0 sm:h-[680px] lg:h-[calc(100vh-220px)]",
+                  scheme === "dark" ? "bg-[#0b0b0c]" : "bg-white",
+                )}
               />
             </div>
           </div>
@@ -127,7 +204,7 @@ export default function TemplateDetail({
             ) : null}
 
             {template.description ? (
-              <p className="mt-4 text-[15px] leading-7 text-madoo-copy">
+              <p className="mt-4 max-w-xl text-[15px] leading-7 text-madoo-copy">
                 {template.description}
               </p>
             ) : null}
@@ -141,7 +218,7 @@ export default function TemplateDetail({
               {usingTemplate ? t.using : t.use}
             </button>
 
-            <div className="mt-7">
+            <div className="mt-7 max-w-xl">
               <h2 className="m-0 text-xs font-medium uppercase tracking-wide text-madoo-muted">
                 {t.variables}
               </h2>
@@ -203,6 +280,42 @@ export default function TemplateDetail({
         nextUrl={nextUrl}
       />
     </main>
+  );
+}
+
+function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (next: T) => void;
+  options: { value: T; label: string; icon: typeof ComputerIcon }[];
+}) {
+  return (
+    <div className="inline-flex items-center gap-0.5 rounded-lg bg-madoo-neutral-50 p-0.5 shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.16)]">
+      {options.map((option) => {
+        const active = value === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-label={option.label}
+            aria-pressed={active}
+            title={option.label}
+            onClick={() => onChange(option.value)}
+            className={cx(
+              "inline-flex h-7 w-8 cursor-pointer items-center justify-center rounded-md border-0 transition",
+              active
+                ? "bg-white text-madoo-ink shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.16)]"
+                : "bg-transparent text-madoo-muted hover:text-madoo-ink",
+            )}
+          >
+            <HugeiconsIcon icon={option.icon} size={15} strokeWidth={1.8} />
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

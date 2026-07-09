@@ -440,6 +440,10 @@ export const localeCopy = {
       communityFallbackDescription: "Community template.",
       detailBack: "All templates",
       preview: "Live preview",
+      viewDesktop: "Desktop view",
+      viewMobile: "Mobile view",
+      schemeLight: "Light mode",
+      schemeDark: "Dark mode",
       recommended: "More templates",
       recommendedDescription: "Browse other designs from the community.",
       cards: [
@@ -705,6 +709,10 @@ export const localeCopy = {
       communityFallbackDescription: "Plantilla de la comunidad.",
       detailBack: "Todas las plantillas",
       preview: "Vista previa en vivo",
+      viewDesktop: "Vista escritorio",
+      viewMobile: "Vista móvil",
+      schemeLight: "Modo claro",
+      schemeDark: "Modo oscuro",
       recommended: "Más plantillas",
       recommendedDescription: "Explora otros diseños de la comunidad.",
       cards: [
