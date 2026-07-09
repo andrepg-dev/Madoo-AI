@@ -10,7 +10,6 @@ import type {
   LandingCommunityTemplateDetail,
 } from "@/lib/community-templates";
 import {
-  CheckmarkBadge01Icon,
   ComputerIcon,
   Moon02Icon,
   SmartPhone01Icon,
@@ -135,7 +134,7 @@ export default function TemplateDetail({
           {/* Live HTML preview — the email itself, rendered in a sandboxed
               iframe so its styles can't leak into the marketing page. */}
           <div className="min-w-0">
-            <div className="mb-3 flex items-center justify-end gap-2">
+            <div className="mb-3 flex items-center justify-end gap-2 bg-[#F7F7F7]">
               {supportsDark ? (
                 <Segmented
                   value={scheme}
@@ -217,17 +216,6 @@ export default function TemplateDetail({
             >
               {usingTemplate ? t.using : t.use}
             </button>
-
-            <div className="mt-3 flex items-center gap-2 text-xs text-madoo-muted">
-              <HugeiconsIcon
-                icon={CheckmarkBadge01Icon}
-                size={15}
-                strokeWidth={1.8}
-                className="shrink-0 text-madoo-copy"
-                aria-hidden="true"
-              />
-              {t.tested}
-            </div>
 
             <div className="mt-7 max-w-xl">
               <h2 className="m-0 text-xs font-medium uppercase tracking-wide text-madoo-muted">
