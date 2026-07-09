@@ -200,16 +200,6 @@ export default function TemplateDetail({
                         <rect x="14" y="0" width="3" height="11" rx="1" />
                       </svg>
                       <svg
-                        width="16"
-                        height="11"
-                        viewBox="0 0 16 11"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M8 2.2c2.6 0 5 1 6.8 2.7l-1.3 1.4C12.1 4.9 10.1 4.1 8 4.1S3.9 4.9 2.5 6.3L1.2 4.9C3 3.2 5.4 2.2 8 2.2Z" />
-                        <path d="M8 5.6c1.4 0 2.7.5 3.7 1.5L8 10.8 4.3 7.1C5.3 6.1 6.6 5.6 8 5.6Z" />
-                      </svg>
-                      <svg
                         width="25"
                         height="12"
                         viewBox="0 0 25 12"
