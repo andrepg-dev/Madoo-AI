@@ -30,6 +30,7 @@ import { cx } from "@madoo/design-system";
 import type { VariableSchemaRoot } from "@madoo/shared";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type {
   ChangeEvent,
   ClipboardEvent,
@@ -437,6 +438,10 @@ export const localeCopy = {
       using: "Opening…",
       close: "Close",
       communityFallbackDescription: "Community template.",
+      detailBack: "All templates",
+      preview: "Live preview",
+      recommended: "More templates",
+      recommendedDescription: "Browse other designs from the community.",
       cards: [
         {
           name: "Big news: We've been backed by Y Combinator 🚀",
@@ -698,6 +703,10 @@ export const localeCopy = {
       using: "Abriendo…",
       close: "Cerrar",
       communityFallbackDescription: "Plantilla de la comunidad.",
+      detailBack: "Todas las plantillas",
+      preview: "Vista previa en vivo",
+      recommended: "Más plantillas",
+      recommendedDescription: "Explora otros diseños de la comunidad.",
       cards: [
         {
           name: "Gran noticia: Y Combinator nos respaldó 🚀",
@@ -795,6 +804,7 @@ export default function HomePage({
     "/product/design-bac.png",
     "/product/design-anthropic.png",
   ];
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -877,8 +887,16 @@ export default function HomePage({
     );
   };
 
-  const openTemplatePreview = (template: TemplateShowcaseCard) =>
+  // Real templates open the full-page detail view (HTML preview + info +
+  // recommendations). Decorative sample cards have no id, so they keep the
+  // lightweight modal since there's no detail page to route to.
+  const openTemplatePreview = (template: TemplateShowcaseCard) => {
+    if (template.id) {
+      router.push(`/templates/${template.id}`);
+      return;
+    }
     setPreviewTemplate(template);
+  };
 
   // View is always free. "Use" needs an account: signed-in visitors go straight
   // to the app (which owns the session), otherwise we open the login dialog and

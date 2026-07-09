@@ -1,21 +1,15 @@
 "use client";
 
-import {
-  clientHomeUrl,
-  clientUseTemplateUrl,
-  isLikelySignedIn,
-} from "@/lib/client-app";
+import { clientHomeUrl, isLikelySignedIn } from "@/lib/client-app";
 import type { LandingCommunityTemplate } from "@/lib/community-templates";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cx } from "@madoo/design-system";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AuthDialog from "./AuthDialog";
-import { TEMPLATE_ROLE_LABELS, localeCopy } from "./HomePage";
+import { localeCopy } from "./HomePage";
 import { LandingHeader } from "./LandingHeader";
-import TemplatePreviewDialog, {
-  type TemplatePreviewData,
-} from "./TemplatePreviewDialog";
 
 type Locale = "en" | "es";
 
@@ -31,11 +25,7 @@ export default function TemplatesGallery({
   const copy = localeCopy[locale];
   const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORY);
   const [search, setSearch] = useState("");
-  const [previewTemplate, setPreviewTemplate] =
-    useState<TemplatePreviewData | null>(null);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
-  const [nextUrl, setNextUrl] = useState<string | null>(null);
-  const [usingTemplate, setUsingTemplate] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
 
   // Cookies aren't readable during SSR; detect the session after mount so the
@@ -75,41 +65,6 @@ export default function TemplatesGallery({
       );
     });
   }, [templates, activeCategory, search]);
-
-  const openPreview = (template: LandingCommunityTemplate) =>
-    setPreviewTemplate({
-      id: template.id,
-      name: template.name,
-      description:
-        template.description ??
-        template.category ??
-        copy.templates.communityFallbackDescription,
-      imageSrc: template.previewUrl ?? "/templates/news-letter.png",
-      authorName: template.authorName,
-      category: template.category,
-      variables: template.variables,
-    });
-
-  // View is free; "Use" needs a session. Signed-in visitors go straight to the
-  // app, otherwise we open the login dialog and resume into the app after auth.
-  const handleUseTemplate = (template: TemplatePreviewData) => {
-    if (!template.id) {
-      setPreviewTemplate(null);
-      setAuthDialogOpen(true);
-      return;
-    }
-
-    const target = clientUseTemplateUrl(template.id);
-    if (isLikelySignedIn()) {
-      setUsingTemplate(true);
-      window.location.assign(target);
-      return;
-    }
-
-    setNextUrl(target);
-    setPreviewTemplate(null);
-    setAuthDialogOpen(true);
-  };
 
   return (
     <main
@@ -179,7 +134,6 @@ export default function TemplatesGallery({
                 key={template.id}
                 template={template}
                 previewAlt={copy.templates.previewAlt}
-                onOpen={() => openPreview(template)}
               />
             ))}
           </div>
@@ -190,27 +144,10 @@ export default function TemplatesGallery({
         )}
       </section>
 
-      <TemplatePreviewDialog
-        template={previewTemplate}
-        isUsing={usingTemplate}
-        onClose={() => setPreviewTemplate(null)}
-        onUse={handleUseTemplate}
-        copy={{
-          close: copy.templates.close,
-          by: copy.templates.by,
-          variables: copy.templates.variables,
-          noVariables: copy.templates.noVariables,
-          use: copy.templates.use,
-          using: copy.templates.using,
-          roleLabels: TEMPLATE_ROLE_LABELS,
-        }}
-      />
-
       <AuthDialog
         open={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
         locale={locale}
-        nextUrl={nextUrl}
       />
     </main>
   );
@@ -245,19 +182,16 @@ function CategoryChip({
 function GalleryCard({
   template,
   previewAlt,
-  onOpen,
 }: {
   template: LandingCommunityTemplate;
   previewAlt: string;
-  onOpen: () => void;
 }) {
   const category = template.categories[0] ?? template.category;
 
   return (
     <article className="group min-w-0">
-      <button
-        type="button"
-        onClick={onOpen}
+      <Link
+        href={`/templates/${template.id}`}
         aria-label={template.name}
         className="madoo-paper-border madoo-paper-border-hover relative block aspect-3/4 w-full cursor-pointer overflow-hidden rounded-lg bg-white p-0 transition focus-visible:outline-none focus-visible:shadow-[0_0_0_1.5px_rgb(91_99_255/0.5)]"
       >
@@ -273,7 +207,7 @@ function GalleryCard({
             {template.name}
           </div>
         )}
-      </button>
+      </Link>
 
       <div className="mt-2.5 min-w-0">
         <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium leading-[1.2] text-[#101114]">

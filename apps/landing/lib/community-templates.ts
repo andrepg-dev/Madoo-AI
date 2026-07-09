@@ -13,6 +13,10 @@ export type LandingCommunityTemplate = {
   variables: VariableSchemaRoot["variables"];
 };
 
+export type LandingCommunityTemplateDetail = LandingCommunityTemplate & {
+  html: string;
+};
+
 const COMMUNITY_TEMPLATES_URL = `${API_URL.replace(/\/$/, "")}/public/community-templates`;
 
 function nullableString(value: unknown): string | null {
@@ -71,5 +75,31 @@ export async function fetchLandingCommunityTemplates(): Promise<
     });
   } catch {
     return [];
+  }
+}
+
+export async function fetchLandingCommunityTemplate(
+  id: string,
+): Promise<LandingCommunityTemplateDetail | null> {
+  try {
+    const response = await fetch(
+      `${COMMUNITY_TEMPLATES_URL}/${encodeURIComponent(id)}`,
+      { next: { revalidate: 60 } },
+    );
+    if (!response.ok) return null;
+
+    const data: unknown = await response.json();
+    const base = toLandingTemplate(data);
+    if (!base) return null;
+
+    const html =
+      data && typeof data === "object" && "compiledHtml" in data
+        ? (data as { compiledHtml?: unknown }).compiledHtml
+        : null;
+    if (typeof html !== "string" || !html.trim()) return null;
+
+    return { ...base, html };
+  } catch {
+    return null;
   }
 }
