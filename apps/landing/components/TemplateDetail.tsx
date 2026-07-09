@@ -10,6 +10,7 @@ import type {
   LandingCommunityTemplateDetail,
 } from "@/lib/community-templates";
 import {
+  CheckmarkBadge01Icon,
   ComputerIcon,
   Moon02Icon,
   SmartPhone01Icon,
@@ -161,8 +162,10 @@ export default function TemplateDetail({
 
             <div
               className={cx(
-                "madoo-paper-border mx-auto overflow-hidden rounded-2xl bg-white shadow-[0_20px_60px_rgb(7_17_35/0.08)] transition-[max-width] duration-300 ease-out",
-                device === "mobile" ? "max-w-[400px]" : "max-w-none",
+                "madoo-paper-border mx-auto overflow-hidden rounded-2xl shadow-[0_20px_60px_rgb(7_17_35/0.08)] transition-[max-width] duration-300 ease-out",
+                device === "mobile"
+                  ? "max-w-[400px] bg-[#F7F7F7]"
+                  : "max-w-none bg-white",
               )}
             >
               <iframe
@@ -172,7 +175,11 @@ export default function TemplateDetail({
                 referrerPolicy="no-referrer"
                 className={cx(
                   "block h-[600px] w-full border-0 sm:h-[720px] lg:h-[calc(100vh-172px)]",
-                  scheme === "dark" ? "bg-[#0b0b0c]" : "bg-white",
+                  scheme === "dark"
+                    ? "bg-[#0b0b0c]"
+                    : device === "mobile"
+                      ? "bg-[#F7F7F7]"
+                      : "bg-white",
                 )}
               />
             </div>
@@ -210,6 +217,17 @@ export default function TemplateDetail({
             >
               {usingTemplate ? t.using : t.use}
             </button>
+
+            <div className="mt-3 flex items-center gap-2 text-xs text-madoo-muted">
+              <HugeiconsIcon
+                icon={CheckmarkBadge01Icon}
+                size={15}
+                strokeWidth={1.8}
+                className="shrink-0 text-madoo-copy"
+                aria-hidden="true"
+              />
+              {t.tested}
+            </div>
 
             <div className="mt-7 max-w-xl">
               <h2 className="m-0 text-xs font-medium uppercase tracking-wide text-madoo-muted">

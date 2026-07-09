@@ -444,6 +444,7 @@ export const localeCopy = {
       viewMobile: "Mobile view",
       schemeLight: "Light mode",
       schemeDark: "Dark mode",
+      tested: "Tested with Litmus & Email on Acid",
       recommended: "More templates",
       recommendedDescription: "Browse other designs from the community.",
       cards: [
@@ -713,6 +714,7 @@ export const localeCopy = {
       viewMobile: "Vista móvil",
       schemeLight: "Modo claro",
       schemeDark: "Modo oscuro",
+      tested: "Probado con Litmus y Email on Acid",
       recommended: "Más plantillas",
       recommendedDescription: "Explora otros diseños de la comunidad.",
       cards: [
