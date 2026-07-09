@@ -44,6 +44,27 @@ function applyScheme(html: string, scheme: Scheme): string {
     );
 }
 
+// Mirror the app's `madoo-preview-scrollbar`: a slim, rounded thumb floating
+// over a transparent track. Injected into the preview iframe so the email body
+// scrolls with the same chrome as the product instead of the browser default.
+function previewScrollbarStyle(scheme: Scheme): string {
+  const thumb = scheme === "dark" ? "rgba(255,255,255,0.26)" : "#555555";
+  const thumbHover = scheme === "dark" ? "rgba(255,255,255,0.4)" : "#3f3f3f";
+  return `<style>html{scrollbar-width:thin;scrollbar-color:${thumb} transparent;}::-webkit-scrollbar{width:20px;}::-webkit-scrollbar-track{background:transparent;margin-block:16px;}::-webkit-scrollbar-thumb{background:${thumb};border:7px solid transparent;border-right-width:9px;border-radius:999px;background-clip:padding-box;min-height:72px;}::-webkit-scrollbar-thumb:hover{background:${thumbHover};border:7px solid transparent;border-right-width:9px;background-clip:padding-box;}</style>`;
+}
+
+// Slip our style into the email's <head> (or <body>) so it wins without a
+// script — the iframe is fully sandboxed.
+function injectHead(html: string, snippet: string): string {
+  if (/<\/head>/i.test(html)) {
+    return html.replace(/<\/head>/i, `${snippet}</head>`);
+  }
+  if (/<body[^>]*>/i.test(html)) {
+    return html.replace(/(<body[^>]*>)/i, `$1${snippet}`);
+  }
+  return `${snippet}${html}`;
+}
+
 export default function TemplateDetail({
   locale = "en",
   template,
@@ -71,10 +92,13 @@ export default function TemplateDetail({
     () => /prefers-color-scheme\s*:\s*dark/i.test(template.html),
     [template.html],
   );
-  const srcDoc = useMemo(
-    () => (supportsDark ? applyScheme(template.html, scheme) : template.html),
-    [template.html, scheme, supportsDark],
-  );
+  const srcDoc = useMemo(() => {
+    const effectiveScheme: Scheme = supportsDark ? scheme : "light";
+    const base = supportsDark
+      ? applyScheme(template.html, scheme)
+      : template.html;
+    return injectHead(base, previewScrollbarStyle(effectiveScheme));
+  }, [template.html, scheme, supportsDark]);
 
   const variables = template.variables ?? [];
   const category = template.categories[0] ?? template.category;
