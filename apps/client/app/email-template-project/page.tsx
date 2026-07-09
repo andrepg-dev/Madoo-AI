@@ -685,20 +685,56 @@ function EmailTemplateProjectInner() {
       requestUserScroll();
 
       // Upload attachments to S3 so the AI can see them and reuse their URLs as
-      // <Img src> inside the email. Best-effort: a failed upload still streams.
+      // <Img src> inside the email. A failed upload must be visible: silently
+      // streaming without the image makes the AI answer "I don't see an image"
+      // while the chat bubble still shows the local preview.
       const uploadImages = async (emailId: string): Promise<string[]> => {
         if (files.length === 0) return [];
-        try {
-          return await Promise.all(
-            files.map((file) => uploadEmailImage(emailId, file)),
-          );
-        } catch {
-          return [];
+        const results = await Promise.allSettled(
+          files.map((file) => uploadEmailImage(emailId, file)),
+        );
+        const urls = results
+          .filter(
+            (result): result is PromiseFulfilledResult<string> =>
+              result.status === "fulfilled",
+          )
+          .map((result) => result.value);
+        const firstFailure = results.find(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        );
+        if (firstFailure) {
+          const reason =
+            firstFailure.reason instanceof Error
+              ? firstFailure.reason.message
+              : "Image upload failed.";
+          posthog.capture("email_image_upload_failed", {
+            email_id: emailId,
+            failed_count: results.length - urls.length,
+            reason,
+          });
+          setMessages((current) => [
+            ...current,
+            {
+              id: `upload-${Date.now()}-error`,
+              role: "error",
+              content:
+                urls.length > 0
+                  ? `Some images could not be attached: ${reason}`
+                  : `Your image could not be attached, so it was not sent to the AI. ${reason}`,
+              seq: Date.now(),
+              emailId,
+            },
+          ]);
         }
+        return urls;
       };
 
       if (currentEmailId) {
         const uploaded = await uploadImages(currentEmailId);
+        // Every attachment failed: stop here instead of spending a credit on a
+        // request the AI cannot fulfill without the image.
+        if (files.length > 0 && uploaded.length === 0) return;
         const shouldGenerateInitialVariant =
           Boolean(email) && (email?.variants.length ?? 0) === 0;
         if (!shouldGenerateInitialVariant) {
@@ -992,15 +1028,37 @@ function EmailTemplateProjectInner() {
         router.replace(`/email-template-project?id=${created.id}`);
         let uploaded: string[] = [...queryImageUrls];
         if (pendingImages.length > 0) {
-          try {
-            uploaded = [
-              ...uploaded,
-              ...(await Promise.all(
-                pendingImages.map((file) => uploadEmailImage(created.id, file)),
-              )),
-            ];
-          } catch {
-            // Keep any landing URLs already collected above.
+          const results = await Promise.allSettled(
+            pendingImages.map((file) => uploadEmailImage(created.id, file)),
+          );
+          uploaded = [
+            ...uploaded,
+            ...results
+              .filter(
+                (result): result is PromiseFulfilledResult<string> =>
+                  result.status === "fulfilled",
+              )
+              .map((result) => result.value),
+          ];
+          const firstFailure = results.find(
+            (result): result is PromiseRejectedResult =>
+              result.status === "rejected",
+          );
+          if (firstFailure) {
+            const reason =
+              firstFailure.reason instanceof Error
+                ? firstFailure.reason.message
+                : "Image upload failed.";
+            setMessages((current) => [
+              ...current,
+              {
+                id: `upload-${Date.now()}-error`,
+                role: "error",
+                content: `Some images could not be attached, so the AI will not see them. ${reason}`,
+                seq: Date.now(),
+                emailId: created.id,
+              },
+            ]);
           }
         }
         await startStream(created.id, "generate", undefined, undefined, uploaded);

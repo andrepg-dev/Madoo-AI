@@ -21,6 +21,12 @@ export async function uploadEmailImage(
     credentials: "include",
   });
   if (!res.ok) {
+    // Vercel rejects bodies over ~4.5 MB with a bare 413 before our route runs.
+    if (res.status === 413) {
+      throw new Error(
+        "The image is too large to upload (over the 4 MB limit).",
+      );
+    }
     const payload = (await res.json().catch(() => null)) as {
       message?: string;
     } | null;
