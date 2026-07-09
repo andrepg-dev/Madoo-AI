@@ -105,80 +105,49 @@ export default function TemplateDetail({
         goToAppLabel={copy.nav.goToApp}
       />
 
-      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-8 pt-10 sm:px-8 sm:pt-14">
-        <Link
-          href="/templates"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-madoo-muted transition hover:text-madoo-ink"
-        >
-          <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
-            <path
-              d="M10 3.5 5.5 8l4.5 4.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {t.detailBack}
-        </Link>
-
-        <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:gap-12">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-8 pt-8 sm:px-8 sm:pt-12">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
           {/* Live HTML preview — the email itself, rendered in a sandboxed
               iframe so its styles can't leak into the marketing page. */}
           <div className="min-w-0">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-madoo-muted">
-                {t.preview}
-              </span>
-              <div className="flex items-center gap-2">
-                {supportsDark ? (
-                  <Segmented
-                    value={scheme}
-                    onChange={setScheme}
-                    options={[
-                      { value: "light", label: t.schemeLight, icon: Sun03Icon },
-                      { value: "dark", label: t.schemeDark, icon: Moon02Icon },
-                    ]}
-                  />
-                ) : null}
+            <div className="mb-3 flex items-center justify-end gap-2">
+              {supportsDark ? (
                 <Segmented
-                  value={device}
-                  onChange={setDevice}
+                  value={scheme}
+                  onChange={setScheme}
                   options={[
-                    {
-                      value: "desktop",
-                      label: t.viewDesktop,
-                      icon: ComputerIcon,
-                    },
-                    {
-                      value: "mobile",
-                      label: t.viewMobile,
-                      icon: SmartPhone01Icon,
-                    },
+                    { value: "light", label: t.schemeLight, icon: Sun03Icon },
+                    { value: "dark", label: t.schemeDark, icon: Moon02Icon },
                   ]}
                 />
-              </div>
+              ) : null}
+              <Segmented
+                value={device}
+                onChange={setDevice}
+                options={[
+                  { value: "desktop", label: t.viewDesktop, icon: ComputerIcon },
+                  {
+                    value: "mobile",
+                    label: t.viewMobile,
+                    icon: SmartPhone01Icon,
+                  },
+                ]}
+              />
             </div>
 
             <div
               className={cx(
-                "madoo-paper-border mx-auto overflow-hidden rounded-2xl bg-white shadow-[0_28px_90px_rgb(7_17_35/0.10)] transition-[max-width] duration-300 ease-out",
-                device === "mobile" ? "max-w-[380px]" : "max-w-[600px]",
+                "madoo-paper-border mx-auto overflow-hidden rounded-2xl bg-white shadow-[0_20px_60px_rgb(7_17_35/0.08)] transition-[max-width] duration-300 ease-out",
+                device === "mobile" ? "max-w-[400px]" : "max-w-none",
               )}
             >
-              <div className="flex items-center gap-2 border-b border-zinc-200/70 bg-madoo-neutral-50 px-4 py-3">
-                <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
-                <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
-                <span className="h-2.5 w-2.5 rounded-full bg-zinc-300" />
-              </div>
               <iframe
                 title={template.name}
                 srcDoc={srcDoc}
                 sandbox=""
                 referrerPolicy="no-referrer"
                 className={cx(
-                  "h-[560px] w-full border-0 sm:h-[680px] lg:h-[calc(100vh-220px)]",
+                  "block h-[600px] w-full border-0 sm:h-[720px] lg:h-[calc(100vh-172px)]",
                   scheme === "dark" ? "bg-[#0b0b0c]" : "bg-white",
                 )}
               />
