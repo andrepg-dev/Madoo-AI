@@ -19,7 +19,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cx } from "@madoo/design-system";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AuthDialog from "./AuthDialog";
 import { TEMPLATE_ROLE_LABELS, localeCopy } from "./HomePage";
 import { LandingHeader } from "./LandingHeader";
@@ -27,11 +27,6 @@ import { LandingHeader } from "./LandingHeader";
 type Locale = "en" | "es";
 type Device = "desktop" | "mobile";
 type Scheme = "light" | "dark";
-
-// Community emails are laid out at a fixed desktop width. Render the phone
-// preview at that width and scale the whole iframe to fit the bezel, so the
-// email is shown in full (fit-to-width) instead of being clipped.
-const PHONE_DESIGN_WIDTH = 600;
 
 // Emails gate their dark styles behind `prefers-color-scheme`, which normally
 // follows the viewer's OS. Rewrite those queries to always/never match so the
@@ -90,30 +85,9 @@ export default function TemplateDetail({
   const [device, setDevice] = useState<Device>("desktop");
   const [scheme, setScheme] = useState<Scheme>("light");
 
-  const phoneScreenRef = useRef<HTMLDivElement>(null);
-  const [phoneScreen, setPhoneScreen] = useState({ width: 0, height: 0 });
-
   // Cookies aren't readable during SSR; detect the session after mount so the
   // header CTA doesn't cause a hydration mismatch.
   useEffect(() => setSignedIn(isLikelySignedIn()), []);
-
-  // Track the phone's inner screen size so the fixed-width email can be scaled
-  // to fit it.
-  useEffect(() => {
-    if (device !== "mobile") return;
-    const el = phoneScreenRef.current;
-    if (!el) return;
-    const measure = () =>
-      setPhoneScreen({ width: el.clientWidth, height: el.clientHeight });
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [device]);
-
-  const phoneScale = phoneScreen.width
-    ? phoneScreen.width / PHONE_DESIGN_WIDTH
-    : 1;
 
   const supportsDark = useMemo(
     () => /prefers-color-scheme\s*:\s*dark/i.test(template.html),
@@ -193,12 +167,12 @@ export default function TemplateDetail({
               className={cx(
                 "madoo-paper-border h-[600px] overflow-hidden  shadow-[0_20px_60px_rgb(7_17_35/0.08)] transition-colors duration-300 sm:h-[720px] lg:h-[calc(100vh-172px)]",
                 device === "mobile"
-                  ? "flex items-center justify-center bg-[#F7F7F7] p-6"
+                  ? "flex justify-center overflow-y-auto overflow-x-hidden bg-[#F7F7F7] p-6"
                   : "flex flex-col bg-white",
               )}
             >
               {device === "mobile" ? (
-                <div className="flex h-full w-full max-w-[280px] flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)] sm:max-w-[330px] lg:max-w-[360px] 2xl:max-w-[390px]">
+                <div className="relative flex h-[780px] w-[390px] shrink-0 flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)]">
                   {/* iOS status bar: gives the email breathing room under the
                       Dynamic Island instead of butting against it. */}
                   <div
@@ -258,32 +232,16 @@ export default function TemplateDetail({
                       </svg>
                     </span>
                   </div>
-                  <div
-                    ref={phoneScreenRef}
+                  <iframe
+                    title={template.name}
+                    srcDoc={srcDoc}
+                    sandbox=""
+                    referrerPolicy="no-referrer"
                     className={cx(
-                      "relative min-h-0 w-full flex-1 overflow-hidden",
+                      "min-h-0 w-full flex-1 border-0",
                       scheme === "dark" ? "bg-[#0b0b0c]" : "bg-white",
                     )}
-                  >
-                    <iframe
-                      title={template.name}
-                      srcDoc={srcDoc}
-                      sandbox=""
-                      referrerPolicy="no-referrer"
-                      style={{
-                        width: PHONE_DESIGN_WIDTH,
-                        height: phoneScreen.height
-                          ? phoneScreen.height / phoneScale
-                          : "100%",
-                        transform: `scale(${phoneScale})`,
-                        transformOrigin: "top left",
-                      }}
-                      className={cx(
-                        "border-0",
-                        scheme === "dark" ? "bg-[#0b0b0c]" : "bg-white",
-                      )}
-                    />
-                  </div>
+                  />
                 </div>
               ) : (
                 <>
