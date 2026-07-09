@@ -67,3 +67,20 @@ New **public** endpoint to expose compiled HTML (previously only the screenshot
 
 Backend endpoint is **new** — must deploy backend (manual: git pull + docker compose
 up --build) before the landing detail pages resolve on prod.
+
+## Update (same day) — preview polish (`8a67c1b`, landing-only)
+
+- Narrower preview: grid `[minmax(0,1fr) 380px]` → `[minmax(0,640px) minmax(0,1fr)]`,
+  frame capped `max-w-[600px]`, so the email hugs its content and the info column
+  gets more room.
+- **Device toggle** (desktop/mobile) in a toolbar above the frame — frame animates
+  between `max-w-[600px]` and `max-w-[380px]`.
+- **Dark-mode toggle**, shown only when the template ships dark CSS
+  (`/prefers-color-scheme:\s*dark/`). `applyScheme()` rewrites the email's
+  `prefers-color-scheme` media queries to always/never-match (`min-width:0px` /
+  `max-width:0px`) so the toggle is deterministic and works under `sandbox=""`
+  (CSS-only, no scripts).
+- Copy added (en+es): `viewDesktop`, `viewMobile`, `schemeLight`, `schemeDark`.
+- Verified live via SSH tunnel to prod API: desktop/mobile toggle works; dark toggle
+  correctly hidden (none of the 13 live templates ship dark CSS yet); `applyScheme`
+  rewrite unit-checked. Backend unchanged — Vercel auto-deploy only.
