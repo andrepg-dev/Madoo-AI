@@ -10,6 +10,7 @@ import type {
   LandingCommunityTemplateDetail,
 } from "@/lib/community-templates";
 import {
+  AiMagicIcon,
   ComputerIcon,
   Moon02Icon,
   SmartPhone01Icon,
@@ -130,7 +131,7 @@ export default function TemplateDetail({
       />
 
       <section className="relative z-10 mx-auto w-full max-w-[1440px] px-4 pb-8 pt-8 sm:px-8 sm:pt-12">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-14">
           {/* Live HTML preview — the email itself, rendered in a sandboxed
               iframe so its styles can't leak into the marketing page. */}
           <div className="min-w-0">
@@ -272,11 +273,17 @@ export default function TemplateDetail({
 
           {/* Info panel */}
           <aside className="flex min-w-0 flex-col self-start lg:sticky lg:top-24">
-            {category ? (
-              <span className="mb-3 inline-flex w-fit items-center rounded-full bg-madoo-ink/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-madoo-copy">
-                {category}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {category ? (
+                <span className="inline-flex items-center rounded-full bg-madoo-ink/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-madoo-copy">
+                  {category}
+                </span>
+              ) : null}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(91_99_255/0.1)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[rgb(91_99_255)]">
+                <HugeiconsIcon icon={AiMagicIcon} size={13} strokeWidth={2} />
+                {t.aiGenerated}
               </span>
-            ) : null}
+            </div>
 
             <h1 className="m-0 text-3xl font-semibold leading-[1.1] text-madoo-text sm:text-4xl">
               {template.name}
