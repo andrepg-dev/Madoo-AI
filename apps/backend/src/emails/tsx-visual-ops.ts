@@ -39,8 +39,8 @@ const SKIP_TAG_NAMES = new Set([
   "script",
 ]);
 
-/** Deleting these would produce a broken document. */
-const PROTECTED_DELETE_NAMES = new Set(["Html", "Head", "Body", "Preview"]);
+/** Deleting or moving these would produce a broken document. */
+const PROTECTED_STRUCTURE_NAMES = new Set(["Html", "Head", "Body", "Preview"]);
 
 const FUNCTION_TYPES = new Set([
   "ArrowFunctionExpression",
@@ -258,6 +258,51 @@ function isPlainJsxText(text: string): boolean {
 }
 
 /**
+ * A sibling counts as visual content for reordering: another element, or an
+ * expression block like `{items.map(...)}` / `{flag && <X />}` that renders
+ * something. Whitespace JSXText between them is skipped (and left in place —
+ * recast reprints the swapped nodes with their surrounding formatting).
+ */
+function isMovableSibling(node: unknown): boolean {
+  if (n.JSXElement.check(node)) return true;
+  return (
+    n.JSXExpressionContainer.check(node) &&
+    !n.JSXEmptyExpression.check(node.expression)
+  );
+}
+
+/** Swaps the element with its previous/next sibling in the parent's children. */
+function moveAmongSiblings(
+  path: AstPath,
+  element: recast.types.namedTypes.JSXElement,
+  direction: "up" | "down",
+  name: string,
+): void {
+  const parentNode = path.parent?.node as { children?: unknown[] } | undefined;
+  const children = parentNode?.children;
+  if (!Array.isArray(children)) {
+    throw new BadRequestException(`<${name}> cannot be moved.`);
+  }
+  const index = children.indexOf(element);
+  if (index === -1) {
+    throw new BadRequestException(`<${name}> cannot be moved.`);
+  }
+  const step = direction === "up" ? -1 : 1;
+  let target = index + step;
+  while (target >= 0 && target < children.length && !isMovableSibling(children[target])) {
+    target += step;
+  }
+  if (target < 0 || target >= children.length) {
+    throw new BadRequestException(
+      direction === "up"
+        ? `<${name}> is already at the top of its section.`
+        : `<${name}> is already at the bottom of its section.`,
+    );
+  }
+  [children[index], children[target]] = [children[target], children[index]];
+}
+
+/**
  * Applies visual ops to the stored component source and reprints it.
  * Every op re-validates server-side (dynamic nodes, protected elements),
  * so a stale or forged client payload cannot corrupt the document.
@@ -289,12 +334,21 @@ export function applyVisualOps(
     }
 
     if (op.op === "delete") {
-      if (PROTECTED_DELETE_NAMES.has(name)) {
+      if (PROTECTED_STRUCTURE_NAMES.has(name)) {
         throw new BadRequestException(`<${name}> cannot be deleted.`);
       }
       path.prune();
       byId.delete(op.nodeId);
       summaries.push(`Deleted <${name}>`);
+      continue;
+    }
+
+    if (op.op === "move") {
+      if (PROTECTED_STRUCTURE_NAMES.has(name)) {
+        throw new BadRequestException(`<${name}> cannot be moved.`);
+      }
+      moveAmongSiblings(path, element, op.direction, name);
+      summaries.push(`Moved <${name}> ${op.direction}`);
       continue;
     }
 

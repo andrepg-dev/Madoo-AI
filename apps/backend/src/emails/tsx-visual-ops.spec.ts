@@ -178,6 +178,78 @@ describe("applyVisualOps", () => {
     );
   });
 
+  it("move down swaps the element with its next sibling", () => {
+    const id = idOf(tagged, "{headline}</Text>");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "move", nodeId: id, direction: "down" },
+    ]);
+    const headlineAt = result.code.indexOf("{headline}</Text>");
+    const paragraphAt = result.code.indexOf("A hard-coded paragraph.");
+    assert.ok(
+      headlineAt > paragraphAt,
+      "headline should now come after the paragraph",
+    );
+    assert.deepEqual(result.summaries, ["Moved <Text> down"]);
+  });
+
+  it("move up swaps with the previous element, skipping whitespace", () => {
+    const id = idOf(tagged, "<Button");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "move", nodeId: id, direction: "up" },
+    ]);
+    const buttonAt = result.code.indexOf("<Button");
+    const paragraphAt = result.code.indexOf("A hard-coded paragraph.");
+    assert.ok(
+      buttonAt < paragraphAt,
+      "button should now come before the paragraph",
+    );
+  });
+
+  it("move down reorders whole sections", () => {
+    const id = idOf(tagged, "padding: '20px'");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "move", nodeId: id, direction: "down" },
+    ]);
+    assert.ok(
+      result.code.indexOf("<Row>") < result.code.indexOf("{headline}</Text>"),
+      "items section should now come first",
+    );
+  });
+
+  it("refuses to move past the edges", () => {
+    const id = idOf(tagged, "{headline}</Text>");
+    assert.throws(
+      () =>
+        applyVisualOps(SAMPLE, [{ op: "move", nodeId: id, direction: "up" }]),
+      /already at the top/,
+    );
+  });
+
+  it("refuses to move protected elements", () => {
+    const line = tagComponentSource(SAMPLE)
+      .split("\n")
+      .find((l) => l.includes("<Body") && l.includes("data-m-id"));
+    assert.ok(line);
+    const bodyId = line.match(/data-m-id="(\d+:\d+)"/)![1];
+    assert.throws(
+      () =>
+        applyVisualOps(SAMPLE, [
+          { op: "move", nodeId: bodyId, direction: "down" },
+        ]),
+      /cannot be moved/,
+    );
+  });
+
+  it("moved output recompiles cleanly", () => {
+    const id = idOf(tagged, "{headline}</Text>");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "move", nodeId: id, direction: "down" },
+    ]);
+    const service = new ReactToHtmlService();
+    const html = service.compile(result.code, {});
+    assert.match(html, /A hard-coded paragraph\./);
+  });
+
   it("edited output recompiles cleanly end to end", () => {
     const id = idOf(tagged, "{headline}</Text>");
     const result = applyVisualOps(SAMPLE, [
