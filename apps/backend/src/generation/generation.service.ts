@@ -29,6 +29,7 @@ import {
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
+import { extractElementSnippet } from "../emails/tsx-visual-ops";
 import {
   EMIT_EMAIL_TOOL,
   FIND_BRAND_IMAGES_TOOL,
@@ -336,7 +337,12 @@ export class GenerationService {
   editEmailStream(
     emailId: string,
     workspaceId: string,
-    body: { instruction: string; baseVariantId?: string; imageUrls?: string[] },
+    body: {
+      instruction: string;
+      baseVariantId?: string;
+      imageUrls?: string[];
+      selectedElement?: { nodeId: string; label: string };
+    },
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
       const ac = new AbortController();
@@ -696,7 +702,12 @@ export class GenerationService {
   private async runEdit(
     emailId: string,
     workspaceId: string,
-    body: { instruction: string; baseVariantId?: string; imageUrls?: string[] },
+    body: {
+      instruction: string;
+      baseVariantId?: string;
+      imageUrls?: string[];
+      selectedElement?: { nodeId: string; label: string };
+    },
     emit: (p: Record<string, unknown>) => void,
     opts?: { groupId?: string; skipUserMessage?: boolean; contextUpTo?: Date },
     signal?: AbortSignal,
@@ -739,6 +750,27 @@ export class GenerationService {
     });
 
     const instruction = body.instruction.trim();
+
+    // Visual-editor targeting: the user clicked an element in the preview, so
+    // pin the edit to that exact node instead of letting the model guess which
+    // part of the email the instruction refers to.
+    let selectedElementBlock = "";
+    if (body.selectedElement) {
+      const selected = extractElementSnippet(
+        baseCode,
+        body.selectedElement.nodeId,
+      );
+      if (selected) {
+        selectedElementBlock = [
+          "",
+          `The user visually selected this <${selected.name}> element in the preview. Apply the instruction to exactly this element (keep the rest of the email unchanged unless the instruction says otherwise):`,
+          "```tsx",
+          selected.snippet,
+          "```",
+        ].join("\n");
+      }
+    }
+
     const recentChat = await this.loadRecentChatContext(
       emailId,
       opts?.contextUpTo,
@@ -761,6 +793,7 @@ export class GenerationService {
     const editPrompt = [
       "Edit the current Madoo TSX email component according to the instruction.",
       `Instruction:\n${instruction}`,
+      selectedElementBlock,
       brandKitBlock ? `\n${brandKitBlock}` : "",
       "",
       versionLine,

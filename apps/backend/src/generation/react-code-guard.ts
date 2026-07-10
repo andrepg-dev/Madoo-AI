@@ -56,6 +56,9 @@ const DENIED_PROPERTIES = new Set([
   "__defineSetter__",
   "__lookupGetter__",
   "__lookupSetter__",
+  // Raw-HTML injection: the visual editor renders previews in a same-origin
+  // iframe, so generated markup must never carry arbitrary script-capable HTML.
+  "dangerouslySetInnerHTML",
 ]);
 
 function reject(reason: string): never {
@@ -128,6 +131,13 @@ export function assertSafeComponentSource(code: string): void {
       const name = propertyName(property);
       if (name && DENIED_PROPERTIES.has(name)) {
         reject(`access to "${name}" is not allowed`);
+      }
+    },
+    // JSX form of raw-HTML injection: <div dangerouslySetInnerHTML={…} />.
+    JSXAttribute(path) {
+      const name = path.node.name;
+      if (name.type === "JSXIdentifier" && name.name === "dangerouslySetInnerHTML") {
+        reject("dangerouslySetInnerHTML is not allowed");
       }
     },
     // Block destructuring an escape gadget out of an object: `const { constructor: c } = x`.

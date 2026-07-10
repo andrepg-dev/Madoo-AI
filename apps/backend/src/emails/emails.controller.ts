@@ -25,6 +25,7 @@ import {
 import { EmailsService } from "./emails.service";
 import { GenerationService } from "../generation/generation.service";
 import {
+  ApplyVisualEditSchema,
   CreateEmailFromTemplateSchema,
   CreateEmailSchema,
   EditEmailSchema,
@@ -230,6 +231,32 @@ export class EmailsController {
       user.sub,
       dto,
     );
+  }
+
+  @Get(":id/variants/:variantId/editable-html")
+  getEditableHtml(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Param("variantId") variantId: string,
+  ) {
+    return this.emails.getEditableVariantHtml(
+      id,
+      variantId,
+      req.workspace.id,
+      user.sub,
+    );
+  }
+
+  @Post(":id/visual-edit")
+  applyVisualEdit(
+    @Req() req: WorkspaceScopedRequest,
+    @CurrentUser() user: { sub: string },
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const dto = ApplyVisualEditSchema.parse(body);
+    return this.emails.applyVisualEdit(id, req.workspace.id, user.sub, dto);
   }
 
   @Post(":id/generate")

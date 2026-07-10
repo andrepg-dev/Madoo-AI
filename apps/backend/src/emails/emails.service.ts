@@ -34,7 +34,10 @@ import {
   type UpdateEmailShareInput,
   type UpdateEmailVariantVariableSchemaInput,
   type VariableSchemaRoot,
+  type ApplyVisualEditInput,
+  type EditableEmailHtmlDto,
 } from "@madoo/shared";
+import { applyVisualOps, tagComponentSource } from "./tsx-visual-ops";
 import { PrismaService } from "../prisma/prisma.service";
 import { WorkspacesService } from "../workspaces/workspaces.service";
 import { TemplatesService } from "../templates/templates.service";
@@ -677,6 +680,125 @@ export class EmailsService {
         ...(previewUrl ? { previewUrl } : {}),
       },
     });
+    return this.toDto(emailId);
+  }
+
+  /**
+   * Compiles a variant's TSX with the visual-editor tagging pass so every
+   * selectable element carries `data-m-id` (+ capability flags). Computed on
+   * demand and never persisted — the stored compiledHtml stays clean for
+   * sending/exporting.
+   */
+  async getEditableVariantHtml(
+    emailId: string,
+    variantId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<EditableEmailHtmlDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    const variant = await this.prisma.emailVariant.findFirst({
+      where: { id: variantId, emailId, workspaceId },
+      select: { id: true, componentCode: true, variableSchema: true },
+    });
+    if (!variant) throw new NotFoundException("Email variant not found.");
+
+    const tagged = tagComponentSource(variant.componentCode);
+    const html = this.reactToHtml.compile(
+      tagged,
+      buildRenderVariables(parseVariableSchemaJson(variant.variableSchema)),
+    );
+    return { variantId: variant.id, html };
+  }
+
+  /**
+   * Applies direct-manipulation ops (edit text / delete element) to a
+   * variant's TSX and saves the result as a new variant, so the version
+   * dropdown doubles as undo history. Manual edits are free — no AI credit.
+   */
+  async applyVisualEdit(
+    emailId: string,
+    workspaceId: string,
+    userId: string,
+    dto: ApplyVisualEditInput,
+  ): Promise<EmailDto> {
+    await this.workspaces.assertMembership(userId, workspaceId);
+    const variant = await this.prisma.emailVariant.findFirst({
+      where: { id: dto.baseVariantId, emailId, workspaceId },
+      select: {
+        id: true,
+        subject: true,
+        componentCode: true,
+        variableSchema: true,
+      },
+    });
+    if (!variant) throw new NotFoundException("Email variant not found.");
+
+    const result = applyVisualOps(variant.componentCode, dto.ops);
+
+    const variableSchema = parseVariableSchemaJson(variant.variableSchema);
+    for (const update of result.variableUpdates) {
+      const spec = variableSchema.variables.find(
+        (v) => v.name === update.name,
+      );
+      if (spec) spec.default = update.value;
+    }
+
+    // compile() re-runs the AST security guard on the patched source before
+    // executing it, so a bug in the op layer cannot smuggle code past it.
+    const compiledHtml = this.reactToHtml.compile(
+      result.code,
+      buildRenderVariables(variableSchema),
+    );
+
+    const seq = await this.nextVariantSeq(emailId);
+    const created = await this.prisma.emailVariant.create({
+      data: {
+        workspaceId,
+        emailId,
+        seq,
+        subject: variant.subject,
+        componentCode: result.code,
+        compiledHtml,
+        variableSchema: variableSchema as object,
+      },
+    });
+
+    try {
+      const previewUrl = await this.createPreviewUrl(compiledHtml);
+      await this.prisma.emailVariant.update({
+        where: { id: created.id },
+        data: { previewUrl },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Visual edit preview refresh failed for variant ${created.id}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // Leave a status row in the chat so the timeline explains why a new
+    // version exists (mapChatMessages renders kind=STATUS as a status line).
+    await this.prisma.emailChatMessage.create({
+      data: {
+        workspaceId,
+        emailId,
+        role: "ASSISTANT",
+        kind: "STATUS",
+        content: `Manual edit: ${result.summaries.join(", ")}.`,
+      },
+    });
+
+    await this.recordProductEvent({
+      userId,
+      workspaceId,
+      name: "email.visual_edit",
+      source: "emails.visual_edit",
+      properties: {
+        emailId,
+        baseVariantId: variant.id,
+        ops: dto.ops.map((op) => op.op),
+      },
+    });
+
     return this.toDto(emailId);
   }
 
