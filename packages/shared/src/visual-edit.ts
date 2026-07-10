@@ -37,6 +37,12 @@ export const VisualEditOpSchema = z.discriminatedUnion("op", [
     op: z.literal("delete"),
     nodeId: VisualEditNodeIdSchema,
   }),
+  z.object({
+    op: z.literal("move"),
+    nodeId: VisualEditNodeIdSchema,
+    /** Swap with the previous/next sibling element in the JSX tree. */
+    direction: z.enum(["up", "down"]),
+  }),
 ]);
 
 export type VisualEditOp = z.infer<typeof VisualEditOpSchema>;
