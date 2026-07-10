@@ -207,12 +207,12 @@ const featureTabImages = [
     alt: "HTML export connected to Mailchimp, Klaviyo, Zapier, SendGrid, Outlook, and upload anywhere",
   },
   {
-    src: "/product/prompt-to-inbox-flow.png",
-    alt: "AI email flow from prompt to templates to a finished email, ready to send to the inbox",
+    src: "/product/time-saving-hero.webp",
+    alt: "Paper-cutout illustration of a one-line prompt turning into a finished email landing in an inbox tray, with a stopwatch above",
   },
   {
-    src: "/product/client-compatibility.png",
-    alt: "Email client compatibility checks across Desktop Gmail, Tablet Outlook, and Mobile Gmail",
+    src: "/product/test-email-engine-hero.webp",
+    alt: "Paper-cutout illustration of one email verified with checkmarks across desktop, tablet, and phone",
   },
   {
     src: "/product/team-collaboration.png",
@@ -299,7 +299,7 @@ export const localeCopy = {
       readyLabel: "Ready",
     },
     productFeatures: {
-      cta: "Get started free",
+      cta: "See examples",
       tabs: [
         {
           label: "Designs & Layouts",
@@ -570,7 +570,7 @@ export const localeCopy = {
       readyLabel: "Listo",
     },
     productFeatures: {
-      cta: "Empieza gratis",
+      cta: "Ver ejemplos",
       tabs: [
         {
           label: "Diseño y Layouts",
@@ -1362,17 +1362,12 @@ export default function HomePage({
                   })}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    signedIn
-                      ? window.location.assign(clientHomeUrl())
-                      : openAuthDialog()
-                  }
+                <a
+                  href="#templates"
                   className="mt-8 inline-flex h-12 w-fit cursor-pointer items-center justify-center rounded-full bg-madoo-ink px-7 text-sm font-semibold text-white transition hover:bg-madoo-ink-hover"
                 >
                   {copy.productFeatures.cta}
-                </button>
+                </a>
               </div>
 
               <div
