@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  applyEmailVisualEdit,
   createEmail,
+  fetchEditableEmailHtml,
   fetchEmail,
   fetchEmailChat,
   getEmailRating,
@@ -53,13 +55,15 @@ import { highlightMergeTags } from "@/lib/highlight-merge-tags";
 import { playCompletionSound } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useClientStore } from "@/stores/client-store";
-import { ArrowDown02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown02Icon, Cancel01Icon, Target02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, useToast } from "@madoo/design-system";
 import type {
   EmailChatMessageDto,
   EmailDto,
   EmailRatingInput,
+  SelectedEmailElement,
+  VisualEditOp,
 } from "@madoo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -266,6 +270,88 @@ function EmailTemplateProjectInner() {
     () => highlightMergeTags(previewSrcDoc),
     [previewSrcDoc],
   );
+
+  // --- Visual edit mode (click-to-edit in the preview) ---------------------
+  const [visualEditOn, setVisualEditOn] = useState(false);
+  // Element the next AI edit should target, picked via "Ask AI" in the preview.
+  const [aiTarget, setAiTarget] = useState<
+    (SelectedEmailElement & { variantId: string }) | null
+  >(null);
+
+  // Tagged render of the active variant: same HTML as the preview plus
+  // data-m-id markers. Ids are minted per variant, so the key includes it.
+  const editableHtmlQuery = useQuery({
+    queryKey: ["email-editable", currentEmailId, activeVariant?.id],
+    queryFn: () => fetchEditableEmailHtml(currentEmailId!, activeVariant!.id),
+    enabled: Boolean(
+      visualEditOn && currentEmailId && activeVariant && !isStreaming,
+    ),
+    staleTime: Infinity,
+  });
+
+  const visualEditMutation = useMutation({
+    mutationFn: (ops: VisualEditOp[]) =>
+      applyEmailVisualEdit(currentEmailId!, {
+        baseVariantId: activeVariant!.id,
+        ops,
+      }),
+    onSuccess: (dto) => {
+      // The response carries the new variant; seed it and jump the preview to
+      // the latest version (which is that new variant).
+      queryClient.setQueryData(["email", currentEmailId], dto);
+      setSelectedVariantId(null);
+      void queryClient.invalidateQueries({
+        queryKey: ["email-chat", currentEmailId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["emails"] });
+    },
+    onError: (error) => {
+      toast({
+        tone: "danger",
+        title: "Edit not applied",
+        body: error instanceof Error ? error.message : "Try again.",
+      });
+    },
+  });
+
+  // Live-streamed HTML carries no ids; leave edit mode while a turn runs.
+  useEffect(() => {
+    if (isStreaming) setVisualEditOn(false);
+  }, [isStreaming]);
+
+  // Node ids only match the variant they were tagged against — drop a pending
+  // AI target when the previewed version changes underneath it.
+  useEffect(() => {
+    setAiTarget((current) =>
+      current && current.variantId !== activeVariant?.id ? null : current,
+    );
+  }, [activeVariant?.id]);
+
+  const editableHtml =
+    visualEditOn &&
+    !isStreaming &&
+    editableHtmlQuery.data &&
+    activeVariant &&
+    editableHtmlQuery.data.variantId === activeVariant.id
+      ? editableHtmlQuery.data.html
+      : null;
+  const sidebarSrcDoc = useMemo(
+    () =>
+      editableHtml
+        ? (highlightMergeTags(editableHtml) ?? editableHtml)
+        : (highlightedPreviewSrcDoc ?? ""),
+    [editableHtml, highlightedPreviewSrcDoc],
+  );
+
+  const handleAskAiOnElement = useCallback(
+    (element: SelectedEmailElement) => {
+      if (!activeVariant) return;
+      setAiTarget({ ...element, variantId: activeVariant.id });
+      // On narrow screens jump back to the chat so the target chip is visible.
+      setMobileTab("chat");
+    },
+    [activeVariant],
+  );
   const previewSubject =
     streamedSubject ?? activeVariant?.subject ?? "Untitled email";
   const currentPlan = billingOverview?.subscription.plan;
@@ -327,6 +413,7 @@ function EmailTemplateProjectInner() {
       instruction?: string,
       baseVariantId?: string,
       imageUrls?: string[],
+      selectedElement?: SelectedEmailElement,
     ) => {
       const assistantId = `${mode}-${Date.now()}-assistant`;
       const timeline = createTimelineMessage(
@@ -595,6 +682,7 @@ function EmailTemplateProjectInner() {
               instruction: instruction ?? "",
               ...(baseVariantId ? { baseVariantId } : {}),
               ...(hasImages ? { imageUrls } : {}),
+              ...(selectedElement ? { selectedElement } : {}),
             })
             : mode === "generate" && ((instruction?.trim().length ?? 0) > 0 || hasImages)
               ? JSON.stringify({
@@ -741,13 +829,21 @@ function EmailTemplateProjectInner() {
           posthog.capture("email_edit_submitted", {
             email_id: currentEmailId,
             has_images: (input.images?.length ?? 0) > 0,
+            has_selected_element: Boolean(aiTarget),
           });
+          // A picked element pins the edit to the variant it was tagged
+          // against — its node id means nothing on any other variant.
+          const target = aiTarget;
+          setAiTarget(null);
           await startStream(
             currentEmailId,
             "edit",
             input.prompt,
-            variant?.id,
+            target?.variantId ?? variant?.id,
             uploaded,
+            target
+              ? { nodeId: target.nodeId, label: target.label }
+              : undefined,
           );
         } else {
           posthog.capture("email_generation_started", {
@@ -800,6 +896,7 @@ function EmailTemplateProjectInner() {
       }
     },
     [
+      aiTarget,
       currentEmailId,
       email,
       isStreaming,
@@ -1327,6 +1424,34 @@ function EmailTemplateProjectInner() {
                 rating={ratingQuery.data}
               />
             ) : null}
+            {aiTarget ? (
+              <div className="mb-2 flex w-fit max-w-full items-center gap-2 rounded-full bg-madoo-bg py-1 pl-3 pr-1.5 text-xs text-madoo-ink shadow-madoo-border">
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  icon={Target02Icon}
+                  primaryColor="currentColor"
+                  size={14}
+                  strokeWidth={1.6}
+                />
+                <span className="min-w-0 truncate">
+                  Editing {aiTarget.label}
+                </span>
+                <button
+                  aria-label="Clear selected element"
+                  className="flex size-5 shrink-0 items-center justify-center rounded-full text-madoo-ink-muted transition-colors hover:bg-white"
+                  onClick={() => setAiTarget(null)}
+                  type="button"
+                >
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    icon={Cancel01Icon}
+                    primaryColor="currentColor"
+                    size={12}
+                    strokeWidth={1.6}
+                  />
+                </button>
+              </div>
+            ) : null}
             <ClientPromptBox
               classNames={{
                 root: "w-full",
@@ -1366,12 +1491,24 @@ function EmailTemplateProjectInner() {
               open={sidebarOpen}
               setMode={setPreviewMode}
               showUpgradeButton={showUpgradeButton}
-              srcDoc={highlightedPreviewSrcDoc ?? ""}
+              srcDoc={sidebarSrcDoc}
               setTheme={setTemplateTheme}
               setWidth={updatePreviewWidth}
               subject={previewSubject}
               theme={templateTheme}
               variant={activeVariant}
+              visualEdit={
+                activeVariant && !isStreaming
+                  ? {
+                      enabled: visualEditOn,
+                      loading: visualEditOn && !editableHtml,
+                      applying: visualEditMutation.isPending,
+                      onToggle: () => setVisualEditOn((on) => !on),
+                      onApply: (ops) => visualEditMutation.mutate(ops),
+                      onAskAi: handleAskAiOnElement,
+                    }
+                  : null
+              }
               width={previewWidth}
             />
           </div>

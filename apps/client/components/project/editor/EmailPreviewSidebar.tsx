@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Button, SegmentedControl } from "@madoo/design-system";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CrownPlusIcon, EyeIcon, FileExportIcon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
-import type { EmailDto, EmailVariantDto } from "@madoo/shared";
+import { CrownPlusIcon, CursorMagicSelection01Icon, EyeIcon, FileExportIcon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
+import type { EmailDto, EmailVariantDto, SelectedEmailElement, VisualEditOp } from "@madoo/shared";
 import { cn } from "@/lib/utils";
 import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
 import { defaultPreviewWidthVw, previewModeItems, previewThemeItems } from "./constants";
@@ -12,6 +12,21 @@ import type { PreviewMode, TemplateTheme } from "./types";
 import { HeaderPillButton } from "./HeaderPillButton";
 import { ShareProjectDropdown } from "./ShareProjectDropdown";
 import { VersionsDropdown } from "./VersionsDropdown";
+import { VisualEditToolbar } from "./VisualEditToolbar";
+import { useVisualEditSelection } from "./useVisualEditSelection";
+
+/** Wiring for the click-to-edit mode; the page owns the state, the sidebar renders it. */
+export type VisualEditController = {
+  /** Edit mode toggle state. */
+  enabled: boolean;
+  /** Tagged HTML for the active variant is still being fetched. */
+  loading: boolean;
+  /** A visual-edit apply request is in flight. */
+  applying: boolean;
+  onToggle: () => void;
+  onApply: (ops: VisualEditOp[]) => void;
+  onAskAi: (element: SelectedEmailElement) => void;
+};
 
 export function EmailPreviewSidebar({
   expanded,
@@ -34,6 +49,7 @@ export function EmailPreviewSidebar({
   subject,
   theme,
   variant,
+  visualEdit,
   width,
 }: {
   expanded: boolean;
@@ -57,12 +73,24 @@ export function EmailPreviewSidebar({
   subject: string;
   theme: TemplateTheme;
   variant: EmailVariantDto | null;
+  /** Present when this email supports click-to-edit; null hides the mode entirely. */
+  visualEdit?: VisualEditController | null;
   width: number;
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const [variablesOpen, setVariablesOpen] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeHeight, setIframeHeight] = useState(900);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  // Bumps on every iframe load so selection listeners re-attach to the new doc.
+  const [docVersion, setDocVersion] = useState(0);
+
+  const { selection, clearSelection } = useVisualEditSelection({
+    enabled: Boolean(visualEdit?.enabled && !visualEdit.loading),
+    iframeRef,
+    overlayRef,
+    docVersion,
+  });
 
   const variants = email?.variants ?? [];
   const latestVariantId = latestVariant(email)?.id;
@@ -115,6 +143,7 @@ export function EmailPreviewSidebar({
   // loading), so the outer scroll container always covers the full email.
   const handleIframeLoad = useCallback(() => {
     syncIframeHeight();
+    setDocVersion((version) => version + 1);
     const body = iframeRef.current?.contentDocument?.body;
     resizeObserverRef.current?.disconnect();
     if (body && typeof ResizeObserver !== "undefined") {
@@ -123,6 +152,12 @@ export function EmailPreviewSidebar({
       resizeObserverRef.current = observer;
     }
   }, [syncIframeHeight]);
+
+  // Element boxes shift when the preview switches desktop/mobile or resizes —
+  // a kept selection would float over the wrong spot.
+  useEffect(() => {
+    clearSelection();
+  }, [clearSelection, mode, width]);
 
   useEffect(() => () => resizeObserverRef.current?.disconnect(), []);
 
@@ -336,6 +371,26 @@ export function EmailPreviewSidebar({
                 </Button>
               ) : null}
 
+              {visualEdit ? (
+                <Button
+                  aria-label="Toggle visual edit mode"
+                  aria-pressed={visualEdit.enabled}
+                  className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
+                  onClick={visualEdit.onToggle}
+                  size="sm"
+                  variant={visualEdit.enabled ? "primary" : "secondary"}
+                >
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    icon={CursorMagicSelection01Icon}
+                    primaryColor="currentColor"
+                    size={15}
+                    strokeWidth={1.55}
+                  />
+                  <span>{visualEdit.loading ? "Edit…" : "Edit"}</span>
+                </Button>
+              ) : null}
+
               <VersionsDropdown
                 activeId={variant?.id}
                 latestId={latestVariantId}
@@ -376,25 +431,47 @@ export function EmailPreviewSidebar({
           ) : null}
 
           <div className="madoo-preview-scrollbar mr-1 h-full min-w-0 flex-1 overflow-y-auto">
-            <div
-              className={cn(
-                "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)/0.14)] transition-[width] duration-300",
-                mode === "desktop" ? "w-full" : "w-97.5",
-              )}
-            >
-              <iframe
+            {/* Overlay host: the floating toolbar is positioned against this
+                wrapper so it scrolls with the email content. */}
+            <div className="relative" ref={overlayRef}>
+              <div
                 className={cn(
-                  "block w-full border-0 bg-white",
-                  isResizing && "pointer-events-none",
+                  "mx-auto overflow-hidden shadow-[0_18px_44px_rgb(var(--ink-shadow-rgb)/0.14)] transition-[width] duration-300",
+                  mode === "desktop" ? "w-full" : "w-97.5",
                 )}
-                onLoad={handleIframeLoad}
-                ref={iframeRef}
-                scrolling="no"
-                sandbox="allow-same-origin"
-                srcDoc={themedSrcDoc}
-                style={{ height: iframeHeight }}
-                title="Generated email template preview"
-              />
+              >
+                <iframe
+                  className={cn(
+                    "block w-full border-0 bg-white",
+                    isResizing && "pointer-events-none",
+                  )}
+                  onLoad={handleIframeLoad}
+                  ref={iframeRef}
+                  scrolling="no"
+                  sandbox="allow-same-origin"
+                  srcDoc={themedSrcDoc}
+                  style={{ height: iframeHeight }}
+                  title="Generated email template preview"
+                />
+              </div>
+
+              {visualEdit?.enabled && selection ? (
+                <VisualEditToolbar
+                  busy={visualEdit.applying}
+                  key={selection.nodeId}
+                  onApply={visualEdit.onApply}
+                  onAskAi={() => {
+                    visualEdit.onAskAi({
+                      nodeId: selection.nodeId,
+                      label: selection.label,
+                    });
+                    clearSelection();
+                  }}
+                  onClose={clearSelection}
+                  selection={selection}
+                  variables={variant?.variableSchema.variables}
+                />
+              ) : null}
             </div>
           </div>
         </div>

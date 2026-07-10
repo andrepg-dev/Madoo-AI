@@ -2,8 +2,10 @@
 
 import { FetchWrapper } from "@/lib/api/fetch-wrapper";
 import {
+  ApplyVisualEditSchema,
   CreateEmailFromTemplateSchema,
   CreateEmailSchema,
+  EditableEmailHtmlDtoSchema,
   EmailChatMessageDtoSchema,
   EmailDtoSchema,
   EmailRatingDtoSchema,
@@ -16,8 +18,10 @@ import {
   TransferEmailSchema,
   UpdateEmailShareSchema,
   UpdateEmailVariantVariableSchemaSchema,
+  type ApplyVisualEditInput,
   type CreateEmailFromTemplateInput,
   type CreateEmailInput,
+  type EditableEmailHtmlDto,
   type EditEmailInput,
   type EmailChatMessageDto,
   type EmailDto,
@@ -34,8 +38,10 @@ import {
 import { z } from "zod";
 
 export type {
+  ApplyVisualEditInput,
   CreateEmailFromTemplateInput,
   CreateEmailInput,
+  EditableEmailHtmlDto,
   EditEmailInput,
   EmailChatMessageDto,
   EmailDto,
@@ -206,6 +212,34 @@ export async function updateEmailVariantVariableSchema(
       body: JSON.stringify(body),
     },
   );
+  return EmailDtoSchema.parse(raw);
+}
+
+/**
+ * Tagged render of a variant for the visual editor: same compile pipeline as
+ * the stored preview, plus `data-m-id` markers linking DOM nodes back to the
+ * variant's TSX. Never persisted — ids are only valid against this variant.
+ */
+export async function fetchEditableEmailHtml(
+  emailId: string,
+  variantId: string,
+): Promise<EditableEmailHtmlDto> {
+  const raw = await FetchWrapper<unknown>(
+    `/emails/${emailId}/variants/${variantId}/editable-html`,
+  );
+  return EditableEmailHtmlDtoSchema.parse(raw);
+}
+
+/** Applies manual visual ops (edit text / delete) and returns the email with a new variant. */
+export async function applyEmailVisualEdit(
+  emailId: string,
+  input: ApplyVisualEditInput,
+): Promise<EmailDto> {
+  const body = ApplyVisualEditSchema.parse(input);
+  const raw = await FetchWrapper<unknown>(`/emails/${emailId}/visual-edit`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
   return EmailDtoSchema.parse(raw);
 }
 
