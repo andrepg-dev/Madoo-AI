@@ -199,8 +199,8 @@ const featureTabIcons = [
 
 const featureTabImages = [
   {
-    src: "/templates/news-letter.png",
-    alt: "Email template design previews",
+    src: "/product/design-your-way-hero.webp",
+    alt: "Paper-cutout illustration of email building blocks snapping together into a finished template",
   },
   {
     src: "/integrations-export.png",
