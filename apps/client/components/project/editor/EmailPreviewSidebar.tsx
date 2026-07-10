@@ -85,12 +85,15 @@ export function EmailPreviewSidebar({
   // Bumps on every iframe load so selection listeners re-attach to the new doc.
   const [docVersion, setDocVersion] = useState(0);
 
-  const { selection, clearSelection } = useVisualEditSelection({
-    enabled: Boolean(visualEdit?.enabled && !visualEdit.loading),
-    iframeRef,
-    overlayRef,
-    docVersion,
-  });
+  const { selection, clearSelection, startTextEdit, editingText } =
+    useVisualEditSelection({
+      enabled: Boolean(visualEdit?.enabled && !visualEdit.loading),
+      iframeRef,
+      overlayRef,
+      docVersion,
+      onCommitText: (nodeId, text) =>
+        visualEdit?.onApply([{ op: "setText", nodeId, text }]),
+    });
 
   const variants = email?.variants ?? [];
   const latestVariantId = latestVariant(email)?.id;
@@ -455,7 +458,7 @@ export function EmailPreviewSidebar({
                 />
               </div>
 
-              {visualEdit?.enabled && selection ? (
+              {visualEdit?.enabled && selection && !editingText ? (
                 <VisualEditToolbar
                   busy={visualEdit.applying}
                   key={selection.nodeId}
@@ -468,8 +471,8 @@ export function EmailPreviewSidebar({
                     clearSelection();
                   }}
                   onClose={clearSelection}
+                  onEditText={startTextEdit}
                   selection={selection}
-                  variables={variant?.variableSchema.variables}
                 />
               ) : null}
             </div>
