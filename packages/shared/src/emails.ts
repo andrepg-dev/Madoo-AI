@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SelectedEmailElementSchema } from "./visual-edit";
 
 const JsIdentifierSchema = z
   .string()
@@ -450,6 +451,8 @@ export const EditEmailSchema = z.object({
   baseVariantId: z.string().optional(),
   /** Public S3 URLs of images attached to this edit turn (vision + reuse). */
   imageUrls: EmailImageUrlsSchema,
+  /** Element picked in the visual editor so the AI edits exactly that node. */
+  selectedElement: SelectedEmailElementSchema.optional(),
 });
 
 export type EditEmailInput = z.infer<typeof EditEmailSchema>;

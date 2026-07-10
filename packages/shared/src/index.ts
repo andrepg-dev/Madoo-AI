@@ -5,6 +5,7 @@ export * from "./headers";
 export * from "./auth";
 export * from "./prompts";
 export * from "./emails";
+export * from "./visual-edit";
 export * from "./audit-log";
 export * from "./billing";
 export * from "./referrals";
