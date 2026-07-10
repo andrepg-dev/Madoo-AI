@@ -43,6 +43,13 @@ export const VisualEditOpSchema = z.discriminatedUnion("op", [
     /** Swap with the previous/next sibling element in the JSX tree. */
     direction: z.enum(["up", "down"]),
   }),
+  z.object({
+    op: z.literal("moveTo"),
+    nodeId: VisualEditNodeIdSchema,
+    /** Element the dragged node is dropped next to (may be in another container). */
+    targetId: VisualEditNodeIdSchema,
+    position: z.enum(["before", "after"]),
+  }),
 ]);
 
 export type VisualEditOp = z.infer<typeof VisualEditOpSchema>;

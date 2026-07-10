@@ -250,6 +250,81 @@ describe("applyVisualOps", () => {
     assert.match(html, /A hard-coded paragraph\./);
   });
 
+  it("moveTo drops the element after a target in the same container", () => {
+    const id = idOf(tagged, "{headline}</Text>");
+    const targetId = idOf(tagged, "<Button");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "moveTo", nodeId: id, targetId, position: "after" },
+    ]);
+    const headlineAt = result.code.indexOf("{headline}</Text>");
+    const buttonAt = result.code.indexOf("<Button");
+    assert.ok(headlineAt > buttonAt, "headline should now follow the button");
+    assert.deepEqual(result.summaries, ["Moved <Text>"]);
+  });
+
+  it("moveTo moves the element into another container", () => {
+    // Drop the Button before the Row that lives in the second Section.
+    const id = idOf(tagged, "<Button");
+    const targetId = idOf(tagged, "<Row");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "moveTo", nodeId: id, targetId, position: "before" },
+    ]);
+    const buttonAt = result.code.indexOf("<Button");
+    const rowAt = result.code.indexOf("<Row");
+    const paragraphAt = result.code.indexOf("A hard-coded paragraph.");
+    assert.ok(buttonAt > paragraphAt, "button left the first section");
+    assert.ok(buttonAt < rowAt, "button sits before the row");
+    const service = new ReactToHtmlService();
+    assert.doesNotThrow(() => service.compile(result.code, {}));
+  });
+
+  it("moveTo refuses dropping inside the element's own subtree", () => {
+    const sectionId = idOf(tagged, "padding: '20px'");
+    const innerTextId = idOf(tagged, "{headline}</Text>");
+    assert.throws(
+      () =>
+        applyVisualOps(SAMPLE, [
+          {
+            op: "moveTo",
+            nodeId: sectionId,
+            targetId: innerTextId,
+            position: "before",
+          },
+        ]),
+      /inside its own content/,
+    );
+  });
+
+  it("moveTo refuses dropping onto itself or unknown targets", () => {
+    const id = idOf(tagged, "<Button");
+    assert.throws(
+      () =>
+        applyVisualOps(SAMPLE, [
+          { op: "moveTo", nodeId: id, targetId: id, position: "before" },
+        ]),
+      /onto itself/,
+    );
+    assert.throws(
+      () =>
+        applyVisualOps(SAMPLE, [
+          { op: "moveTo", nodeId: id, targetId: "999:0", position: "before" },
+        ]),
+      /no longer exists/,
+    );
+  });
+
+  it("moveTo refuses dynamic drop targets", () => {
+    const id = idOf(tagged, "<Button");
+    const dynamicId = idOf(tagged, "<Column");
+    assert.throws(
+      () =>
+        applyVisualOps(SAMPLE, [
+          { op: "moveTo", nodeId: id, targetId: dynamicId, position: "after" },
+        ]),
+      /rendered dynamically/,
+    );
+  });
+
   it("edited output recompiles cleanly end to end", () => {
     const id = idOf(tagged, "{headline}</Text>");
     const result = applyVisualOps(SAMPLE, [

@@ -271,6 +271,68 @@ function isMovableSibling(node: unknown): boolean {
   );
 }
 
+/**
+ * Detaches the element and re-inserts it before/after the drop target, which
+ * may live in a different container. Both stay in normal document flow —
+ * email clients don't support absolute positioning, so "free" moves are
+ * expressed as reordering.
+ */
+function moveElementTo(
+  path: AstPath,
+  element: recast.types.namedTypes.JSXElement,
+  targetPath: AstPath,
+  position: "before" | "after",
+  name: string,
+): void {
+  const target = targetPath.node as recast.types.namedTypes.JSXElement;
+  const targetName = jsxElementName(target) ?? "element";
+  if (target === element) {
+    throw new BadRequestException(`<${name}> cannot be dropped onto itself.`);
+  }
+  if (PROTECTED_STRUCTURE_NAMES.has(targetName)) {
+    throw new BadRequestException(
+      `Elements cannot be dropped next to <${targetName}>.`,
+    );
+  }
+  if (isDynamicJsxPath(targetPath)) {
+    throw new BadRequestException(
+      `The drop position is rendered dynamically — ask the AI to restructure it instead.`,
+    );
+  }
+  // Dropping an element inside its own subtree would detach it from the tree.
+  for (let p: AstPath | null = targetPath.parent; p; p = p.parent) {
+    if (p.node === element) {
+      throw new BadRequestException(
+        `<${name}> cannot be dropped inside its own content.`,
+      );
+    }
+  }
+
+  const sourceParent = path.parent?.node as { children?: unknown[] } | undefined;
+  const sourceChildren = sourceParent?.children;
+  const targetParent = targetPath.parent?.node as
+    | { children?: unknown[] }
+    | undefined;
+  const targetChildren = targetParent?.children;
+  if (!Array.isArray(sourceChildren) || !Array.isArray(targetChildren)) {
+    throw new BadRequestException(`<${name}> cannot be moved there.`);
+  }
+  const sourceIndex = sourceChildren.indexOf(element);
+  if (sourceIndex === -1 || !targetChildren.includes(target)) {
+    throw new BadRequestException(`<${name}> cannot be moved there.`);
+  }
+
+  sourceChildren.splice(sourceIndex, 1);
+  // Same-array move: the removal above may have shifted the target's index,
+  // so always resolve it after the splice.
+  const targetIndex = targetChildren.indexOf(target);
+  targetChildren.splice(
+    position === "before" ? targetIndex : targetIndex + 1,
+    0,
+    element,
+  );
+}
+
 /** Swaps the element with its previous/next sibling in the parent's children. */
 function moveAmongSiblings(
   path: AstPath,
@@ -349,6 +411,21 @@ export function applyVisualOps(
       }
       moveAmongSiblings(path, element, op.direction, name);
       summaries.push(`Moved <${name}> ${op.direction}`);
+      continue;
+    }
+
+    if (op.op === "moveTo") {
+      if (PROTECTED_STRUCTURE_NAMES.has(name)) {
+        throw new BadRequestException(`<${name}> cannot be moved.`);
+      }
+      const targetPath = byId.get(op.targetId);
+      if (!targetPath) {
+        throw new BadRequestException(
+          "The drop position no longer exists in the current version — refresh the preview and try again.",
+        );
+      }
+      moveElementTo(path, element, targetPath, op.position, name);
+      summaries.push(`Moved <${name}>`);
       continue;
     }
 
