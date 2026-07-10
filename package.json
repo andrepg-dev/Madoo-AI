@@ -2,7 +2,7 @@
   "name": "madoo-ai",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@11.7.0",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
