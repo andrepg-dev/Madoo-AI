@@ -20,3 +20,7 @@ coverage
 
 # Vendored axe-core UMD copied by apps/client/scripts/copy-axe.mjs (predev/prebuild)
 apps/client/public/vendor/
+
+# Local AI tool scratch output
+.codex-tmp/
+outputs/
