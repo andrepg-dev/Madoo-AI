@@ -200,7 +200,6 @@ export function suggestCommunityCategories(
   const text = [
     getEmailTitle(email),
     email.prompt,
-    email.audience,
     latestVariant?.subject,
   ]
     .filter(Boolean)

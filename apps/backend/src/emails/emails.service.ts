@@ -110,9 +110,6 @@ export class EmailsService {
           workspaceId,
           createdByUserId: userId,
           prompt,
-          tone: dto.tone ?? null,
-          length: dto.length ?? null,
-          audience: dto.audience ?? null,
           templateId,
           status: "DRAFT",
         },
@@ -446,9 +443,6 @@ export class EmailsService {
     prompt,
     subject,
     templateId = null,
-    tone = null,
-    length = null,
-    audience = null,
   }: {
     workspaceId: string;
     userId: string;
@@ -457,9 +451,6 @@ export class EmailsService {
     prompt: string;
     subject: string;
     templateId?: string | null;
-    tone?: string | null;
-    length?: string | null;
-    audience?: string | null;
   }): Promise<EmailDto> {
     const compiledHtml = this.reactToHtml.compile(
       componentCode,
@@ -474,9 +465,6 @@ export class EmailsService {
           workspaceId,
           createdByUserId: userId,
           prompt: trimmedPrompt,
-          tone,
-          length,
-          audience,
           templateId,
           templateSavedAt: now,
           templateSavedByUserId: userId,
@@ -555,9 +543,6 @@ export class EmailsService {
       prompt: dto.prompt,
       subject: tpl.name,
       templateId: tpl.id,
-      tone: dto.tone ?? null,
-      length: dto.length ?? null,
-      audience: dto.audience ?? null,
     });
   }
 
@@ -844,9 +829,6 @@ export class EmailsService {
           workspaceId: membership.workspaceId,
           createdByUserId: userId,
           prompt,
-          tone: pp.tone ?? null,
-          length: pp.length ?? null,
-          audience: pp.audience ?? null,
           status: "DRAFT",
           sourcePendingPromptId: pp.id,
         },
@@ -949,9 +931,6 @@ export class EmailsService {
       workspaceId: row.workspaceId,
       status: row.status,
       prompt: row.prompt,
-      tone: row.tone,
-      length: row.length,
-      audience: row.audience,
       title: row.title,
       templateId: row.templateId,
       templateSavedAt: row.templateSavedAt?.toISOString() ?? null,

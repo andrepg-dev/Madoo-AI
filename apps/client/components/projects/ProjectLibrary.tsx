@@ -95,8 +95,7 @@ function projectTitle(email: EmailDto): string {
 }
 
 function projectSubtitle(email: EmailDto): string {
-  const updated = formatDate(email.updatedAt);
-  return email.audience ? `${email.audience} - ${updated}` : updated;
+  return formatDate(email.updatedAt);
 }
 
 function formatDate(value: string): string {
@@ -141,13 +140,7 @@ function useFilteredEmails(
       if (status !== "ANY" && email.status !== status) continue;
 
       if (normalizedQuery) {
-        const searchable = [
-          projectTitle(email),
-          email.prompt,
-          email.tone ?? "",
-          email.length ?? "",
-          email.audience ?? "",
-        ]
+        const searchable = [projectTitle(email), email.prompt]
           .join(" ")
           .toLowerCase();
         if (!searchable.includes(normalizedQuery)) continue;

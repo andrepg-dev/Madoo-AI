@@ -96,9 +96,6 @@ model PendingPrompt {
   id        String   @id @default(cuid())
   userId    String
   prompt    String
-  tone      String?
-  length    String?
-  audience  String?
   imageUrls String[] @default([])
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -208,10 +205,7 @@ model Email {
   status          EmailStatus @default(DRAFT)
   createdByUserId String?
 
-  prompt   String
-  tone     String?
-  length   String?
-  audience String?
+  prompt String
 
   title                 String?
   templateId            String?

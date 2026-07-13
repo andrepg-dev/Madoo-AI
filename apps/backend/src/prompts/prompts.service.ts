@@ -57,9 +57,6 @@ export class PromptsService {
       data: {
         userId,
         prompt: dto.prompt.trim(),
-        tone: dto.tone ?? null,
-        length: dto.length ?? null,
-        audience: dto.audience ?? null,
         imageUrls: dto.imageUrls ?? [],
       },
     });

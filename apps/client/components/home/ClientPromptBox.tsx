@@ -149,9 +149,6 @@ type ClientPromptBoxProps = {
 
 export type PromptSubmitInput = {
   prompt: string;
-  tone?: string;
-  length?: string;
-  audience?: string;
   images?: File[];
 };
 

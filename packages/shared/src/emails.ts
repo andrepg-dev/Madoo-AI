@@ -289,9 +289,6 @@ export const EmailImageUrlsSchema = z.array(z.string().url()).max(8).optional();
 
 export const CreateEmailSchema = z.object({
   prompt: z.string().min(1),
-  tone: z.string().optional(),
-  length: z.string().optional(),
-  audience: z.string().optional(),
   templateId: z.string().optional(),
   /** Resolves to workspace Template row when templateId is omitted */
   templateSlug: TemplateSlugSchema.optional(),
@@ -329,9 +326,6 @@ export const EmailDtoSchema = z.object({
   workspaceId: z.string(),
   status: z.enum(["DRAFT", "GENERATING", "READY", "ERROR"]),
   prompt: z.string(),
-  tone: z.string().nullable(),
-  length: z.string().nullable(),
-  audience: z.string().nullable(),
   title: z.string().nullable(),
   templateId: z.string().nullable(),
   templateSavedAt: z.string().nullable(),
@@ -496,9 +490,6 @@ export type TemplateSeedPreviewDto = z.infer<
 export const CreateEmailFromTemplateSchema = z.object({
   templateSlug: TemplateSlugSchema,
   prompt: z.string().min(1),
-  tone: z.string().optional(),
-  length: z.string().optional(),
-  audience: z.string().optional(),
 });
 
 export type CreateEmailFromTemplateInput = z.infer<

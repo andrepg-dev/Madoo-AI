@@ -895,15 +895,9 @@ function EmailTemplateProjectInner() {
       try {
         const created = await createEmail({
           prompt: input.prompt,
-          tone: input.tone,
-          length: input.length,
-          audience: input.audience,
         });
         posthog.capture("email_generation_started", {
           email_id: created.id,
-          has_tone: Boolean(input.tone),
-          has_length: Boolean(input.length),
-          has_audience: Boolean(input.audience),
           has_images: (input.images?.length ?? 0) > 0,
         });
         setCurrentEmailId(created.id);
@@ -1126,10 +1120,6 @@ function EmailTemplateProjectInner() {
     const prompt = searchParams.get("prompt")?.trim();
     if (!prompt) return;
 
-    const tone = searchParams.get("tone") ?? undefined;
-    const length = searchParams.get("length") ?? undefined;
-    const audience = searchParams.get("audience") ?? undefined;
-
     // Images attached in the home prompt box are handed over via the store (same
     // origin, File objects). Images attached on the landing page are uploaded
     // before the cross-subdomain handoff and arrive as public URLs in the query.
@@ -1149,7 +1139,7 @@ function EmailTemplateProjectInner() {
         images: previewUrls.length > 0 ? previewUrls : undefined,
       },
     ]);
-    void createEmail({ prompt, tone, length, audience })
+    void createEmail({ prompt })
       .then(async (created) => {
         setCurrentEmailId(created.id);
         router.replace(`/email-template-project?id=${created.id}`);

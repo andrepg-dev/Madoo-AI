@@ -27,9 +27,6 @@ function MetaGrid({ email }: { email: AdminEmailDetail }) {
     { label: "Email", value: email.userEmail ?? "—" },
     { label: "Workspace", value: email.workspaceName ?? "—" },
     { label: "Status", value: email.status },
-    { label: "Tone", value: email.tone ?? "—" },
-    { label: "Length", value: email.length ?? "—" },
-    { label: "Audience", value: email.audience ?? "—" },
     { label: "Created", value: formatDateTime(email.createdAt) },
   ];
   return (

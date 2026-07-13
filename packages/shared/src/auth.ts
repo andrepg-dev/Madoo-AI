@@ -5,9 +5,6 @@ import { ReferralCodeFields } from "./referrals";
 
 const PendingPromptFields = {
   pendingPrompt: z.string().optional(),
-  pendingTone: z.string().optional(),
-  pendingLength: z.string().optional(),
-  pendingAudience: z.string().optional(),
 };
 
 export const GoogleLoginInputSchema = z.object({

@@ -631,9 +631,6 @@ export class GenerationService {
             "If the user answered the intake questions or asked you to use best judgment, generate the email now.",
           ].join("\n"),
       `User brief:\n${ctx.prompt}`,
-      ctx.tone ? `Tone: ${ctx.tone}` : "",
-      ctx.length ? `Length preference: ${ctx.length}` : "",
-      ctx.audience ? `Audience: ${ctx.audience}` : "",
       hasPriorChat
         ? `Conversation context (most recent first):\n${recentChat}`
         : "",
@@ -658,8 +655,6 @@ export class GenerationService {
       ],
       titleContext: {
         prompt: ctx.prompt,
-        tone: ctx.tone,
-        audience: ctx.audience,
       },
       emit,
       signal,
@@ -906,8 +901,6 @@ export class GenerationService {
     fullCodeForRetry?: string;
     titleContext?: {
       prompt: string;
-      tone?: string | null;
-      audience?: string | null;
     };
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
@@ -1729,8 +1722,6 @@ export class GenerationService {
         kind === "INITIAL" && titleContext
           ? await this.conversationTitleAgent.generateTitle({
               prompt: titleContext.prompt,
-              tone: titleContext.tone,
-              audience: titleContext.audience,
               subject: input.subject,
               assistantText,
             })

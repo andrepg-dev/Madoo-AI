@@ -9,8 +9,6 @@ type GenerateConversationTitleInput = {
   prompt: string;
   subject?: string;
   assistantText?: string;
-  tone?: string | null;
-  audience?: string | null;
 };
 
 @Injectable()
@@ -49,8 +47,6 @@ export class ConversationTitleAgent {
             content: [
               `User prompt: ${input.prompt}`,
               input.subject ? `Email subject: ${input.subject}` : "",
-              input.tone ? `Tone: ${input.tone}` : "",
-              input.audience ? `Audience: ${input.audience}` : "",
               input.assistantText
                 ? `Assistant summary: ${input.assistantText.slice(0, 600)}`
                 : "",

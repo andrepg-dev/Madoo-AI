@@ -28,9 +28,6 @@ export type AuthResult = AuthSessionResponse;
 
 type PendingPromptInput = {
   pendingPrompt?: string;
-  pendingTone?: string;
-  pendingLength?: string;
-  pendingAudience?: string;
 };
 
 @Injectable()
@@ -325,9 +322,6 @@ export class AuthService {
         data: {
           userId: user.id,
           prompt: pending.pendingPrompt.trim(),
-          tone: pending.pendingTone ?? null,
-          length: pending.pendingLength ?? null,
-          audience: pending.pendingAudience ?? null,
         },
       });
       pendingPromptId = pp.id;
