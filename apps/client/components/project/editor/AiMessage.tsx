@@ -52,7 +52,7 @@ export function AiMessage({
   const showActions = !showThinking && !generating;
 
   return (
-    <div className="group mb-3.5 mr-auto rounded text-left">
+    <div className="group mb-3.5 w-full max-w-full rounded text-left">
       {showThinking ? (
         <ThinkingBlock
           active={thinkingActive}
