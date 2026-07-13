@@ -29,7 +29,7 @@ const HOVER_CLASS = "m-ve-hover";
 const SELECTED_ATTR = "data-m-selected";
 
 const EDITOR_STYLES = `
-  [${VISUAL_EDIT_ID_ATTR}] { cursor: grab; }
+  [${VISUAL_EDIT_ID_ATTR}] { cursor: default; }
   [${VISUAL_EDIT_DYNAMIC_ATTR}="1"] { cursor: pointer; }
   .${HOVER_CLASS} { outline: 2px dashed rgba(53, 107, 255, 0.55) !important; outline-offset: -2px; }
   [${SELECTED_ATTR}="1"] { outline: 2px solid #356bff !important; outline-offset: -2px; }

@@ -218,6 +218,17 @@ export function EmailPreviewSidebar({
     clearSelection();
   }, [clearSelection, mode, width]);
 
+  // Double-clicking the preview is a natural "let me edit this" gesture —
+  // enter edit mode without reaching for the toolbar button.
+  useEffect(() => {
+    if (!visualEdit || visualEdit.enabled) return;
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    const onDoubleClick = () => visualEdit.onToggle();
+    doc.addEventListener("dblclick", onDoubleClick);
+    return () => doc.removeEventListener("dblclick", onDoubleClick);
+  }, [docVersion, visualEdit]);
+
   useEffect(() => () => resizeObserverRef.current?.disconnect(), []);
 
   useEffect(() => {
