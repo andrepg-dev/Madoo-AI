@@ -768,18 +768,6 @@ export class EmailsService {
 
     await this.variantRetention.prune(emailId);
 
-    // Leave a status row in the chat so the timeline explains why a new
-    // version exists (mapChatMessages renders kind=STATUS as a status line).
-    await this.prisma.emailChatMessage.create({
-      data: {
-        workspaceId,
-        emailId,
-        role: "ASSISTANT",
-        kind: "STATUS",
-        content: `Manual edit: ${result.summaries.join(", ")}.`,
-      },
-    });
-
     await this.recordProductEvent({
       userId,
       workspaceId,

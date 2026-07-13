@@ -149,7 +149,11 @@ export function mapChatMessages(
 
   const rows =
     orderedChat.filter(
-      (message) => message.kind !== "THINKING" && message.kind !== "TOOL_CALL",
+      (message) =>
+        message.kind !== "THINKING" &&
+        message.kind !== "TOOL_CALL" &&
+        // Old "Manual edit: …" rows; no longer written nor shown.
+        message.kind !== "STATUS",
     );
 
   // Collect assistant response-version siblings, oldest → newest (chat is asc).
