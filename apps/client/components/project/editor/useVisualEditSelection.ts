@@ -14,17 +14,23 @@ export type VisualEditSelection = {
   textKind: string | null;
   /** True for elements rendered inside loops/conditionals — structure ops are unsafe. */
   dynamic: boolean;
+  /** True when the selected rendered node is an image. */
+  image: boolean;
   /** Rendered text content, used to prefill the inline text editor. */
   currentText: string;
   /** Bounding box relative to the overlay host (the wrapper around the iframe). */
   rect: { top: number; left: number; width: number; height: number };
 };
 
+type DropPosition = "before" | "after";
+type DropAxis = "horizontal" | "vertical";
+
 const HOVER_CLASS = "m-ve-hover";
 const SELECTED_ATTR = "data-m-selected";
 
 const EDITOR_STYLES = `
-  [${VISUAL_EDIT_ID_ATTR}] { cursor: pointer; }
+  [${VISUAL_EDIT_ID_ATTR}] { cursor: grab; }
+  [${VISUAL_EDIT_DYNAMIC_ATTR}="1"] { cursor: pointer; }
   .${HOVER_CLASS} { outline: 2px dashed rgba(53, 107, 255, 0.55) !important; outline-offset: -2px; }
   [${SELECTED_ATTR}="1"] { outline: 2px solid #356bff !important; outline-offset: -2px; }
   [contenteditable] { outline: 2px solid #16a34a !important; outline-offset: -2px; cursor: text; }
@@ -49,23 +55,50 @@ export function useVisualEditSelection({
   enabled,
   iframeRef,
   overlayRef,
+  scrollRef,
   docVersion,
   onCommitText,
+  onMoveTo,
 }: {
   enabled: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
   overlayRef: RefObject<HTMLDivElement | null>;
+  scrollRef: RefObject<HTMLDivElement | null>;
   docVersion: number;
   /** Called when an inline edit is committed (Enter / click away). */
   onCommitText: (nodeId: string, text: string) => void;
+  onMoveTo: (nodeId: string, targetId: string, position: DropPosition) => void;
 }) {
   const [selection, setSelection] = useState<VisualEditSelection | null>(null);
   // True while the selected element is contentEditable (toolbar hides).
   const [editingText, setEditingText] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const onCommitTextRef = useRef(onCommitText);
   onCommitTextRef.current = onCommitText;
+  const onMoveToRef = useRef(onMoveTo);
+  onMoveToRef.current = onMoveTo;
   // Ends the active inline edit (commit or cancel); null when not editing.
   const finishEditRef = useRef<((commit: boolean) => void) | null>(null);
+  const dragRef = useRef<{
+    active: boolean;
+    bodyCursor: string;
+    bodyUserSelect: string;
+    cursor: string;
+    el: HTMLElement;
+    ghost: HTMLDivElement | null;
+    nodeId: string;
+    opacity: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const dropIndicatorRef = useRef<HTMLDivElement | null>(null);
+  const dropTargetRef = useRef<{
+    element: HTMLElement;
+    nodeId: string;
+    position: DropPosition;
+  } | null>(null);
+  const justDraggedRef = useRef(false);
 
   const clearSelection = useCallback(() => {
     finishEditRef.current?.(false);
@@ -75,6 +108,34 @@ export function useVisualEditSelection({
       .forEach((node) => node.removeAttribute(SELECTED_ATTR));
     setSelection(null);
   }, [iframeRef]);
+
+  const removeElement = useCallback(
+    (nodeId: string) => {
+      const element = iframeRef.current?.contentDocument?.querySelector(
+        `[${VISUAL_EDIT_ID_ATTR}="${nodeId}"]`,
+      );
+      element?.remove();
+      setSelection((current) =>
+        current?.nodeId === nodeId ? null : current,
+      );
+    },
+    [iframeRef],
+  );
+
+  const replaceImage = useCallback(
+    (nodeId: string, url: string) => {
+      const element = iframeRef.current?.contentDocument?.querySelector(
+        `[${VISUAL_EDIT_ID_ATTR}="${nodeId}"]`,
+      );
+      if (element?.tagName.toLowerCase() !== "img") return;
+      (element as HTMLImageElement).src = url;
+      element.removeAttribute(SELECTED_ATTR);
+      setSelection((current) =>
+        current?.nodeId === nodeId ? null : current,
+      );
+    },
+    [iframeRef],
+  );
 
   /**
    * Turns the selected element contentEditable so the user types the new copy
@@ -169,6 +230,38 @@ export function useVisualEditSelection({
         .forEach((node) => node.classList.remove(HOVER_CLASS));
     };
 
+    const hideDropIndicator = () => {
+      dropTargetRef.current = null;
+      if (dropIndicatorRef.current) {
+        dropIndicatorRef.current.style.display = "none";
+      }
+    };
+
+    const cleanupDrag = (suppressClick: boolean) => {
+      const drag = dragRef.current;
+      if (suppressClick) {
+        justDraggedRef.current = true;
+        doc.defaultView?.setTimeout(() => {
+          justDraggedRef.current = false;
+        }, 80);
+      }
+      if (drag) {
+        if (drag.el.hasPointerCapture(drag.pointerId)) {
+          drag.el.releasePointerCapture(drag.pointerId);
+        }
+        drag.el.style.opacity = drag.opacity;
+        drag.el.style.cursor = drag.cursor;
+        drag.ghost?.remove();
+        doc.body.style.cursor = drag.bodyCursor;
+        doc.body.style.userSelect = drag.bodyUserSelect;
+      }
+      dropIndicatorRef.current?.remove();
+      dropIndicatorRef.current = null;
+      dropTargetRef.current = null;
+      dragRef.current = null;
+      setDragging(false);
+    };
+
     const selectElement = (el: Element) => {
       doc
         .querySelectorAll(`[${SELECTED_ATTR}]`)
@@ -179,6 +272,7 @@ export function useVisualEditSelection({
         label: buildLabel(el),
         textKind: el.getAttribute(VISUAL_EDIT_TEXT_ATTR),
         dynamic: el.getAttribute(VISUAL_EDIT_DYNAMIC_ATTR) === "1",
+        image: el.tagName.toLowerCase() === "img",
         currentText: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
         rect: computeRect(el),
       });
@@ -187,6 +281,7 @@ export function useVisualEditSelection({
     // Highlight only the innermost taggable element under the cursor — CSS
     // `:hover` would outline every tagged ancestor at once.
     const onMouseOver = (event: MouseEvent) => {
+      if (dragRef.current?.active) return;
       clearHover();
       const el = (event.target as Element | null)?.closest(
         `[${VISUAL_EDIT_ID_ATTR}]`,
@@ -195,6 +290,12 @@ export function useVisualEditSelection({
     };
 
     const onClick = (event: MouseEvent) => {
+      if (justDraggedRef.current) {
+        justDraggedRef.current = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       const target = event.target as Element | null;
       // Clicks inside the element being edited place the caret — leave them be.
       if (target?.closest("[contenteditable]")) return;
@@ -231,21 +332,308 @@ export function useVisualEditSelection({
       startTextEdit();
     };
 
+    const onPointerDown = (event: globalThis.PointerEvent) => {
+      if (!event.isPrimary || event.button !== 0) return;
+      const target = event.target as Element | null;
+      if (target?.closest("[contenteditable]")) return;
+      const el = target?.closest(
+        `[${VISUAL_EDIT_ID_ATTR}]`,
+      ) as HTMLElement | null;
+      const nodeId = el?.getAttribute(VISUAL_EDIT_ID_ATTR);
+      if (!el || !nodeId || el.getAttribute(VISUAL_EDIT_DYNAMIC_ATTR) === "1") {
+        return;
+      }
+      cleanupDrag(false);
+      dragRef.current = {
+        active: false,
+        bodyCursor: doc.body.style.cursor,
+        bodyUserSelect: doc.body.style.userSelect,
+        cursor: el.style.cursor,
+        el,
+        ghost: null,
+        nodeId,
+        opacity: el.style.opacity,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+    };
+
+    const dropAxisFor = (candidate: HTMLElement): DropAxis => {
+      const parent = candidate.parentElement;
+      if (!parent) return "vertical";
+      const computed = doc.defaultView?.getComputedStyle(parent);
+      if (computed?.display === "table-row") return "horizontal";
+      if (computed?.display === "flex") {
+        return computed.flexDirection.startsWith("row")
+          ? "horizontal"
+          : "vertical";
+      }
+
+      const candidateRect = candidate.getBoundingClientRect();
+      for (const sibling of Array.from(parent.children)) {
+        if (sibling === candidate) continue;
+        const siblingRect = (sibling as HTMLElement).getBoundingClientRect();
+        const sameRow =
+          Math.abs(
+            candidateRect.top + candidateRect.height / 2 -
+              (siblingRect.top + siblingRect.height / 2),
+          ) < Math.max(candidateRect.height, siblingRect.height) / 2;
+        if (sameRow && Math.abs(candidateRect.left - siblingRect.left) > 4) {
+          return "horizontal";
+        }
+      }
+      return "vertical";
+    };
+
+    const ensureDropIndicator = () => {
+      if (dropIndicatorRef.current) return dropIndicatorRef.current;
+      const indicator = doc.createElement("div");
+      Object.assign(indicator.style, {
+        background: "#356bff",
+        borderRadius: "2px",
+        display: "none",
+        height: "3px",
+        pointerEvents: "none",
+        position: "absolute",
+        zIndex: "2147483647",
+      });
+      doc.body.appendChild(indicator);
+      dropIndicatorRef.current = indicator;
+      return indicator;
+    };
+
+    const createDragGhost = (
+      drag: NonNullable<typeof dragRef.current>,
+      event: globalThis.PointerEvent,
+    ) => {
+      const rect = drag.el.getBoundingClientRect();
+      const ghost = doc.createElement("div");
+      const clone = drag.el.cloneNode(true) as HTMLElement;
+      clone.removeAttribute(SELECTED_ATTR);
+      clone.querySelectorAll(`[${SELECTED_ATTR}]`).forEach((node) =>
+        node.removeAttribute(SELECTED_ATTR),
+      );
+      Object.assign(ghost.style, {
+        background: "white",
+        border: "1px solid rgba(53, 107, 255, 0.45)",
+        borderRadius: "6px",
+        boxShadow: "0 12px 30px rgba(15, 23, 42, 0.2)",
+        left: "0",
+        maxHeight: "140px",
+        opacity: "0.92",
+        overflow: "hidden",
+        pointerEvents: "none",
+        position: "fixed",
+        top: "0",
+        width: `${Math.min(Math.max(rect.width, 80), 280)}px`,
+        zIndex: "2147483646",
+      });
+      ghost.appendChild(clone);
+      doc.body.appendChild(ghost);
+      drag.ghost = ghost;
+      positionDragGhost(drag, event);
+    };
+
+    const positionDragGhost = (
+      drag: NonNullable<typeof dragRef.current>,
+      event: globalThis.PointerEvent,
+    ) => {
+      if (!drag.ghost) return;
+      const width = drag.ghost.getBoundingClientRect().width;
+      const left = Math.min(
+        event.clientX + 14,
+        doc.documentElement.clientWidth - width - 8,
+      );
+      drag.ghost.style.transform = `translate(${Math.max(8, left)}px, ${Math.max(
+        8,
+        event.clientY + 14,
+      )}px)`;
+    };
+
+    const autoScroll = (event: globalThis.PointerEvent) => {
+      const scrollHost = scrollRef.current;
+      if (!scrollHost) return;
+      const hostRect = scrollHost.getBoundingClientRect();
+      const pointerY = iframe.getBoundingClientRect().top + event.clientY;
+      const edge = 64;
+      if (pointerY < hostRect.top + edge) {
+        scrollHost.scrollBy({ top: -18 });
+      } else if (pointerY > hostRect.bottom - edge) {
+        scrollHost.scrollBy({ top: 18 });
+      }
+    };
+
+    const showDropTarget = (
+      candidate: HTMLElement,
+      position: DropPosition,
+      axis: DropAxis,
+    ) => {
+      const candidateId = candidate.getAttribute(VISUAL_EDIT_ID_ATTR);
+      if (!candidateId) {
+        hideDropIndicator();
+        return;
+      }
+      const rect = candidate.getBoundingClientRect();
+      const indicator = ensureDropIndicator();
+      dropTargetRef.current = {
+        element: candidate,
+        nodeId: candidateId,
+        position,
+      };
+      indicator.style.display = "block";
+      if (axis === "horizontal") {
+        indicator.style.height = `${rect.height}px`;
+        indicator.style.left = `${
+          position === "before" ? rect.left : rect.right
+        }px`;
+        indicator.style.top = `${rect.top}px`;
+        indicator.style.width = "3px";
+      } else {
+        indicator.style.height = "3px";
+        indicator.style.left = `${rect.left}px`;
+        indicator.style.top = `${
+          position === "before" ? rect.top : rect.bottom
+        }px`;
+        indicator.style.width = `${rect.width}px`;
+      }
+    };
+
+    const onPointerMove = (event: globalThis.PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      if (!drag.active) {
+        const distance = Math.hypot(
+          event.clientX - drag.startX,
+          event.clientY - drag.startY,
+        );
+        if (distance <= 6) return;
+        drag.active = true;
+        drag.el.setPointerCapture(event.pointerId);
+        drag.el.style.opacity = "0.25";
+        drag.el.style.cursor = "grabbing";
+        doc.body.style.cursor = "grabbing";
+        // Dragging across text would otherwise paint native selections.
+        doc.body.style.userSelect = "none";
+        ensureDropIndicator();
+        createDragGhost(drag, event);
+        clearHover();
+        setDragging(true);
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      positionDragGhost(drag, event);
+      autoScroll(event);
+      let candidate = doc
+        .elementFromPoint(event.clientX, event.clientY)
+        ?.closest(`[${VISUAL_EDIT_ID_ATTR}]`) as HTMLElement | null;
+      while (
+        candidate &&
+        (drag.el.contains(candidate) ||
+          candidate.getAttribute(VISUAL_EDIT_DYNAMIC_ATTR) === "1")
+      ) {
+        candidate = candidate.parentElement?.closest(
+          `[${VISUAL_EDIT_ID_ATTR}]`,
+        ) as HTMLElement | null;
+      }
+      if (!candidate) {
+        hideDropIndicator();
+        return;
+      }
+      const rect = candidate.getBoundingClientRect();
+      const axis = dropAxisFor(candidate);
+      const position =
+        axis === "horizontal"
+          ? event.clientX < rect.left + rect.width / 2
+            ? "before"
+            : "after"
+          : event.clientY < rect.top + rect.height / 2
+            ? "before"
+            : "after";
+      showDropTarget(candidate, position, axis);
+    };
+
+    const onPointerUp = (event: globalThis.PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const wasActive = drag.active;
+      const draggedId = drag.nodeId;
+      const target = dropTargetRef.current;
+      if (wasActive) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      if (wasActive && target) {
+        const parent = target.element.parentNode;
+        if (parent) {
+          parent.insertBefore(
+            drag.el,
+            target.position === "before"
+              ? target.element
+              : target.element.nextSibling,
+          );
+        }
+      }
+      cleanupDrag(wasActive);
+      if (wasActive && target) {
+        doc.defaultView?.requestAnimationFrame(() => selectElement(drag.el));
+        onMoveToRef.current(draggedId, target.nodeId, target.position);
+      }
+    };
+
+    const onPointerCancel = (event: globalThis.PointerEvent) => {
+      if (event.pointerId === dragRef.current?.pointerId) cleanupDrag(false);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !dragRef.current?.active) return;
+      event.preventDefault();
+      event.stopPropagation();
+      cleanupDrag(false);
+    };
+
     doc.addEventListener("mouseover", onMouseOver, true);
     doc.addEventListener("click", onClick, true);
     doc.addEventListener("dblclick", onDblClick, true);
+    doc.addEventListener("pointerdown", onPointerDown, true);
+    doc.addEventListener("pointermove", onPointerMove, true);
+    doc.addEventListener("pointerup", onPointerUp, true);
+    doc.addEventListener("pointercancel", onPointerCancel, true);
+    doc.addEventListener("keydown", onKeyDown, true);
     return () => {
       finishEditRef.current?.(false);
+      cleanupDrag(false);
       doc.removeEventListener("mouseover", onMouseOver, true);
       doc.removeEventListener("click", onClick, true);
       doc.removeEventListener("dblclick", onDblClick, true);
+      doc.removeEventListener("pointerdown", onPointerDown, true);
+      doc.removeEventListener("pointermove", onPointerMove, true);
+      doc.removeEventListener("pointerup", onPointerUp, true);
+      doc.removeEventListener("pointercancel", onPointerCancel, true);
+      doc.removeEventListener("keydown", onKeyDown, true);
       clearHover();
       doc
         .querySelectorAll(`[${SELECTED_ATTR}]`)
         .forEach((node) => node.removeAttribute(SELECTED_ATTR));
       style.remove();
     };
-  }, [enabled, docVersion, iframeRef, overlayRef, startTextEdit]);
+  }, [
+    enabled,
+    docVersion,
+    iframeRef,
+    overlayRef,
+    scrollRef,
+    startTextEdit,
+  ]);
 
-  return { selection, clearSelection, startTextEdit, editingText };
+  return {
+    selection,
+    clearSelection,
+    startTextEdit,
+    editingText,
+    dragging,
+    removeElement,
+    replaceImage,
+  };
 }

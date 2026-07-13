@@ -1,9 +1,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowDown02Icon,
-  ArrowUp02Icon,
   Cancel01Icon,
   Delete02Icon,
+  Image01Icon,
+  Loading03Icon,
   PencilEdit02Icon,
   SparklesIcon,
 } from "@hugeicons/core-free-icons";
@@ -15,6 +15,7 @@ function ToolbarButton({
   danger = false,
   disabled = false,
   icon,
+  iconClassName,
   label,
   onClick,
   showLabel = true,
@@ -22,6 +23,7 @@ function ToolbarButton({
   danger?: boolean;
   disabled?: boolean;
   icon: typeof PencilEdit02Icon;
+  iconClassName?: string;
   label: string;
   onClick: () => void;
   showLabel?: boolean;
@@ -43,6 +45,7 @@ function ToolbarButton({
     >
       <HugeiconsIcon
         aria-hidden="true"
+        className={iconClassName}
         icon={icon}
         primaryColor="currentColor"
         size={15}
@@ -60,18 +63,20 @@ function ToolbarButton({
  * iframe), so this bar only triggers it.
  */
 export function VisualEditToolbar({
-  busy,
+  imageUploading,
   onApply,
   onAskAi,
   onClose,
   onEditText,
+  onReplaceImage,
   selection,
 }: {
-  busy: boolean;
+  imageUploading: boolean;
   onApply: (ops: VisualEditOp[]) => void;
   onAskAi: () => void;
   onClose: () => void;
   onEditText: () => void;
+  onReplaceImage: () => void;
   selection: VisualEditSelection;
 }) {
   const canEditText = Boolean(selection.textKind) && !selection.dynamic;
@@ -88,41 +93,29 @@ export function VisualEditToolbar({
       <div className="flex items-center gap-0.5">
         {canEditText ? (
           <ToolbarButton
-            disabled={busy}
             icon={PencilEdit02Icon}
             label="Edit text"
             onClick={onEditText}
           />
         ) : null}
+        {selection.image && !selection.dynamic ? (
+          <ToolbarButton
+            disabled={imageUploading}
+            icon={imageUploading ? Loading03Icon : Image01Icon}
+            iconClassName={imageUploading ? "animate-spin" : undefined}
+            label={imageUploading ? "Uploading…" : "Replace image"}
+            onClick={onReplaceImage}
+            showLabel={false}
+          />
+        ) : null}
         <ToolbarButton
-          disabled={busy || !structural}
-          icon={ArrowUp02Icon}
-          label="Move up"
-          onClick={() =>
-            onApply([{ op: "move", nodeId: selection.nodeId, direction: "up" }])
-          }
-          showLabel={false}
-        />
-        <ToolbarButton
-          disabled={busy || !structural}
-          icon={ArrowDown02Icon}
-          label="Move down"
-          onClick={() =>
-            onApply([
-              { op: "move", nodeId: selection.nodeId, direction: "down" },
-            ])
-          }
-          showLabel={false}
-        />
-        <ToolbarButton
-          disabled={busy}
           icon={SparklesIcon}
           label="Ask AI"
           onClick={onAskAi}
         />
         <ToolbarButton
           danger
-          disabled={busy || !structural}
+          disabled={!structural}
           icon={Delete02Icon}
           label={
             selection.dynamic ? "Repeated element — ask AI instead" : "Delete"

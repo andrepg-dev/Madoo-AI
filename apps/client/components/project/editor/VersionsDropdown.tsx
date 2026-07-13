@@ -3,6 +3,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import type { EmailVariantDto } from "@madoo/shared";
 
+const MAX_VISIBLE_VERSIONS = 20;
+
 export function VersionsDropdown({
   variants,
   activeId,
@@ -16,7 +18,9 @@ export function VersionsDropdown({
 }) {
   if (variants.length <= 1) return null;
 
-  const ordered = [...variants].sort((a, b) => b.seq - a.seq);
+  const ordered = [...variants]
+    .sort((a, b) => b.seq - a.seq)
+    .slice(0, MAX_VISIBLE_VERSIONS);
   const active = ordered.find((item) => item.id === activeId) ?? ordered[0];
 
   return (
@@ -39,7 +43,10 @@ export function VersionsDropdown({
           />
         </Button>
       </DropdownTrigger>
-      <DropdownContent align="start" className="w-56 gap-0.5 p-1.5!">
+      <DropdownContent
+        align="start"
+        className="madoo-preview-scrollbar max-h-[calc(100dvh-7rem)] w-56 gap-0.5 overflow-y-auto overscroll-contain p-1.5!"
+      >
         {ordered.map((item) => (
           <DropdownItem
             className="justify-start! gap-2 px-2! py-1.5! text-[13px]!"

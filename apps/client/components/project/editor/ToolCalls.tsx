@@ -15,7 +15,9 @@ import type { IconSvgElement } from "@hugeicons/react";
 import type { ToolCallView } from "./types";
 
 function iconFor(name: string): IconSvgElement {
-  if (name === "find_images") return Image01Icon;
+  if (name === "find_images" || name === "get_email_icons") {
+    return Image01Icon;
+  }
   if (name === "inspect_website_brand") return Globe02Icon;
   if (name === "get_email_version") return Clock01Icon;
   if (name === "generate_chart") return Chart01Icon;

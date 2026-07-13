@@ -25,6 +25,7 @@ import { AiMessage } from "@/components/project/editor/AiMessage";
 import { ConversationTitleDropdown } from "@/components/project/editor/ConversationTitleDropdown";
 import { DislikeFeedbackModal } from "@/components/project/editor/DislikeFeedbackModal";
 import { EmailPreviewSidebar } from "@/components/project/editor/EmailPreviewSidebar";
+import { useVisualEditAutosave } from "@/components/project/editor/useVisualEditAutosave";
 import { EmailRatingCard } from "@/components/project/editor/EmailRatingCard";
 import { ErrorMessage } from "@/components/project/editor/ErrorMessage";
 import { ExportProviderModal } from "@/components/project/editor/ExportProviderModal";
@@ -289,30 +290,59 @@ function EmailTemplateProjectInner() {
     staleTime: Infinity,
   });
 
-  const visualEditMutation = useMutation({
-    mutationFn: (ops: VisualEditOp[]) =>
-      applyEmailVisualEdit(currentEmailId!, {
-        baseVariantId: activeVariant!.id,
-        ops,
-      }),
-    onSuccess: (dto) => {
-      // The response carries the new variant; seed it and jump the preview to
-      // the latest version (which is that new variant).
-      queryClient.setQueryData(["email", currentEmailId], dto);
+  const saveVisualEdits = useCallback(
+    (emailId: string, baseVariantId: string, ops: VisualEditOp[]) =>
+      applyEmailVisualEdit(emailId, { baseVariantId, ops }),
+    [],
+  );
+  const handleVisualEditsSaved = useCallback(
+    (emailId: string, dto: EmailDto) => {
+      // Seed only the newest complete save. Intermediate responses stay out of
+      // the preview so their regenerated node ids cannot interrupt editing.
+      queryClient.setQueryData(["email", emailId], dto);
       setSelectedVariantId(null);
       void queryClient.invalidateQueries({
-        queryKey: ["email-chat", currentEmailId],
+        queryKey: ["email-chat", emailId],
       });
       void queryClient.invalidateQueries({ queryKey: ["emails"] });
     },
-    onError: (error) => {
+    [queryClient],
+  );
+  const handleVisualEditError = useCallback(
+    (error: unknown) => {
       toast({
         tone: "danger",
-        title: "Edit not applied",
-        body: error instanceof Error ? error.message : "Try again.",
+        title: "Edits not saved",
+        body:
+          error instanceof Error
+            ? `${error.message} Preview restored.`
+            : "Preview restored. Try again.",
       });
     },
+    [toast],
+  );
+  const {
+    enqueue: enqueueVisualEdits,
+    flush: flushVisualEdits,
+    resetVersion: visualEditResetVersion,
+    saving: visualEditSaving,
+  } = useVisualEditAutosave({
+    baseVariantId: activeVariant?.id ?? null,
+    emailId: currentEmailId,
+    onError: handleVisualEditError,
+    onSaved: handleVisualEditsSaved,
+    save: saveVisualEdits,
   });
+
+  const handleReplaceVisualImage = useCallback(
+    async (nodeId: string, file: File) => {
+      if (!currentEmailId) throw new Error("Email is not ready.");
+      const url = await uploadEmailImage(currentEmailId, file);
+      enqueueVisualEdits([{ op: "setImage", nodeId, url }]);
+      return url;
+    },
+    [currentEmailId, enqueueVisualEdits],
+  );
 
   // Live-streamed HTML carries no ids; leave edit mode while a turn runs.
   useEffect(() => {
@@ -1502,10 +1532,15 @@ function EmailTemplateProjectInner() {
                   ? {
                       enabled: visualEditOn,
                       loading: visualEditOn && !editableHtml,
-                      applying: visualEditMutation.isPending,
-                      onToggle: () => setVisualEditOn((on) => !on),
-                      onApply: (ops) => visualEditMutation.mutate(ops),
+                      applying: visualEditSaving,
+                      resetVersion: visualEditResetVersion,
+                      onToggle: () => {
+                        if (visualEditOn) flushVisualEdits();
+                        setVisualEditOn((on) => !on);
+                      },
+                      onApply: enqueueVisualEdits,
                       onAskAi: handleAskAiOnElement,
+                      onReplaceImage: handleReplaceVisualImage,
                     }
                   : null
               }

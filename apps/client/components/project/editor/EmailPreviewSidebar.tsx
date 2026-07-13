@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { Button, SegmentedControl } from "@madoo/design-system";
+import { Button, SegmentedControl, useToast } from "@madoo/design-system";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CrownPlusIcon, CursorMagicSelection01Icon, EyeIcon, FileExportIcon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
+import { CrownPlusIcon, CursorMagicSelection01Icon, EyeIcon, FileExportIcon, Loading03Icon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
 import type { EmailDto, EmailVariantDto, SelectedEmailElement, VisualEditOp } from "@madoo/shared";
 import { cn } from "@/lib/utils";
 import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
@@ -23,9 +23,12 @@ export type VisualEditController = {
   loading: boolean;
   /** A visual-edit apply request is in flight. */
   applying: boolean;
+  /** Remounts the iframe after a failed optimistic save. */
+  resetVersion: number;
   onToggle: () => void;
   onApply: (ops: VisualEditOp[]) => void;
   onAskAi: (element: SelectedEmailElement) => void;
+  onReplaceImage: (nodeId: string, file: File) => Promise<string>;
 };
 
 export function EmailPreviewSidebar({
@@ -79,21 +82,74 @@ export function EmailPreviewSidebar({
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const [variablesOpen, setVariablesOpen] = useState(true);
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const previewScrollRef = useRef<HTMLDivElement>(null);
   const [iframeHeight, setIframeHeight] = useState(900);
   const overlayRef = useRef<HTMLDivElement>(null);
   // Bumps on every iframe load so selection listeners re-attach to the new doc.
   const [docVersion, setDocVersion] = useState(0);
 
-  const { selection, clearSelection, startTextEdit, editingText } =
-    useVisualEditSelection({
-      enabled: Boolean(visualEdit?.enabled && !visualEdit.loading),
-      iframeRef,
-      overlayRef,
-      docVersion,
-      onCommitText: (nodeId, text) =>
-        visualEdit?.onApply([{ op: "setText", nodeId, text }]),
-    });
+  const { toast } = useToast();
+  const {
+    selection,
+    clearSelection,
+    startTextEdit,
+    editingText,
+    dragging,
+    removeElement,
+    replaceImage,
+  } = useVisualEditSelection({
+    enabled: Boolean(visualEdit?.enabled && !visualEdit.loading),
+    iframeRef,
+    overlayRef,
+    scrollRef: previewScrollRef,
+    docVersion,
+    onCommitText: (nodeId, text) =>
+      visualEdit?.onApply([{ op: "setText", nodeId, text }]),
+    onMoveTo: (nodeId, targetId, position) =>
+      visualEdit?.onApply([{ op: "moveTo", nodeId, targetId, position }]),
+  });
+
+  const applyVisualOps = useCallback(
+    (ops: VisualEditOp[]) => {
+      for (const op of ops) {
+        if (op.op === "delete") removeElement(op.nodeId);
+      }
+      visualEdit?.onApply(ops);
+    },
+    [removeElement, visualEdit],
+  );
+
+  const uploadSelectedImage = useCallback(
+    async (file: File | undefined) => {
+      if (!file || !selection || !visualEdit) return;
+      if (!file.type.startsWith("image/")) {
+        toast({
+          tone: "danger",
+          title: "Not an image",
+          body: "Pick an image file.",
+        });
+        return;
+      }
+      const nodeId = selection.nodeId;
+      setImageUploading(true);
+      try {
+        const url = await visualEdit.onReplaceImage(nodeId, file);
+        replaceImage(nodeId, url);
+      } catch (error) {
+        toast({
+          tone: "danger",
+          title: "Upload failed",
+          body: error instanceof Error ? error.message : "Try again.",
+        });
+      } finally {
+        setImageUploading(false);
+      }
+    },
+    [replaceImage, selection, toast, visualEdit],
+  );
 
   const variants = email?.variants ?? [];
   const latestVariantId = latestVariant(email)?.id;
@@ -391,6 +447,19 @@ export function EmailPreviewSidebar({
                     strokeWidth={1.55}
                   />
                   <span>{visualEdit.loading ? "Edit…" : "Edit"}</span>
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    className={cn(
+                      "transition-opacity",
+                      visualEdit.applying
+                        ? "animate-spin opacity-100"
+                        : "opacity-0",
+                    )}
+                    icon={Loading03Icon}
+                    primaryColor="currentColor"
+                    size={12}
+                    strokeWidth={2.1}
+                  />
                 </Button>
               ) : null}
 
@@ -433,7 +502,10 @@ export function EmailPreviewSidebar({
             />
           ) : null}
 
-          <div className="madoo-preview-scrollbar mr-1 h-full min-w-0 flex-1 overflow-y-auto">
+          <div
+            className="madoo-preview-scrollbar mr-1 h-full min-w-0 flex-1 overflow-y-auto"
+            ref={previewScrollRef}
+          >
             {/* Overlay host: the floating toolbar is positioned against this
                 wrapper so it scrolls with the email content. */}
             <div className="relative" ref={overlayRef}>
@@ -449,6 +521,7 @@ export function EmailPreviewSidebar({
                     isResizing && "pointer-events-none",
                   )}
                   onLoad={handleIframeLoad}
+                  key={visualEdit?.resetVersion ?? 0}
                   ref={iframeRef}
                   scrolling="no"
                   sandbox="allow-same-origin"
@@ -458,11 +531,11 @@ export function EmailPreviewSidebar({
                 />
               </div>
 
-              {visualEdit?.enabled && selection && !editingText ? (
+              {visualEdit?.enabled && selection && !editingText && !dragging ? (
                 <VisualEditToolbar
-                  busy={visualEdit.applying}
+                  imageUploading={imageUploading}
                   key={selection.nodeId}
-                  onApply={visualEdit.onApply}
+                  onApply={applyVisualOps}
                   onAskAi={() => {
                     visualEdit.onAskAi({
                       nodeId: selection.nodeId,
@@ -472,9 +545,20 @@ export function EmailPreviewSidebar({
                   }}
                   onClose={clearSelection}
                   onEditText={startTextEdit}
+                  onReplaceImage={() => imageInputRef.current?.click()}
                   selection={selection}
                 />
               ) : null}
+              <input
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  void uploadSelectedImage(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+                ref={imageInputRef}
+                type="file"
+              />
             </div>
           </div>
         </div>
