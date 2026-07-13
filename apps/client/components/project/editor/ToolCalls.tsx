@@ -38,9 +38,11 @@ export function ToolCallCard({ call }: { call: ToolCallView }) {
           size={15}
           strokeWidth={1.8}
         />
-        <span className="text-xs font-medium text-madoo-ink">{call.title}</span>
+        <span className="shrink-0 whitespace-nowrap text-xs font-medium text-madoo-ink">
+          {call.title}
+        </span>
         {call.detail ? (
-          <span className="truncate text-xs text-madoo-ink-muted">
+          <span className="min-w-0 flex-1 truncate text-xs text-madoo-ink-muted">
             {call.detail}
           </span>
         ) : null}
