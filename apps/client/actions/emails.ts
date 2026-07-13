@@ -230,7 +230,7 @@ export async function fetchEditableEmailHtml(
   return EditableEmailHtmlDtoSchema.parse(raw);
 }
 
-/** Applies manual visual ops (edit text / delete) and returns the email with a new variant. */
+/** Applies manual visual ops and returns the email with a new variant. */
 export async function applyEmailVisualEdit(
   emailId: string,
   input: ApplyVisualEditInput,

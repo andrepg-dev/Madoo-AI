@@ -9,11 +9,12 @@ import { assertSafeComponentSource } from "../generation/react-code-guard";
 import { ReactToHtmlService } from "../generation/react-to-html.service";
 
 const SAMPLE = `import * as React from 'react';
-import { Html, Head, Body, Container, Section, Row, Column, Text, Button, Preview } from '@react-email/components';
+  import { Html, Head, Body, Container, Section, Row, Column, Text, Button, Img, Preview } from '@react-email/components';
 
 const Email = ({
   headline = 'Something new is shipping',
   ctaLabel = 'Explore',
+  heroImage = 'https://example.com/old.png',
   items = ['a', 'b'],
 } = {}) => (
   <Html lang="en">
@@ -22,6 +23,7 @@ const Email = ({
     <Body style={{ margin: 0 }}>
       <Container style={{ maxWidth: 580 }}>
         <Section style={{ padding: '20px' }}>
+          <Img src={heroImage} alt="Product" width="580" />
           <Text style={{ fontSize: 38 }}>{headline}</Text>
           <Text style={{ fontSize: 16 }}>A hard-coded paragraph.</Text>
           <Button href="#" style={{ padding: '14px' }}>{ctaLabel}</Button>
@@ -103,6 +105,7 @@ describe("tagComponentSource", () => {
     const service = new ReactToHtmlService();
     const html = service.compile(tagged, {});
     assert.match(html, /data-m-id="\d+:\d+"/);
+    assert.match(html, /<img[^>]*data-m-id="\d+:\d+"/);
     assert.match(html, /data-m-text="var:headline"/);
     assert.match(html, /data-m-dynamic="1"/);
   });
@@ -139,6 +142,55 @@ describe("applyVisualOps", () => {
     assert.deepEqual(result.variableUpdates, [
       { name: "headline", value: "Fresh headline" },
     ]);
+  });
+
+  it("setImage preserves a prop binding and updates its default", () => {
+    const id = idOf(tagged, "src={heroImage}");
+    const result = applyVisualOps(SAMPLE, [
+      {
+        op: "setImage",
+        nodeId: id,
+        url: "https://cdn.example.com/new.png",
+      },
+    ]);
+    assert.match(result.code, /heroImage = ['"]https:\/\/cdn\.example\.com\/new\.png['"]/);
+    assert.match(result.code, /src=\{heroImage\}/);
+    assert.deepEqual(result.variableUpdates, [
+      { name: "heroImage", value: "https://cdn.example.com/new.png" },
+    ]);
+    assert.deepEqual(result.summaries, ["Replaced image in <Img>"]);
+  });
+
+  it("setImage replaces a literal source", () => {
+    const code = SAMPLE.replace(
+      "src={heroImage}",
+      'src="https://example.com/literal.png"',
+    );
+    const id = idOf(tagComponentSource(code), "literal.png");
+    const result = applyVisualOps(code, [
+      {
+        op: "setImage",
+        nodeId: id,
+        url: "https://cdn.example.com/replacement.webp",
+      },
+    ]);
+    assert.match(result.code, /src=['"]https:\/\/cdn\.example\.com\/replacement\.webp['"]/);
+    assert.equal(result.variableUpdates.length, 0);
+  });
+
+  it("setImage refuses non-image elements", () => {
+    const id = idOf(tagged, "A hard-coded paragraph.");
+    assert.throws(
+      () =>
+        applyVisualOps(SAMPLE, [
+          {
+            op: "setImage",
+            nodeId: id,
+            url: "https://cdn.example.com/new.png",
+          },
+        ]),
+      /not an editable image/,
+    );
   });
 
   it("delete removes the element", () => {
@@ -217,7 +269,7 @@ describe("applyVisualOps", () => {
   });
 
   it("refuses to move past the edges", () => {
-    const id = idOf(tagged, "{headline}</Text>");
+    const id = idOf(tagged, "src={heroImage}");
     assert.throws(
       () =>
         applyVisualOps(SAMPLE, [{ op: "move", nodeId: id, direction: "up" }]),
@@ -276,6 +328,32 @@ describe("applyVisualOps", () => {
     assert.ok(buttonAt < rowAt, "button sits before the row");
     const service = new ReactToHtmlService();
     assert.doesNotThrow(() => service.compile(result.code, {}));
+  });
+
+  it("applies repeated cross-container moves from one autosave batch", () => {
+    const buttonId = idOf(tagged, "<Button");
+    const rowId = idOf(tagged, "<Row");
+    const headlineId = idOf(tagged, "{headline}</Text>");
+    const result = applyVisualOps(SAMPLE, [
+      {
+        op: "moveTo",
+        nodeId: buttonId,
+        targetId: rowId,
+        position: "before",
+      },
+      {
+        op: "moveTo",
+        nodeId: buttonId,
+        targetId: headlineId,
+        position: "before",
+      },
+    ]);
+    assert.ok(
+      result.code.indexOf("<Button") <
+        result.code.indexOf("{headline}</Text>"),
+      "button should finish before the headline",
+    );
+    assert.deepEqual(result.summaries, ["Moved <Button>", "Moved <Button>"]);
   });
 
   it("moveTo refuses dropping inside the element's own subtree", () => {

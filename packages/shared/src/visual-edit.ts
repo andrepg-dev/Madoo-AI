@@ -34,6 +34,17 @@ export const VisualEditOpSchema = z.discriminatedUnion("op", [
     text: z.string().max(4000),
   }),
   z.object({
+    op: z.literal("setImage"),
+    nodeId: VisualEditNodeIdSchema,
+    url: z
+      .string()
+      .url()
+      .max(4096)
+      .refine((value) => /^https?:\/\//i.test(value), {
+        message: "Image URL must use HTTP or HTTPS.",
+      }),
+  }),
+  z.object({
     op: z.literal("delete"),
     nodeId: VisualEditNodeIdSchema,
   }),
@@ -57,7 +68,7 @@ export type VisualEditOp = z.infer<typeof VisualEditOpSchema>;
 export const ApplyVisualEditSchema = z.object({
   /** Variant whose componentCode the node ids were computed against. */
   baseVariantId: z.string().min(1),
-  ops: z.array(VisualEditOpSchema).min(1).max(20),
+  ops: z.array(VisualEditOpSchema).min(1).max(100),
 });
 
 export type ApplyVisualEditInput = z.infer<typeof ApplyVisualEditSchema>;

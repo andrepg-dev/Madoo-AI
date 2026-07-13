@@ -162,6 +162,56 @@ function textBindingOf(
   return null;
 }
 
+function imageSourceAttribute(
+  element: recast.types.namedTypes.JSXElement,
+): recast.types.namedTypes.JSXAttribute | null {
+  for (const attribute of element.openingElement.attributes ?? []) {
+    if (
+      n.JSXAttribute.check(attribute) &&
+      n.JSXIdentifier.check(attribute.name) &&
+      attribute.name.name === "src"
+    ) {
+      return attribute;
+    }
+  }
+  return null;
+}
+
+/** Replaces an <Img>/<img> source while preserving a string prop binding. */
+function setImageSource(
+  element: recast.types.namedTypes.JSXElement,
+  name: string,
+  url: string,
+  propDefaults: Map<string, recast.types.namedTypes.AssignmentPattern>,
+): string | null {
+  if (name !== "Img" && name !== "img") {
+    throw new BadRequestException(`<${name}> is not an editable image.`);
+  }
+
+  const source = imageSourceAttribute(element);
+  const expression =
+    source?.value && n.JSXExpressionContainer.check(source.value)
+      ? source.value.expression
+      : null;
+  if (expression && n.Identifier.check(expression)) {
+    const pattern = propDefaults.get(expression.name);
+    if (pattern && n.StringLiteral.check(pattern.right)) {
+      pattern.right = b.stringLiteral(url);
+      return expression.name;
+    }
+  }
+
+  if (source) {
+    source.value = b.stringLiteral(url);
+  } else {
+    element.openingElement.attributes = [
+      ...(element.openingElement.attributes ?? []),
+      b.jsxAttribute(b.jsxIdentifier("src"), b.stringLiteral(url)),
+    ];
+  }
+  return null;
+}
+
 function hasAttribute(
   element: recast.types.namedTypes.JSXElement,
   name: string,
@@ -375,7 +425,7 @@ export function applyVisualOps(
 ): VisualOpsResult {
   const ast = parseComponentAst(code);
   const propDefaults = collectPropDefaults(ast);
-  const byId = findElementPaths(ast);
+  let byId = findElementPaths(ast);
   const variableUpdates: { name: string; value: string }[] = [];
   const summaries: string[] = [];
 
@@ -400,7 +450,7 @@ export function applyVisualOps(
         throw new BadRequestException(`<${name}> cannot be deleted.`);
       }
       path.prune();
-      byId.delete(op.nodeId);
+      byId = findElementPaths(ast);
       summaries.push(`Deleted <${name}>`);
       continue;
     }
@@ -410,6 +460,7 @@ export function applyVisualOps(
         throw new BadRequestException(`<${name}> cannot be moved.`);
       }
       moveAmongSiblings(path, element, op.direction, name);
+      byId = findElementPaths(ast);
       summaries.push(`Moved <${name}> ${op.direction}`);
       continue;
     }
@@ -425,7 +476,22 @@ export function applyVisualOps(
         );
       }
       moveElementTo(path, element, targetPath, op.position, name);
+      byId = findElementPaths(ast);
       summaries.push(`Moved <${name}>`);
+      continue;
+    }
+
+    if (op.op === "setImage") {
+      const variableName = setImageSource(
+        element,
+        name,
+        op.url,
+        propDefaults,
+      );
+      if (variableName) {
+        variableUpdates.push({ name: variableName, value: op.url });
+      }
+      summaries.push(`Replaced image in <${name}>`);
       continue;
     }
 
