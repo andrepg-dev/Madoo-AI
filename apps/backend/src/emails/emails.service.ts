@@ -45,6 +45,10 @@ import { ReactToHtmlService } from "../generation/react-to-html.service";
 import { ScreenshotService } from "../generation/screenshot.service";
 import { BillingService } from "../billing/billing.service";
 import { S3Service } from "../s3/s3.service";
+import {
+  EmailVariantRetentionService,
+  MAX_EMAIL_VERSIONS,
+} from "./email-variant-retention.service";
 
 @Injectable()
 export class EmailsService {
@@ -59,6 +63,7 @@ export class EmailsService {
     private readonly screenshot: ScreenshotService,
     private readonly s3: S3Service,
     private readonly billing: BillingService,
+    private readonly variantRetention: EmailVariantRetentionService,
   ) {}
 
   async assertEmailInWorkspace(
@@ -153,6 +158,7 @@ export class EmailsService {
   ): Promise<EmailDto> {
     await this.workspaces.assertMembership(userId, workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
+    await this.variantRetention.prune(emailId);
     return this.toDto(emailId);
   }
 
@@ -711,7 +717,7 @@ export class EmailsService {
   }
 
   /**
-   * Applies direct-manipulation ops (edit text / delete element) to a
+   * Applies direct-manipulation ops (text, image, move, delete) to a
    * variant's TSX and saves the result as a new variant, so the version
    * dropdown doubles as undo history. Manual edits are free — no AI credit.
    */
@@ -774,6 +780,8 @@ export class EmailsService {
         `Visual edit preview refresh failed for variant ${created.id}: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+
+    await this.variantRetention.prune(emailId);
 
     // Leave a status row in the chat so the timeline explains why a new
     // version exists (mapChatMessages renders kind=STATUS as a status line).
@@ -911,8 +919,7 @@ export class EmailsService {
       include: {
         variants: {
           orderBy: { seq: "desc" },
-          // Keep the full edit history available for the version dropdown.
-          take: 50,
+          take: MAX_EMAIL_VERSIONS,
         },
       },
     });

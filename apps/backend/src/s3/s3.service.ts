@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -43,6 +44,14 @@ export class S3Service {
     });
   }
 
+  publicUrlForKey(key: string): string {
+    const encodedKey = key
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/");
+    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${encodedKey}`;
+  }
+
   async uploadBuffer(buffer: Buffer, contentType: string, folder = "previews"): Promise<string> {
     // Normalize images to an email-safe format before hosting. AVIF/WEBP render
     // in a desktop browser (so the in-app editor preview looks fine) but come
@@ -73,11 +82,31 @@ export class S3Service {
         ACL: "public-read",
       });
       await this.client.send(command);
-      return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+      return this.publicUrlForKey(key);
     } catch (err) {
       this.logger.error("S3 upload failed", err);
       throw new InternalServerErrorException("Failed to upload file to S3.");
     }
+  }
+
+  /** Delete an object only when URL points to this configured bucket. */
+  async deletePublicUrl(url: string): Promise<boolean> {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return false;
+    }
+    const expectedHost = `${this.bucketName}.s3.${this.region}.amazonaws.com`;
+    if (parsed.protocol !== "https:" || parsed.hostname !== expectedHost) {
+      return false;
+    }
+    const key = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
+    if (!key) return false;
+    await this.client.send(
+      new DeleteObjectCommand({ Bucket: this.bucketName, Key: key }),
+    );
+    return true;
   }
 
   /** List every object key under a prefix (paginated). For maintenance scripts. */
