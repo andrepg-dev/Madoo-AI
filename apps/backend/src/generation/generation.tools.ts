@@ -1,4 +1,5 @@
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
+import { EMAIL_ICON_NAMES } from "./email-icon-catalog.service";
 
 export const EMIT_EMAIL_TOOL: Tool = {
   name: "emit_email",
@@ -111,10 +112,36 @@ export const FIND_BRAND_IMAGES_TOOL: Tool = {
   },
 };
 
+export const GET_EMAIL_ICONS_TOOL: Tool = {
+  name: "get_email_icons",
+  description:
+    "Return stable, email-safe PNG URLs from Madoo's curated icon catalog. Use for compact feature rows, benefits, contact details, commerce, trust marks, and social links. Do not use icons as hero imagery or as a substitute for meaningful photos.",
+  input_schema: {
+    type: "object",
+    properties: {
+      names: {
+        type: "array",
+        minItems: 1,
+        maxItems: 8,
+        uniqueItems: true,
+        items: { type: "string", enum: [...EMAIL_ICON_NAMES] },
+        description: "One to eight icon names from the curated catalog.",
+      },
+      tone: {
+        type: "string",
+        enum: ["dark", "light"],
+        description:
+          "Use dark icons on light surfaces and light icons on dark/accent surfaces.",
+      },
+    },
+    required: ["names", "tone"],
+  },
+};
+
 export const GET_EMAIL_VERSION_TOOL: Tool = {
   name: "get_email_version",
   description:
-    "Fetch the full TSX componentCode and variableSchema of a previously saved version of THIS email by its version number. Every save creates a numbered version; the user sees them as 'Version N · latest'. You normally only receive the CURRENT version's code. Call this whenever the user asks to revert, restore, undo back to, or reuse anything from an earlier version (e.g. 'put the image back as it was in version 1', 'go back to version 2', 'revert to the previous one'). Read the exact earlier code with this tool, then emit_email with the reverted or merged result. Never reconstruct an old version from memory.",
+    "Fetch full TSX and variableSchema for a retained version of THIS email. The user sees numbered versions as 'Version N · latest'; only newest 20 are retained. Current edit prompt gives exact retained range. Call this for revert, restore, undo, or reuse requests, then emit_email with exact retrieved code. Never reconstruct old versions from memory.",
   input_schema: {
     type: "object",
     properties: {
@@ -138,7 +165,7 @@ export const VIEW_CURRENT_EMAIL_TOOL: Tool = {
       version: {
         type: "number",
         description:
-          "Optional 1-based saved version number. Omit for the current/latest version.",
+          "Optional retained saved version number. Omit for current/latest version.",
       },
     },
   },

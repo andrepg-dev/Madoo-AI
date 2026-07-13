@@ -72,6 +72,9 @@ importers:
       '@babel/preset-typescript':
         specifier: ^7.28.5
         version: 7.28.5(@babel/core@7.29.0)
+      '@hugeicons/core-free-icons':
+        specifier: ^4.2.0
+        version: 4.2.0
       '@madoo/shared':
         specifier: workspace:*
         version: link:../../packages/shared

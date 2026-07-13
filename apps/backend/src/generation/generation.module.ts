@@ -8,6 +8,8 @@ import { ReactToHtmlService } from "./react-to-html.service";
 import { ScreenshotService } from "./screenshot.service";
 import { WebsiteBrandService } from "./website-brand.service";
 import { ConversationTitleAgent } from "./conversation-title.agent";
+import { EmailVariantRetentionService } from "../emails/email-variant-retention.service";
+import { EmailIconCatalogService } from "./email-icon-catalog.service";
 
 @Module({
   imports: [ConfigModule, PrismaModule, S3Module, BillingModule],
@@ -17,7 +19,14 @@ import { ConversationTitleAgent } from "./conversation-title.agent";
     ScreenshotService,
     WebsiteBrandService,
     ConversationTitleAgent,
+    EmailVariantRetentionService,
+    EmailIconCatalogService,
   ],
-  exports: [GenerationService, ReactToHtmlService, ScreenshotService],
+  exports: [
+    GenerationService,
+    ReactToHtmlService,
+    ScreenshotService,
+    EmailVariantRetentionService,
+  ],
 })
 export class GenerationModule {}

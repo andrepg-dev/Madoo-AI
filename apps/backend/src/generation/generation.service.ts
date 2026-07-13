@@ -35,6 +35,7 @@ import {
   FIND_BRAND_IMAGES_TOOL,
   FIND_IMAGES_TOOL,
   GENERATE_CHART_TOOL,
+  GET_EMAIL_ICONS_TOOL,
   GET_EMAIL_VERSION_TOOL,
   INSPECT_WEBSITE_BRAND_TOOL,
   VIEW_CURRENT_EMAIL_TOOL,
@@ -54,6 +55,16 @@ import { assertPublicUrl } from "../common/ssrf-guard";
 import { WebsiteBrandService } from "./website-brand.service";
 import { ConversationTitleAgent } from "./conversation-title.agent";
 import type { ChartToolInput } from "./generation.tools";
+import {
+  EmailVariantRetentionService,
+  MAX_EMAIL_VERSIONS,
+} from "../emails/email-variant-retention.service";
+import {
+  EMAIL_ICON_NAMES,
+  EmailIconCatalogService,
+  type EmailIconName,
+  type EmailIconTone,
+} from "./email-icon-catalog.service";
 import {
   GenerationAbortedError,
   assertStaticSubject,
@@ -81,6 +92,8 @@ export class GenerationService {
     private readonly s3: S3Service,
     private readonly websiteBrand: WebsiteBrandService,
     private readonly conversationTitleAgent: ConversationTitleAgent,
+    private readonly variantRetention: EmailVariantRetentionService,
+    private readonly emailIcons: EmailIconCatalogService,
   ) {
     const key = this.config.get<string>("ANTHROPIC_API_KEY");
     this.model =
@@ -777,15 +790,17 @@ export class GenerationService {
     );
     const codeContext = buildCodeContextSnippet(snapshot.componentCode, CODE_CONTEXT_LIMIT);
 
-    const latestVariant = await this.prisma.emailVariant.findFirst({
+    const retainedVersions = await this.prisma.emailVariant.findMany({
       where: { emailId },
       orderBy: { seq: "desc" },
+      take: MAX_EMAIL_VERSIONS,
       select: { seq: true },
     });
-    const versionCount = latestVariant?.seq ?? 0;
+    const latestVersion = retainedVersions[0]?.seq ?? 0;
+    const earliestVersion = retainedVersions.at(-1)?.seq ?? 0;
     const versionLine =
-      versionCount > 0
-        ? `Saved versions: 1..${versionCount} (version ${versionCount} is the current/latest). To reuse or revert to an earlier one, call get_email_version with its number — do not guess its code.`
+      latestVersion > 0
+        ? `Retained saved versions: ${earliestVersion}..${latestVersion} (version ${latestVersion} is current/latest; at most ${MAX_EMAIL_VERSIONS} versions are kept). To reuse or revert to one in this range, call get_email_version with its number — do not guess its code.`
         : "No earlier saved versions yet.";
 
     const brandKitBlock = await this.loadWorkspaceBrandBlock(workspaceId);
@@ -1154,6 +1169,63 @@ export class GenerationService {
                   note: "No brand images found. Use attached images first, then stock images only if needed.",
                 },
           );
+        } else if (requestedTool.name === "get_email_icons") {
+          const input = requestedTool.input as {
+            names?: unknown;
+            tone?: unknown;
+          };
+          const names = Array.isArray(input.names)
+            ? [...new Set(input.names)]
+            : [];
+          const validNames = names.every(
+            (name): name is EmailIconName =>
+              typeof name === "string" &&
+              EMAIL_ICON_NAMES.includes(name as EmailIconName),
+          );
+          const tone = input.tone;
+          if (
+            !validNames ||
+            names.length < 1 ||
+            names.length > 8 ||
+            (tone !== "dark" && tone !== "light")
+          ) {
+            throw new BadRequestException(
+              "get_email_icons requires 1-8 valid icon names and a dark or light tone.",
+            );
+          }
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "get_email_icons",
+            status: "running",
+            title: "Preparing email icons",
+            detail: names.join(", "),
+          });
+          const icons = await this.emailIcons.getIcons(
+            names,
+            tone as EmailIconTone,
+          );
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "get_email_icons",
+            status: "done",
+            title: "Prepared email icons",
+            detail: `${icons.length} ${tone} icon${icons.length === 1 ? "" : "s"}`,
+            images: icons.map((icon) => icon.url),
+          });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "get_email_icons",
+            title: "Prepared email icons",
+            detail: `${icons.length} ${tone} icon${icons.length === 1 ? "" : "s"}`,
+            images: icons.map((icon) => icon.url),
+          });
+          toolResultContent = JSON.stringify({
+            icons,
+            usage:
+              "Use each URL as a direct <Img src> constant at 20-28px display width. Keep alt text empty for decorative icons or use the supplied alt for linked social/contact icons.",
+          });
         } else if (requestedTool.name === "find_images") {
           const input = requestedTool.input as { query?: unknown };
           if (typeof input.query !== "string" || !input.query.trim()) {
@@ -1228,20 +1300,26 @@ export class GenerationService {
             title: "Reading version",
             detail: `Version ${version}`,
           });
-          const variant = await this.prisma.emailVariant.findUnique({
-            where: { emailId_seq: { emailId, seq: version } },
-            select: {
-              seq: true,
-              subject: true,
-              componentCode: true,
-              variableSchema: true,
-            },
-          });
-          const latest = await this.prisma.emailVariant.findFirst({
+          const retained = await this.prisma.emailVariant.findMany({
             where: { emailId },
             orderBy: { seq: "desc" },
+            take: MAX_EMAIL_VERSIONS,
             select: { seq: true },
           });
+          const latest = retained[0]?.seq ?? 0;
+          const earliest = retained.at(-1)?.seq ?? 0;
+          const variant =
+            version >= earliest && version <= latest
+              ? await this.prisma.emailVariant.findUnique({
+                  where: { emailId_seq: { emailId, seq: version } },
+                  select: {
+                    seq: true,
+                    subject: true,
+                    componentCode: true,
+                    variableSchema: true,
+                  },
+                })
+              : null;
           emit({
             type: "tool_call",
             id: requestedTool.id,
@@ -1269,8 +1347,9 @@ export class GenerationService {
                   variableSchema: variant.variableSchema,
                 }
               : {
-                  error: `Version ${version} does not exist.`,
-                  latestVersion: latest?.seq ?? 0,
+                  error: `Version ${version} is not retained.`,
+                  retainedVersionRange:
+                    latest > 0 ? { earliest, latest } : null,
                 },
           );
         } else if (requestedTool.name === "view_current_email") {
@@ -1673,6 +1752,7 @@ export class GenerationService {
           warning: "Preview image generation failed; email HTML still saved.",
         });
       }
+      await this.variantRetention.prune(emailId);
 
       // Optional self-review pass (env-gated, default OFF): let the model SEE its
       // own rendered draft and revise once if it spots visual problems.
@@ -1874,6 +1954,7 @@ export class GenerationService {
         compiledHtml,
       );
       if (previewUrl) args.emit({ type: "preview_url", value: previewUrl });
+      await this.variantRetention.prune(args.emailId);
       return {
         variant: {
           id: variant.id,
@@ -1981,6 +2062,7 @@ export class GenerationService {
               INSPECT_WEBSITE_BRAND_TOOL,
               FIND_BRAND_IMAGES_TOOL,
               FIND_IMAGES_TOOL,
+              GET_EMAIL_ICONS_TOOL,
               GET_EMAIL_VERSION_TOOL,
               VIEW_CURRENT_EMAIL_TOOL,
               GENERATE_CHART_TOOL,
