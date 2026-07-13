@@ -259,10 +259,14 @@ function EmailTemplateProjectInner() {
   // The version shown in the preview: a picked older variant, else the latest.
   const activeVariant =
     email?.variants.find((item) => item.id === selectedVariantId) ?? variant;
-  // Jump back to the newest version whenever a new edit produces one.
+  // Jump back to the newest version whenever a new edit produces one, and
+  // retire the streamed snapshot: the persisted variant now carries that HTML,
+  // and keeping it would mask variants saved later (e.g. visual edits).
   const latestVariantId = variant?.id;
   useEffect(() => {
     setSelectedVariantId(null);
+    setStreamedHtml(null);
+    setStreamedSubject(null);
   }, [latestVariantId]);
 
   const previewSrcDoc = streamedHtml ?? activeVariant?.compiledHtml ?? null;

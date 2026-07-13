@@ -42,7 +42,7 @@ export function ToolCallCard({ call }: { call: ToolCallView }) {
           {call.title}
         </span>
         {call.detail ? (
-          <span className="min-w-0 flex-1 truncate text-xs text-madoo-ink-muted">
+          <span className="max-w-[45%] truncate text-xs text-madoo-ink-muted">
             {call.detail}
           </span>
         ) : null}
