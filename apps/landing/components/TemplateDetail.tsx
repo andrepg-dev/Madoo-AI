@@ -506,7 +506,7 @@ function CompatibilityTester({
         <p
           className={cx(
             "mb-0 mt-2 flex items-center gap-1.5 text-xs leading-5",
-            status === "error" ? "text-red-600" : "text-madoo-accent",
+            status === "error" ? "text-red-600" : "text-green-600",
           )}
         >
           <HugeiconsIcon
