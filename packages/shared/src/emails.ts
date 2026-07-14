@@ -236,6 +236,52 @@ export function extractVariableSchemaFromComponent(
   return { variables };
 }
 
+/**
+ * Re-applies user-set variable values on the schema emitted after an AI edit.
+ * Values changed via the variables panel live only in the variant's stored
+ * schema — the component code keeps its original defaults, so the model tends
+ * to re-emit those and silently discard the user's value (e.g. an uploaded
+ * logo). A user override is carried into the new schema unless the model
+ * deliberately emitted a new value of its own (different from both the old
+ * code default and the user's value).
+ */
+export function mergeUserVariableOverrides(
+  emitted: VariableSchemaRoot,
+  baseComponentCode: string,
+  baseVariableSchema: unknown,
+): VariableSchemaRoot {
+  let userSchema: VariableSchemaRoot;
+  try {
+    userSchema = parseVariableSchemaJson(baseVariableSchema);
+  } catch {
+    return emitted;
+  }
+  const codeDefaults = new Map(
+    extractVariableSchemaFromComponent(baseComponentCode).variables.map(
+      (variable) => [variable.name, variable.default],
+    ),
+  );
+  const userVariables = new Map(
+    userSchema.variables.map((variable) => [variable.name, variable]),
+  );
+  return {
+    variables: emitted.variables.map((variable) => {
+      const user = userVariables.get(variable.name);
+      if (!user) return variable;
+      const codeDefault = codeDefaults.get(variable.name);
+      const userOverrode =
+        codeDefault !== undefined && user.default !== codeDefault;
+      if (!userOverrode) return variable;
+      const modelChangedIntentionally =
+        variable.default.trim() !== "" &&
+        variable.default !== codeDefault &&
+        variable.default !== user.default;
+      if (modelChangedIntentionally) return variable;
+      return { ...variable, default: user.default, scope: user.scope };
+    }),
+  };
+}
+
 export const TemplateSlugSchema = z.enum([
   "launch",
   "newsletter",

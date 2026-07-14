@@ -25,6 +25,7 @@ import { randomUUID } from "node:crypto";
 import {
   buildRenderVariables,
   EmailChatToolCallPayloadSchema,
+  mergeUserVariableOverrides,
   parseVariableSchemaJson,
 } from "@madoo/shared";
 import { PrismaService } from "../prisma/prisma.service";
@@ -727,6 +728,7 @@ export class GenerationService {
 
     let baseCode = ctx.variants[0]?.componentCode ?? "";
     let sourceVariantId = ctx.variants[0]?.id ?? null;
+    let baseVariableSchema: unknown = ctx.variants[0]?.variableSchema ?? null;
     if (body.baseVariantId) {
       const v = await this.prisma.emailVariant.findFirst({
         where: {
@@ -738,6 +740,7 @@ export class GenerationService {
       if (!v) throw new BadRequestException("baseVariantId not found.");
       baseCode = v.componentCode;
       sourceVariantId = v.id;
+      baseVariableSchema = v.variableSchema;
     }
 
     const snapshot = await this.prisma.emailVfsSnapshot.upsert({
@@ -800,10 +803,33 @@ export class GenerationService {
 
     const brandKitBlock = await this.loadWorkspaceBrandBlock(workspaceId);
 
+    // The stored schema is where panel edits (uploaded images, value changes)
+    // live — the code defaults can be stale, so the model must see these.
+    let currentVariablesBlock = "";
+    try {
+      const currentSchema = parseVariableSchemaJson(baseVariableSchema);
+      if (currentSchema.variables.length > 0) {
+        currentVariablesBlock = [
+          "",
+          "Current variables (authoritative user-set values — keep each value verbatim in variableSchema unless the instruction changes that variable):",
+          JSON.stringify(
+            currentSchema.variables.map((variable) => ({
+              name: variable.name,
+              value: variable.default,
+              scope: variable.scope,
+            })),
+          ),
+        ].join("\n");
+      }
+    } catch {
+      // Malformed stored schema — the model just won't get the block.
+    }
+
     const editPrompt = [
       "Edit the current Madoo TSX email component according to the instruction.",
       `Instruction:\n${instruction}`,
       selectedElementBlock,
+      currentVariablesBlock,
       brandKitBlock ? `\n${brandKitBlock}` : "",
       "",
       versionLine,
@@ -844,6 +870,10 @@ export class GenerationService {
         },
       ],
       fullCodeForRetry: snapshot.componentCode,
+      preserveVariablesFrom: {
+        componentCode: baseCode,
+        variableSchema: baseVariableSchema,
+      },
       emit,
       signal,
     });
@@ -899,6 +929,11 @@ export class GenerationService {
     briefForFewShot: string;
     modelMessages: MessageParam[];
     fullCodeForRetry?: string;
+    /** Base variant whose user-set variable values must survive the edit. */
+    preserveVariablesFrom?: {
+      componentCode: string;
+      variableSchema: unknown;
+    };
     titleContext?: {
       prompt: string;
     };
@@ -926,6 +961,7 @@ export class GenerationService {
       briefForFewShot,
       modelMessages,
       fullCodeForRetry,
+      preserveVariablesFrom,
       titleContext,
       emit,
       signal,
@@ -1611,6 +1647,13 @@ export class GenerationService {
           variableSchema = sanitizeGeneratedVariableSchema(
             parseVariableSchemaJson(input.variableSchema),
           );
+          if (preserveVariablesFrom) {
+            variableSchema = mergeUserVariableOverrides(
+              variableSchema,
+              preserveVariablesFrom.componentCode,
+              preserveVariablesFrom.variableSchema,
+            );
+          }
           assertStaticSubject(input.subject, variableSchema);
           emit({
             type: "meta",

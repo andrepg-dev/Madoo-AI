@@ -8,7 +8,7 @@
     "start": "node dist/main.js",
     "start:prod": "node dist/main.js",
     "lint": "echo \"backend lint placeholder\"",
-    "test": "node --require ts-node/register/transpile-only --test src/billing/credit-window.spec.ts src/emails/email-variant-retention.spec.ts src/emails/tsx-visual-ops.spec.ts src/generation/email-icon-catalog.spec.ts",
+    "test": "node --require ts-node/register/transpile-only --test src/billing/credit-window.spec.ts src/emails/email-variant-retention.spec.ts src/emails/tsx-visual-ops.spec.ts src/emails/variable-merge.spec.ts src/generation/email-icon-catalog.spec.ts",
     "clean": "rm -rf dist .turbo",
     "backfill:image-formats": "node --require ts-node/register/transpile-only src/scripts/backfill-image-formats.ts",
     "backfill:community-previews": "node --require ts-node/register/transpile-only src/scripts/backfill-community-previews.ts",
