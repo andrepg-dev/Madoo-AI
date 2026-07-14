@@ -110,6 +110,9 @@ export function EmailPreviewSidebar({
       visualEdit?.onApply([{ op: "setText", nodeId, text }]),
     onMoveTo: (nodeId, targetId, position) =>
       visualEdit?.onApply([{ op: "moveTo", nodeId, targetId, position }]),
+    onExitEditMode: () => {
+      if (visualEdit?.enabled) visualEdit.onToggle();
+    },
   });
 
   const applyVisualOps = useCallback(
