@@ -170,12 +170,15 @@ export default function TemplateDetail({
               className={cx(
                 "madoo-paper-border h-[600px] overflow-hidden  shadow-[0_20px_60px_rgb(7_17_35/0.08)] transition-colors duration-300 sm:h-[720px] lg:h-[calc(100vh-172px)]",
                 device === "mobile"
-                  ? "flex justify-center overflow-y-auto overflow-x-hidden bg-[#F7F7F7] p-6"
+                  ? "flex items-center justify-center bg-[#F7F7F7] p-6"
                   : "flex flex-col bg-white",
               )}
             >
               {device === "mobile" ? (
-                <div className="relative flex h-[780px] w-[390px] shrink-0 flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)]">
+                /* The device fills the stage's height and keeps its phone
+                   proportions, so the frame is always whole — only the email
+                   inside its screen scrolls. */
+                <div className="relative flex aspect-[390/780] h-full w-auto max-w-full shrink-0 flex-col overflow-hidden rounded-[2.75rem] border-[10px] border-[#111317] bg-[#111317] shadow-[0_24px_70px_rgb(0_0_0/0.5)]">
                   {/* iOS status bar: gives the email breathing room under the
                       Dynamic Island instead of butting against it. */}
                   <div
@@ -308,7 +311,7 @@ export default function TemplateDetail({
               type="button"
               disabled={usingTemplate}
               onClick={handleUse}
-              className="mt-6 h-10 w-fit cursor-pointer rounded-lg bg-madoo-ink px-5 text-sm font-medium text-white shadow-[0_8px_20px_rgb(var(--madoo-ink-shadow-rgb)/0.16),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-ink-hover disabled:cursor-wait disabled:opacity-70"
+              className="mt-6 h-9 w-full cursor-pointer rounded-lg bg-madoo-ink text-sm font-medium text-white shadow-[0_8px_20px_rgb(var(--madoo-ink-shadow-rgb)/0.16),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-ink-hover disabled:cursor-wait disabled:opacity-70"
             >
               {usingTemplate ? t.using : t.use}
             </button>
