@@ -11,7 +11,10 @@ import type {
 } from "@/lib/community-templates";
 import {
   AiMagicIcon,
+  CheckmarkCircle02Icon,
   ComputerIcon,
+  Loading03Icon,
+  Mail01Icon,
   Moon02Icon,
   SmartPhone01Icon,
   Sun03Icon,
@@ -305,7 +308,7 @@ export default function TemplateDetail({
               type="button"
               disabled={usingTemplate}
               onClick={handleUse}
-              className="mt-6 h-11 cursor-pointer rounded-lg bg-madoo-ink text-sm font-medium text-white shadow-[0_8px_20px_rgb(var(--madoo-ink-shadow-rgb)/0.16),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-ink-hover disabled:cursor-wait disabled:opacity-70"
+              className="mt-6 h-10 w-fit cursor-pointer rounded-lg bg-madoo-ink px-5 text-sm font-medium text-white shadow-[0_8px_20px_rgb(var(--madoo-ink-shadow-rgb)/0.16),0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.22)] transition hover:bg-madoo-ink-hover disabled:cursor-wait disabled:opacity-70"
             >
               {usingTemplate ? t.using : t.use}
             </button>
@@ -442,7 +445,7 @@ function CompatibilityTester({
   };
 
   return (
-    <div className="mt-4 rounded-lg bg-white p-3">
+    <div className="mt-4">
       <div className="flex items-center gap-3">
         <span className="flex shrink-0 items-center gap-3">
           {COMPAT_PROVIDERS.map((provider) => (
@@ -478,18 +481,37 @@ function CompatibilityTester({
           type="button"
           disabled={status === "sending"}
           onClick={() => void submit()}
-          className="h-9 shrink-0 cursor-pointer whitespace-nowrap rounded-md bg-madoo-ink px-3 text-[13px] font-medium text-white transition hover:bg-madoo-ink-hover disabled:cursor-wait disabled:opacity-70"
+          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md bg-madoo-ink px-3 text-[13px] font-medium text-white transition hover:bg-madoo-ink-hover disabled:cursor-wait disabled:opacity-70"
         >
+          <HugeiconsIcon
+            aria-hidden="true"
+            className={status === "sending" ? "animate-spin" : undefined}
+            icon={
+              status === "sending"
+                ? Loading03Icon
+                : status === "sent"
+                  ? CheckmarkCircle02Icon
+                  : Mail01Icon
+            }
+            size={15}
+            strokeWidth={1.9}
+          />
           {status === "sending" ? t.compatibilitySending : t.compatibilityCta}
         </button>
       </div>
       {message ? (
         <p
           className={cx(
-            "mb-0 mt-2 text-xs leading-5",
+            "mb-0 mt-2 flex items-center gap-1.5 text-xs leading-5",
             status === "error" ? "text-red-600" : "text-madoo-accent",
           )}
         >
+          <HugeiconsIcon
+            aria-hidden="true"
+            icon={status === "error" ? Mail01Icon : CheckmarkCircle02Icon}
+            size={14}
+            strokeWidth={1.9}
+          />
           {message}
         </p>
       ) : null}
