@@ -67,9 +67,11 @@ export function CommunityCategoryFilterChips({
 export function EmailCardMenu({
   email,
   onShare,
+  onTest,
 }: {
   email: EmailDto;
   onShare: (email: EmailDto) => void;
+  onTest: (email: EmailDto) => void;
 }) {
   const title = getEmailTitle(email);
 
@@ -89,6 +91,15 @@ export function EmailCardMenu({
         align="end"
         className="w-52 gap-0.5 overflow-hidden p-1!"
       >
+        <DropdownItem
+          className={compactMenuItemClass}
+          onSelect={() => onTest(email)}
+        >
+          <span className="flex items-center gap-2.5">
+            <Icon name="inbox" size={14} />
+            Test email
+          </span>
+        </DropdownItem>
         <DropdownItem
           className={compactMenuItemClass}
           onSelect={() => onShare(email)}

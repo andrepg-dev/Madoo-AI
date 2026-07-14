@@ -12,6 +12,7 @@ import {
 } from "@/actions/community-templates";
 import { MasonryGrid } from "@/components/global/masonry-grid";
 import TemplateCard from "@/components/global/template-card";
+import { TestingModal } from "@/components/project/testing/TestingModal";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button, Card, Icon, SegmentedControl, useToast } from "@madoo/design-system";
 import {
@@ -61,6 +62,7 @@ export function ProjectShowCase() {
     useState<ProjectTab>("projects");
   const [projectTabTouched, setProjectTabTouched] = useState(false);
   const [shareTarget, setShareTarget] = useState<EmailDto | null>(null);
+  const [testTarget, setTestTarget] = useState<EmailDto | null>(null);
   const [privateTarget, setPrivateTarget] =
     useState<CommunityTemplateDto | null>(null);
   const [selectedCommunityTemplateId, setSelectedCommunityTemplateId] =
@@ -85,12 +87,10 @@ export function ProjectShowCase() {
 
   const recentEmails = useMemo(
     () =>
-      [...emails]
-        .sort(
-          (a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-        )
-        .slice(0, 10),
+      [...emails].sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      ),
     [emails],
   );
 
@@ -331,6 +331,7 @@ export function ProjectShowCase() {
                       <EmailCardMenu
                         email={email}
                         onShare={(nextEmail) => setShareTarget(nextEmail)}
+                        onTest={(nextEmail) => setTestTarget(nextEmail)}
                       />
                     }
                     onClick={() =>
@@ -415,6 +416,19 @@ export function ProjectShowCase() {
           </div>
         )}
       </Card>
+
+      <TestingModal
+        emailId={testTarget?.id ?? null}
+        html={
+          testTarget?.variants[testTarget.variants.length - 1]?.compiledHtml ??
+          ""
+        }
+        onClose={() => setTestTarget(null)}
+        open={Boolean(testTarget)}
+        variantId={
+          testTarget?.variants[testTarget.variants.length - 1]?.id ?? null
+        }
+      />
 
       <ShareToCommunityModal
         email={shareTarget}
