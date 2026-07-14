@@ -446,6 +446,9 @@ export const localeCopy = {
       compatibilitySent: "Sent! Check your inbox to see how it renders.",
       compatibilityError: "Could not send the test. Try again.",
       compatibilityInvalidEmail: "Enter a valid email.",
+      compatibilityLimit: "Daily limit reached — 3 test emails a day.",
+      compatibilityRemaining: (remaining: number) =>
+        `${remaining} test email${remaining === 1 ? "" : "s"} left today.`,
       recommended: "More templates",
       recommendedDescription: "Browse other designs from the community.",
       cards: [
@@ -723,6 +726,9 @@ export const localeCopy = {
       compatibilitySent: "¡Enviado! Revisa tu bandeja para ver cómo se renderiza.",
       compatibilityError: "No se pudo enviar la prueba. Inténtalo de nuevo.",
       compatibilityInvalidEmail: "Escribe un email válido.",
+      compatibilityLimit: "Límite diario alcanzado — 3 emails de prueba al día.",
+      compatibilityRemaining: (remaining: number) =>
+        `Te queda${remaining === 1 ? "" : "n"} ${remaining} email${remaining === 1 ? "" : "s"} de prueba hoy.`,
       recommended: "Más plantillas",
       recommendedDescription: "Explora otros diseños de la comunidad.",
       cards: [

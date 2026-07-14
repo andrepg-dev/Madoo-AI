@@ -392,10 +392,47 @@ const COMPAT_PROVIDERS = [
   { src: "/logos/apple.svg", alt: "Apple Mail" },
 ] as const;
 
+const COMPAT_EMAIL_KEY = "madoo:compat-email";
+const COMPAT_QUOTA_KEY = "madoo:compat-sends";
+/** Matches the backend's per-recipient daily cap. */
+const COMPAT_DAILY_LIMIT = 3;
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Sends already made today, from this browser. */
+function readSendsToday(): number {
+  try {
+    const raw = window.localStorage.getItem(COMPAT_QUOTA_KEY);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw) as { day?: string; count?: number };
+    return parsed.day === today() ? (parsed.count ?? 0) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function recordSend(): number {
+  const next = readSendsToday() + 1;
+  try {
+    window.localStorage.setItem(
+      COMPAT_QUOTA_KEY,
+      JSON.stringify({ day: today(), count: next }),
+    );
+  } catch {
+    // Private mode / storage disabled — the backend still enforces the cap.
+  }
+  return next;
+}
+
 /**
  * Landing visitors mail themselves the template to check how it renders in
  * their real client (Gmail, Outlook, Apple Mail…). Public, proxied through
- * /api/template-test; the backend rate-limits per recipient and per day.
+ * /api/template-test; the backend rate-limits per recipient and per day, and
+ * this mirrors that cap locally so the button reflects the remaining sends.
+ * The address is remembered in localStorage so it doesn't have to be retyped
+ * on every template.
  */
 function CompatibilityTester({
   templateId,
@@ -410,6 +447,8 @@ function CompatibilityTester({
     compatibilitySent: string;
     compatibilityError: string;
     compatibilityInvalidEmail: string;
+    compatibilityLimit: string;
+    compatibilityRemaining: (remaining: number) => string;
   };
 }) {
   const [email, setEmail] = useState("");
@@ -417,12 +456,31 @@ function CompatibilityTester({
     "idle",
   );
   const [message, setMessage] = useState("");
+  const [sendsToday, setSendsToday] = useState(0);
+
+  // localStorage isn't readable during SSR; hydrate after mount.
+  useEffect(() => {
+    try {
+      setEmail(window.localStorage.getItem(COMPAT_EMAIL_KEY) ?? "");
+    } catch {
+      // Storage disabled — the field just starts empty.
+    }
+    setSendsToday(readSendsToday());
+  }, []);
+
+  const remaining = Math.max(0, COMPAT_DAILY_LIMIT - sendsToday);
+  const outOfSends = remaining === 0;
 
   const submit = async () => {
     const trimmed = email.trim().toLowerCase();
     if (!COMPAT_EMAIL_RE.test(trimmed)) {
       setStatus("error");
       setMessage(t.compatibilityInvalidEmail);
+      return;
+    }
+    if (outOfSends) {
+      setStatus("error");
+      setMessage(t.compatibilityLimit);
       return;
     }
     setStatus("sending");
@@ -439,6 +497,13 @@ function CompatibilityTester({
         } | null;
         throw new Error(raw?.message ?? t.compatibilityError);
       }
+      try {
+        window.localStorage.setItem(COMPAT_EMAIL_KEY, trimmed);
+      } catch {
+        // Storage disabled — nothing to remember, the send still worked.
+      }
+      const used = recordSend();
+      setSendsToday(used);
       setStatus("sent");
       setMessage(t.compatibilitySent);
     } catch (err) {
@@ -482,9 +547,10 @@ function CompatibilityTester({
         />
         <button
           type="button"
-          disabled={status === "sending"}
+          disabled={status === "sending" || outOfSends}
           onClick={() => void submit()}
-          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md bg-madoo-ink px-3 text-[13px] font-medium text-white transition hover:bg-madoo-ink-hover disabled:cursor-wait disabled:opacity-70"
+          title={outOfSends ? t.compatibilityLimit : undefined}
+          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md bg-madoo-ink px-3 text-[13px] font-medium text-white transition hover:bg-madoo-ink-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           <HugeiconsIcon
             aria-hidden="true"
@@ -517,6 +583,11 @@ function CompatibilityTester({
             strokeWidth={1.9}
           />
           {message}
+        </p>
+      ) : null}
+      {status === "sent" && remaining > 0 ? (
+        <p className="mb-0 mt-1 text-xs leading-5 text-madoo-muted">
+          {t.compatibilityRemaining(remaining)}
         </p>
       ) : null}
     </div>
