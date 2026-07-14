@@ -442,9 +442,9 @@ function CompatibilityTester({
   };
 
   return (
-    <div className="mt-4 rounded-lg bg-white p-3 shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.14)]">
-      <div className="flex items-center gap-2">
-        <span className="flex shrink-0 items-center gap-1.5">
+    <div className="mt-4 rounded-lg bg-white p-3">
+      <div className="flex items-center gap-3">
+        <span className="flex shrink-0 items-center gap-3">
           {COMPAT_PROVIDERS.map((provider) => (
             <img
               alt={provider.alt}
@@ -472,7 +472,7 @@ function CompatibilityTester({
               void submit();
             }
           }}
-          className="h-9 min-w-0 flex-1 rounded-md border-0 bg-madoo-neutral-50 px-3 text-sm text-madoo-text shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.24)] outline-none placeholder:text-madoo-muted focus:shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.5)]"
+          className="h-9 min-w-0 flex-1 rounded-md border-0 bg-madoo-neutral-50 px-3 text-sm text-madoo-text outline-none placeholder:text-madoo-muted"
         />
         <button
           type="button"
