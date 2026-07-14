@@ -78,8 +78,8 @@ test("buildCreditUsage reports -1 remaining for unlimited", () => {
 
 test("PLAN_LIMITS match the agreed per-feature caps", () => {
   assert.deepEqual(PLAN_LIMITS.FREE, {
-    aiGenerations: 30,
-    dailyAiGenerations: 5,
+    aiGenerations: 3,
+    dailyAiGenerations: 3,
     storedTemplates: 10,
     members: 0,
     workspaces: 0,
