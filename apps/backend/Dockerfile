@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install Chromium and dependencies for Puppeteer.
 # openssl + libc6-compat: Prisma engines need libssl; without them Alpine often defaults to openssl-1.1.x
