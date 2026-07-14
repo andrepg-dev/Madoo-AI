@@ -310,6 +310,8 @@ export default function TemplateDetail({
               {usingTemplate ? t.using : t.use}
             </button>
 
+            <CompatibilityTester templateId={template.id} t={t} />
+
             <div className="mt-7 max-w-xl">
               <h2 className="m-0 text-xs font-medium uppercase tracking-wide text-madoo-muted">
                 {t.variables}
@@ -372,6 +374,164 @@ export default function TemplateDetail({
         nextUrl={nextUrl}
       />
     </main>
+  );
+}
+
+const COMPAT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function GmailLogo() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-label="Gmail">
+      <path fill="#EA4335" d="M12 11.1 3.4 4.5h17.2L12 11.1Z" />
+      <path fill="#FBBC04" d="M2 6.1v11.4c0 .8.7 1.5 1.5 1.5H6V9.2L2 6.1Z" />
+      <path fill="#34A853" d="M18 19h2.5c.8 0 1.5-.7 1.5-1.5V6.1l-4 3.1V19Z" />
+      <path
+        fill="#4285F4"
+        d="M6 19h12V9.2l-6 4.6-6-4.6V19Z"
+        opacity=".9"
+      />
+    </svg>
+  );
+}
+
+function OutlookLogo() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-label="Outlook">
+      <rect x="2" y="5" width="12" height="14" rx="2" fill="#0F6CBD" />
+      <ellipse cx="8" cy="12" rx="3.4" ry="3.8" fill="#fff" />
+      <ellipse cx="8" cy="12" rx="1.7" ry="2.2" fill="#0F6CBD" />
+      <path fill="#28A8EA" d="M14 8h8v9a2 2 0 0 1-2 2h-6V8Z" opacity=".85" />
+      <path fill="#0364B8" d="M14 5h6a2 2 0 0 1 2 2v1h-8V5Z" />
+    </svg>
+  );
+}
+
+function AppleMailLogo() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-label="Apple Mail">
+      <rect
+        x="2.5"
+        y="4.5"
+        width="19"
+        height="15"
+        rx="3"
+        fill="#fff"
+        stroke="#1E88E5"
+        strokeWidth="1.6"
+      />
+      <path
+        d="m4.5 7 7.5 6 7.5-6"
+        fill="none"
+        stroke="#1E88E5"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Landing visitors mail themselves the template to check how it renders in
+ * their real client (Gmail, Outlook, Apple Mail…). Public, proxied through
+ * /api/template-test; the backend rate-limits per recipient and per day.
+ */
+function CompatibilityTester({
+  templateId,
+  t,
+}: {
+  templateId: string;
+  t: {
+    compatibilityTitle: string;
+    compatibilityPlaceholder: string;
+    compatibilityCta: string;
+    compatibilitySending: string;
+    compatibilitySent: string;
+    compatibilityError: string;
+    compatibilityInvalidEmail: string;
+  };
+}) {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
+    "idle",
+  );
+  const [message, setMessage] = useState("");
+
+  const submit = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!COMPAT_EMAIL_RE.test(trimmed)) {
+      setStatus("error");
+      setMessage(t.compatibilityInvalidEmail);
+      return;
+    }
+    setStatus("sending");
+    setMessage("");
+    try {
+      const res = await fetch("/api/template-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId, email: trimmed }),
+      });
+      if (!res.ok) {
+        const raw = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(raw?.message ?? t.compatibilityError);
+      }
+      setStatus("sent");
+      setMessage(t.compatibilitySent);
+    } catch (err) {
+      setStatus("error");
+      setMessage(err instanceof Error ? err.message : t.compatibilityError);
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-lg bg-white p-3 shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.14)]">
+      <div className="flex items-center gap-2">
+        <span className="flex shrink-0 items-center gap-1.5" aria-hidden="true">
+          <GmailLogo />
+          <OutlookLogo />
+          <AppleMailLogo />
+        </span>
+        <input
+          type="email"
+          inputMode="email"
+          aria-label={t.compatibilityTitle}
+          placeholder={t.compatibilityPlaceholder}
+          value={email}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            if (status === "error" || status === "sent") setStatus("idle");
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void submit();
+            }
+          }}
+          className="h-9 min-w-0 flex-1 rounded-md border-0 bg-madoo-neutral-50 px-3 text-sm text-madoo-text shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.24)] outline-none placeholder:text-madoo-muted focus:shadow-[0_0_0_0.5px_rgb(var(--madoo-rule-rgb)/0.5)]"
+        />
+        <button
+          type="button"
+          disabled={status === "sending"}
+          onClick={() => void submit()}
+          className="h-9 shrink-0 cursor-pointer whitespace-nowrap rounded-md bg-madoo-ink px-3 text-[13px] font-medium text-white transition hover:bg-madoo-ink-hover disabled:cursor-wait disabled:opacity-70"
+        >
+          {status === "sending" ? t.compatibilitySending : t.compatibilityCta}
+        </button>
+      </div>
+      {message ? (
+        <p
+          className={cx(
+            "mb-0 mt-2 text-xs leading-5",
+            status === "error" ? "text-red-600" : "text-madoo-accent",
+          )}
+        >
+          {message}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

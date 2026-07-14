@@ -22,6 +22,28 @@ export type SendTestEmailResponse = z.infer<
   typeof SendTestEmailResponseSchema
 >;
 
+/**
+ * Public (unauthenticated) test send from the landing page: a visitor mails
+ * themselves a community template to check how it renders in their client.
+ */
+export const PublicTemplateTestSendSchema = z.object({
+  to: z.string().email(),
+});
+
+export type PublicTemplateTestSendInput = z.infer<
+  typeof PublicTemplateTestSendSchema
+>;
+
+export const PublicTemplateTestSendResponseSchema = z.object({
+  ok: z.literal(true),
+  to: z.string().email(),
+  skipped: z.boolean(),
+});
+
+export type PublicTemplateTestSendResponse = z.infer<
+  typeof PublicTemplateTestSendResponseSchema
+>;
+
 /** One link discovered in the email and the result of probing it. */
 export const LinkCheckSchema = z.object({
   url: z.string(),

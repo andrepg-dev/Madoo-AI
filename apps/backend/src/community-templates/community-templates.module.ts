@@ -3,6 +3,7 @@ import { AuthModule } from "../auth/auth.module";
 import { BillingModule } from "../billing/billing.module";
 import { EmailsModule } from "../emails/emails.module";
 import { GenerationModule } from "../generation/generation.module";
+import { MailModule } from "../mail/mail.module";
 import { PrismaModule } from "../prisma/prisma.module";
 import { WorkspacesModule } from "../workspaces/workspaces.module";
 import { CommunityTemplatesController } from "./community-templates.controller";
@@ -17,6 +18,7 @@ import { PublicCommunityTemplatesController } from "./public-community-templates
     BillingModule,
     EmailsModule,
     GenerationModule,
+    MailModule,
   ],
   controllers: [
     CommunityTemplatesController,

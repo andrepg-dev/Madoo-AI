@@ -22,6 +22,7 @@ import {
 import { BillingService } from "../billing/billing.service";
 import { EmailsService } from "../emails/emails.service";
 import { ReactToHtmlService } from "../generation/react-to-html.service";
+import { MailService } from "../mail/mail.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   SEED_TEMPLATES,
@@ -108,7 +109,47 @@ export class CommunityTemplatesService {
     private readonly emails: EmailsService,
     private readonly billing: BillingService,
     private readonly reactToHtml: ReactToHtmlService,
+    private readonly mail: MailService,
   ) {}
+
+  // The landing test-send endpoint is public, so cap sends per recipient and
+  // per day globally. In-memory is enough: one backend instance, and losing
+  // the counters on a restart only refreshes the budget.
+  private publicTestSends = new Map<string, number>();
+  private publicTestSendDay = "";
+
+  private assertPublicTestSendAllowed(to: string): void {
+    const day = new Date().toISOString().slice(0, 10);
+    if (day !== this.publicTestSendDay) {
+      this.publicTestSendDay = day;
+      this.publicTestSends.clear();
+    }
+    const perRecipient = this.publicTestSends.get(to) ?? 0;
+    const global = this.publicTestSends.get("*") ?? 0;
+    if (perRecipient >= 3 || global >= 200) {
+      throw new BadRequestException(
+        "Daily test-send limit reached. Try again tomorrow.",
+      );
+    }
+    this.publicTestSends.set(to, perRecipient + 1);
+    this.publicTestSends.set("*", global + 1);
+  }
+
+  /** Landing page: mail a community template to a visitor's address. */
+  async sendPublicTestEmail(
+    id: string,
+    to: string,
+  ): Promise<{ ok: true; to: string; skipped: boolean }> {
+    const recipient = to.trim().toLowerCase();
+    this.assertPublicTestSendAllowed(recipient);
+    const template = await this.getPublic(id);
+    const sent = await this.mail.sendTestEmail({
+      to: recipient,
+      subject: template.name,
+      html: template.compiledHtml,
+    });
+    return { ok: true, to: recipient, skipped: !sent };
+  }
 
   async list(userId: string): Promise<CommunityTemplateDto[]> {
     const rows = await this.prisma.communityTemplate.findMany({
