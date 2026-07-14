@@ -49,6 +49,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { PricingDrawer } from "./PricingDrawer";
+import { WhatsNewPanel } from "./WhatsNewPanel";
 
 type NavItem = {
   href: string;
@@ -840,18 +841,8 @@ export function Sidebar() {
                 className="w-max"
               />
             </DropdownTrigger>
-            <DropdownContent side="right" align="end" className="w-64 p-0!">
-              <div className="grid justify-items-center gap-1.5 px-4 py-6 text-center">
-                <span className="grid size-9 place-items-center rounded-full bg-madoo-surface-2 text-madoo-ink-muted">
-                  <AppIcon icon={InboxIcon} size={16} />
-                </span>
-                <span className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
-                  What's new
-                </span>
-                <span className="text-(length:--font-size-sm) leading-5 text-madoo-ink-muted">
-                  Product news and updates will show up here.
-                </span>
-              </div>
+            <DropdownContent side="right" align="end" className="w-80 p-0!">
+              <WhatsNewPanel />
             </DropdownContent>
           </Dropdown>
         </div>
