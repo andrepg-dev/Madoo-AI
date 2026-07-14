@@ -36,7 +36,7 @@ import type {
   ClipboardEvent,
   KeyboardEvent,
 } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AuthDialog from "./AuthDialog";
 import {
   AttachmentPreviewList,
@@ -46,7 +46,9 @@ import {
 import { Hi, getNextSearchParams } from "./home/home-utils";
 import {
   TemplatePreviewImage,
+  TemplateShowcaseImage,
   pickCategoryShowcase,
+  useTallTemplates,
 } from "./home/TemplatePreviewImage";
 import { useTypingPlaceholder } from "./home/useTypingPlaceholder";
 import { LandingHeader } from "./LandingHeader";
@@ -776,6 +778,11 @@ export const localeCopy = {
   },
 } as const;
 
+/** Tiles shown in the homepage showcase row. */
+const SHOWCASE_COLUMNS = 5;
+/** Categories considered before the short-template filter runs. */
+const SHOWCASE_CANDIDATES = 12;
+
 export default function HomePage({
   locale = "en",
   communityTemplates = [],
@@ -811,9 +818,18 @@ export default function HomePage({
   // cards are a fallback for an empty gallery, not padding to a minimum count —
   // padding made decorative cards look like real DB templates.
   const hasCommunityTemplates = communityTemplateCards.length > 0;
-  // Homepage showcase: one card per category (up to 5) so the section reads as a
-  // category overview. The full gallery lives on /templates.
-  const categoryShowcase = pickCategoryShowcase(communityTemplateCards, 5);
+  // Homepage showcase: one card per category so the section reads as a category
+  // overview (the full gallery lives on /templates). Candidates are picked wide
+  // and then narrowed to the ones whose screenshot is tall enough for the
+  // uniform tiles — short emails would sit in a mostly-empty crop.
+  const showcaseCandidates = useMemo(
+    () => pickCategoryShowcase(communityTemplateCards, SHOWCASE_CANDIDATES),
+    [communityTemplateCards],
+  );
+  const categoryShowcase = useTallTemplates(
+    showcaseCandidates,
+    SHOWCASE_COLUMNS,
+  );
   // Product-features section: tabs switch the copy and a matching product visual.
   // Designs & Layouts is the first tab and the default selection.
   const [activeFeatureTab, setActiveFeatureTab] = useState(0);
@@ -1040,27 +1056,19 @@ export default function HomePage({
 
   // Category showcase card: a representative preview with the category name as a
   // bold caption below, mirroring the homepage category overview row.
-  const renderShowcaseCard = (
-    template: TemplateShowcaseCard,
-    index: number,
-  ) => (
+  const renderShowcaseCard = (template: TemplateShowcaseCard) => (
     <article
       key={template.id ?? template.name}
       role="button"
       tabIndex={0}
       onClick={() => openTemplatePreview(template)}
       onKeyDown={onTemplateCardKeyDown(template)}
-      className="group mb-8 flex min-w-0 cursor-pointer flex-col break-inside-avoid outline-none"
+      className="group flex min-w-0 cursor-pointer flex-col outline-none"
     >
       <div className="relative">
-        <TemplatePreviewImage
+        <TemplateShowcaseImage
           src={template.imageSrc ?? "/templates/news-letter.png"}
           alt={`${template.name} ${copy.templates.previewAlt}`}
-          defaultHeightRatio={
-            templateDefaultHeightRatios[
-              index % templateDefaultHeightRatios.length
-            ]
-          }
         />
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-madoo-ink/0 opacity-0 transition duration-200 group-hover:bg-madoo-ink/12 group-hover:opacity-100">
           <span className="rounded-full bg-white px-4 py-2 text-xs font-medium text-madoo-ink shadow-[0_0_0_0.5px_rgb(var(--madoo-ink-shadow-rgb)/0.18)]">
@@ -1436,7 +1444,9 @@ export default function HomePage({
             </div>
 
             {hasCommunityTemplates ? (
-              <div className="mt-10 columns-2 gap-4 sm:columns-3 lg:columns-5">
+              // Empty until the screenshots have been measured; the fallback
+              // sample cards must not flash in during that pass.
+              <div className="mt-10 grid grid-cols-2 items-start gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 {categoryShowcase.map(renderShowcaseCard)}
               </div>
             ) : (
