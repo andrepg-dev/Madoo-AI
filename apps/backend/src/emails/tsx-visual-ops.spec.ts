@@ -27,6 +27,7 @@ const Email = ({
           <Text style={{ fontSize: 38 }}>{headline}</Text>
           <Text style={{ fontSize: 16 }}>A hard-coded paragraph.</Text>
           <Button href="#" style={{ padding: '14px' }}>{ctaLabel}</Button>
+          <Text style={{ fontSize: 15 }}>Greetings {headline}, glad you are here.</Text>
         </Section>
         <Section>
           <Row>
@@ -80,6 +81,14 @@ describe("tagComponentSource", () => {
     assert.match(tagged, /data-m-text="literal"/);
   });
 
+  it("flags text mixing literals and variables as mixed", () => {
+    const mixedLine = tagged
+      .split("\n")
+      .find((l) => l.includes("Greetings") && l.includes("data-m-id"));
+    assert.ok(mixedLine);
+    assert.match(mixedLine, /data-m-text="mixed"/);
+  });
+
   it("flags elements inside .map as dynamic without text editing", () => {
     const columnLine = tagged
       .split("\n")
@@ -121,6 +130,17 @@ describe("applyVisualOps", () => {
     ]);
     assert.match(result.code, />New copy\.</);
     assert.doesNotMatch(result.code, /A hard-coded paragraph\./);
+    assert.equal(result.variableUpdates.length, 0);
+    assert.deepEqual(result.summaries, ["Edited text in <Text>"]);
+  });
+
+  it("setText on mixed content replaces the whole content with the typed text", () => {
+    const id = idOf(tagged, "Greetings");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "setText", nodeId: id, text: "Welcome aboard, friend." },
+    ]);
+    assert.match(result.code, />Welcome aboard, friend\.</);
+    assert.doesNotMatch(result.code, /Greetings \{headline\}/);
     assert.equal(result.variableUpdates.length, 0);
     assert.deepEqual(result.summaries, ["Edited text in <Text>"]);
   });

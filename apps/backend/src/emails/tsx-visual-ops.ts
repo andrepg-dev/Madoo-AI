@@ -134,12 +134,16 @@ function collectPropDefaults(
 
 type TextBinding =
   | { kind: "literal" }
-  | { kind: "var"; name: string };
+  | { kind: "var"; name: string }
+  | { kind: "mixed" };
 
 /**
- * Detects whether an element's content is a single directly-editable text:
- * one JSXText child (literal) or one `{propName}` expression whose prop has
- * a string default (var). Mixed content is not inline-editable.
+ * Detects whether an element's content is directly editable text: one JSXText
+ * child (literal), one `{propName}` expression whose prop has a string
+ * default (var), or several children that are all plain text pieces — JSXText,
+ * `{"…"}` string literals, or `{prop}` references (mixed). Editing a mixed
+ * element replaces its whole content with the typed text, so inline variables
+ * become static copy. Content with nested elements is not inline-editable.
  */
 function textBindingOf(
   element: recast.types.namedTypes.JSXElement,
@@ -149,17 +153,28 @@ function textBindingOf(
     if (n.JSXText.check(child)) return child.value.trim() !== "";
     return true;
   });
-  if (significant.length !== 1) return null;
-  const only = significant[0];
-  if (n.JSXText.check(only)) return { kind: "literal" };
-  if (
-    n.JSXExpressionContainer.check(only) &&
-    n.Identifier.check(only.expression) &&
-    propDefaults.has(only.expression.name)
-  ) {
-    return { kind: "var", name: only.expression.name };
+  if (significant.length === 0) return null;
+  if (significant.length === 1) {
+    const only = significant[0];
+    if (n.JSXText.check(only)) return { kind: "literal" };
+    if (
+      n.JSXExpressionContainer.check(only) &&
+      n.Identifier.check(only.expression) &&
+      propDefaults.has(only.expression.name)
+    ) {
+      return { kind: "var", name: only.expression.name };
+    }
   }
-  return null;
+  const allTextPieces = significant.every((child) => {
+    if (n.JSXText.check(child)) return true;
+    if (!n.JSXExpressionContainer.check(child)) return false;
+    if (n.StringLiteral.check(child.expression)) return true;
+    return (
+      n.Identifier.check(child.expression) &&
+      propDefaults.has(child.expression.name)
+    );
+  });
+  return allTextPieces ? { kind: "mixed" } : null;
 }
 
 function imageSourceAttribute(
@@ -267,7 +282,7 @@ export function tagComponentSource(code: string): string {
           pushAttribute(
             element,
             VISUAL_EDIT_TEXT_ATTR,
-            binding.kind === "literal" ? "literal" : `var:${binding.name}`,
+            binding.kind === "var" ? `var:${binding.name}` : binding.kind,
           );
         }
       }
