@@ -506,11 +506,12 @@ function CompatibilityTester({
         <p
           className={cx(
             "mb-0 mt-2 flex items-center gap-1.5 text-xs leading-5",
-            status === "error" ? "text-red-600" : "text-green-600",
+            status === "error" ? "text-red-600" : "text-madoo-text",
           )}
         >
           <HugeiconsIcon
             aria-hidden="true"
+            className={status === "error" ? undefined : "text-green-600"}
             icon={status === "error" ? Mail01Icon : CheckmarkCircle02Icon}
             size={14}
             strokeWidth={1.9}
