@@ -3,6 +3,7 @@
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { REFERRAL_REWARD_CREDITS } from "@madoo/shared";
+import Image from "next/image";
 import { useState } from "react";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,6 +13,10 @@ type Faq = {
   answer: string;
   /** Renders the 7-day trial email-claim form under the answer. */
   claimTrial?: boolean;
+  /** Renders a link to this URL under the answer. */
+  linkHref?: string;
+  /** Renders a screenshot under the answer. */
+  image?: { src: string; alt: string };
 };
 
 const faqs: Faq[] = [
@@ -34,6 +39,16 @@ const faqs: Faq[] = [
     question: "How do credits work?",
     answer:
       "1 AI message costs 1 credit. Creating a template from scratch costs 1 credit, and each message you send to edit that template also costs 1 credit.",
+  },
+  {
+    question: "How do I cancel my subscription?",
+    answer:
+      "You can cancel anytime from Settings → Billing & usage. Open the page below, find the \"Your plan\" card, and click \"Cancel plan\". You keep full access until the end of your current billing period.",
+    linkHref: "https://my.madooai.com/settings/billing",
+    image: {
+      src: "/faq-cancel-plan.png",
+      alt: "Billing & usage settings page showing the Your plan card with the Cancel plan button",
+    },
   },
   {
     question: "Who owns the project and code?",
@@ -162,6 +177,25 @@ export function PricingFaq() {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-madoo-muted">
               {faq.answer}
             </p>
+            {faq.linkHref ? (
+              <a
+                href={faq.linkHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-sm font-medium text-madoo-blue-700 underline underline-offset-2 hover:opacity-80"
+              >
+                {faq.linkHref.replace(/^https?:\/\//, "")}
+              </a>
+            ) : null}
+            {faq.image ? (
+              <Image
+                src={faq.image.src}
+                alt={faq.image.alt}
+                width={1496}
+                height={628}
+                className="madoo-paper-border mt-3 w-full rounded-2xl"
+              />
+            ) : null}
             {faq.claimTrial ? <TrialClaimForm /> : null}
           </details>
         ))}
