@@ -1,11 +1,3 @@
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import type { MessageEvent } from "@nestjs/common";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   ContentBlockParam,
@@ -14,23 +6,52 @@ import type {
   MessageParam,
   ThinkingConfigParam,
 } from "@anthropic-ai/sdk/resources/messages";
+import {
+  EmailChatToolCallPayloadSchema,
+  buildRenderVariables,
+  mergeUserVariableOverrides,
+  parseVariableSchemaJson,
+} from "@madoo/shared";
+import type { MessageEvent } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import type {
   EmailChatKind,
   EmailChatRole,
   GenerationRunKind,
   GenerationRunStatus,
 } from "@prisma/client";
-import { Observable } from "rxjs";
 import { randomUUID } from "node:crypto";
-import {
-  buildRenderVariables,
-  EmailChatToolCallPayloadSchema,
-  mergeUserVariableOverrides,
-  parseVariableSchemaJson,
-} from "@madoo/shared";
-import { PrismaService } from "../prisma/prisma.service";
+import { Observable } from "rxjs";
 import { BillingService } from "../billing/billing.service";
+import { assertPublicUrl } from "../common/ssrf-guard";
+import {
+  EmailVariantRetentionService,
+  MAX_EMAIL_VERSIONS,
+} from "../emails/email-variant-retention.service";
 import { extractElementSnippet } from "../emails/tsx-visual-ops";
+import { PrismaService } from "../prisma/prisma.service";
+import { S3Service } from "../s3/s3.service";
+import { ConversationTitleAgent } from "./conversation-title.agent";
+import {
+  EMAIL_ICON_NAMES,
+  EmailIconCatalogService,
+  type EmailIconName,
+  type EmailIconTone,
+} from "./email-icon-catalog.service";
+import {
+  CHAT_HISTORY_LIMIT,
+  CODE_CONTEXT_LIMIT,
+  PREVIEW_MAX_ATTEMPTS,
+  STATIC_INSTRUCTION,
+  buildFewShotText,
+} from "./generation.prompts";
+import type { ChartToolInput } from "./generation.tools";
 import {
   EMIT_EMAIL_TOOL,
   FIND_BRAND_IMAGES_TOOL,
@@ -43,30 +64,6 @@ import {
   buildQuickChartUrl,
 } from "./generation.tools";
 import {
-  CHAT_HISTORY_LIMIT,
-  CODE_CONTEXT_LIMIT,
-  PREVIEW_MAX_ATTEMPTS,
-  STATIC_INSTRUCTION,
-  buildFewShotText,
-} from "./generation.prompts";
-import { ReactToHtmlService } from "./react-to-html.service";
-import { ScreenshotService } from "./screenshot.service";
-import { S3Service } from "../s3/s3.service";
-import { assertPublicUrl } from "../common/ssrf-guard";
-import { WebsiteBrandService } from "./website-brand.service";
-import { ConversationTitleAgent } from "./conversation-title.agent";
-import type { ChartToolInput } from "./generation.tools";
-import {
-  EmailVariantRetentionService,
-  MAX_EMAIL_VERSIONS,
-} from "../emails/email-variant-retention.service";
-import {
-  EMAIL_ICON_NAMES,
-  EmailIconCatalogService,
-  type EmailIconName,
-  type EmailIconTone,
-} from "./email-icon-catalog.service";
-import {
   GenerationAbortedError,
   assertStaticSubject,
   buildCodeContextSnippet,
@@ -77,7 +74,9 @@ import {
   sanitizeGeneratedVariableSchema,
   shortHash,
 } from "./generation.util";
-
+import { ReactToHtmlService } from "./react-to-html.service";
+import { ScreenshotService } from "./screenshot.service";
+import { WebsiteBrandService } from "./website-brand.service";
 
 @Injectable()
 export class GenerationService {
@@ -98,11 +97,8 @@ export class GenerationService {
   ) {
     const key = this.config.get<string>("ANTHROPIC_API_KEY");
     this.model =
-      this.config.get<string>("ANTHROPIC_MODEL") ??
-      "claude-sonnet-5";
-    this.anthropic = key
-      ? new Anthropic({ apiKey: key, maxRetries: 3 })
-      : null;
+      this.config.get<string>("ANTHROPIC_MODEL") ?? "claude-sonnet-5";
+    this.anthropic = key ? new Anthropic({ apiKey: key, maxRetries: 3 }) : null;
   }
 
   /**
@@ -120,7 +116,10 @@ export class GenerationService {
       try {
         // SSRF guard: URLs originate from the model / find_images tool, so
         // validate the host (and every redirect hop) resolves to a public IP.
-        res = await this.fetchImageFollowingRedirects(sourceUrl, controller.signal);
+        res = await this.fetchImageFollowingRedirects(
+          sourceUrl,
+          controller.signal,
+        );
       } finally {
         clearTimeout(timer);
       }
@@ -186,8 +185,11 @@ export class GenerationService {
    * `ANTHROPIC_EFFORT_INITIAL` / `ANTHROPIC_EFFORT_EDIT`, then the shared
    * `ANTHROPIC_EFFORT`, then the per-kind default. Values: low|medium|high|max.
    */
-  private effortLevel(kind: GenerationRunKind): "low" | "medium" | "high" | "max" {
-    const perKindDefault: "high" | "medium" = kind === "INITIAL" ? "high" : "medium";
+  private effortLevel(
+    kind: GenerationRunKind,
+  ): "low" | "medium" | "high" | "max" {
+    const perKindDefault: "high" | "medium" =
+      kind === "INITIAL" ? "high" : "medium";
     const perKindEnv =
       kind === "INITIAL" ? "ANTHROPIC_EFFORT_INITIAL" : "ANTHROPIC_EFFORT_EDIT";
     const raw = (
@@ -319,13 +321,18 @@ export class GenerationService {
       void (async () => {
         try {
           subscriber.next({
-            data: JSON.stringify({ type: "step", message: "Preparing generation..." }),
+            data: JSON.stringify({
+              type: "step",
+              message: "Preparing generation...",
+            }),
           } as MessageEvent);
           await this.runInitial(
             emailId,
             workspaceId,
             (payload) =>
-              subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+              subscriber.next({
+                data: JSON.stringify(payload),
+              } as MessageEvent),
             undefined,
             body?.imageUrls,
             body?.prompt,
@@ -363,14 +370,19 @@ export class GenerationService {
       void (async () => {
         try {
           subscriber.next({
-            data: JSON.stringify({ type: "step", message: "Applying AI edits..." }),
+            data: JSON.stringify({
+              type: "step",
+              message: "Applying AI edits...",
+            }),
           } as MessageEvent);
           await this.runEdit(
             emailId,
             workspaceId,
             body,
             (payload) =>
-              subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+              subscriber.next({
+                data: JSON.stringify(payload),
+              } as MessageEvent),
             undefined,
             ac.signal,
           );
@@ -408,7 +420,9 @@ export class GenerationService {
             emailId,
             workspaceId,
             (payload) =>
-              subscriber.next({ data: JSON.stringify(payload) } as MessageEvent),
+              subscriber.next({
+                data: JSON.stringify(payload),
+              } as MessageEvent),
             ac.signal,
           );
           subscriber.complete();
@@ -492,7 +506,10 @@ export class GenerationService {
   }
 
   /** Fire-and-forget generation used by PendingPrompt.consume() flow. */
-  async generateEmailInBackground(emailId: string, workspaceId: string): Promise<void> {
+  async generateEmailInBackground(
+    emailId: string,
+    workspaceId: string,
+  ): Promise<void> {
     try {
       await this.runInitial(emailId, workspaceId, () => undefined);
     } catch {
@@ -693,17 +710,17 @@ export class GenerationService {
         (result.applied
           ? "I drafted your email — open the preview on the right to review it, then tell me what you'd like to adjust."
           : isFirstInitialDraftTurn
-          ? [
-              "Before I draft, quick questions:",
-              "1. What is the main goal of this email?",
-              "2. Who should receive it?",
-              "3. What brand or website should it match?",
-              "4. What offer, product, date, link, or detail must be included?",
-              "5. What should the primary CTA say and link to?",
-              "",
-              'Reply with answers, or say "go" / "use your best judgment" and I will draft with smart defaults.',
-            ].join("\n")
-          : "I added some guidance above. Ask me for a concrete draft whenever you're ready."),
+            ? [
+                "Before I draft, quick questions:",
+                "1. What is the main goal of this email?",
+                "2. Who should receive it?",
+                "3. What brand or website should it match?",
+                "4. What offer, product, date, link, or detail must be included?",
+                "5. What should the primary CTA say and link to?",
+                "",
+                'Reply with answers, or say "go" / "use your best judgment" and I will draft with smart defaults.',
+              ].join("\n")
+            : "I added some guidance above. Ask me for a concrete draft whenever you're ready."),
       groupId,
     });
   }
@@ -786,7 +803,10 @@ export class GenerationService {
       emailId,
       opts?.contextUpTo,
     );
-    const codeContext = buildCodeContextSnippet(snapshot.componentCode, CODE_CONTEXT_LIMIT);
+    const codeContext = buildCodeContextSnippet(
+      snapshot.componentCode,
+      CODE_CONTEXT_LIMIT,
+    );
 
     const retainedVersions = await this.prisma.emailVariant.findMany({
       where: { emailId },
@@ -968,7 +988,9 @@ export class GenerationService {
     } = params;
 
     if (!this.anthropic) {
-      throw new InternalServerErrorException("ANTHROPIC_API_KEY is not configured.");
+      throw new InternalServerErrorException(
+        "ANTHROPIC_API_KEY is not configured.",
+      );
     }
 
     await this.prisma.email.update({
@@ -1046,15 +1068,22 @@ export class GenerationService {
           };
         }
 
-        const requestedTool = response.content.find((b) => b.type === "tool_use");
+        const requestedTool = response.content.find(
+          (b) => b.type === "tool_use",
+        );
         if (!requestedTool || requestedTool.type !== "tool_use") break;
         if (requestedTool.name === "emit_email") break;
 
         let toolResultContent: string | ContentBlockParam[];
         if (requestedTool.name === "inspect_website_brand") {
-          const input = requestedTool.input as { url?: unknown; purpose?: unknown };
+          const input = requestedTool.input as {
+            url?: unknown;
+            purpose?: unknown;
+          };
           if (typeof input.url !== "string" || !input.url.trim()) {
-            throw new BadRequestException("inspect_website_brand requires a URL.");
+            throw new BadRequestException(
+              "inspect_website_brand requires a URL.",
+            );
           }
           const url = input.url.trim();
           emit({
@@ -1136,12 +1165,16 @@ export class GenerationService {
           }
           toolResultContent = JSON.stringify(brandContext);
         } else if (requestedTool.name === "find_brand_images") {
-          const input = requestedTool.input as { url?: unknown; query?: unknown };
+          const input = requestedTool.input as {
+            url?: unknown;
+            query?: unknown;
+          };
           if (typeof input.url !== "string" || !input.url.trim()) {
             throw new BadRequestException("find_brand_images requires a URL.");
           }
           const url = input.url.trim();
-          const query = typeof input.query === "string" ? input.query.trim() : "";
+          const query =
+            typeof input.query === "string" ? input.query.trim() : "";
           emit({
             type: "tool_call",
             id: requestedTool.id,
@@ -1275,9 +1308,7 @@ export class GenerationService {
           const rehosted = await Promise.all(
             found.slice(0, 4).map(async (img) => {
               const url = await this.rehostImageUrl(img.url);
-              return url
-                ? { url, description: img.description }
-                : null;
+              return url ? { url, description: img.description } : null;
             }),
           );
           const images = rehosted.filter((img) => img !== null) as Array<{
@@ -1310,7 +1341,10 @@ export class GenerationService {
           toolResultContent = JSON.stringify(
             images.length
               ? { images }
-              : { images: [], note: "No images found. Use a sensible placeholder image URL instead." },
+              : {
+                  images: [],
+                  note: "No images found. Use a sensible placeholder image URL instead.",
+                },
           );
         } else if (requestedTool.name === "get_email_version") {
           const input = requestedTool.input as { version?: unknown };
@@ -1384,14 +1418,18 @@ export class GenerationService {
         } else if (requestedTool.name === "view_current_email") {
           const input = requestedTool.input as { version?: unknown };
           const requestedVersion =
-            typeof input.version === "number" ? Math.trunc(input.version) : undefined;
+            typeof input.version === "number"
+              ? Math.trunc(input.version)
+              : undefined;
           emit({
             type: "tool_call",
             id: requestedTool.id,
             name: "view_current_email",
             status: "running",
             title: "Viewing current email design",
-            detail: requestedVersion ? `Version ${requestedVersion}` : "Latest version",
+            detail: requestedVersion
+              ? `Version ${requestedVersion}`
+              : "Latest version",
           });
           const variant = await this.prisma.emailVariant.findFirst({
             where: {
@@ -1416,13 +1454,17 @@ export class GenerationService {
               name: "view_current_email",
               status: "done",
               title: "No saved version to view",
-              detail: requestedVersion ? `Version ${requestedVersion}` : "Latest version",
+              detail: requestedVersion
+                ? `Version ${requestedVersion}`
+                : "Latest version",
             });
             toolCalls.push({
               id: requestedTool.id,
               name: "view_current_email",
               title: "No saved version to view",
-              detail: requestedVersion ? `Version ${requestedVersion}` : "Latest version",
+              detail: requestedVersion
+                ? `Version ${requestedVersion}`
+                : "Latest version",
             });
             toolResultContent = requestedVersion
               ? `Version ${requestedVersion} has not been saved yet. Emit the email first, then view it.`
@@ -1472,7 +1514,11 @@ export class GenerationService {
           }
         } else if (requestedTool.name === "generate_chart") {
           const input = requestedTool.input as ChartToolInput;
-          if (!input.type || !Array.isArray(input.datasets) || input.datasets.length === 0) {
+          if (
+            !input.type ||
+            !Array.isArray(input.datasets) ||
+            input.datasets.length === 0
+          ) {
             throw new BadRequestException(
               "generate_chart requires a type and at least one dataset.",
             );
@@ -1512,7 +1558,9 @@ export class GenerationService {
             note: "Use this URL as the <Img src> default (give it an explicit width and descriptive alt). It is a static PNG safe for all email clients.",
           });
         } else {
-          throw new BadRequestException(`Unsupported tool requested: ${requestedTool.name}`);
+          throw new BadRequestException(
+            `Unsupported tool requested: ${requestedTool.name}`,
+          );
         }
 
         turnMessages = [
@@ -1535,7 +1583,9 @@ export class GenerationService {
       }
 
       if (!response) {
-        throw new InternalServerErrorException("Madoo AI did not return a response.");
+        throw new InternalServerErrorException(
+          "Madoo AI did not return a response.",
+        );
       }
 
       emit({
@@ -1635,7 +1685,8 @@ export class GenerationService {
         throw new BadRequestException("Invalid emit_email tool payload.");
       }
 
-      let variableSchema: ReturnType<typeof parseVariableSchemaJson> | null = null;
+      let variableSchema: ReturnType<typeof parseVariableSchemaJson> | null =
+        null;
       let compiledHtml = "";
       let validated = false;
       let attempts = 0;
@@ -1676,7 +1727,8 @@ export class GenerationService {
             type: "meta",
             attempt: attempts,
             maxAttempts: 2,
-            warning: "Invalid component/schema. Retrying once with validator feedback.",
+            warning:
+              "Invalid component/schema. Retrying once with validator feedback.",
           });
           const retry = await this.runStream({
             modelMessages: [
@@ -1726,7 +1778,9 @@ export class GenerationService {
             typeof nextInput.componentCode !== "string" ||
             nextInput.variableSchema === undefined
           ) {
-            throw new BadRequestException("Invalid emit_email payload on retry.");
+            throw new BadRequestException(
+              "Invalid emit_email payload on retry.",
+            );
           }
           input.subject = nextInput.subject;
           input.componentCode = nextInput.componentCode;
@@ -1734,7 +1788,9 @@ export class GenerationService {
         }
       }
       if (!variableSchema || !validated) {
-        throw new BadRequestException(lastErr?.message ?? "Invalid component or variableSchema.");
+        throw new BadRequestException(
+          lastErr?.message ?? "Invalid component or variableSchema.",
+        );
       }
 
       const seq = await this.nextVariantSeq(emailId);
@@ -1805,8 +1861,10 @@ export class GenerationService {
           finalComponentCode = reviewed.componentCode;
           assistantText += reviewed.assistantText;
           usageTotals = {
-            input_tokens: usageTotals.input_tokens + reviewed.usage.input_tokens,
-            output_tokens: usageTotals.output_tokens + reviewed.usage.output_tokens,
+            input_tokens:
+              usageTotals.input_tokens + reviewed.usage.input_tokens,
+            output_tokens:
+              usageTotals.output_tokens + reviewed.usage.output_tokens,
             cache_creation_input_tokens:
               usageTotals.cache_creation_input_tokens +
               reviewed.usage.cache_creation_input_tokens,
@@ -1940,7 +1998,8 @@ export class GenerationService {
       const usage = {
         input_tokens: resp.usage?.input_tokens ?? 0,
         output_tokens: resp.usage?.output_tokens ?? 0,
-        cache_creation_input_tokens: resp.usage?.cache_creation_input_tokens ?? 0,
+        cache_creation_input_tokens:
+          resp.usage?.cache_creation_input_tokens ?? 0,
         cache_read_input_tokens: resp.usage?.cache_read_input_tokens ?? 0,
       };
       const toolBlock = resp.content.find(
@@ -2077,7 +2136,9 @@ export class GenerationService {
     thinkingText: string;
   }> {
     if (!this.anthropic) {
-      throw new InternalServerErrorException("ANTHROPIC_API_KEY is not configured.");
+      throw new InternalServerErrorException(
+        "ANTHROPIC_API_KEY is not configured.",
+      );
     }
 
     // Forcing a specific tool (or "any") is incompatible with extended thinking
@@ -2110,17 +2171,17 @@ export class GenerationService {
 
     const stream = this.anthropic.messages.stream(
       {
-      model: this.model,
-      max_tokens: maxTokens,
-      ...(thinking ? { thinking } : {}),
-      output_config: { effort: this.effortLevel(args.kind) },
-      system: args.systemBlocks,
-      // The tool loop pairs a tool_result for exactly one tool_use per turn.
-      // Parallel tool use (e.g. inspect_website_brand + emit_email together)
-      // leaves the second tool_use unpaired on replay → Anthropic 400. Force
-      // at most one tool call per assistant turn.
-      ...toolConfig,
-      messages: args.modelMessages,
+        model: this.model,
+        max_tokens: maxTokens,
+        ...(thinking ? { thinking } : {}),
+        output_config: { effort: this.effortLevel(args.kind) },
+        system: args.systemBlocks,
+        // The tool loop pairs a tool_result for exactly one tool_use per turn.
+        // Parallel tool use (e.g. inspect_website_brand + emit_email together)
+        // leaves the second tool_use unpaired on replay → Anthropic 400. Force
+        // at most one tool call per assistant turn.
+        ...toolConfig,
+        messages: args.modelMessages,
       },
       args.signal ? { signal: args.signal } : undefined,
     );
