@@ -28,8 +28,28 @@ export async function generateMetadata({
   const { publicId } = await params;
   const email = await loadPublicEmail(publicId);
 
+  const title = email?.title ?? email?.subject ?? "Shared Email";
+  const description = email
+    ? `"${email.subject}" — an email template designed with Madoo AI.`
+    : "This shared email template is no longer available.";
+  const images = email?.previewUrl ? [{ url: email.previewUrl }] : undefined;
+
   return {
-    title: email?.title ?? email?.subject ?? "Shared Email",
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: "Madoo AI",
+      images,
+    },
+    twitter: {
+      card: images ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: email?.previewUrl ? [email.previewUrl] : undefined,
+    },
   };
 }
 

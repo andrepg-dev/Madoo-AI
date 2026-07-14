@@ -996,7 +996,7 @@ export class EmailsService {
         variants: {
           orderBy: { seq: "desc" },
           take: 1,
-          select: { subject: true, compiledHtml: true },
+          select: { subject: true, compiledHtml: true, previewUrl: true },
         },
       },
     });
@@ -1011,6 +1011,11 @@ export class EmailsService {
       subject: variant.subject,
       compiledHtml: variant.compiledHtml,
       createdAt: email.createdAt.toISOString(),
+      previewUrl:
+        typeof variant.previewUrl === "string" &&
+        /^https?:\/\//i.test(variant.previewUrl.trim())
+          ? variant.previewUrl.trim()
+          : null,
     });
   }
 

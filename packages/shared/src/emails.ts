@@ -385,6 +385,8 @@ export const PublicEmailDtoSchema = z.object({
   subject: z.string(),
   compiledHtml: z.string(),
   createdAt: z.string(),
+  /** Rendered template screenshot — used as the share page's OG image. */
+  previewUrl: z.string().nullable(),
 });
 
 export type PublicEmailDto = z.infer<typeof PublicEmailDtoSchema>;
