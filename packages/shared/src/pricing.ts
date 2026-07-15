@@ -46,7 +46,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     checkoutPlan: "BASIC",
     features: [
       { value: "100", label: "monthly credits", emphasized: true },
-      { value: "~3", label: "credits a day", emphasized: true },
+      { value: "15", label: "credits a day", emphasized: true },
       { value: "50", label: "stored templates", emphasized: true },
       { value: "2", label: "members", emphasized: true },
       { value: "5", label: "workspaces", emphasized: true },
@@ -65,7 +65,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     checkoutPlan: "MEDIUM",
     features: [
       { value: "250", label: "monthly credits", emphasized: true },
-      { value: "~8", label: "credits a day", emphasized: true },
+      { value: "25", label: "credits a day", emphasized: true },
       { value: "150", label: "stored templates", emphasized: true },
       { value: "3", label: "members", emphasized: true },
       { value: "15", label: "workspaces", emphasized: true },
@@ -83,7 +83,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     checkoutPlan: "PRO",
     features: [
       { value: "550", label: "monthly credits", emphasized: true },
-      { value: "~18", label: "credits a day", emphasized: true },
+      { value: "50", label: "credits a day", emphasized: true },
       { value: "300", label: "stored templates", emphasized: true },
       { value: "5", label: "members", emphasized: true },
       { value: "Unlimited", label: "workspaces", emphasized: true },
