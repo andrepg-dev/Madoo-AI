@@ -203,6 +203,7 @@ const featureTabImages = [
   {
     src: "/product/design-your-way-hero.webp",
     alt: "Paper-cutout illustration of email building blocks snapping together into a finished template",
+    video: "/landing-page-video-v1.5.mp4",
   },
   {
     src: "/integrations-export.png",
@@ -838,6 +839,45 @@ export default function HomePage({
     copy.productFeatures.tabs[0]!;
   const activeFeatureImage =
     featureTabImages[activeFeatureTab] ?? featureTabImages[0]!;
+  const activeFeatureVideo =
+    "video" in activeFeatureImage ? activeFeatureImage.video : undefined;
+  const featureVideoRef = useRef<HTMLVideoElement>(null);
+  const [featureVideoPlaying, setFeatureVideoPlaying] = useState(true);
+  const featureVideoUserPausedRef = useRef(false);
+
+  const toggleFeatureVideo = () => {
+    const video = featureVideoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      featureVideoUserPausedRef.current = false;
+      void video.play();
+    } else {
+      featureVideoUserPausedRef.current = true;
+      video.pause();
+    }
+  };
+
+  useEffect(() => {
+    const video = featureVideoRef.current;
+    if (!video || !activeFeatureVideo) return;
+
+    featureVideoUserPausedRef.current = false;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        if (entry.isIntersecting) {
+          if (!featureVideoUserPausedRef.current) void video.play();
+        } else {
+          video.pause();
+        }
+      },
+      { rootMargin: "0px 0px -20% 0px", threshold: 0.25 },
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [activeFeatureVideo]);
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -1402,14 +1442,60 @@ export default function HomePage({
                 key={`feature-media-${activeFeatureTab}`}
                 className="madoo-tab-panel relative mx-auto w-full max-w-xl"
               >
-                <div className="relative aspect-square w-full overflow-hidden rounded-[2rem] bg-white">
-                  <img
-                    src={activeFeatureImage.src}
-                    alt={activeFeatureImage.alt}
-                    loading="lazy"
-                    className="h-full w-full object-contain"
-                  />
-                </div>
+                {activeFeatureVideo ? (
+                  <div className="group relative flex aspect-square w-full items-center justify-center">
+                    <div className="relative w-full overflow-hidden rounded-2xl bg-white ring-4 ring-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_30px_rgba(0,0,0,0.06)]">
+                      <video
+                        ref={featureVideoRef}
+                        src={activeFeatureVideo}
+                        muted
+                        loop
+                        playsInline
+                        onPlay={() => setFeatureVideoPlaying(true)}
+                        onPause={() => setFeatureVideoPlaying(false)}
+                        className="block h-auto w-full"
+                      />
+                      <button
+                        type="button"
+                        onClick={toggleFeatureVideo}
+                        aria-label={featureVideoPlaying ? "Pause video" : "Play video"}
+                        className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-[#5b63ff] text-white opacity-0 shadow-lg transition hover:scale-105 group-hover:opacity-100 focus-visible:opacity-100"
+                      >
+                        {featureVideoPlaying ? (
+                          <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <rect x="6" y="5" width="4" height="14" rx="1" />
+                            <rect x="14" y="5" width="4" height="14" rx="1" />
+                          </svg>
+                        ) : (
+                          <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path d="M8 5.14v13.72a1 1 0 0 0 1.54.84l10.29-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative aspect-square w-full overflow-hidden rounded-[2rem] bg-white">
+                    <img
+                      src={activeFeatureImage.src}
+                      alt={activeFeatureImage.alt}
+                      loading="lazy"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
