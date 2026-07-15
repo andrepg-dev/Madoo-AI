@@ -203,7 +203,7 @@ const featureTabImages = [
   {
     src: "/product/design-your-way-hero.webp",
     alt: "Paper-cutout illustration of email building blocks snapping together into a finished template",
-    video: "/landing-page-video-v1.5.mp4",
+    video: "/product-demo-v1.7.mp4",
   },
   {
     src: "/integrations-export.png",
