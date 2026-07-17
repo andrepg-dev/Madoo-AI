@@ -164,6 +164,22 @@ export function EmailPreviewSidebar({
   const latestVariantId = latestVariant(email)?.id;
   const canEditVariables = Boolean(emailId && variant);
 
+  // Edit mode wants the full canvas: entering it closes the variables panel,
+  // leaving it brings the panel back. Only acts on the on/off transition so
+  // manual toggles while in either mode are respected.
+  const visualEditEnabled = Boolean(visualEdit?.enabled);
+  const prevVisualEditEnabledRef = useRef(visualEditEnabled);
+  useEffect(() => {
+    const was = prevVisualEditEnabledRef.current;
+    prevVisualEditEnabledRef.current = visualEditEnabled;
+    if (visualEditEnabled === was) return;
+    if (visualEditEnabled) {
+      setVariablesOpen(false);
+    } else if (canEditVariables && !expanded) {
+      setVariablesOpen(true);
+    }
+  }, [canEditVariables, expanded, visualEditEnabled]);
+
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   // The Dark/Light toggle emulates the email client's color scheme: force the
