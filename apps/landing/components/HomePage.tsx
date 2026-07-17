@@ -32,6 +32,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type {
+  CSSProperties,
   ChangeEvent,
   ClipboardEvent,
   KeyboardEvent,
@@ -47,7 +48,6 @@ import { Hi, getNextSearchParams } from "./home/home-utils";
 import {
   TemplatePreviewImage,
   TemplateShowcaseImage,
-  pickCategoryShowcase,
   useTallTemplates,
 } from "./home/TemplatePreviewImage";
 import { useTypingPlaceholder } from "./home/useTypingPlaceholder";
@@ -779,10 +779,8 @@ export const localeCopy = {
   },
 } as const;
 
-/** Tiles shown in the homepage showcase row. */
-const SHOWCASE_COLUMNS = 5;
-/** Categories considered before the short-template filter runs. */
-const SHOWCASE_CANDIDATES = 12;
+/** Cap on templates measured for the homepage marquee, for image-load cost. */
+const SHOWCASE_MAX = 24;
 
 export default function HomePage({
   locale = "en",
@@ -819,18 +817,17 @@ export default function HomePage({
   // cards are a fallback for an empty gallery, not padding to a minimum count —
   // padding made decorative cards look like real DB templates.
   const hasCommunityTemplates = communityTemplateCards.length > 0;
-  // Homepage showcase: one card per category so the section reads as a category
-  // overview (the full gallery lives on /templates). Candidates are picked wide
-  // and then narrowed to the ones whose screenshot is tall enough for the
-  // uniform tiles — short emails would sit in a mostly-empty crop.
+  // Homepage showcase: a marquee of every template whose screenshot is tall
+  // enough for the uniform tiles — short emails would sit in a mostly-empty
+  // crop (the full gallery lives on /templates).
   const showcaseCandidates = useMemo(
-    () => pickCategoryShowcase(communityTemplateCards, SHOWCASE_CANDIDATES),
+    () => communityTemplateCards.slice(0, SHOWCASE_MAX),
     [communityTemplateCards],
   );
-  const categoryShowcase = useTallTemplates(
-    showcaseCandidates,
-    SHOWCASE_COLUMNS,
-  );
+  const showcaseTemplates = useTallTemplates(showcaseCandidates, SHOWCASE_MAX);
+  // Few templates would leave the marquee track narrower than the viewport, so
+  // repeat the set more often; the keyframes shift by one copy's width.
+  const showcaseCopies = showcaseTemplates.length >= 8 ? 2 : 4;
   // Product-features section: tabs switch the copy and a matching product visual.
   // Designs & Layouts is the first tab and the default selection.
   const [activeFeatureTab, setActiveFeatureTab] = useState(0);
@@ -1094,16 +1091,21 @@ export default function HomePage({
     </article>
   );
 
-  // Category showcase card: a representative preview with the category name as a
-  // bold caption below, mirroring the homepage category overview row.
-  const renderShowcaseCard = (template: TemplateShowcaseCard) => (
+  // Marquee showcase card: fixed-width preview tile with the category name as a
+  // bold caption below. Duplicate marquee copies are hidden from the
+  // accessibility tree and tab order so each template is announced once.
+  const renderShowcaseCard = (
+    template: TemplateShowcaseCard,
+    duplicate = false,
+  ) => (
     <article
-      key={template.id ?? template.name}
+      key={`${template.id ?? template.name}${duplicate ? "-dup" : ""}`}
       role="button"
-      tabIndex={0}
+      tabIndex={duplicate ? -1 : 0}
+      aria-hidden={duplicate || undefined}
       onClick={() => openTemplatePreview(template)}
       onKeyDown={onTemplateCardKeyDown(template)}
-      className="group flex min-w-0 cursor-pointer flex-col outline-none"
+      className="group flex w-56 shrink-0 cursor-pointer flex-col outline-none sm:w-64"
     >
       <div className="relative">
         <TemplateShowcaseImage
@@ -1121,7 +1123,8 @@ export default function HomePage({
         <Link
           href={`/templates?category=${encodeURIComponent(template.category)}`}
           onClick={(event) => event.stopPropagation()}
-          className="mt-4 self-start font-ibm-plex-sans text-sm font-semibold uppercase tracking-[0.14em] text-[#171717] underline-offset-4 hover:underline"
+          tabIndex={duplicate ? -1 : undefined}
+          className="mt-4 max-w-full self-start truncate font-ibm-plex-sans text-sm font-semibold uppercase tracking-[0.14em] text-[#171717] underline-offset-4 hover:underline"
         >
           {template.category}
         </Link>
@@ -1538,9 +1541,27 @@ export default function HomePage({
             {hasCommunityTemplates ? (
               // Empty until the screenshots have been measured; the fallback
               // sample cards must not flash in during that pass.
-              <div className="mt-10 grid grid-cols-2 items-start gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                {categoryShowcase.map(renderShowcaseCard)}
-              </div>
+              showcaseTemplates.length > 0 ? (
+                <div className="mt-10 overflow-hidden">
+                  <div
+                    className="madoo-template-marquee flex w-max"
+                    style={
+                      {
+                        "--marquee-copies": showcaseCopies,
+                        "--marquee-duration": `${showcaseCopies * showcaseTemplates.length * 8}s`,
+                      } as CSSProperties
+                    }
+                  >
+                    {Array.from({ length: showcaseCopies }, (_, copy) => (
+                      <div key={copy} className="flex w-max gap-4 pr-4">
+                        {showcaseTemplates.map((template) =>
+                          renderShowcaseCard(template, copy > 0),
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null
             ) : (
               <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {localizedFallbackTemplateCards.map(renderTemplateCard)}

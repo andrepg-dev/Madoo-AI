@@ -306,6 +306,36 @@
   animation: madoo-provider-marquee 200s linear infinite;
 }
 
+/*
+ * Homepage template showcase marquee. The track holds identical copy groups
+ * (count in --marquee-copies) and shifts by exactly one group per loop, so the
+ * restart is seamless. Hover/focus pauses so cards stay clickable.
+ */
+@keyframes madoo-template-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-100% / var(--marquee-copies, 2)));
+  }
+}
+
+.madoo-template-marquee {
+  animation: madoo-template-marquee var(--marquee-duration, 80s) linear infinite;
+}
+
+.madoo-template-marquee:hover,
+.madoo-template-marquee:focus-within {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .madoo-template-marquee {
+    animation: none;
+  }
+}
+
 @keyframes ani-madoo-hero-mesh {
   0% {
     --y-0: 35%;

@@ -131,22 +131,3 @@ export function TemplatePreviewImage({
     </div>
   );
 }
-
-// One representative card per category, for the homepage showcase row. Picks the
-// first template seen for each category (templates arrive newest-first) up to a
-// small cap so the section reads as a clean category overview, not a full grid.
-export function pickCategoryShowcase<T extends { category?: string | null }>(
-  cards: T[],
-  max: number,
-): T[] {
-  const seen = new Set<string>();
-  const showcase: T[] = [];
-  for (const card of cards) {
-    const category = card.category;
-    if (!category || seen.has(category)) continue;
-    seen.add(category);
-    showcase.push(card);
-    if (showcase.length >= max) break;
-  }
-  return showcase;
-}
