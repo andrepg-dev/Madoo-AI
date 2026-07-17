@@ -1548,7 +1548,7 @@ export default function HomePage({
                     style={
                       {
                         "--marquee-copies": showcaseCopies,
-                        "--marquee-duration": `${showcaseCopies * showcaseTemplates.length * 8}s`,
+                        "--marquee-duration": `${showcaseCopies * showcaseTemplates.length * 4}s`,
                       } as CSSProperties
                     }
                   >
