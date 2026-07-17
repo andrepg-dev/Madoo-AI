@@ -48,6 +48,18 @@ export default function TemplatesGallery({
     [categoryCounts],
   );
 
+  // Deep links like /templates?category=Newsletter land with that category
+  // pre-selected (used by the homepage category showcase). Read from
+  // window.location instead of useSearchParams to avoid a Suspense boundary.
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get("category");
+    if (!param) return;
+    const match = categories.find(
+      (category) => category.toLowerCase() === param.toLowerCase(),
+    );
+    if (match) setActiveCategory(match);
+  }, [categories]);
+
   const filteredTemplates = useMemo(() => {
     const query = search.trim().toLowerCase();
     return templates.filter((template) => {

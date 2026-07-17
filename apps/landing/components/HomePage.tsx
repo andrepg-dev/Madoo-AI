@@ -1117,9 +1117,15 @@ export default function HomePage({
         </div>
       </div>
 
-      <p className="mt-4 font-ibm-plex-sans text-sm font-semibold uppercase tracking-[0.14em] text-[#171717]">
-        {template.category}
-      </p>
+      {template.category ? (
+        <Link
+          href={`/templates?category=${encodeURIComponent(template.category)}`}
+          onClick={(event) => event.stopPropagation()}
+          className="mt-4 self-start font-ibm-plex-sans text-sm font-semibold uppercase tracking-[0.14em] text-[#171717] underline-offset-4 hover:underline"
+        >
+          {template.category}
+        </Link>
+      ) : null}
     </article>
   );
 
