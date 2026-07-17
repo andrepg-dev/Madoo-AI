@@ -17,6 +17,15 @@ type WhatsNewEntry = {
 
 const WHATS_NEW: WhatsNewEntry[] = [
   {
+    date: "July 17, 2026",
+    changes: [
+      {
+        title: "A livelier template showcase",
+        body: "The homepage now shows templates in a smooth, always-moving row — more designs at a glance. Click any one to start from it.",
+      },
+    ],
+  },
+  {
     date: "July 14, 2026",
     changes: [
       {
@@ -54,7 +63,7 @@ const WHATS_NEW: WhatsNewEntry[] = [
 
 export function WhatsNewPanel() {
   return (
-    <div className="max-h-[26rem] overflow-y-auto">
+    <div className="madoo-command-scrollbar max-h-[26rem] overflow-y-auto overscroll-contain rounded-lg">
       <div className="sticky top-0 z-10 border-b border-madoo-rule/60 bg-madoo-surface px-4 py-3">
         <span className="text-(length:--font-size-base) font-medium leading-none text-madoo-ink">
           What's new

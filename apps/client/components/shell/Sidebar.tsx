@@ -841,7 +841,11 @@ export function Sidebar() {
                 className="w-max"
               />
             </DropdownTrigger>
-            <DropdownContent side="right" align="end" className="w-80 p-0!">
+            <DropdownContent
+              side="right"
+              align="end"
+              className="w-80 overflow-hidden p-0!"
+            >
               <WhatsNewPanel />
             </DropdownContent>
           </Dropdown>

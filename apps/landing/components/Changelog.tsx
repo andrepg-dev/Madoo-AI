@@ -30,6 +30,15 @@ export const changelogContent: Record<LegalLocale, ChangelogContent> = {
       "The latest improvements to Madoo — new ways to edit, test, and share your email templates.",
     entries: [
       {
+        date: "July 17, 2026",
+        changes: [
+          {
+            title: "A livelier template showcase",
+            body: "The homepage now shows your templates in a smooth, always-moving row — so more designs catch your eye at a glance. Click any one to preview and start from it.",
+          },
+        ],
+      },
+      {
         date: "July 14, 2026",
         changes: [
           {
@@ -79,6 +88,15 @@ export const changelogContent: Record<LegalLocale, ChangelogContent> = {
     intro:
       "Las últimas mejoras de Madoo — nuevas formas de editar, probar y compartir tus plantillas de email.",
     entries: [
+      {
+        date: "17 de julio de 2026",
+        changes: [
+          {
+            title: "Una galería de plantillas con más vida",
+            body: "La página principal ahora muestra tus plantillas en una fila fluida y en movimiento constante, así más diseños llaman tu atención de un vistazo. Haz clic en cualquiera para verla y empezar desde ahí.",
+          },
+        ],
+      },
       {
         date: "14 de julio de 2026",
         changes: [
