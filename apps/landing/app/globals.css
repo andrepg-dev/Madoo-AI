@@ -309,7 +309,7 @@
 /*
  * Homepage template showcase marquee. The track holds identical copy groups
  * (count in --marquee-copies) and shifts by exactly one group per loop, so the
- * restart is seamless. Hover/focus pauses so cards stay clickable.
+ * restart is seamless.
  */
 @keyframes madoo-template-marquee {
   from {
@@ -323,11 +323,6 @@
 
 .madoo-template-marquee {
   animation: madoo-template-marquee var(--marquee-duration, 80s) linear infinite;
-}
-
-.madoo-template-marquee:hover,
-.madoo-template-marquee:focus-within {
-  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
