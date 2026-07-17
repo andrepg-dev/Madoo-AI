@@ -99,7 +99,6 @@ export function EmailPreviewSidebar({
   const {
     selection,
     clearSelection,
-    startTextEdit,
     editingText,
     dragging,
     removeElement,
@@ -482,7 +481,7 @@ export function EmailPreviewSidebar({
                     size={15}
                     strokeWidth={1.55}
                   />
-                  <span>{visualEdit.loading ? "Edit…" : "Edit"}</span>
+                  <span>Edit</span>
                   <HugeiconsIcon
                     aria-hidden="true"
                     className={cn(
@@ -580,7 +579,6 @@ export function EmailPreviewSidebar({
                     clearSelection();
                   }}
                   onClose={clearSelection}
-                  onEditText={startTextEdit}
                   onOpenStyles={() => setStylesOpen(true)}
                   onReplaceImage={() => imageInputRef.current?.click()}
                   selection={selection}

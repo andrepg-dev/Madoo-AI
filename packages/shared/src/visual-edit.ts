@@ -48,6 +48,10 @@ export const VISUAL_EDIT_STYLE_PROPERTIES = [
   // Fill & border
   "backgroundColor",
   "borderRadius",
+  "borderTopLeftRadius",
+  "borderTopRightRadius",
+  "borderBottomRightRadius",
+  "borderBottomLeftRadius",
   "border",
   "borderWidth",
   "borderStyle",

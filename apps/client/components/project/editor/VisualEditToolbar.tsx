@@ -5,7 +5,6 @@ import {
   Image01Icon,
   Loading03Icon,
   PaintBoardIcon,
-  PencilEdit02Icon,
   SparklesIcon,
 } from "@hugeicons/core-free-icons";
 import type { VisualEditOp } from "@madoo/shared";
@@ -23,7 +22,7 @@ function ToolbarButton({
 }: {
   danger?: boolean;
   disabled?: boolean;
-  icon: typeof PencilEdit02Icon;
+  icon: typeof SparklesIcon;
   iconClassName?: string;
   label: string;
   onClick: () => void;
@@ -68,7 +67,6 @@ export function VisualEditToolbar({
   onApply,
   onAskAi,
   onClose,
-  onEditText,
   onOpenStyles,
   onReplaceImage,
   selection,
@@ -78,13 +76,11 @@ export function VisualEditToolbar({
   onApply: (ops: VisualEditOp[]) => void;
   onAskAi: () => void;
   onClose: () => void;
-  onEditText: () => void;
   onOpenStyles: () => void;
   onReplaceImage: () => void;
   selection: VisualEditSelection;
   stylesOpen: boolean;
 }) {
-  const canEditText = Boolean(selection.textKind) && !selection.dynamic;
   const structural = !selection.dynamic;
 
   const top = selection.rect.top + selection.rect.height + 8;
@@ -96,13 +92,6 @@ export function VisualEditToolbar({
       style={{ top, left }}
     >
       <div className="flex items-center gap-0.5">
-        {canEditText ? (
-          <ToolbarButton
-            icon={PencilEdit02Icon}
-            label="Edit text"
-            onClick={onEditText}
-          />
-        ) : null}
         {selection.image && !selection.dynamic ? (
           <ToolbarButton
             disabled={imageUploading}

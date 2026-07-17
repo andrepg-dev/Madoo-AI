@@ -292,6 +292,11 @@ function EmailTemplateProjectInner() {
       visualEditOn && currentEmailId && activeVariant && !isStreaming,
     ),
     staleTime: Infinity,
+    // Saves must be invisible: while the retagged HTML for the new variant
+    // loads, keep showing the previous tagged document (which already looks
+    // identical thanks to the live-preview edits) instead of flashing the
+    // untagged preview and tearing down the selection/style panel.
+    placeholderData: (previous) => previous,
   });
 
   const saveVisualEdits = useCallback(
@@ -361,12 +366,10 @@ function EmailTemplateProjectInner() {
     );
   }, [activeVariant?.id]);
 
+  // Stale (placeholder) tagged HTML is intentionally accepted here — it is
+  // the previous variant's document kept on screen during a save round-trip.
   const editableHtml =
-    visualEditOn &&
-    !isStreaming &&
-    editableHtmlQuery.data &&
-    activeVariant &&
-    editableHtmlQuery.data.variantId === activeVariant.id
+    visualEditOn && !isStreaming && activeVariant && editableHtmlQuery.data
       ? editableHtmlQuery.data.html
       : null;
   const sidebarSrcDoc = useMemo(

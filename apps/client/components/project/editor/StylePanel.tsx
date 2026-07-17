@@ -80,7 +80,10 @@ type Draft = {
   textAlign: string;
   color: string;
   backgroundColor: string;
-  borderRadius: string;
+  borderTopLeftRadius: string;
+  borderTopRightRadius: string;
+  borderBottomRightRadius: string;
+  borderBottomLeftRadius: string;
   borderWidth: string;
   borderStyle: string;
   borderColor: string;
@@ -108,7 +111,10 @@ function draftFrom(computed: CSSStyleDeclaration | null): Draft {
     textAlign: computed?.textAlign ?? "left",
     color: toHex(computed?.color),
     backgroundColor: toHex(computed?.backgroundColor),
-    borderRadius: pxNumber(computed?.borderRadius),
+    borderTopLeftRadius: pxNumber(computed?.borderTopLeftRadius),
+    borderTopRightRadius: pxNumber(computed?.borderTopRightRadius),
+    borderBottomRightRadius: pxNumber(computed?.borderBottomRightRadius),
+    borderBottomLeftRadius: pxNumber(computed?.borderBottomLeftRadius),
     borderWidth: pxNumber(computed?.borderTopWidth),
     borderStyle: computed?.borderTopStyle || "none",
     borderColor: toHex(computed?.borderTopColor),
@@ -123,6 +129,47 @@ function draftFrom(computed: CSSStyleDeclaration | null): Draft {
     width: pxNumber(computed?.width),
   };
 }
+
+/**
+ * A quad group (padding / margin / corner radius) edits like Figma: one
+ * general field that writes the shorthand property and clears the per-side
+ * longhands, plus an expandable per-side mode that writes longhands (which
+ * override the shorthand). The removals are ordered before the shorthand in
+ * the patch so the DOM preview never drops sides mid-update.
+ */
+type QuadSpec = {
+  shorthand: VisualEditStyleProperty;
+  sides: readonly [
+    VisualEditStyleProperty,
+    VisualEditStyleProperty,
+    VisualEditStyleProperty,
+    VisualEditStyleProperty,
+  ];
+  sideLabels: readonly [string, string, string, string];
+};
+
+const PADDING_SPEC: QuadSpec = {
+  shorthand: "padding",
+  sides: ["paddingTop", "paddingRight", "paddingBottom", "paddingLeft"],
+  sideLabels: ["T", "R", "B", "L"],
+};
+
+const MARGIN_SPEC: QuadSpec = {
+  shorthand: "margin",
+  sides: ["marginTop", "marginRight", "marginBottom", "marginLeft"],
+  sideLabels: ["T", "R", "B", "L"],
+};
+
+const RADIUS_SPEC: QuadSpec = {
+  shorthand: "borderRadius",
+  sides: [
+    "borderTopLeftRadius",
+    "borderTopRightRadius",
+    "borderBottomRightRadius",
+    "borderBottomLeftRadius",
+  ],
+  sideLabels: ["TL", "TR", "BR", "BL"],
+};
 
 /**
  * Manual property editor for the element selected in the preview. Every
@@ -175,20 +222,25 @@ export function StylePanel({
   // Commit whatever is pending when the panel closes or the element changes.
   useEffect(() => flush, [flush]);
 
-  const setProp = useCallback(
+  const applyPatch = useCallback(
     (
-      prop: VisualEditStyleProperty,
       draftPatch: Partial<Draft>,
-      cssValue: string | null,
+      cssPatch: Partial<Record<VisualEditStyleProperty, string | null>>,
     ) => {
       setDraft((current) => ({ ...current, ...draftPatch }));
-      onPreview(nodeId, { [prop]: cssValue });
-      pendingRef.current = { ...pendingRef.current, [prop]: cssValue };
+      onPreview(nodeId, cssPatch);
+      pendingRef.current = { ...pendingRef.current, ...cssPatch };
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(flush, COMMIT_DEBOUNCE_MS);
     },
     [flush, nodeId, onPreview],
   );
+
+  const setProp = (
+    prop: VisualEditStyleProperty,
+    draftPatch: Partial<Draft>,
+    cssValue: string | null,
+  ) => applyPatch(draftPatch, { [prop]: cssValue });
 
   const setPx = (
     prop: VisualEditStyleProperty,
@@ -198,6 +250,34 @@ export function StylePanel({
     const n = parseFloat(raw);
     setProp(prop, { [key]: raw }, Number.isFinite(n) ? `${n}px` : null);
   };
+
+  const setQuadAll = (spec: QuadSpec, raw: string) => {
+    const n = parseFloat(raw);
+    const css = Number.isFinite(n) ? `${n}px` : null;
+    // Longhand removals first, shorthand last: the DOM preview applies
+    // entries in order, and clearing a longhand after setting the shorthand
+    // would strip that side from the expanded shorthand.
+    const cssPatch: Partial<Record<VisualEditStyleProperty, string | null>> =
+      {};
+    for (const side of spec.sides) cssPatch[side] = null;
+    cssPatch[spec.shorthand] = css;
+    applyPatch(
+      Object.fromEntries(spec.sides.map((side) => [side, raw])),
+      cssPatch,
+    );
+  };
+
+  const setQuadSide = (spec: QuadSpec, index: number, raw: string) => {
+    setPx(spec.sides[index], spec.sides[index] as keyof Draft, raw);
+  };
+
+  const quadValues = (spec: QuadSpec) =>
+    spec.sides.map((side) => draft[side as keyof Draft]) as [
+      string,
+      string,
+      string,
+      string,
+    ];
 
   const fontValue =
     FONT_STACKS.find(
@@ -331,13 +411,14 @@ export function StylePanel({
             }
             value={draft.backgroundColor}
           />
-          <Field label="Corner radius">
-            <NumberField
-              min={0}
-              onChange={(raw) => setPx("borderRadius", "borderRadius", raw)}
-              value={draft.borderRadius}
-            />
-          </Field>
+          <QuadControl
+            label="Corner radius"
+            min={0}
+            onChangeAll={(raw) => setQuadAll(RADIUS_SPEC, raw)}
+            onChangeSide={(index, raw) => setQuadSide(RADIUS_SPEC, index, raw)}
+            sideLabels={RADIUS_SPEC.sideLabels}
+            values={quadValues(RADIUS_SPEC)}
+          />
           <div className="grid grid-cols-2 gap-2">
             <Field label="Border width">
               <NumberField
@@ -372,37 +453,22 @@ export function StylePanel({
         </Section>
 
         <Section title="Spacing">
-          <SidesGrid
-            legend="Padding"
-            onChange={(side, raw) =>
-              setPx(
-                `padding${side}` as VisualEditStyleProperty,
-                `padding${side}` as keyof Draft,
-                raw,
-              )
+          <QuadControl
+            label="Padding"
+            min={0}
+            onChangeAll={(raw) => setQuadAll(PADDING_SPEC, raw)}
+            onChangeSide={(index, raw) =>
+              setQuadSide(PADDING_SPEC, index, raw)
             }
-            values={{
-              Top: draft.paddingTop,
-              Right: draft.paddingRight,
-              Bottom: draft.paddingBottom,
-              Left: draft.paddingLeft,
-            }}
+            sideLabels={PADDING_SPEC.sideLabels}
+            values={quadValues(PADDING_SPEC)}
           />
-          <SidesGrid
-            legend="Margin"
-            onChange={(side, raw) =>
-              setPx(
-                `margin${side}` as VisualEditStyleProperty,
-                `margin${side}` as keyof Draft,
-                raw,
-              )
-            }
-            values={{
-              Top: draft.marginTop,
-              Right: draft.marginRight,
-              Bottom: draft.marginBottom,
-              Left: draft.marginLeft,
-            }}
+          <QuadControl
+            label="Margin"
+            onChangeAll={(raw) => setQuadAll(MARGIN_SPEC, raw)}
+            onChangeSide={(index, raw) => setQuadSide(MARGIN_SPEC, index, raw)}
+            sideLabels={MARGIN_SPEC.sideLabels}
+            values={quadValues(MARGIN_SPEC)}
           />
         </Section>
 
@@ -603,39 +669,107 @@ function AlignToggle({
   );
 }
 
-type Side = "Top" | "Right" | "Bottom" | "Left";
+/** Figma-style icon: four independent corners. */
+function IndependentSidesIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="12"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="1.3"
+      viewBox="0 0 12 12"
+      width="12"
+    >
+      <path d="M1 4V2.5A1.5 1.5 0 0 1 2.5 1H4" />
+      <path d="M8 1h1.5A1.5 1.5 0 0 1 11 2.5V4" />
+      <path d="M11 8v1.5A1.5 1.5 0 0 1 9.5 11H8" />
+      <path d="M4 11H2.5A1.5 1.5 0 0 1 1 9.5V8" />
+    </svg>
+  );
+}
 
-function SidesGrid({
-  legend,
-  onChange,
+/**
+ * Figma-style quad editor: a general field that applies one value to all
+ * four sides/corners, plus a toggle that expands per-side fields. When the
+ * sides differ the general field shows a "Mixed" placeholder.
+ */
+function QuadControl({
+  label,
+  min,
+  onChangeAll,
+  onChangeSide,
+  sideLabels,
   values,
 }: {
-  legend: string;
-  onChange: (side: Side, raw: string) => void;
-  values: Record<Side, string>;
+  label: string;
+  min?: number;
+  onChangeAll: (raw: string) => void;
+  onChangeSide: (index: number, raw: string) => void;
+  sideLabels: readonly [string, string, string, string];
+  values: [string, string, string, string];
 }) {
-  const sides: Side[] = ["Top", "Right", "Bottom", "Left"];
+  const uniform =
+    values[0] !== "" && values.every((value) => value === values[0]);
+  const mixed = !uniform && values.some((value) => value !== "");
+  // Auto-expand when the element already has per-side values.
+  const [expanded, setExpanded] = useState(mixed);
+
   return (
-    <div>
+    <div className="min-w-0">
       <span className="mb-1 block text-[11px] font-medium text-madoo-ink-muted">
-        {legend}
+        {label}
       </span>
-      <div className="grid grid-cols-4 gap-1.5">
-        {sides.map((side) => (
-          <div key={side}>
-            <Input
-              aria-label={`${legend} ${side.toLowerCase()}`}
-              inputSize="sm"
-              onChange={(event) => onChange(side, event.target.value)}
-              type="number"
-              value={values[side]}
-            />
-            <span className="mt-0.5 block text-center text-[10px] text-madoo-ink-faint">
-              {side[0]}
-            </span>
-          </div>
-        ))}
+      <div className="flex items-center gap-1.5">
+        <div className="relative flex-1">
+          <Input
+            aria-label={`${label} (all sides)`}
+            inputSize="sm"
+            min={min}
+            onChange={(event) => onChangeAll(event.target.value)}
+            placeholder={mixed ? "Mixed" : undefined}
+            type="number"
+            value={uniform ? values[0] : ""}
+          />
+          <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11px] text-madoo-ink-faint">
+            px
+          </span>
+        </div>
+        <button
+          aria-label={`Edit ${label.toLowerCase()} per side`}
+          aria-pressed={expanded}
+          className={cn(
+            "flex size-7.5 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors",
+            expanded
+              ? "bg-madoo-accent-soft text-madoo-accent-deep shadow-madoo-border"
+              : "text-madoo-ink-muted shadow-madoo-border hover:text-madoo-ink",
+          )}
+          onClick={() => setExpanded((current) => !current)}
+          type="button"
+        >
+          <IndependentSidesIcon />
+        </button>
       </div>
+      {expanded ? (
+        <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+          {values.map((value, index) => (
+            <div key={sideLabels[index]}>
+              <Input
+                aria-label={`${label} ${sideLabels[index]}`}
+                inputSize="sm"
+                min={min}
+                onChange={(event) => onChangeSide(index, event.target.value)}
+                type="number"
+                value={value}
+              />
+              <span className="mt-0.5 block text-center text-[10px] text-madoo-ink-faint">
+                {sideLabels[index]}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
