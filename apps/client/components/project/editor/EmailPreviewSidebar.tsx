@@ -163,21 +163,13 @@ export function EmailPreviewSidebar({
   const latestVariantId = latestVariant(email)?.id;
   const canEditVariables = Boolean(emailId && variant);
 
-  // Edit mode wants the full canvas: entering it closes the variables panel,
-  // leaving it brings the panel back. Only acts on the on/off transition so
-  // manual toggles while in either mode are respected.
+  // Edit mode wants the full canvas: entering it closes the variables panel.
+  // Leaving edit mode deliberately does NOT reopen it — the user brings it
+  // back with the Variables button when needed.
   const visualEditEnabled = Boolean(visualEdit?.enabled);
-  const prevVisualEditEnabledRef = useRef(visualEditEnabled);
   useEffect(() => {
-    const was = prevVisualEditEnabledRef.current;
-    prevVisualEditEnabledRef.current = visualEditEnabled;
-    if (visualEditEnabled === was) return;
-    if (visualEditEnabled) {
-      setVariablesOpen(false);
-    } else if (canEditVariables && !expanded) {
-      setVariablesOpen(true);
-    }
-  }, [canEditVariables, expanded, visualEditEnabled]);
+    if (visualEditEnabled) setVariablesOpen(false);
+  }, [visualEditEnabled]);
 
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
