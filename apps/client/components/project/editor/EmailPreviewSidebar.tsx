@@ -11,6 +11,7 @@ import { latestVariant } from "./chat-utils";
 import type { PreviewMode, TemplateTheme } from "./types";
 import { HeaderPillButton } from "./HeaderPillButton";
 import { ShareProjectDropdown } from "./ShareProjectDropdown";
+import { StylePanel } from "./StylePanel";
 import { VersionsDropdown } from "./VersionsDropdown";
 import { VisualEditToolbar } from "./VisualEditToolbar";
 import { useVisualEditSelection } from "./useVisualEditSelection";
@@ -82,6 +83,9 @@ export function EmailPreviewSidebar({
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const [variablesOpen, setVariablesOpen] = useState(true);
+  // Design panel opens automatically with the first selection so designers
+  // land straight in manual property editing; the close button opts out.
+  const [stylesOpen, setStylesOpen] = useState(true);
   const [imageUploading, setImageUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -100,6 +104,8 @@ export function EmailPreviewSidebar({
     dragging,
     removeElement,
     replaceImage,
+    applyElementStyles,
+    readElementStyles,
   } = useVisualEditSelection({
     enabled: Boolean(visualEdit?.enabled && !visualEdit.loading),
     iframeRef,
@@ -505,7 +511,7 @@ export function EmailPreviewSidebar({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden shadow-madoo-border">
+        <div className="relative flex min-h-0 flex-1 overflow-hidden shadow-madoo-border">
           {variablesOpen && canEditVariables && variant ? (
             <VariablesPanel
               emailId={emailId!}
@@ -559,8 +565,10 @@ export function EmailPreviewSidebar({
                   }}
                   onClose={clearSelection}
                   onEditText={startTextEdit}
+                  onOpenStyles={() => setStylesOpen(true)}
                   onReplaceImage={() => imageInputRef.current?.click()}
                   selection={selection}
+                  stylesOpen={stylesOpen}
                 />
               ) : null}
               <input
@@ -575,6 +583,26 @@ export function EmailPreviewSidebar({
               />
             </div>
           </div>
+
+          {visualEdit?.enabled && selection && stylesOpen ? (
+            <StylePanel
+              className={
+                fullWidth
+                  ? "absolute inset-y-0 right-0 z-30 shadow-[-12px_0_32px_rgb(var(--ink-shadow-rgb)/0.14)]"
+                  : undefined
+              }
+              isImage={selection.image}
+              key={selection.nodeId}
+              label={selection.label}
+              nodeId={selection.nodeId}
+              onClose={() => setStylesOpen(false)}
+              onCommit={(nodeId, styles) =>
+                visualEdit.onApply([{ op: "setStyle", nodeId, styles }])
+              }
+              onPreview={applyElementStyles}
+              readStyles={readElementStyles}
+            />
+          ) : null}
         </div>
       </div>
     </aside>

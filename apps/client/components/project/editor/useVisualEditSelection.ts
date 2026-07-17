@@ -97,6 +97,13 @@ export function useVisualEditSelection({
     startX: number;
     startY: number;
   } | null>(null);
+  // Recomputes the selection's overlay rect after live style changes reflow
+  // the email; set inside the effect where computeRect lives.
+  const refreshRectRef = useRef<() => void>(() => undefined);
+  // Survives iframe reloads: after an autosave recompiles the email the doc
+  // remounts, and the same node id is re-selected so the style panel stays
+  // open mid-editing. Cleared on explicit deselection.
+  const lastNodeIdRef = useRef<string | null>(null);
   const dropIndicatorRef = useRef<HTMLDivElement | null>(null);
   const dropTargetRef = useRef<{
     element: HTMLElement;
@@ -106,6 +113,7 @@ export function useVisualEditSelection({
   const justDraggedRef = useRef(false);
 
   const clearSelection = useCallback(() => {
+    lastNodeIdRef.current = null;
     finishEditRef.current?.(false);
     const doc = iframeRef.current?.contentDocument;
     doc
@@ -120,6 +128,7 @@ export function useVisualEditSelection({
         `[${VISUAL_EDIT_ID_ATTR}="${nodeId}"]`,
       );
       element?.remove();
+      if (lastNodeIdRef.current === nodeId) lastNodeIdRef.current = null;
       setSelection((current) =>
         current?.nodeId === nodeId ? null : current,
       );
@@ -138,6 +147,49 @@ export function useVisualEditSelection({
       setSelection((current) =>
         current?.nodeId === nodeId ? null : current,
       );
+    },
+    [iframeRef],
+  );
+
+  /**
+   * Applies inline styles to every rendered copy of the node (dynamic
+   * elements render N times from one TSX node) for an instant WYSIWYG
+   * preview; the durable change is committed separately as a setStyle op.
+   * `null` clears the inline property.
+   */
+  const applyElementStyles = useCallback(
+    (nodeId: string, styles: Record<string, string | null>) => {
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) return;
+      doc
+        .querySelectorAll(`[${VISUAL_EDIT_ID_ATTR}="${nodeId}"]`)
+        .forEach((node) => {
+          const style = (node as HTMLElement).style as unknown as Record<
+            string,
+            string
+          >;
+          for (const [prop, value] of Object.entries(styles)) {
+            style[prop] = value ?? "";
+          }
+        });
+      refreshRectRef.current();
+    },
+    [iframeRef],
+  );
+
+  /**
+   * Snapshot of the node's current computed style, used to prefill the style
+   * panel controls. Returns null when the node is gone (stale selection).
+   */
+  const readElementStyles = useCallback(
+    (nodeId: string): CSSStyleDeclaration | null => {
+      const doc = iframeRef.current?.contentDocument;
+      const el = doc?.querySelector(
+        `[${VISUAL_EDIT_ID_ATTR}="${nodeId}"]`,
+      ) as HTMLElement | null;
+      const view = doc?.defaultView;
+      if (!el || !view) return null;
+      return view.getComputedStyle(el);
     },
     [iframeRef],
   );
@@ -235,6 +287,13 @@ export function useVisualEditSelection({
         .forEach((node) => node.classList.remove(HOVER_CLASS));
     };
 
+    refreshRectRef.current = () => {
+      const el = doc.querySelector(`[${SELECTED_ATTR}="1"]`);
+      if (!el) return;
+      const rect = computeRect(el);
+      setSelection((current) => (current ? { ...current, rect } : current));
+    };
+
     const hideDropIndicator = () => {
       dropTargetRef.current = null;
       if (dropIndicatorRef.current) {
@@ -272,6 +331,7 @@ export function useVisualEditSelection({
         .querySelectorAll(`[${SELECTED_ATTR}]`)
         .forEach((node) => node.removeAttribute(SELECTED_ATTR));
       el.setAttribute(SELECTED_ATTR, "1");
+      lastNodeIdRef.current = el.getAttribute(VISUAL_EDIT_ID_ATTR);
       setSelection({
         nodeId: el.getAttribute(VISUAL_EDIT_ID_ATTR)!,
         label: buildLabel(el),
@@ -314,6 +374,7 @@ export function useVisualEditSelection({
         doc
           .querySelectorAll(`[${SELECTED_ATTR}]`)
           .forEach((node) => node.removeAttribute(SELECTED_ATTR));
+        lastNodeIdRef.current = null;
         setSelection(null);
         return;
       }
@@ -620,6 +681,16 @@ export function useVisualEditSelection({
       clearSelection();
     };
 
+    // Re-select the node the user was working on before the iframe reloaded
+    // (autosaves recompile the email). Style-only saves keep node positions,
+    // so the id usually still exists; when it doesn't, selection stays empty.
+    if (lastNodeIdRef.current) {
+      const el = doc.querySelector(
+        `[${VISUAL_EDIT_ID_ATTR}="${lastNodeIdRef.current}"]`,
+      );
+      if (el) selectElement(el);
+    }
+
     doc.addEventListener("mouseover", onMouseOver, true);
     doc.addEventListener("click", onClick, true);
     doc.addEventListener("dblclick", onDblClick, true);
@@ -629,6 +700,7 @@ export function useVisualEditSelection({
     doc.addEventListener("pointercancel", onPointerCancel, true);
     doc.addEventListener("keydown", onKeyDown, true);
     return () => {
+      refreshRectRef.current = () => undefined;
       finishEditRef.current?.(false);
       cleanupDrag(false);
       doc.removeEventListener("mouseover", onMouseOver, true);
@@ -663,5 +735,7 @@ export function useVisualEditSelection({
     dragging,
     removeElement,
     replaceImage,
+    applyElementStyles,
+    readElementStyles,
   };
 }

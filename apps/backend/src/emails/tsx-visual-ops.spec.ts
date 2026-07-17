@@ -423,6 +423,89 @@ describe("applyVisualOps", () => {
     );
   });
 
+  it("setStyle updates an existing property and adds new ones", () => {
+    const id = idOf(tagged, "A hard-coded paragraph.");
+    const result = applyVisualOps(SAMPLE, [
+      {
+        op: "setStyle",
+        nodeId: id,
+        styles: { fontSize: "18px", color: "#356bff", borderRadius: "12px" },
+      },
+    ]);
+    assert.match(result.code, /fontSize: ["']18px["']/);
+    assert.match(result.code, /color: ["']#356bff["']/);
+    assert.match(result.code, /borderRadius: ["']12px["']/);
+    assert.deepEqual(result.summaries, [
+      "Styled <Text> (fontSize, color, borderRadius)",
+    ]);
+  });
+
+  it("setStyle creates the style prop when the element has none", () => {
+    const id = idOf(tagged, "src={heroImage}");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "setStyle", nodeId: id, styles: { borderRadius: "16px" } },
+    ]);
+    assert.match(
+      result.code,
+      /<Img[^>]*style=\{\{[^}]*borderRadius: ["']16px["']/s,
+    );
+  });
+
+  it("setStyle with null removes the explicit property", () => {
+    const id = idOf(tagged, "A hard-coded paragraph.");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "setStyle", nodeId: id, styles: { fontSize: null } },
+    ]);
+    assert.doesNotMatch(result.code, /fontSize: 16/);
+  });
+
+  it("setStyle wraps a non-object style expression with a spread", () => {
+    const code = SAMPLE.replace(
+      "const Email = ({",
+      "const sharedText = { fontSize: 15 };\nconst Email = ({",
+    ).replace(
+      "<Text style={{ fontSize: 16 }}>A hard-coded paragraph.</Text>",
+      "<Text style={sharedText}>A hard-coded paragraph.</Text>",
+    );
+    const id = idOf(tagComponentSource(code), "A hard-coded paragraph.");
+    const result = applyVisualOps(code, [
+      { op: "setStyle", nodeId: id, styles: { color: "#111827" } },
+    ]);
+    assert.match(
+      result.code,
+      /style=\{\{\s*\.\.\.sharedText,\s*color: ["']#111827["']\s*\}\}/,
+    );
+    // The shared object itself is untouched for other consumers.
+    assert.match(result.code, /const sharedText = \{ fontSize: 15 \};/);
+  });
+
+  it("setStyle is allowed on dynamic elements and styles every copy", () => {
+    const id = idOf(tagged, "<Column");
+    const result = applyVisualOps(SAMPLE, [
+      { op: "setStyle", nodeId: id, styles: { backgroundColor: "#f9fafb" } },
+    ]);
+    assert.match(result.code, /backgroundColor: ["']#f9fafb["']/);
+    const service = new ReactToHtmlService();
+    const html = service.compile(tagComponentSource(result.code), {});
+    const matches = html.match(/background-color:#f9fafb/g) ?? [];
+    assert.equal(matches.length, 2, "both rendered columns carry the style");
+  });
+
+  it("styled output recompiles cleanly", () => {
+    const id = idOf(tagged, "A hard-coded paragraph.");
+    const result = applyVisualOps(SAMPLE, [
+      {
+        op: "setStyle",
+        nodeId: id,
+        styles: { color: "#16a34a", textAlign: "center" },
+      },
+    ]);
+    const service = new ReactToHtmlService();
+    const html = service.compile(result.code, {});
+    assert.match(html, /color:#16a34a/);
+    assert.match(html, /text-align:center/);
+  });
+
   it("edited output recompiles cleanly end to end", () => {
     const id = idOf(tagged, "{headline}</Text>");
     const result = applyVisualOps(SAMPLE, [

@@ -4,6 +4,7 @@ import {
   Delete02Icon,
   Image01Icon,
   Loading03Icon,
+  PaintBoardIcon,
   PencilEdit02Icon,
   SparklesIcon,
 } from "@hugeicons/core-free-icons";
@@ -68,16 +69,20 @@ export function VisualEditToolbar({
   onAskAi,
   onClose,
   onEditText,
+  onOpenStyles,
   onReplaceImage,
   selection,
+  stylesOpen,
 }: {
   imageUploading: boolean;
   onApply: (ops: VisualEditOp[]) => void;
   onAskAi: () => void;
   onClose: () => void;
   onEditText: () => void;
+  onOpenStyles: () => void;
   onReplaceImage: () => void;
   selection: VisualEditSelection;
+  stylesOpen: boolean;
 }) {
   const canEditText = Boolean(selection.textKind) && !selection.dynamic;
   const structural = !selection.dynamic;
@@ -106,6 +111,13 @@ export function VisualEditToolbar({
             label={imageUploading ? "Uploading…" : "Replace image"}
             onClick={onReplaceImage}
             showLabel={false}
+          />
+        ) : null}
+        {!stylesOpen ? (
+          <ToolbarButton
+            icon={PaintBoardIcon}
+            label="Style"
+            onClick={onOpenStyles}
           />
         ) : null}
         <ToolbarButton

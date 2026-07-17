@@ -6,6 +6,7 @@ import {
   VISUAL_EDIT_ID_ATTR,
   VISUAL_EDIT_TEXT_ATTR,
   type VisualEditOp,
+  type VisualEditStylePatch,
 } from "@madoo/shared";
 
 /**
@@ -225,6 +226,95 @@ function setImageSource(
     ];
   }
   return null;
+}
+
+function propertyKeyName(prop: unknown): string | null {
+  if (!n.ObjectProperty.check(prop) && !n.Property.check(prop)) return null;
+  const key = (prop as recast.types.namedTypes.ObjectProperty).key;
+  if (n.Identifier.check(key)) return key.name;
+  if (n.StringLiteral.check(key)) return key.value;
+  return null;
+}
+
+/**
+ * Patches the element's `style={{ … }}` prop with the given property map.
+ * A missing style attr is created; a non-object style expression (e.g.
+ * `style={styles.hero}`) is wrapped as `{ ...styles.hero, <patch> }` so other
+ * elements sharing that object keep their look. `null` removes the explicit
+ * property (spread-inherited values are left alone). Returns the touched
+ * property names for the op summary.
+ */
+function applyStylePatch(
+  element: recast.types.namedTypes.JSXElement,
+  styles: VisualEditStylePatch,
+): string[] {
+  const attributes = element.openingElement.attributes ?? [];
+  let styleAttr: recast.types.namedTypes.JSXAttribute | null = null;
+  for (const attribute of attributes) {
+    if (
+      n.JSXAttribute.check(attribute) &&
+      n.JSXIdentifier.check(attribute.name) &&
+      attribute.name.name === "style"
+    ) {
+      styleAttr = attribute;
+      break;
+    }
+  }
+
+  let objectExpr: recast.types.namedTypes.ObjectExpression;
+  if (
+    styleAttr?.value &&
+    n.JSXExpressionContainer.check(styleAttr.value) &&
+    n.ObjectExpression.check(styleAttr.value.expression)
+  ) {
+    objectExpr = styleAttr.value.expression;
+  } else if (
+    styleAttr?.value &&
+    n.JSXExpressionContainer.check(styleAttr.value) &&
+    !n.JSXEmptyExpression.check(styleAttr.value.expression)
+  ) {
+    objectExpr = b.objectExpression([
+      b.spreadElement(
+        styleAttr.value.expression as recast.types.namedTypes.Identifier,
+      ),
+    ]);
+    styleAttr.value = b.jsxExpressionContainer(objectExpr);
+  } else {
+    objectExpr = b.objectExpression([]);
+    if (styleAttr) {
+      styleAttr.value = b.jsxExpressionContainer(objectExpr);
+    } else {
+      element.openingElement.attributes = [
+        ...attributes,
+        b.jsxAttribute(
+          b.jsxIdentifier("style"),
+          b.jsxExpressionContainer(objectExpr),
+        ),
+      ];
+    }
+  }
+
+  const touched: string[] = [];
+  for (const [prop, value] of Object.entries(styles)) {
+    touched.push(prop);
+    const index = objectExpr.properties.findIndex(
+      (candidate) => propertyKeyName(candidate) === prop,
+    );
+    if (value === null) {
+      if (index >= 0) objectExpr.properties.splice(index, 1);
+      continue;
+    }
+    if (index >= 0) {
+      (
+        objectExpr.properties[index] as recast.types.namedTypes.ObjectProperty
+      ).value = b.stringLiteral(value);
+    } else {
+      objectExpr.properties.push(
+        b.objectProperty(b.identifier(prop), b.stringLiteral(value)),
+      );
+    }
+  }
+  return touched;
 }
 
 function hasAttribute(
@@ -453,6 +543,14 @@ export function applyVisualOps(
     }
     const element = path.node as recast.types.namedTypes.JSXElement;
     const name = jsxElementName(element) ?? "element";
+
+    // Style edits are allowed on dynamic elements: one AST node styles every
+    // rendered copy uniformly, which is exactly what the user sees happen.
+    if (op.op === "setStyle") {
+      const touched = applyStylePatch(element, op.styles);
+      summaries.push(`Styled <${name}> (${touched.join(", ")})`);
+      continue;
+    }
 
     if (isDynamicJsxPath(path)) {
       throw new BadRequestException(

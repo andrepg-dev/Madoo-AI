@@ -27,7 +27,93 @@ export const VisualEditNodeIdSchema = z
 
 export type VisualEditNodeId = z.infer<typeof VisualEditNodeIdSchema>;
 
+/**
+ * CSS properties the manual style panel may edit. Email-safe subset only:
+ * no positioning, floats, or layout primitives that email clients ignore.
+ * Keys are the camelCase React style-object names — they map 1:1 onto the
+ * `style={{ … }}` props the generated TSX already uses.
+ */
+export const VISUAL_EDIT_STYLE_PROPERTIES = [
+  // Typography
+  "color",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "fontStyle",
+  "lineHeight",
+  "letterSpacing",
+  "textAlign",
+  "textTransform",
+  "textDecoration",
+  // Fill & border
+  "backgroundColor",
+  "borderRadius",
+  "border",
+  "borderWidth",
+  "borderStyle",
+  "borderColor",
+  // Spacing
+  "padding",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+  "margin",
+  "marginTop",
+  "marginRight",
+  "marginBottom",
+  "marginLeft",
+  // Sizing
+  "width",
+  "maxWidth",
+  "height",
+] as const;
+
+export type VisualEditStyleProperty =
+  (typeof VISUAL_EDIT_STYLE_PROPERTIES)[number];
+
+/**
+ * A style value must stay a plain CSS token list: colors, lengths, keywords,
+ * font stacks. Everything that could smuggle markup or external requests out
+ * of a value position (`url(…)`, `expression(…)`, semicolons, braces, angle
+ * brackets, `@`, backslashes) is rejected — values land inside the stored TSX
+ * and the exported HTML.
+ */
+const STYLE_VALUE_SAFE_RE = /^[a-zA-Z0-9#%.,()\s'"\/*+-]*$/;
+const STYLE_VALUE_BLOCKED_RE = /url\s*\(|expression\s*\(|javascript|@|\\|\/\*/i;
+
+export const VisualEditStyleValueSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(160)
+  .refine(
+    (value) =>
+      STYLE_VALUE_SAFE_RE.test(value) && !STYLE_VALUE_BLOCKED_RE.test(value),
+    { message: "Style value contains unsupported characters." },
+  );
+
+/** Map of property → new value, or null to remove the explicit property. */
+export const VisualEditStylePatchSchema = z
+  .record(
+    z.enum(VISUAL_EDIT_STYLE_PROPERTIES),
+    VisualEditStyleValueSchema.nullable(),
+  )
+  .refine((styles) => Object.keys(styles).length > 0, {
+    message: "At least one style property is required.",
+  })
+  .refine((styles) => Object.keys(styles).length <= 24, {
+    message: "Too many style properties in one op.",
+  });
+
+export type VisualEditStylePatch = z.infer<typeof VisualEditStylePatchSchema>;
+
 export const VisualEditOpSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("setStyle"),
+    nodeId: VisualEditNodeIdSchema,
+    styles: VisualEditStylePatchSchema,
+  }),
   z.object({
     op: z.literal("setText"),
     nodeId: VisualEditNodeIdSchema,

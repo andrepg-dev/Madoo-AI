@@ -119,7 +119,24 @@ export function useVisualEditAutosave({
         sessionRef.current = session;
       }
 
-      session.ops.push(...ops);
+      for (const op of ops) {
+        // Style tweaks stream in per keystroke/drag — collapse consecutive
+        // patches on the same node so the batch stays small and the backend
+        // applies one final value per property.
+        const last = session.ops[session.ops.length - 1];
+        if (
+          op.op === "setStyle" &&
+          last?.op === "setStyle" &&
+          last.nodeId === op.nodeId
+        ) {
+          session.ops[session.ops.length - 1] = {
+            ...last,
+            styles: { ...last.styles, ...op.styles },
+          };
+        } else {
+          session.ops.push(op);
+        }
+      }
       session.revision += 1;
       session.lastChangedAt = Date.now();
       setSaving(true);
