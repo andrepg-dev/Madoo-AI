@@ -104,6 +104,13 @@ export function sanitizeGeneratedVariableSchema(schema: VariableSchemaRoot): Var
           pattern.test(searchable),
         );
       })
+      // Image URLs are template constants shared by every recipient — the model
+      // occasionally marks them dynamic anyway, so force them static here.
+      .map((variable) =>
+        variable.role === "image" && variable.scope === "dynamic"
+          ? { ...variable, scope: "static" as const }
+          : variable,
+      )
       .slice(0, 8),
   };
 }

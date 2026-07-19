@@ -47,6 +47,7 @@ export const STATIC_INSTRUCTION = [
   "role is optional and must only be one of: text, url, image, date. Never use role for variable identity such as recipient_name or company_name; put identity in name.",
   "Every variable must set scope: dynamic or static.",
   "Use scope=dynamic for personalized data that may be replaced outside Madoo (recipientName, companyName, planName, invoiceNumber, dates from CRM).",
+  "Image variables (role=image) are ALWAYS scope=static — logos, hero images, product shots, banners, and every other image URL stay identical for all recipients. NEVER create a scope=dynamic image variable, even if the user talks about personalization; per-recipient imagery is injected by the sending platform, not by Madoo variables.",
   "Use scope=static for template constants that stay fixed across uses (heroTitle, offerText, footerLine, buttonLabel, feature bullets).",
   "Links/URLs are NOT dynamic by default: every URL variable (role=url) — including unsubscribeUrl — defaults to scope=static because the same link is shown to every recipient (ctaUrl, unsubscribeUrl, store/product/landing links, social links). Use scope=dynamic for a URL ONLY when the user explicitly asks for it (e.g. per-recipient opt-out or tracked links injected by the sending platform).",
   "Variable discipline: use only a small set of meaningful merge fields, usually 3-6 and never more than 8 unless the user explicitly asks for many personalized fields.",
