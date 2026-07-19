@@ -32,6 +32,12 @@ export const EMAIL_ICON_NAMES = [
 
 export type EmailIconName = (typeof EMAIL_ICON_NAMES)[number];
 export type EmailIconTone = "dark" | "light";
+/**
+ * outline — the bare stroke glyph (original catalog look).
+ * badge — the glyph reversed out of a filled circle ("shaped" icons); the
+ * circle color defaults to the tone but can be any brand hex.
+ */
+export type EmailIconStyle = "outline" | "badge";
 
 type IconDefinition = {
   alt: string;
@@ -85,8 +91,8 @@ function escapeXml(value: string | number): string {
     .replaceAll(">", "&gt;");
 }
 
-function renderIconSvg(icon: IconSvgObject, color: string): Buffer {
-  const body = icon
+function renderIconBody(icon: IconSvgObject, color: string): string {
+  return icon
     .map(([tag, attributes]) => {
       const attrs = Object.entries(attributes)
         .filter(([name]) => name !== "key")
@@ -99,8 +105,26 @@ function renderIconSvg(icon: IconSvgObject, color: string): Buffer {
       return `<${tag} ${attrs} />`;
     })
     .join("");
+}
+
+function renderIconSvg(icon: IconSvgObject, color: string): Buffer {
   return Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none">${body}</svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none">${renderIconBody(icon, color)}</svg>`,
+  );
+}
+
+/** Perceived luminance decides whether the glyph reverses to white or dark. */
+function glyphColorFor(fill: string): string {
+  const r = parseInt(fill.slice(1, 3), 16);
+  const g = parseInt(fill.slice(3, 5), 16);
+  const b = parseInt(fill.slice(5, 7), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b > 160 ? "#17181a" : "#ffffff";
+}
+
+function renderBadgeSvg(icon: IconSvgObject, fill: string): Buffer {
+  const glyph = renderIconBody(icon, glyphColorFor(fill));
+  return Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="${escapeXml(fill)}"/><g transform="translate(6.4 6.4) scale(0.8)">${glyph}</g></svg>`,
   );
 }
 
@@ -119,21 +143,29 @@ export class EmailIconCatalogService {
   getIcons(
     names: readonly EmailIconName[],
     tone: EmailIconTone,
+    style: EmailIconStyle = "outline",
+    badgeColor?: string,
   ): Promise<EmailIconAsset[]> {
     return Promise.all(
-      [...new Set(names)].map((name) => this.getIcon(name, tone)),
+      [...new Set(names)].map((name) =>
+        this.getIcon(name, tone, style, badgeColor),
+      ),
     );
   }
 
   private getIcon(
     name: EmailIconName,
     tone: EmailIconTone,
+    style: EmailIconStyle,
+    badgeColor?: string,
   ): Promise<EmailIconAsset> {
-    const cacheKey = `${name}:${tone}`;
+    const fill = this.badgeFill(tone, badgeColor);
+    const cacheKey =
+      style === "badge" ? `${name}:badge:${fill}` : `${name}:${tone}`;
     const cached = this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const pending = this.createIcon(name, tone).catch((error) => {
+    const pending = this.createIcon(name, tone, style, fill).catch((error) => {
       this.cache.delete(cacheKey);
       throw error;
     });
@@ -141,19 +173,35 @@ export class EmailIconCatalogService {
     return pending;
   }
 
+  private badgeFill(tone: EmailIconTone, badgeColor?: string): string {
+    if (badgeColor && /^#[0-9a-f]{6}$/i.test(badgeColor)) {
+      return badgeColor.toLowerCase();
+    }
+    return tone === "light" ? "#ffffff" : "#17181a";
+  }
+
   private async createIcon(
     name: EmailIconName,
     tone: EmailIconTone,
+    style: EmailIconStyle,
+    badgeFill: string,
   ): Promise<EmailIconAsset> {
     const definition = ICONS[name];
     const module = await nativeImport(
       `@hugeicons/core-free-icons/${definition.moduleName}`,
     );
-    const color = tone === "light" ? "#ffffff" : "#17181a";
-    const png = await sharp(renderIconSvg(module.default, color))
-      .png()
-      .toBuffer();
-    const key = `email-icons/v1/${name}-${tone}.png`;
+    const svg =
+      style === "badge"
+        ? renderBadgeSvg(module.default, badgeFill)
+        : renderIconSvg(
+            module.default,
+            tone === "light" ? "#ffffff" : "#17181a",
+          );
+    const png = await sharp(svg).png().toBuffer();
+    const key =
+      style === "badge"
+        ? `email-icons/v1/${name}-badge-${badgeFill.slice(1)}.png`
+        : `email-icons/v1/${name}-${tone}.png`;
     await this.s3.putObjectAtKey(key, png, "image/png");
     return {
       alt: definition.alt,
