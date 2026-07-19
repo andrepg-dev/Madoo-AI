@@ -296,6 +296,7 @@ export class GenerationService {
     content: string;
     groupId?: string;
     imageUrls?: string[];
+    selectedElementLabel?: string;
   }): Promise<void> {
     const content = args.content.trim();
     if (!content) return;
@@ -308,6 +309,7 @@ export class GenerationService {
         content,
         groupId: args.groupId ?? null,
         imageUrls: args.imageUrls ?? [],
+        selectedElementLabel: args.selectedElementLabel ?? null,
       },
     });
   }
@@ -876,6 +878,7 @@ export class GenerationService {
         kind: "TEXT",
         content: instruction,
         imageUrls: body.imageUrls,
+        selectedElementLabel: body.selectedElement?.label,
       });
     }
 

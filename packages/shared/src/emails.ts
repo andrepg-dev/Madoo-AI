@@ -456,6 +456,8 @@ export const EmailChatMessageDtoSchema = z.object({
   content: z.string(),
   /** Public URLs of images the user attached to this turn. */
   imageUrls: z.array(z.string()).default([]),
+  /** Label of the preview element the user had selected for this edit turn. */
+  selectedElementLabel: z.string().nullable().optional(),
   feedback: z.enum(["LIKE", "DISLIKE"]).nullable().optional(),
   feedbackComment: z.string().nullable().optional(),
   /** Shared by assistant responses that are regenerations of the same turn. */

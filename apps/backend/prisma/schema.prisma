@@ -318,6 +318,9 @@ model EmailChatMessage {
   // Public S3 URLs of images the user attached to this turn, so the chat can be
   // restored with its attachments after a reload.
   imageUrls       String[]           @default([])
+  // Label of the preview element the user had selected via the visual editor
+  // when sending this turn, e.g. `<p> "Fresh headline…"`.
+  selectedElementLabel String?
   feedback        EmailChatFeedback?
   feedbackComment String?            @db.Text
 
