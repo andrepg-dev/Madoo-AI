@@ -42,6 +42,7 @@ import {
   EMAIL_ICON_NAMES,
   EmailIconCatalogService,
   type EmailIconName,
+  type EmailIconStyle,
   type EmailIconTone,
 } from "./email-icon-catalog.service";
 import {
@@ -1235,6 +1236,8 @@ export class GenerationService {
           const input = requestedTool.input as {
             names?: unknown;
             tone?: unknown;
+            style?: unknown;
+            color?: unknown;
           };
           const names = Array.isArray(input.names)
             ? [...new Set(input.names)]
@@ -1245,14 +1248,21 @@ export class GenerationService {
               EMAIL_ICON_NAMES.includes(name as EmailIconName),
           );
           const tone = input.tone;
+          const style = input.style ?? "outline";
+          const badgeColor =
+            typeof input.color === "string" &&
+            /^#[0-9a-f]{6}$/i.test(input.color)
+              ? input.color
+              : undefined;
           if (
             !validNames ||
             names.length < 1 ||
             names.length > 8 ||
-            (tone !== "dark" && tone !== "light")
+            (tone !== "dark" && tone !== "light") ||
+            (style !== "outline" && style !== "badge")
           ) {
             throw new BadRequestException(
-              "get_email_icons requires 1-8 valid icon names and a dark or light tone.",
+              "get_email_icons requires 1-8 valid icon names, a dark or light tone, and an outline or badge style.",
             );
           }
           emit({
@@ -1266,6 +1276,8 @@ export class GenerationService {
           const icons = await this.emailIcons.getIcons(
             names,
             tone as EmailIconTone,
+            style as EmailIconStyle,
+            badgeColor,
           );
           emit({
             type: "tool_call",
