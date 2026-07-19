@@ -59,7 +59,6 @@ export function useVisualEditSelection({
   docVersion,
   onCommitText,
   onMoveTo,
-  onExitEditMode,
 }: {
   enabled: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -69,8 +68,6 @@ export function useVisualEditSelection({
   /** Called when an inline edit is committed (Enter / click away). */
   onCommitText: (nodeId: string, text: string) => void;
   onMoveTo: (nodeId: string, targetId: string, position: DropPosition) => void;
-  /** Called when the user double-clicks empty space — the exit gesture. */
-  onExitEditMode?: () => void;
 }) {
   const [selection, setSelection] = useState<VisualEditSelection | null>(null);
   // True while the selected element is contentEditable (toolbar hides).
@@ -80,8 +77,6 @@ export function useVisualEditSelection({
   onCommitTextRef.current = onCommitText;
   const onMoveToRef = useRef(onMoveTo);
   onMoveToRef.current = onMoveTo;
-  const onExitEditModeRef = useRef(onExitEditMode);
-  onExitEditModeRef.current = onExitEditMode;
   // Ends the active inline edit (commit or cancel); null when not editing.
   const finishEditRef = useRef<((commit: boolean) => void) | null>(null);
   const dragRef = useRef<{
@@ -384,14 +379,11 @@ export function useVisualEditSelection({
     // Double-click on an editable text starts typing in place directly.
     // Leaf content that isn't inline-editable (text mixed with variables,
     // images) still selects for the toolbar; structural wrappers and the
-    // background around the email read as "outside" and exit edit mode.
+    // background around the email read as "outside" and clear the selection.
     const onDblClick = (event: MouseEvent) => {
       const target = event.target as Element | null;
       if (target?.closest("[contenteditable]")) return;
       event.preventDefault();
-      // Exiting re-renders and re-attaches the enter-gesture dblclick
-      // listener on this same document mid-dispatch; without this the very
-      // same event bubbles into it and instantly re-enters edit mode.
       event.stopPropagation();
       const el = target?.closest(`[${VISUAL_EDIT_ID_ATTR}]`);
       if (
@@ -412,7 +404,6 @@ export function useVisualEditSelection({
         return;
       }
       clearSelection();
-      onExitEditModeRef.current?.();
     };
 
     const onPointerDown = (event: globalThis.PointerEvent) => {

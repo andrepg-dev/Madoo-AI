@@ -38,6 +38,8 @@ export type ChatMessage = {
   emailId?: string;
   /** Object URLs for images attached to a user message (display only). */
   images?: string[];
+  /** Label of the preview element the user had selected for this edit turn. */
+  selectedElementLabel?: string | null;
   /** Assistant response-version group (regenerations of the same turn). */
   groupId?: string;
   /** All sibling responses in the group, oldest → newest. */

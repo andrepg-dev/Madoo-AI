@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Button, SegmentedControl, useToast } from "@madoo/design-system";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CrownPlusIcon, CursorMagicSelection01Icon, EyeIcon, FileExportIcon, Loading03Icon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
+import { CrownPlusIcon, EyeIcon, FileExportIcon, Loading03Icon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
 import type { EmailDto, EmailVariantDto, SelectedEmailElement, VisualEditOp } from "@madoo/shared";
 import { cn } from "@/lib/utils";
 import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
@@ -16,17 +16,14 @@ import { VersionsDropdown } from "./VersionsDropdown";
 import { VisualEditToolbar } from "./VisualEditToolbar";
 import { useVisualEditSelection } from "./useVisualEditSelection";
 
-/** Wiring for the click-to-edit mode; the page owns the state, the sidebar renders it. */
+/** Wiring for click-to-edit (always active); the page owns the state, the sidebar renders it. */
 export type VisualEditController = {
-  /** Edit mode toggle state. */
-  enabled: boolean;
   /** Tagged HTML for the active variant is still being fetched. */
   loading: boolean;
   /** A visual-edit apply request is in flight. */
   applying: boolean;
   /** Remounts the iframe after a failed optimistic save. */
   resetVersion: number;
-  onToggle: () => void;
   onApply: (ops: VisualEditOp[]) => void;
   onAskAi: (element: SelectedEmailElement) => void;
   onReplaceImage: (nodeId: string, file: File) => Promise<string>;
@@ -106,7 +103,7 @@ export function EmailPreviewSidebar({
     applyElementStyles,
     readElementStyles,
   } = useVisualEditSelection({
-    enabled: Boolean(visualEdit?.enabled && !visualEdit.loading),
+    enabled: Boolean(visualEdit && !visualEdit.loading),
     iframeRef,
     overlayRef,
     scrollRef: previewScrollRef,
@@ -115,9 +112,6 @@ export function EmailPreviewSidebar({
       visualEdit?.onApply([{ op: "setText", nodeId, text }]),
     onMoveTo: (nodeId, targetId, position) =>
       visualEdit?.onApply([{ op: "moveTo", nodeId, targetId, position }]),
-    onExitEditMode: () => {
-      if (visualEdit?.enabled) visualEdit.onToggle();
-    },
   });
 
   const applyVisualOps = useCallback(
@@ -162,14 +156,6 @@ export function EmailPreviewSidebar({
   const variants = email?.variants ?? [];
   const latestVariantId = latestVariant(email)?.id;
   const canEditVariables = Boolean(emailId && variant);
-
-  // Edit mode wants the full canvas: entering it closes the variables panel.
-  // Leaving edit mode deliberately does NOT reopen it — the user brings it
-  // back with the Variables button when needed.
-  const visualEditEnabled = Boolean(visualEdit?.enabled);
-  useEffect(() => {
-    if (visualEditEnabled) setVariablesOpen(false);
-  }, [visualEditEnabled]);
 
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
@@ -233,17 +219,6 @@ export function EmailPreviewSidebar({
   useEffect(() => {
     clearSelection();
   }, [clearSelection, mode, width]);
-
-  // Double-clicking the preview is a natural "let me edit this" gesture —
-  // enter edit mode without reaching for the toolbar button.
-  useEffect(() => {
-    if (!visualEdit || visualEdit.enabled) return;
-    const doc = iframeRef.current?.contentDocument;
-    if (!doc) return;
-    const onDoubleClick = () => visualEdit.onToggle();
-    doc.addEventListener("dblclick", onDoubleClick);
-    return () => doc.removeEventListener("dblclick", onDoubleClick);
-  }, [docVersion, visualEdit]);
 
   useEffect(() => () => resizeObserverRef.current?.disconnect(), []);
 
@@ -457,37 +432,21 @@ export function EmailPreviewSidebar({
                 </Button>
               ) : null}
 
-              {visualEdit ? (
-                <Button
-                  aria-label="Toggle visual edit mode"
-                  aria-pressed={visualEdit.enabled}
-                  className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
-                  onClick={visualEdit.onToggle}
-                  size="sm"
-                  variant={visualEdit.enabled ? "primary" : "secondary"}
+              {visualEdit?.applying ? (
+                <span
+                  aria-live="polite"
+                  className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-madoo-ink-muted"
                 >
                   <HugeiconsIcon
                     aria-hidden="true"
-                    icon={CursorMagicSelection01Icon}
-                    primaryColor="currentColor"
-                    size={15}
-                    strokeWidth={1.55}
-                  />
-                  <span>Edit</span>
-                  <HugeiconsIcon
-                    aria-hidden="true"
-                    className={cn(
-                      "transition-opacity",
-                      visualEdit.applying
-                        ? "animate-spin opacity-100"
-                        : "opacity-0",
-                    )}
+                    className="animate-spin"
                     icon={Loading03Icon}
                     primaryColor="currentColor"
-                    size={12}
+                    size={13}
                     strokeWidth={2.1}
                   />
-                </Button>
+                  <span>Saving</span>
+                </span>
               ) : null}
 
               <VersionsDropdown
@@ -558,7 +517,7 @@ export function EmailPreviewSidebar({
                 />
               </div>
 
-              {visualEdit?.enabled && selection && !editingText && !dragging ? (
+              {visualEdit && selection && !editingText && !dragging ? (
                 <VisualEditToolbar
                   imageUploading={imageUploading}
                   key={selection.nodeId}
@@ -590,7 +549,7 @@ export function EmailPreviewSidebar({
             </div>
           </div>
 
-          {visualEdit?.enabled && selection && stylesOpen ? (
+          {visualEdit && selection && stylesOpen ? (
             <StylePanel
               className={
                 fullWidth

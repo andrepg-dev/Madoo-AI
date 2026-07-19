@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@madoo/design-system";
-import { Cancel01Icon, Edit02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Edit02Icon, Target02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ActionButton } from "./ActionButton";
 import { CopyActionButton } from "./CopyActionButton";
@@ -10,11 +10,14 @@ export function HumanMessage({
   disabled,
   images,
   onEdit,
+  selectedElementLabel,
 }: {
   children: string;
   disabled?: boolean;
   images?: string[];
   onEdit?: (text: string) => void;
+  /** Preview element this message targeted via the visual editor's Ask AI. */
+  selectedElementLabel?: string | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(children);
@@ -115,6 +118,21 @@ export function HumanMessage({
             </button>
           ))}
         </div>
+      ) : null}
+
+      {selectedElementLabel ? (
+        <span className="mb-1.5 flex min-w-0 max-w-xl items-center gap-1.5 rounded-full bg-madoo-bg py-1 pl-2.5 pr-3 text-xs text-madoo-ink-muted shadow-madoo-border">
+          <HugeiconsIcon
+            aria-hidden="true"
+            icon={Target02Icon}
+            primaryColor="currentColor"
+            size={13}
+            strokeWidth={1.6}
+          />
+          <span className="min-w-0 truncate">
+            Editing {selectedElementLabel}
+          </span>
+        </span>
       ) : null}
 
       <span className="ml-2.5 max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2.5 font-figtree leading-relaxed shadow-madoo-border">

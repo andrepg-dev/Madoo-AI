@@ -214,6 +214,10 @@ export function mapChatMessages(
         message.role === "USER" && message.imageUrls.length > 0
           ? message.imageUrls
           : undefined,
+      selectedElementLabel:
+        message.role === "USER"
+          ? (message.selectedElementLabel ?? undefined)
+          : undefined,
       thinking:
         message.role === "ASSISTANT"
           ? thinkingByText.get(message.id)

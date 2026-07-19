@@ -276,8 +276,7 @@ function EmailTemplateProjectInner() {
     [previewSrcDoc],
   );
 
-  // --- Visual edit mode (click-to-edit in the preview) ---------------------
-  const [visualEditOn, setVisualEditOn] = useState(false);
+  // --- Visual editing (click-to-edit in the preview, always active) --------
   // Element the next AI edit should target, picked via "Ask AI" in the preview.
   const [aiTarget, setAiTarget] = useState<
     (SelectedEmailElement & { variantId: string }) | null
@@ -288,9 +287,7 @@ function EmailTemplateProjectInner() {
   const editableHtmlQuery = useQuery({
     queryKey: ["email-editable", currentEmailId, activeVariant?.id],
     queryFn: () => fetchEditableEmailHtml(currentEmailId!, activeVariant!.id),
-    enabled: Boolean(
-      visualEditOn && currentEmailId && activeVariant && !isStreaming,
-    ),
+    enabled: Boolean(currentEmailId && activeVariant && !isStreaming),
     staleTime: Infinity,
     // Saves must be invisible: while the retagged HTML for the new variant
     // loads, keep showing the previous tagged document (which already looks
@@ -353,11 +350,6 @@ function EmailTemplateProjectInner() {
     [currentEmailId, enqueueVisualEdits],
   );
 
-  // Live-streamed HTML carries no ids; leave edit mode while a turn runs.
-  useEffect(() => {
-    if (isStreaming) setVisualEditOn(false);
-  }, [isStreaming]);
-
   // Node ids only match the variant they were tagged against — drop a pending
   // AI target when the previewed version changes underneath it.
   useEffect(() => {
@@ -369,7 +361,7 @@ function EmailTemplateProjectInner() {
   // Stale (placeholder) tagged HTML is intentionally accepted here — it is
   // the previous variant's document kept on screen during a save round-trip.
   const editableHtml =
-    visualEditOn && !isStreaming && activeVariant && editableHtmlQuery.data
+    !isStreaming && activeVariant && editableHtmlQuery.data
       ? editableHtmlQuery.data.html
       : null;
   const sidebarSrcDoc = useMemo(
@@ -790,6 +782,9 @@ function EmailTemplateProjectInner() {
       if (isStreaming) return;
       // A fresh attempt clears any prior credit-cap alert.
       setCreditLimitMessage(null);
+      // Editing is always on: push any debounced visual edits through before
+      // the AI turn so the model edits the version the user is looking at.
+      flushVisualEdits();
       const files = input.images ?? [];
       // Local previews for attached images (display only — not yet persisted).
       const previewUrls = files.map((file) => URL.createObjectURL(file));
@@ -803,6 +798,7 @@ function EmailTemplateProjectInner() {
           seq: Date.now(),
           emailId: currentEmailId ?? undefined,
           images: previewUrls.length > 0 ? previewUrls : undefined,
+          selectedElementLabel: aiTarget?.label,
         },
       ]);
       // Pin the new message to the top of the chat (its reserved response area
@@ -930,6 +926,7 @@ function EmailTemplateProjectInner() {
       aiTarget,
       currentEmailId,
       email,
+      flushVisualEdits,
       isStreaming,
       router,
       startStream,
@@ -1254,6 +1251,7 @@ function EmailTemplateProjectInner() {
           disabled={isStreaming}
           images={message.images}
           onEdit={(text) => void editMessage(message, text)}
+          selectedElementLabel={message.selectedElementLabel}
         >
           {message.content}
         </HumanMessage>
@@ -1527,14 +1525,9 @@ function EmailTemplateProjectInner() {
               visualEdit={
                 activeVariant && !isStreaming
                   ? {
-                      enabled: visualEditOn,
-                      loading: visualEditOn && !editableHtml,
+                      loading: !editableHtml,
                       applying: visualEditSaving,
                       resetVersion: visualEditResetVersion,
-                      onToggle: () => {
-                        if (visualEditOn) flushVisualEdits();
-                        setVisualEditOn((on) => !on);
-                      },
                       onApply: enqueueVisualEdits,
                       onAskAi: handleAskAiOnElement,
                       onReplaceImage: handleReplaceVisualImage,
