@@ -53,6 +53,22 @@ services:
       madoo-redis:
         condition: service_healthy
 
+  mcp:
+    build:
+      context: ../../
+      dockerfile: apps/mcp/Dockerfile
+    container_name: madoo-mcp
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-4100}:4100"
+    env_file:
+      - ../mcp/.env
+    environment:
+      # Reach the API over the compose network, not localhost.
+      MADOO_API_URL: http://backend:4000/api/v1
+    depends_on:
+      - backend
+
 volumes:
   madoo-postgres-data:
   madoo-redis-data:
