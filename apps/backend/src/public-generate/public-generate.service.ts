@@ -52,10 +52,11 @@ export class PublicGenerateService {
       const subject = await this.watermarkLatestVariant(email.id);
 
       const web = this.webUrl();
-      const previewUrl = `${web}/share/${share.publicId}`;
-      const ctaUrl = `${web}/share/${share.publicId}?utm_source=${encodeURIComponent(
-        this.config.get<string>("MCP_UTM_SOURCE") ?? "mcp",
-      )}&utm_medium=connector`;
+      const utm = encodeURIComponent(this.config.get<string>("MCP_UTM_SOURCE") ?? "mcp");
+      // Self-contained backend view route — renders the email regardless of
+      // frontend deploy state (the marketing site has no /share route).
+      const previewUrl = `${this.apiUrl()}/public/emails/${share.publicId}/view`;
+      const ctaUrl = `${web}/?utm_source=${utm}&utm_medium=connector&ref=${share.publicId}`;
 
       return { publicId: share.publicId, previewUrl, ctaUrl, subject };
     } catch (err) {
@@ -129,6 +130,15 @@ export class PublicGenerateService {
         ",",
       )[0];
     return raw.trim().replace(/\/$/, "");
+  }
+
+  /** Public base URL of this API (used to build the self-hosted preview link). */
+  private apiUrl(): string {
+    return (
+      this.config.get<string>("PUBLIC_API_URL") ?? "http://localhost:4000/api/v1"
+    )
+      .trim()
+      .replace(/\/$/, "");
   }
 }
 

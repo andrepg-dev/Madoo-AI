@@ -1020,6 +1020,15 @@ export class EmailsService {
     });
   }
 
+  /**
+   * Returns the shared email's rendered HTML as a standalone document. Reuses
+   * getPublicByPublicId so the same PUBLIC-only visibility rule applies.
+   */
+  async getPublicHtml(publicId: string): Promise<string> {
+    const email = await this.getPublicByPublicId(publicId);
+    return email.compiledHtml;
+  }
+
   async loadGenerationContext(emailId: string, workspaceId: string) {
     const email = await this.prisma.email.findFirst({
       where: { id: emailId, workspaceId },
