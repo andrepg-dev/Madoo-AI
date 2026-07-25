@@ -14,6 +14,7 @@ import { HealthController } from "./health.controller";
 import { InvitesModule } from "./invites/invites.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { PromptsModule } from "./prompts/prompts.module";
+import { PublicGenerateModule } from "./public-generate/public-generate.module";
 import { ReferralsModule } from "./referrals/referrals.module";
 import { FeedbackModule } from "./feedback/feedback.module";
 import { SupportModule } from "./support/support.module";
@@ -81,6 +82,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     InvitesModule,
     ConnectionsModule,
     ExportsModule,
+    PublicGenerateModule,
   ],
   controllers: [HealthController],
 })

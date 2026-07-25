@@ -577,6 +577,28 @@ export class GenerationService {
     return null;
   }
 
+  /**
+   * Anonymous acquisition generation (MCP): runs the initial generation to
+   * completion with no SSE streaming and NO account billing. Cost is bounded by
+   * the caller's per-IP + global daily caps (see PublicGenerateService).
+   */
+  async generateAnonymousToCompletion(
+    emailId: string,
+    workspaceId: string,
+    prompt?: string,
+  ): Promise<void> {
+    await this.runInitial(
+      emailId,
+      workspaceId,
+      () => {},
+      undefined,
+      undefined,
+      prompt,
+      undefined,
+      true,
+    );
+  }
+
   private async runInitial(
     emailId: string,
     workspaceId: string,
@@ -585,8 +607,11 @@ export class GenerationService {
     imageUrls?: string[],
     promptOverride?: string,
     signal?: AbortSignal,
+    skipBilling = false,
   ): Promise<void> {
-    await this.billing.assertCanGenerate(workspaceId);
+    // Anonymous (MCP acquisition) generations meter against their own IP/global
+    // caps in PublicGenerateService, not the shared account credit pool.
+    if (!skipBilling) await this.billing.assertCanGenerate(workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     const replacementPrompt = promptOverride?.trim();
     if (replacementPrompt) {
