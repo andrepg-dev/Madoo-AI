@@ -34,7 +34,24 @@ Decisions: **3/IP/day, fully open (no email gate)**.
 optional `ANON_PER_IP_DAILY`, `ANON_GLOBAL_DAILY`, `MCP_UTM_SOURCE`.
 Generation reuses existing backend `ANTHROPIC_API_KEY` — no new key.
 
-## Status: all three build clean; MCP smoke-tested (tools/list OK). Not committed. Not deployed.
+## DEPLOYED TO PROD 2026-07-25 — LIVE
+Connector URL: **https://api.madooai.com/mcp** (Streamable HTTP, stateless).
+- nginx `location /mcp` on existing `api.madooai.com` cert → docker `madoo-mcp` @ `127.0.0.1:4100`. No new DNS.
+- Merged compose preserved VPS prod hardening (loopback db/redis binds, redis auth, DATABASE_URL_DOCKER).
+- Env: MADOO_SERVICE_TOKEN (backend .env + apps/mcp/.env), PUBLIC_WEB_URL=https://madooai.com,
+  PUBLIC_API_URL=https://api.madooai.com/api/v1.
+- Verified end-to-end: initialize + tools/list + generate_email over HTTPS; preview view returns
+  200 text/html rendering the email.
+
+### Preview fix (frontend has no /share route deployed)
+Marketing site at madooai.com; no app subdomain. Added self-hosted
+`GET /api/v1/public/emails/:publicId/view` → serves compiledHtml directly. Preview link points here,
+independent of the Vercel frontend. CTA link → madooai.com root.
+
+## Remaining (user action / future)
+- USER must add the connector in their own Claude/ChatGPT settings (cannot be done for them).
+- Optional: set ANTHROPIC_API_KEY in apps/mcp/.env to enable `ask_model` bridge.
+- Future: OAuth 2.1 existing-user tools; move rate limiter to Redis if API scales.
 
 ## Honest distribution note
 MCP connectors are NOT auto-discovered — users add manually or via approval-gated directory.
