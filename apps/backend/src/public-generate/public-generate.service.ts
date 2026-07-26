@@ -51,12 +51,15 @@ export class PublicGenerateService {
 
       const subject = await this.watermarkLatestVariant(email.id);
 
-      const web = this.webUrl();
       const utm = encodeURIComponent(this.config.get<string>("MCP_UTM_SOURCE") ?? "mcp");
       // Self-contained backend view route — renders the email regardless of
       // frontend deploy state (the marketing site has no /share route).
       const previewUrl = `${this.apiUrl()}/public/emails/${share.publicId}/view`;
-      const ctaUrl = `${web}/?utm_source=${utm}&utm_medium=connector&ref=${share.publicId}`;
+      // Edit link must land on the gated client app's public /share route, which
+      // renders this exact email and offers the "Make yours" path into the
+      // editor. The old landing-homepage `?ref=` link went nowhere — nothing
+      // consumed the ref, so it just dropped users on the marketing home.
+      const ctaUrl = `${this.appUrl()}/share/${share.publicId}?utm_source=${utm}&utm_medium=connector`;
 
       return { publicId: share.publicId, previewUrl, ctaUrl, subject };
     } catch (err) {
@@ -129,6 +132,15 @@ export class PublicGenerateService {
       (this.config.get<string>("CORS_ORIGINS") ?? "http://localhost:3000").split(
         ",",
       )[0];
+    return raw.trim().replace(/\/$/, "");
+  }
+
+  /** Base URL of the gated client app (hosts the public /share editor entry). */
+  private appUrl(): string {
+    const raw =
+      this.config.get<string>("APP_URL") ??
+      this.config.get<string>("CLIENT_APP_URL") ??
+      this.webUrl();
     return raw.trim().replace(/\/$/, "");
   }
 

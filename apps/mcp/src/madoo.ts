@@ -5,7 +5,7 @@ export interface AnonGenerateResult {
   publicId: string;
   /** Fully-qualified public preview URL a client can open in a browser. */
   previewUrl: string;
-  /** Signup CTA link (opens the generated email in the editor after auth). */
+  /** Edit CTA — client /share page for this email, with a path into the editor. */
   ctaUrl: string;
   /** Optional rendered subject line for display. */
   subject?: string;
