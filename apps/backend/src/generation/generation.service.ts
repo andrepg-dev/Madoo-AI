@@ -1069,6 +1069,11 @@ export class GenerationService {
         summary?: string;
         images?: string[];
       }> = [];
+      // Source URLs of brand images already handed to the model across
+      // find_brand_images calls this turn. Repeat calls surface fresh images
+      // instead of the same top-ranked few, and once the pool is exhausted the
+      // tool returns empty so the model stops searching.
+      const seenBrandImageUrls = new Set<string>();
       let turnMessages = [...modelMessages];
 
       for (let toolTurn = 0; toolTurn < 4; toolTurn += 1) {
@@ -1213,8 +1218,14 @@ export class GenerationService {
             detail: query ? `${url} · ${query}` : url,
           });
           const found = await this.websiteBrand.findBrandImages(url, query);
+          // Skip images already handed to the model on earlier calls so each
+          // search returns fresh results instead of the same top-ranked few.
+          const fresh = found
+            .filter((img) => !seenBrandImageUrls.has(img.url))
+            .slice(0, 8);
+          for (const img of fresh) seenBrandImageUrls.add(img.url);
           const rehosted = await Promise.all(
-            found.slice(0, 4).map(async (img) => {
+            fresh.map(async (img) => {
               const hostedUrl = await this.rehostImageUrl(img.url);
               return hostedUrl
                 ? { url: hostedUrl, description: img.description }
@@ -1225,6 +1236,7 @@ export class GenerationService {
             url: string;
             description?: string;
           }>;
+          const exhausted = images.length === 0 && seenBrandImageUrls.size > 0;
           emit({
             type: "image_search",
             query: query || url,
@@ -1240,7 +1252,7 @@ export class GenerationService {
             summary: images.length
               ? `Found ${images.length} brand image${images.length === 1 ? "" : "s"}`
               : "No brand images found — fall back if needed",
-            images: images.slice(0, 4).map((img) => img.url),
+            images: images.map((img) => img.url),
           });
           toolCalls.push({
             id: requestedTool.id,
@@ -1250,14 +1262,16 @@ export class GenerationService {
             summary: images.length
               ? `Found ${images.length} brand image${images.length === 1 ? "" : "s"}`
               : "No brand images found — fall back if needed",
-            images: images.slice(0, 4).map((img) => img.url),
+            images: images.map((img) => img.url),
           });
           toolResultContent = JSON.stringify(
             images.length
               ? { images }
               : {
                   images: [],
-                  note: "No brand images found. Use attached images first, then stock images only if needed.",
+                  note: exhausted
+                    ? "No new brand images — you've already been shown every brand image on this site. Use those, or attached images; do not call find_brand_images again."
+                    : "No brand images found. Use attached images first, then stock images only if needed.",
                 },
           );
         } else if (requestedTool.name === "get_email_icons") {
