@@ -1276,18 +1276,14 @@ export class GenerationService {
               EMAIL_ICON_NAMES.includes(name as EmailIconName),
           );
           const tone = input.tone;
-          const style = input.style ?? "outline";
-          const badgeColor =
-            typeof input.color === "string" &&
-            /^#[0-9a-f]{6}$/i.test(input.color)
-              ? input.color
-              : undefined;
+          // Badge icon style retired — always render the base outline glyphs.
+          const style = "outline" as const;
+          const badgeColor = undefined;
           if (
             !validNames ||
             names.length < 1 ||
             names.length > 8 ||
-            (tone !== "dark" && tone !== "light") ||
-            (style !== "outline" && style !== "badge")
+            (tone !== "dark" && tone !== "light")
           ) {
             throw new BadRequestException(
               "get_email_icons requires 1-8 valid icon names, a dark or light tone, and an outline or badge style.",

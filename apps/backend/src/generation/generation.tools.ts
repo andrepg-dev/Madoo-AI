@@ -133,17 +133,6 @@ export const GET_EMAIL_ICONS_TOOL: Tool = {
         description:
           "Use dark icons on light surfaces and light icons on dark/accent surfaces.",
       },
-      style: {
-        type: "string",
-        enum: ["outline", "badge"],
-        description:
-          "outline (default): bare stroke glyphs. badge: shaped icons — the glyph reversed out of a filled circle; bolder, works well for feature rows and benefit lists.",
-      },
-      color: {
-        type: "string",
-        description:
-          "Badge style only: 6-digit hex (e.g. #356bff) for the circle fill, typically the brand accent. The glyph auto-contrasts white or dark. Omit for a neutral tone-based fill.",
-      },
     },
     required: ["names", "tone"],
   },
