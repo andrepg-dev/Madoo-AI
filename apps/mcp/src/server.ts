@@ -38,14 +38,10 @@ export function buildServer(): McpServer {
           .url()
           .optional()
           .describe("Brand website — Madoo pulls logo/colors from it when provided."),
-        tone: z
-          .string()
-          .optional()
-          .describe("Desired tone, e.g. 'friendly', 'urgent', 'premium'."),
       },
     },
-    async ({ brief, brandName, brandUrl, tone }) => {
-      const result = await madoo.generateAnonymous({ brief, brandName, brandUrl, tone });
+    async ({ brief, brandName, brandUrl }) => {
+      const result = await madoo.generateAnonymous({ brief, brandName, brandUrl });
       const lines = [
         result.subject ? `**Subject:** ${result.subject}` : null,
         `**Preview:** ${result.previewUrl}`,

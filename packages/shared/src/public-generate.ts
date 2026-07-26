@@ -8,7 +8,6 @@ export const PublicGenerateSchema = z.object({
   brief: z.string().trim().min(5).max(2000),
   brandName: z.string().trim().max(120).optional(),
   brandUrl: z.string().url().max(500).optional(),
-  tone: z.string().trim().max(120).optional(),
 });
 export type PublicGenerateInput = z.infer<typeof PublicGenerateSchema>;
 

@@ -25,7 +25,6 @@ export class MadooClient {
     brief: string;
     brandName?: string;
     brandUrl?: string;
-    tone?: string;
   }): Promise<AnonGenerateResult> {
     const res = await fetch(`${this.base}/public/generate`, {
       method: "POST",

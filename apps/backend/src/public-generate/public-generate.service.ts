@@ -158,7 +158,6 @@ function buildPrompt(input: PublicGenerateInput): string {
   const parts = [input.brief.trim()];
   if (input.brandName) parts.push(`Brand: ${input.brandName}.`);
   if (input.brandUrl) parts.push(`Brand website: ${input.brandUrl}.`);
-  if (input.tone) parts.push(`Tone: ${input.tone}.`);
   return parts.join("\n");
 }
 
