@@ -373,6 +373,35 @@ function extractFonts(cssText: string): string[] {
   return unique(fonts).slice(0, MAX_FONTS);
 }
 
+/**
+ * Pull font families straight from Google Fonts <link> tags in the page head.
+ * This is the most reliable signal for the typeface a site actually uses: the
+ * family is named in the href (`?family=Poppins:wght@400;700&family=Inter`),
+ * so we catch it even when the stylesheet sits past the linked-CSS fetch cap or
+ * the `font-family` rule never lands in the sampled CSS.
+ */
+function extractGoogleFonts(html: string): string[] {
+  const fonts: string[] = [];
+  const links = html.match(/<link\b[^>]*fonts\.googleapis\.com[^>]*>/gi) ?? [];
+  for (const link of links) {
+    const href = getAttribute(link, "href");
+    if (!href) continue;
+    // css2 allows repeated `family=` params; css (v1) joins them with `|`.
+    const familyParams = href.match(/family=([^&"']+)/gi) ?? [];
+    for (const param of familyParams) {
+      const raw = param.slice("family=".length);
+      for (const entry of raw.split("|")) {
+        // Drop axis/weight spec after `:` and decode `+`/percent encoding.
+        const name = decodeURIComponent(
+          entry.split(":")[0].replace(/\+/g, " "),
+        ).trim();
+        if (name) fonts.push(name);
+      }
+    }
+  }
+  return unique(fonts);
+}
+
 function extractCtas(text: string): string[] {
   const chunks = text
     .split(/(?<=[.!?])\s+|\n+/)
@@ -534,7 +563,12 @@ export class WebsiteBrandService {
       logoUrl: extractLogoUrl(html, url, imageUrls),
       ogImageUrl: absolutizeUrl(extractMeta(html, "og:image"), url),
       colors: extractColors(styleText || html),
-      fonts: extractFonts(styleText || html),
+      // Google Fonts <link> names win — they're the font the page actually
+      // loads — then fall back to font-family rules in the sampled CSS.
+      fonts: unique([
+        ...extractGoogleFonts(html),
+        ...extractFonts(styleText || html),
+      ]).slice(0, MAX_FONTS),
       imageUrls,
       ctas: extractCtas(visibleText),
       valueProps: extractValueProps(visibleText),
