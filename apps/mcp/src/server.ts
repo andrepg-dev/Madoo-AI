@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { config } from "./config.js";
-import { madoo } from "./madoo.js";
+import { isGate, madoo } from "./madoo.js";
 import { askModel, bridgeAvailable } from "./ask-model.js";
 
 /**
@@ -26,7 +26,8 @@ export function buildServer(): McpServer {
       title: "Generate a marketing email",
       description:
         "Generate a complete, styled HTML marketing email from a brief. Returns a public preview " +
-        "link the user can open, plus a link to keep editing it in Madoo. No account required.",
+        "link the user can open, plus a link to keep editing it in Madoo. The first couple of " +
+        "emails in a conversation are free; after that the user is asked to create a free Madoo account.",
       inputSchema: {
         brief: z
           .string()
@@ -38,18 +39,75 @@ export function buildServer(): McpServer {
           .url()
           .optional()
           .describe("Brand website — Madoo pulls logo/colors from it when provided."),
+        continuationToken: z
+          .string()
+          .optional()
+          .describe(
+            "The continuationToken returned by the previous generate_email call in this " +
+              "conversation. Always pass it back so the user's free allowance is tracked correctly.",
+          ),
+      },
+      outputSchema: {
+        requiresSignIn: z.boolean().optional(),
+        signInUrl: z.string().optional(),
+        previewUrl: z.string().optional(),
+        editUrl: z.string().optional(),
+        subject: z.string().optional(),
+        continuationToken: z.string().optional(),
+        freeRemaining: z.number().optional(),
       },
     },
-    async ({ brief, brandName, brandUrl }) => {
-      const result = await madoo.generateAnonymous({ brief, brandName, brandUrl });
+    async ({ brief, brandName, brandUrl, continuationToken }) => {
+      const result = await madoo.generateAnonymous({
+        brief,
+        brandName,
+        brandUrl,
+        continuationToken,
+      });
+
+      if (isGate(result)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                result.message,
+                "",
+                `**Create your free account:** ${result.signInUrl}`,
+                "",
+                "Tell the user to open that link — signing in keeps the emails already generated and unlocks editing and sending.",
+              ].join("\n"),
+            },
+          ],
+          structuredContent: {
+            requiresSignIn: true,
+            signInUrl: result.signInUrl,
+          },
+        };
+      }
+
       const lines = [
         result.subject ? `**Subject:** ${result.subject}` : null,
         `**Preview:** ${result.previewUrl}`,
         `**Edit in Madoo:** ${result.ctaUrl}`,
         "",
         "Open the preview to view the email. Use the edit link to customize, add your brand, and send.",
+        result.freeRemaining === 0
+          ? `\nThat was the last free email in this chat. Create a free Madoo account to keep generating: ${result.signInUrl}`
+          : `\n${result.freeRemaining} free email${result.freeRemaining === 1 ? "" : "s"} left in this chat.`,
       ].filter(Boolean);
-      return { content: [{ type: "text", text: lines.join("\n") }] };
+
+      return {
+        content: [{ type: "text", text: lines.join("\n") }],
+        structuredContent: {
+          previewUrl: result.previewUrl,
+          editUrl: result.ctaUrl,
+          subject: result.subject ?? undefined,
+          continuationToken: result.continuationToken,
+          freeRemaining: result.freeRemaining,
+          signInUrl: result.signInUrl,
+        },
+      };
     },
   );
 
