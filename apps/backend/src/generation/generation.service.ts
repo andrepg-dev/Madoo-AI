@@ -607,11 +607,11 @@ export class GenerationService {
     imageUrls?: string[],
     promptOverride?: string,
     signal?: AbortSignal,
-    skipBilling = false,
+    anonymous = false,
   ): Promise<void> {
     // Anonymous (MCP acquisition) generations meter against their own IP/global
     // caps in PublicGenerateService, not the shared account credit pool.
-    if (!skipBilling) await this.billing.assertCanGenerate(workspaceId);
+    if (!anonymous) await this.billing.assertCanGenerate(workspaceId);
     await this.assertEmailInWorkspace(emailId, workspaceId);
     const replacementPrompt = promptOverride?.trim();
     if (replacementPrompt) {
@@ -661,10 +661,20 @@ export class GenerationService {
     // the full context instead of treating it as a brand-new conversation.
     const recentChat = await this.loadRecentChatContext(emailId);
     const hasPriorChat = recentChat !== "No previous chat context.";
-    const brandKitBlock = await this.loadWorkspaceBrandBlock(workspaceId);
+    // Anonymous runs all share one workspace, so its persisted brand kit is
+    // whatever the previous MCP caller inspected — never feed it back in.
+    const brandKitBlock = anonymous
+      ? ""
+      : await this.loadWorkspaceBrandBlock(workspaceId);
 
     const userPrompt = [
-      isFirstInitialDraftTurn
+      anonymous
+        ? [
+            "This is a one-shot generation: there is no user to answer questions.",
+            "Never ask clarifying questions. Draft the email this turn and call emit_email.",
+            "Fill any gap in the brief with sensible, specific choices instead of placeholders.",
+          ].join("\n")
+        : isFirstInitialDraftTurn
         ? [
             "This is the first turn for a brand-new initial email draft.",
             "Decide whether the brief is specific enough to draft now.",
@@ -704,6 +714,7 @@ export class GenerationService {
       },
       emit,
       signal,
+      anonymous,
     });
 
     for (const call of result.toolCalls) {
@@ -988,6 +999,11 @@ export class GenerationService {
     };
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
+    /**
+     * Anonymous (MCP) run: shared throwaway workspace, single turn, nobody to
+     * answer a question. Skips brand-kit persistence and forces a draft.
+     */
+    anonymous?: boolean;
   }): Promise<{
     assistantText: string;
     thinkingText: string;
@@ -1014,6 +1030,7 @@ export class GenerationService {
       titleContext,
       emit,
       signal,
+      anonymous = false,
     } = params;
 
     if (!this.anthropic) {
@@ -1169,33 +1186,37 @@ export class GenerationService {
           });
           // Persist the brand kit for this workspace so later emails stay
           // on-brand. Fire-and-forget: a persistence failure must never break
-          // generation.
-          try {
-            const colors = brandContext.colors.map((color) => color.hex);
-            const copyTone =
-              brandContext.valueProps[0] ??
-              brandContext.copySnippets[0] ??
-              brandContext.description ??
-              null;
-            const brandData = {
-              url: brandContext.url,
-              brandName: brandContext.brandName ?? null,
-              logoUrl: brandContext.logoUrl ?? null,
-              colors,
-              fonts: brandContext.fonts,
-              copyTone: copyTone ? copyTone.slice(0, 240) : null,
-              imageUrls: brandContext.imageUrls,
-              raw: brandContext as unknown as object,
-            };
-            await this.prisma.workspaceBrandProfile.upsert({
-              where: { workspaceId },
-              create: { workspaceId, ...brandData },
-              update: brandData,
-            });
-          } catch (err) {
-            console.warn(
-              `[GenerationService] brand profile upsert failed: ${err instanceof Error ? err.message : String(err)}`,
-            );
+          // generation. Skipped for anonymous runs — they all share one
+          // workspace, so persisting would leak one caller's brand into the
+          // next caller's prompt.
+          if (!anonymous) {
+            try {
+              const colors = brandContext.colors.map((color) => color.hex);
+              const copyTone =
+                brandContext.valueProps[0] ??
+                brandContext.copySnippets[0] ??
+                brandContext.description ??
+                null;
+              const brandData = {
+                url: brandContext.url,
+                brandName: brandContext.brandName ?? null,
+                logoUrl: brandContext.logoUrl ?? null,
+                colors,
+                fonts: brandContext.fonts,
+                copyTone: copyTone ? copyTone.slice(0, 240) : null,
+                imageUrls: brandContext.imageUrls,
+                raw: brandContext as unknown as object,
+              };
+              await this.prisma.workspaceBrandProfile.upsert({
+                where: { workspaceId },
+                create: { workspaceId, ...brandData },
+                update: brandData,
+              });
+            } catch (err) {
+              console.warn(
+                `[GenerationService] brand profile upsert failed: ${err instanceof Error ? err.message : String(err)}`,
+              );
+            }
           }
           toolResultContent = JSON.stringify(brandContext);
         } else if (requestedTool.name === "find_brand_images") {
@@ -1652,6 +1673,44 @@ export class GenerationService {
         // already appended to turnMessages, so do one final turn forcing
         // emit_email rather than discarding all that work.
         emit({ type: "step", message: "Finalizing the email…" });
+        response = await this.runStreamWithRetry({
+          modelMessages: turnMessages,
+          systemBlocks,
+          kind,
+          emit,
+          signal,
+          toolChoice: {
+            type: "tool",
+            name: "emit_email",
+            disable_parallel_tool_use: true,
+          },
+        });
+        assistantText += response.assistantText;
+        thinkingText += response.thinkingText;
+        const u = response.usage;
+        if (u) {
+          usageTotals = {
+            input_tokens: usageTotals.input_tokens + (u.input_tokens ?? 0),
+            output_tokens: usageTotals.output_tokens + (u.output_tokens ?? 0),
+            cache_creation_input_tokens:
+              usageTotals.cache_creation_input_tokens +
+              (u.cache_creation_input_tokens ?? 0),
+            cache_read_input_tokens:
+              usageTotals.cache_read_input_tokens +
+              (u.cache_read_input_tokens ?? 0),
+          };
+        }
+        emit({ type: "token_usage", ...usageTotals });
+      }
+
+      // One-shot anonymous runs have nobody to answer a clarifying question, so
+      // a prose-only turn would leave the email with zero variants. Force the
+      // draft off the same history instead of returning chat-only.
+      const emittedThisTurn = response.content.some(
+        (b) => b.type === "tool_use" && b.name === "emit_email",
+      );
+      if (anonymous && !emittedThisTurn && !pendingToolBlock) {
+        emit({ type: "step", message: "Drafting the email…" });
         response = await this.runStreamWithRetry({
           modelMessages: turnMessages,
           systemBlocks,

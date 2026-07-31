@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
 } from "@nestjs/common";
@@ -12,6 +14,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { EmailsService } from "../emails/emails.service";
 import { GenerationService } from "../generation/generation.service";
 import { AnonRateLimiter } from "./anon-rate-limit";
+import { AnonSessionService } from "./anon-session.service";
 
 const ANON_EMAIL = "anon@madoo.internal";
 const ANON_WS_NAME = "Anonymous (MCP)";
@@ -25,6 +28,7 @@ export class PublicGenerateService {
     private readonly emails: EmailsService,
     private readonly generation: GenerationService,
     private readonly limiter: AnonRateLimiter,
+    private readonly sessions: AnonSessionService,
     private readonly config: ConfigService,
   ) {}
 
@@ -32,6 +36,20 @@ export class PublicGenerateService {
     input: PublicGenerateInput,
     ip: string,
   ): Promise<PublicGenerateResult> {
+    // Free allowance is per MCP conversation (see AnonSessionService). Checked
+    // before the rate limiter so a gated call doesn't consume a daily slot.
+    const session = this.sessions.read(input.continuationToken);
+    if (session.used >= this.sessions.freeLimit) {
+      throw new HttpException(
+        {
+          requiresSignIn: true,
+          message: `You've used your ${this.sessions.freeLimit} free Madoo emails here. Create a free account to keep generating, edit this design, and send it.`,
+          signInUrl: this.signInUrl(session.lastPublicId),
+        },
+        HttpStatus.PAYMENT_REQUIRED,
+      );
+    }
+
     const gate = this.limiter.tryConsume(ip);
     if (!gate.ok) throw new BadRequestException(gate.reason);
 
@@ -41,6 +59,22 @@ export class PublicGenerateService {
 
       const email = await this.emails.create(workspaceId, userId, { prompt });
       await this.generation.generateAnonymousToCompletion(email.id, workspaceId);
+
+      // A turn that came back as prose only (or failed validation) leaves the
+      // email with no variant — sharing that would hand the caller an empty
+      // preview. Retry once with an explicit draft-now instruction.
+      if ((await this.variantCount(email.id)) === 0) {
+        await this.generation.generateAnonymousToCompletion(
+          email.id,
+          workspaceId,
+          `${prompt}\n\nDraft the email now using your best judgment. Do not ask questions.`,
+        );
+      }
+      if ((await this.variantCount(email.id)) === 0) {
+        throw new InternalServerErrorException(
+          "Madoo could not draft this email. Try again with a bit more detail in the brief.",
+        );
+      }
 
       const share = await this.emails.setShare(email.id, workspaceId, userId, {
         visibility: "PUBLIC",
@@ -61,12 +95,43 @@ export class PublicGenerateService {
       // consumed the ref, so it just dropped users on the marketing home.
       const ctaUrl = `${this.appUrl()}/share/${share.publicId}?utm_source=${utm}&utm_medium=connector`;
 
-      return { publicId: share.publicId, previewUrl, ctaUrl, subject };
+      const used = session.used + 1;
+      return {
+        publicId: share.publicId,
+        previewUrl,
+        ctaUrl,
+        subject,
+        continuationToken: this.sessions.issue({
+          used,
+          lastPublicId: share.publicId,
+        }),
+        freeRemaining: Math.max(0, this.sessions.freeLimit - used),
+        signInUrl: this.signInUrl(share.publicId),
+      };
     } catch (err) {
       // Don't burn a user's free quota on our failure.
       this.limiter.refund(ip);
       throw err;
     }
+  }
+
+  /**
+   * Where a gated caller is sent to sign in. Their last generated email is the
+   * best landing spot — the /share page renders it and offers "Make yours",
+   * which is the account-creation entry point.
+   */
+  private signInUrl(lastPublicId?: string): string {
+    const utm = encodeURIComponent(
+      this.config.get<string>("MCP_UTM_SOURCE") ?? "mcp",
+    );
+    const query = `utm_source=${utm}&utm_medium=connector&intent=signup`;
+    return lastPublicId
+      ? `${this.appUrl()}/share/${lastPublicId}?${query}`
+      : `${this.webUrl()}/?${query}`;
+  }
+
+  private variantCount(emailId: string): Promise<number> {
+    return this.prisma.emailVariant.count({ where: { emailId } });
   }
 
   /** Lazily create (once) the shared anonymous user + workspace. */
