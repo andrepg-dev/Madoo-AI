@@ -6,6 +6,7 @@ import {
   InternalServerErrorException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Observable } from "rxjs";
 import {
   type PublicGenerateInput,
   type PublicGenerateResult,
@@ -32,9 +33,55 @@ export class PublicGenerateService {
     private readonly config: ConfigService,
   ) {}
 
+  /**
+   * SSE variant of `generate`. Forwards the same progress payloads the platform
+   * editor consumes, then a terminal `result` / `gate` / `error` event so the
+   * MCP server can turn them into progress notifications for the chat client.
+   */
+  generateStream(
+    input: PublicGenerateInput,
+    ip: string,
+  ): Observable<MessageEvent> {
+    return new Observable<MessageEvent>((subscriber) => {
+      const send = (payload: Record<string, unknown>) =>
+        subscriber.next({ data: JSON.stringify(payload) } as MessageEvent);
+
+      void (async () => {
+        try {
+          send({ type: "step", message: "Starting your email…" });
+          const result = await this.generate(input, ip, send);
+          send({ type: "result", result });
+        } catch (err) {
+          if (
+            err instanceof HttpException &&
+            err.getStatus() === HttpStatus.PAYMENT_REQUIRED
+          ) {
+            const body = err.getResponse();
+            send({
+              type: "gate",
+              ...(typeof body === "object" && body !== null ? body : {}),
+            });
+          } else {
+            send({
+              type: "error",
+              message:
+                err instanceof HttpException
+                  ? extractMessage(err.getResponse())
+                  : err instanceof Error
+                    ? err.message
+                    : "Generation failed.",
+            });
+          }
+        }
+        subscriber.complete();
+      })();
+    });
+  }
+
   async generate(
     input: PublicGenerateInput,
     ip: string,
+    emit: (p: Record<string, unknown>) => void = () => {},
   ): Promise<PublicGenerateResult> {
     // Free allowance is per MCP conversation (see AnonSessionService). Checked
     // before the rate limiter so a gated call doesn't consume a daily slot.
@@ -58,16 +105,23 @@ export class PublicGenerateService {
       const prompt = buildPrompt(input);
 
       const email = await this.emails.create(workspaceId, userId, { prompt });
-      await this.generation.generateAnonymousToCompletion(email.id, workspaceId);
+      await this.generation.generateAnonymousToCompletion(
+        email.id,
+        workspaceId,
+        undefined,
+        emit,
+      );
 
       // A turn that came back as prose only (or failed validation) leaves the
       // email with no variant — sharing that would hand the caller an empty
       // preview. Retry once with an explicit draft-now instruction.
       if ((await this.variantCount(email.id)) === 0) {
+        emit({ type: "step", message: "Retrying the draft…" });
         await this.generation.generateAnonymousToCompletion(
           email.id,
           workspaceId,
           `${prompt}\n\nDraft the email now using your best judgment. Do not ask questions.`,
+          emit,
         );
       }
       if ((await this.variantCount(email.id)) === 0) {
@@ -76,6 +130,7 @@ export class PublicGenerateService {
         );
       }
 
+      emit({ type: "step", message: "Publishing the preview link…" });
       const share = await this.emails.setShare(email.id, workspaceId, userId, {
         visibility: "PUBLIC",
       });
@@ -217,6 +272,15 @@ export class PublicGenerateService {
       .trim()
       .replace(/\/$/, "");
   }
+}
+
+function extractMessage(body: unknown): string {
+  if (typeof body === "string") return body;
+  if (typeof body === "object" && body !== null && "message" in body) {
+    const message = (body as { message: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return "Generation failed.";
 }
 
 function buildPrompt(input: PublicGenerateInput): string {

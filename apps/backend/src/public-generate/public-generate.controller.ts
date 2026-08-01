@@ -3,9 +3,11 @@ import {
   Controller,
   Post,
   Req,
+  Sse,
   UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
+import type { Observable } from "rxjs";
 import {
   PublicGenerateSchema,
   type PublicGenerateResult,
@@ -29,6 +31,21 @@ export class PublicGenerateController {
   ): Promise<PublicGenerateResult> {
     const dto = PublicGenerateSchema.parse(body ?? {});
     return this.service.generate(dto, clientIp(req));
+  }
+
+  /**
+   * Same generation, streamed. Progress payloads first, then a terminal
+   * `result` / `gate` / `error` event — the MCP server relays these to the chat
+   * client as progress notifications so the user sees what is happening.
+   */
+  @Post("stream")
+  @Sse()
+  generateStream(
+    @Req() req: Request,
+    @Body() body: unknown,
+  ): Observable<MessageEvent> {
+    const dto = PublicGenerateSchema.parse(body ?? {});
+    return this.service.generateStream(dto, clientIp(req));
   }
 }
 

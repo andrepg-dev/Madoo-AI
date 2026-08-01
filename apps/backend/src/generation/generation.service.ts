@@ -586,11 +586,12 @@ export class GenerationService {
     emailId: string,
     workspaceId: string,
     prompt?: string,
+    emit: (p: Record<string, unknown>) => void = () => {},
   ): Promise<void> {
     await this.runInitial(
       emailId,
       workspaceId,
-      () => {},
+      emit,
       undefined,
       undefined,
       prompt,

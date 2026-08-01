@@ -1,8 +1,43 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { config } from "./config.js";
-import { isGate, madoo } from "./madoo.js";
+import { isGate, madoo, type ProgressEvent } from "./madoo.js";
 import { askModel, bridgeAvailable } from "./ask-model.js";
+
+/** Floor between progress notifications, so the chat client isn't flooded. */
+const PROGRESS_MIN_GAP_MS = 700;
+
+/**
+ * Turn one backend generation event into a line a human wants to read, or ""
+ * for the noisy ones (thinking deltas, token counters).
+ */
+function describeProgress(event: ProgressEvent): string {
+  const text = (value: unknown): string =>
+    typeof value === "string" ? value.trim() : "";
+
+  switch (event.type) {
+    case "step":
+      return text(event.message);
+    case "tool_call": {
+      const title = text(event.title);
+      if (!title) return "";
+      const detail = text(event.summary) || text(event.detail);
+      return detail ? `${title} — ${detail}` : title;
+    }
+    case "brand_context": {
+      const brand = text(event.brandName) || text(event.url);
+      return brand ? `Read the brand: ${brand}` : "";
+    }
+    case "subject": {
+      const subject = text(event.value);
+      return subject ? `Subject: ${subject}` : "";
+    }
+    case "meta":
+      return text(event.warning);
+    default:
+      return "";
+  }
+}
 
 /**
  * Build a fresh MCP server instance with all Madoo tools registered.
@@ -57,13 +92,49 @@ export function buildServer(): McpServer {
         freeRemaining: z.number().optional(),
       },
     },
-    async ({ brief, brandName, brandUrl, continuationToken }) => {
-      const result = await madoo.generateAnonymous({
-        brief,
-        brandName,
-        brandUrl,
-        continuationToken,
-      });
+    async ({ brief, brandName, brandUrl, continuationToken }, extra) => {
+      // Clients that want progress send a token in _meta; without one there is
+      // nothing to attach notifications to, so we stay silent and just stream.
+      const progressToken = extra._meta?.progressToken;
+      let sent = 0;
+      let lastSentAt = 0;
+      let lastMessage = "";
+
+      const report = (message: string) => {
+        if (progressToken === undefined || !message) return;
+        const now = Date.now();
+        // Generation emits far more events than a chat client can render.
+        if (message === lastMessage || now - lastSentAt < PROGRESS_MIN_GAP_MS) {
+          return;
+        }
+        lastMessage = message;
+        lastSentAt = now;
+        sent += 1;
+        void extra
+          .sendNotification({
+            method: "notifications/progress",
+            params: { progressToken, progress: sent, message },
+          })
+          .catch(() => {
+            // A client that hung up must not fail the generation.
+          });
+      };
+
+      const input = { brief, brandName, brandUrl, continuationToken };
+      let sawEvent = false;
+      let result;
+      try {
+        result = await madoo.generateAnonymousStreaming(input, (event) => {
+          sawEvent = true;
+          report(describeProgress(event));
+        });
+      } catch (err) {
+        // Only retry unstreamed when the stream never started (endpoint missing,
+        // proxy refused). Failing mid-stream means the email may already exist —
+        // generating a second one would double-charge the user's free quota.
+        if (sawEvent) throw err;
+        result = await madoo.generateAnonymous(input);
+      }
 
       if (isGate(result)) {
         return {

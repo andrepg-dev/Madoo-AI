@@ -30,6 +30,55 @@ export function isGate(res: AnonGenerateResponse): res is AnonGenerateGate {
   return "requiresSignIn" in res;
 }
 
+/** One SSE payload from the backend generation stream. `type` drives the shape. */
+export interface ProgressEvent {
+  type?: string;
+  [key: string]: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** Minimal SSE reader: yields the parsed JSON of each `data:` frame. */
+async function* readSseEvents(
+  body: ReadableStream<Uint8Array>,
+): AsyncGenerator<ProgressEvent> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let split = buffer.indexOf("\n\n");
+      while (split !== -1) {
+        const frame = buffer.slice(0, split);
+        buffer = buffer.slice(split + 2);
+        const data = frame
+          .split("\n")
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trim())
+          .join("");
+        if (data) {
+          try {
+            const parsed: unknown = JSON.parse(data);
+            if (isRecord(parsed)) yield parsed as ProgressEvent;
+          } catch {
+            // Ignore malformed frames rather than killing the generation.
+          }
+        }
+        split = buffer.indexOf("\n\n");
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export interface PublicTemplate {
   id: string;
   name: string;
@@ -69,6 +118,60 @@ export class MadooClient {
       throw new Error(`Madoo generate failed (${res.status}): ${text.slice(0, 300)}`);
     }
     return (await res.json()) as AnonGenerateResult;
+  }
+
+  /**
+   * Streaming generation. Calls `onProgress` for every progress payload the
+   * backend emits, resolves with the terminal result (or the sign-in gate).
+   */
+  async generateAnonymousStreaming(
+    input: {
+      brief: string;
+      brandName?: string;
+      brandUrl?: string;
+      continuationToken?: string;
+    },
+    onProgress: (event: ProgressEvent) => void,
+  ): Promise<AnonGenerateResponse> {
+    const res = await fetch(`${this.base}/public/generate/stream`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "text/event-stream",
+        "x-madoo-service-token": requireServiceToken(),
+      },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok || !res.body) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Madoo generate failed (${res.status}): ${text.slice(0, 300)}`);
+    }
+
+    let outcome: AnonGenerateResponse | null = null;
+    let failure: string | null = null;
+
+    for await (const event of readSseEvents(res.body)) {
+      if (event.type === "result" && isRecord(event.result)) {
+        outcome = event.result as unknown as AnonGenerateResult;
+      } else if (event.type === "gate") {
+        outcome = {
+          requiresSignIn: true,
+          message:
+            typeof event.message === "string"
+              ? event.message
+              : "Free limit reached — create a free Madoo account to keep generating.",
+          signInUrl:
+            typeof event.signInUrl === "string" ? event.signInUrl : config.madooWebUrl,
+        };
+      } else if (event.type === "error") {
+        failure = typeof event.message === "string" ? event.message : "Generation failed.";
+      } else {
+        onProgress(event);
+      }
+    }
+
+    if (outcome) return outcome;
+    throw new Error(failure ?? "Madoo generation ended without a result.");
   }
 
   async listTemplates(): Promise<PublicTemplate[]> {
