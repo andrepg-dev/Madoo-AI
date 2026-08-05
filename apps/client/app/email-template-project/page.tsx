@@ -12,6 +12,7 @@ import {
   truncateEmailChat,
 } from "@/actions/emails";
 import { fetchBillingOverview } from "@/actions/billing";
+import { fetchSkills } from "@/actions/skills";
 import { uploadEmailImage } from "@/lib/upload-email-image";
 import { consumePendingPrompt } from "@/actions/prompts";
 import type { PromptSubmitInput } from "@/components/home/ClientPromptBox";
@@ -170,6 +171,13 @@ function EmailTemplateProjectInner() {
     queryKey: ["billing-overview", workspaceId],
     queryFn: fetchBillingOverview,
     enabled: Boolean(workspaceId),
+  });
+  // Same query key the composer uses, so this is served from cache — the chat
+  // stores skill ids and needs their labels to render the chips.
+  const { data: skillCatalog = [] } = useQuery({
+    queryKey: ["design-skills"],
+    queryFn: fetchSkills,
+    staleTime: Infinity,
   });
   const email = emailQuery.data;
   const canRateEmail = Boolean(
@@ -805,6 +813,7 @@ function EmailTemplateProjectInner() {
           emailId: currentEmailId ?? undefined,
           images: previewUrls.length > 0 ? previewUrls : undefined,
           selectedElementLabel: aiTarget?.label,
+          skills: input.skills?.length ? input.skills : undefined,
         },
       ]);
       // Pin the new message to the top of the chat (its reserved response area
@@ -1261,6 +1270,11 @@ function EmailTemplateProjectInner() {
           images={message.images}
           onEdit={(text) => void editMessage(message, text)}
           selectedElementLabel={message.selectedElementLabel}
+          skills={message.skills?.map((name) => ({
+            name,
+            label:
+              skillCatalog.find((skill) => skill.name === name)?.label ?? name,
+          }))}
         >
           {message.content}
         </HumanMessage>

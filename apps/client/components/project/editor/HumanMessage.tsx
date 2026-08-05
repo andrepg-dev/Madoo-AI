@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@madoo/design-system";
-import { Cancel01Icon, Edit02Icon, Target02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Edit02Icon, SparklesIcon, Target02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ActionButton } from "./ActionButton";
 import { CopyActionButton } from "./CopyActionButton";
@@ -11,11 +11,14 @@ export function HumanMessage({
   images,
   onEdit,
   selectedElementLabel,
+  skills,
 }: {
   children: string;
   disabled?: boolean;
   images?: string[];
   onEdit?: (text: string) => void;
+  /** Design skills attached to this turn from the composer picker. */
+  skills?: { name: string; label: string }[];
   /** Preview element this message targeted via the visual editor's Ask AI. */
   selectedElementLabel?: string | null;
 }) {
@@ -138,6 +141,26 @@ export function HumanMessage({
       <span className="ml-2.5 max-w-xl whitespace-pre-wrap wrap-break-word rounded-lg bg-madoo-bg px-4 py-2.5 font-figtree leading-relaxed shadow-madoo-border">
         {text}
       </span>
+
+      {skills && skills.length > 0 ? (
+        <span className="ml-2.5 mt-1.5 flex max-w-xl flex-wrap justify-end gap-1.5">
+          {skills.map((skill) => (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-madoo-bg py-1 pl-2.5 pr-3 text-xs text-madoo-ink-muted shadow-madoo-border"
+              key={skill.name}
+            >
+              <HugeiconsIcon
+                aria-hidden="true"
+                icon={SparklesIcon}
+                primaryColor="currentColor"
+                size={12}
+                strokeWidth={1.6}
+              />
+              <span className="min-w-0 truncate">{skill.label}</span>
+            </span>
+          ))}
+        </span>
+      ) : null}
 
       <div className="my-1.5 flex max-w-min gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         <ActionButton

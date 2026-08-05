@@ -177,6 +177,7 @@ export class EmailsService {
         kind: row.kind,
         content: row.content,
         imageUrls: row.imageUrls,
+        skills: row.skills,
         selectedElementLabel: row.selectedElementLabel,
         feedback: row.feedback,
         feedbackComment: row.feedbackComment,

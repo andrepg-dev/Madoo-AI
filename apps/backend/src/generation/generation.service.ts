@@ -312,6 +312,7 @@ export class GenerationService {
     groupId?: string;
     imageUrls?: string[];
     selectedElementLabel?: string;
+    skills?: string[];
   }): Promise<void> {
     const content = args.content.trim();
     if (!content) return;
@@ -325,6 +326,7 @@ export class GenerationService {
         groupId: args.groupId ?? null,
         imageUrls: args.imageUrls ?? [],
         selectedElementLabel: args.selectedElementLabel ?? null,
+        skills: args.skills ?? [],
       },
     });
   }
@@ -648,12 +650,14 @@ export class GenerationService {
             kind: "TEXT",
             content: replacementPrompt,
             imageUrls: imageUrls ?? [],
+            skills: skills ?? [],
           },
         }),
       ]);
-    } else if (imageUrls?.length) {
-      // First generation from the home flow: images are uploaded after the brief
-      // is created, so attach them to that latest user message for restore.
+    } else if (imageUrls?.length || skills?.length) {
+      // First generation from the home flow: the brief row already exists, and
+      // images/skills only arrive with the generate call — attach them to that
+      // latest user message so a reload restores the turn intact.
       const brief = await this.prisma.emailChatMessage.findFirst({
         where: { emailId, workspaceId, role: "USER" },
         orderBy: { createdAt: "desc" },
@@ -661,7 +665,10 @@ export class GenerationService {
       if (brief) {
         await this.prisma.emailChatMessage.update({
           where: { id: brief.id },
-          data: { imageUrls },
+          data: {
+            ...(imageUrls?.length ? { imageUrls } : {}),
+            ...(skills?.length ? { skills } : {}),
+          },
         });
       }
     }
@@ -937,6 +944,7 @@ export class GenerationService {
         content: instruction,
         imageUrls: body.imageUrls,
         selectedElementLabel: body.selectedElement?.label,
+        skills: body.skills,
       });
     }
 

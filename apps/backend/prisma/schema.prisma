@@ -321,6 +321,9 @@ model EmailChatMessage {
   // Label of the preview element the user had selected via the visual editor
   // when sending this turn, e.g. `<p> "Fresh headline…"`.
   selectedElementLabel String?
+  // Design skill ids the user attached in the composer for this turn, so the
+  // chat still shows what was applied after a reload.
+  skills          String[]           @default([])
   feedback        EmailChatFeedback?
   feedbackComment String?            @db.Text
 

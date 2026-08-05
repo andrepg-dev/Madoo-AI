@@ -218,6 +218,10 @@ export function mapChatMessages(
         message.role === "USER"
           ? (message.selectedElementLabel ?? undefined)
           : undefined,
+      skills:
+        message.role === "USER" && message.skills.length > 0
+          ? message.skills
+          : undefined,
       thinking:
         message.role === "ASSISTANT"
           ? thinkingByText.get(message.id)
