@@ -38,7 +38,6 @@ import {
   Dropdown,
   DropdownContent,
   DropdownItem,
-  Tooltip,
   useToast,
 } from "@madoo/design-system";
 import {
@@ -269,6 +268,7 @@ export function ClientPromptBox({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [skillMenuOpen, setSkillMenuOpen] = useState(false);
+  const [hoveredSkill, setHoveredSkill] = useState<string | null>(null);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [images, setImages] = useState<PromptImage[]>([]);
   const [previewImage, setPreviewImage] = useState<PromptImage | null>(null);
@@ -308,6 +308,7 @@ export function ClientPromptBox({
     staleTime: Infinity,
   });
   const skillsAtLimit = selectedSkills.length >= MAX_PROMPT_SKILLS;
+  const hoveredPreview = skills.find((skill) => skill.name === hoveredSkill);
   const toggleSkill = (name: string) =>
     setSelectedSkills((current) =>
       current.includes(name)
@@ -963,7 +964,13 @@ export function ClientPromptBox({
             </Dropdown>
 
             {skills.length > 0 ? (
-              <Dropdown open={skillMenuOpen} onOpenChange={setSkillMenuOpen}>
+              <Dropdown
+                open={skillMenuOpen}
+                onOpenChange={(open) => {
+                  setSkillMenuOpen(open);
+                  if (!open) setHoveredSkill(null);
+                }}
+              >
                 <button
                   type="button"
                   data-madoo-control
@@ -994,43 +1001,25 @@ export function ClientPromptBox({
                 <DropdownContent
                   side={isChatVariant ? "top" : "bottom"}
                   align="start"
-                  className="max-h-88 w-80 overflow-y-auto"
+                  // The scroll lives on the inner list, NOT here: an absolutely
+                  // positioned flyout inside a scroll container adds to its
+                  // scroll width, which shifted the panel and clipped the row
+                  // labels. This element only positions.
+                  className="w-80 overflow-visible"
+                  onMouseLeave={() => setHoveredSkill(null)}
                 >
                   <p className="px-3 pb-1 pt-2 text-[11px] text-madoo-ink-muted">
                     {skillsAtLimit
                       ? `${MAX_PROMPT_SKILLS} skills max — deselect one to swap.`
                       : "Applied to your next message."}
                   </p>
-                  {skills.map((skill) => {
-                    const checked = selectedSkills.includes(skill.name);
-                    const disabled = !checked && skillsAtLimit;
-                    return (
-                      <Tooltip
-                        align="start"
-                        content={
-                          <span className="flex w-52 flex-col gap-1.5">
-                            {/* Static asset, so it costs nothing until the
-                                tooltip renders. Regenerate with
-                                backend scripts/generate-skill-previews.ts. */}
-                            <img
-                              alt=""
-                              className="h-auto w-full rounded-md"
-                              loading="lazy"
-                              src={`/skill-previews/${skill.name}.png`}
-                            />
-                            <span className="block leading-snug">
-                              {skill.example}
-                            </span>
-                          </span>
-                        }
-                        key={skill.name}
-                        // The wrapper is inline-flex w-max by default, which
-                        // would shrink each row to its content width.
-                        className="w-full!"
-                        side="right"
-                        tone="light"
-                      >
+                  <div className="madoo-preview-scrollbar flex max-h-80 flex-col gap-0.5 overflow-y-auto">
+                    {skills.map((skill) => {
+                      const checked = selectedSkills.includes(skill.name);
+                      const disabled = !checked && skillsAtLimit;
+                      return (
                         <DropdownItem
+                          key={skill.name}
                           disabled={disabled}
                           // DropdownItem closes on select unless the click's
                           // default is prevented — keep it open so several
@@ -1039,6 +1028,8 @@ export function ClientPromptBox({
                             event.preventDefault();
                             if (!disabled) toggleSkill(skill.name);
                           }}
+                          onFocus={() => setHoveredSkill(skill.name)}
+                          onMouseEnter={() => setHoveredSkill(skill.name)}
                           className="items-center gap-2.5"
                         >
                           <span className="flex min-w-0 items-center gap-2.5">
@@ -1069,9 +1060,25 @@ export function ClientPromptBox({
                             )}
                           />
                         </DropdownItem>
-                      </Tooltip>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
+                  {/* Submenu-style preview flyout. Hidden on narrow screens,
+                      where there is no room beside the menu. */}
+                  {hoveredPreview ? (
+                    <div className="pointer-events-none absolute left-[calc(100%+8px)] top-0 hidden w-56 flex-col gap-2 rounded-lg bg-madoo-surface p-2 shadow-(--shadow-border-rule-hover) lg:flex">
+                      <img
+                        alt=""
+                        className="h-auto w-full rounded-md"
+                        loading="lazy"
+                        src={`/skill-previews/${hoveredPreview.name}.png`}
+                      />
+                      <span className="text-[11.5px] leading-snug text-madoo-ink-soft">
+                        {hoveredPreview.example}
+                      </span>
+                    </div>
+                  ) : null}
                 </DropdownContent>
               </Dropdown>
             ) : null}
