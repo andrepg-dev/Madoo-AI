@@ -32,9 +32,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-const title = "Madoo | AI Email Template Builder";
+const title = "Madoo | AI Email Builder";
 const description =
-  "Export your email templates design to MailChimp or any provider of your preference.";
+  "AI platform that builds professional emails from a text prompt. Describe the campaign — or paste your website — and get a complete, responsive, on-brand email with your logo, colors and fonts.";
 const ogImage = {
   url: "/og-image.png",
   width: 2934,

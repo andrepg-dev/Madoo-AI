@@ -289,9 +289,9 @@ export const localeCopy = {
       workflowTitle: "Team workflow",
       workflowDescription:
         "Approvals, reviews, ownership, and campaign handoff stay visible before export.",
-      integrationsTitle: "ESP integrations",
+      integrationsTitle: "ESP-ready export",
       integrationsDescription:
-        "Move finished campaigns into Mailchimp, HubSpot, Klaviyo, Salesforce, and other ESPs.",
+        "Export HTML with merge tags already in the right syntax for Mailchimp, HubSpot, Klaviyo, Brevo and 7 more — or send it straight to your Gmail or Outlook drafts.",
       qaTitle: "Test email engine",
       qaDescription:
         "Send test emails from Madoo to review the final message before you move it into your email tool.",
@@ -563,9 +563,9 @@ export const localeCopy = {
       workflowTitle: "Flujo de equipo",
       workflowDescription:
         "Aprobaciones, revisiones, dueños y handoff de campaña se mantienen visibles antes de exportar.",
-      integrationsTitle: "Integraciones ESP",
+      integrationsTitle: "Exportación lista para tu ESP",
       integrationsDescription:
-        "Mueve campañas terminadas a Mailchimp, HubSpot, Klaviyo, Salesforce y otros ESPs.",
+        "Exporta HTML con los merge tags ya escritos en la sintaxis de Mailchimp, HubSpot, Klaviyo, Brevo y 7 más — o mándalo directo a tus borradores de Gmail u Outlook.",
       qaTitle: "Motor de emails de prueba",
       qaDescription:
         "Envía emails de prueba desde Madoo para revisar el mensaje final antes de moverlo a tu herramienta de email.",
