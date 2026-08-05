@@ -191,12 +191,12 @@ export const GENERATE_SECTION_DIVIDER_TOOL: Tool = {
       topColor: {
         type: "string",
         description:
-          "Hex color of the section ABOVE the divider, e.g. '#FFFFFF'. Must match that section's background exactly.",
+          "Hex color of the section ABOVE the divider, e.g. '#FFFFFF'. Must match that section's background exactly. Pass 'transparent' when the band above is a photo, a gradient, or any background whose color you cannot name — the PNG then carries an alpha channel instead.",
       },
       bottomColor: {
         type: "string",
         description:
-          "Hex color of the section BELOW the divider, e.g. '#8B85D9'. Must match that section's background exactly.",
+          "Hex color of the section BELOW the divider, e.g. '#8B85D9', or 'transparent'. At least one of the two bands must be a real color.",
       },
       height: {
         type: "number",

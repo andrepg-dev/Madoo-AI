@@ -10,9 +10,10 @@ import * as zlib from "node:zlib";
  * shape is rasterized here into a plain PNG, hosted, and dropped in as a normal
  * <Img> — which every client renders, Outlook included.
  *
- * The PNG carries BOTH colors (band above the curve, band below), so it needs
- * no transparency and cannot leave a seam if it loads against an unexpected
- * background.
+ * By default the PNG carries BOTH colors (band above the curve, band below), so
+ * it needs no transparency and cannot leave a seam. Either band may instead be
+ * "transparent", which encodes an alpha channel so the shape can sit over a
+ * photo, a gradient, or a section whose background the image cannot know.
  *
  * Rasterized directly rather than through a headless browser: the shape is a
  * single-valued function of x, so a browser buys nothing and costs a process
@@ -27,11 +28,14 @@ export const DIVIDER_SHAPES = [
 ] as const;
 export type DividerShape = (typeof DIVIDER_SHAPES)[number];
 
+/** Either band may be "transparent" so the shape floats over a photo or gradient. */
+export const TRANSPARENT = "transparent";
+
 export type DividerOptions = {
   shape: DividerShape;
-  /** Color of the band ABOVE the curve (the section the divider hangs from). */
+  /** Color of the band ABOVE the curve, or "transparent". */
   topColor: string;
-  /** Color of the band BELOW the curve (the section the divider leads into). */
+  /** Color of the band BELOW the curve, or "transparent". */
   bottomColor: string;
   /** Rendered width in px. 1200 = 600px email width at 2x for retina. */
   width?: number;
@@ -41,6 +45,13 @@ export type DividerOptions = {
 };
 
 type Rgb = { r: number; g: number; b: number };
+/** null = fully transparent band. */
+type Band = Rgb | null;
+
+export function parseBandColor(input: string): Band {
+  if (input.trim().toLowerCase() === TRANSPARENT) return null;
+  return parseHexColor(input);
+}
 
 export function parseHexColor(input: string): Rgb {
   const value = input.trim().replace(/^#/, "");
@@ -114,25 +125,34 @@ function pngChunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([length, typeAndData, crc]);
 }
 
-/** Minimal 8-bit truecolor PNG encoder — no alpha, so no dependency needed. */
-function encodePng(width: number, height: number, rgb: Buffer): Buffer {
+/**
+ * Minimal 8-bit PNG encoder. colorType 2 = truecolor (3 bytes/px), 6 = truecolor
+ * with alpha (4 bytes/px). Alpha is only paid for when a band is transparent.
+ */
+function encodePng(
+  width: number,
+  height: number,
+  pixels: Buffer,
+  hasAlpha = false,
+): Buffer {
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
   const ihdrData = Buffer.alloc(13);
   ihdrData.writeUInt32BE(width, 0);
   ihdrData.writeUInt32BE(height, 4);
   ihdrData.writeUInt8(8, 8); // bit depth
-  ihdrData.writeUInt8(2, 9); // color type: truecolor
+  ihdrData.writeUInt8(hasAlpha ? 6 : 2, 9); // color type: truecolor (+alpha)
   ihdrData.writeUInt8(0, 10); // compression
   ihdrData.writeUInt8(0, 11); // filter
   ihdrData.writeUInt8(0, 12); // interlace
 
   // Each scanline is prefixed with its filter byte (0 = none).
-  const stride = width * 3;
+  const channels = hasAlpha ? 4 : 3;
+  const stride = width * channels;
   const raw = Buffer.alloc((stride + 1) * height);
   for (let y = 0; y < height; y += 1) {
     raw[y * (stride + 1)] = 0;
-    rgb.copy(raw, y * (stride + 1) + 1, y * stride, (y + 1) * stride);
+    pixels.copy(raw, y * (stride + 1) + 1, y * stride, (y + 1) * stride);
   }
 
   return Buffer.concat([
@@ -151,10 +171,23 @@ function encodePng(width: number, height: number, rgb: Buffer): Buffer {
 export function renderDividerPng(options: DividerOptions): Buffer {
   const width = Math.max(2, Math.min(options.width ?? 1200, 2400));
   const height = Math.max(2, Math.min(options.height ?? 120, 600));
-  const top = parseHexColor(options.topColor);
-  const bottom = parseHexColor(options.bottomColor);
+  const top = parseBandColor(options.topColor);
+  const bottom = parseBandColor(options.bottomColor);
 
-  const rgb = Buffer.alloc(width * height * 3);
+  if (!top && !bottom) {
+    throw new Error("At least one divider band must have a color.");
+  }
+
+  // Alpha costs a fourth channel per pixel, so only encode it when a band
+  // actually needs to be see-through.
+  const hasAlpha = !top || !bottom;
+  const channels = hasAlpha ? 4 : 3;
+  const pixels = Buffer.alloc(width * height * channels);
+
+  // A transparent band still needs RGB values to blend toward along the curve,
+  // or the antialiased edge fades through black and leaves a dark halo.
+  const topRgb = top ?? bottom!;
+  const bottomRgb = bottom ?? top!;
 
   for (let x = 0; x < width; x += 1) {
     const t = width === 1 ? 0 : x / (width - 1);
@@ -165,12 +198,25 @@ export function renderDividerPng(options: DividerOptions): Buffer {
       // Coverage of this pixel by the TOP band: 1 fully above the curve, 0
       // fully below, fractional exactly on it.
       const coverage = Math.max(0, Math.min(1, boundary - y));
-      const offset = (y * width + x) * 3;
-      rgb[offset] = Math.round(top.r * coverage + bottom.r * (1 - coverage));
-      rgb[offset + 1] = Math.round(top.g * coverage + bottom.g * (1 - coverage));
-      rgb[offset + 2] = Math.round(top.b * coverage + bottom.b * (1 - coverage));
+      const offset = (y * width + x) * channels;
+      pixels[offset] = Math.round(
+        topRgb.r * coverage + bottomRgb.r * (1 - coverage),
+      );
+      pixels[offset + 1] = Math.round(
+        topRgb.g * coverage + bottomRgb.g * (1 - coverage),
+      );
+      pixels[offset + 2] = Math.round(
+        topRgb.b * coverage + bottomRgb.b * (1 - coverage),
+      );
+      if (hasAlpha) {
+        // Opacity follows whichever band is solid, so the curve keeps its
+        // antialiasing instead of turning into a hard cutout.
+        pixels[offset + 3] = Math.round(
+          255 * (top ? coverage : 1 - coverage),
+        );
+      }
     }
   }
 
-  return encodePng(width, height, rgb);
+  return encodePng(width, height, pixels, hasAlpha);
 }

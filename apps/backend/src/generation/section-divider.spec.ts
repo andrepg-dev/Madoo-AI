@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import * as zlib from "node:zlib";
 import {
   DIVIDER_SHAPES,
+  parseBandColor,
   parseHexColor,
   renderDividerPng,
 } from "./section-divider";
@@ -11,7 +12,11 @@ import {
 function decode(png: Buffer): {
   width: number;
   height: number;
-  pixel: (x: number, y: number) => { r: number; g: number; b: number };
+  colorType: number;
+  pixel: (
+    x: number,
+    y: number,
+  ) => { r: number; g: number; b: number; a: number };
 } {
   assert.deepEqual(
     [...png.subarray(0, 8)],
@@ -32,17 +37,25 @@ function decode(png: Buffer): {
     }
     offset += 12 + length;
   }
+  const colorType = png.readUInt8(25);
+  const channels = colorType === 6 ? 4 : 3;
   const raw = zlib.inflateSync(Buffer.concat(idat));
-  const stride = width * 3;
+  const stride = width * channels;
 
   return {
     width,
     height,
+    colorType,
     pixel: (x, y) => {
       const rowStart = y * (stride + 1);
       assert.equal(raw[rowStart], 0, "expected filter byte 0");
-      const at = rowStart + 1 + x * 3;
-      return { r: raw[at], g: raw[at + 1], b: raw[at + 2] };
+      const at = rowStart + 1 + x * channels;
+      return {
+        r: raw[at],
+        g: raw[at + 1],
+        b: raw[at + 2],
+        a: channels === 4 ? raw[at + 3] : 255,
+      };
     },
   };
 }
@@ -79,12 +92,12 @@ describe("section-divider", () => {
     for (const x of [0, 60, 120, 199]) {
       assert.deepEqual(
         image.pixel(x, 0),
-        { r: 255, g: 255, b: 255 },
+        { r: 255, g: 255, b: 255, a: 255 },
         `top edge at x=${x}`,
       );
       assert.deepEqual(
         image.pixel(x, 79),
-        { r: 139, g: 133, b: 217 },
+        { r: 139, g: 133, b: 217, a: 255 },
         `bottom edge at x=${x}`,
       );
     }
@@ -191,5 +204,95 @@ describe("section-divider", () => {
     const image = decode(png);
     assert.equal(image.width, 2400);
     assert.equal(image.height, 600);
+  });
+
+  describe("transparency", () => {
+    it("keeps colorType 2 (no alpha channel) when both bands are solid", () => {
+      const image = decode(
+        renderDividerPng({
+          shape: "wave",
+          topColor: "#FFFFFF",
+          bottomColor: "#8B85D9",
+          width: 80,
+          height: 40,
+        }),
+      );
+      assert.equal(image.colorType, 2);
+    });
+
+    it("encodes alpha and clears the transparent band", () => {
+      const image = decode(
+        renderDividerPng({
+          shape: "wave",
+          topColor: "transparent",
+          bottomColor: "#8B85D9",
+          width: 200,
+          height: 80,
+        }),
+      );
+      assert.equal(image.colorType, 6);
+      // Top edge is the see-through band, bottom edge is the solid one.
+      assert.equal(image.pixel(100, 0).a, 0);
+      assert.equal(image.pixel(100, 79).a, 255);
+      assert.deepEqual(
+        { r: image.pixel(100, 79).r, g: image.pixel(100, 79).g, b: image.pixel(100, 79).b },
+        { r: 139, g: 133, b: 217 },
+      );
+    });
+
+    it("works with the transparent band on the bottom too", () => {
+      const image = decode(
+        renderDividerPng({
+          shape: "wave",
+          topColor: "#8B85D9",
+          bottomColor: "transparent",
+          width: 200,
+          height: 80,
+        }),
+      );
+      assert.equal(image.pixel(100, 0).a, 255);
+      assert.equal(image.pixel(100, 79).a, 0);
+    });
+
+    it("never blends the antialiased edge through black", () => {
+      // A transparent band still needs RGB to blend toward, or the curve gets a
+      // dark halo everywhere the alpha is partial.
+      const image = decode(
+        renderDividerPng({
+          shape: "slant",
+          topColor: "transparent",
+          bottomColor: "#FFFFFF",
+          width: 200,
+          height: 80,
+        }),
+      );
+      for (let y = 0; y < 80; y += 1) {
+        for (const x of [50, 150]) {
+          const p = image.pixel(x, y);
+          assert.ok(
+            p.r > 200 && p.g > 200 && p.b > 200,
+            `dark halo at ${x},${y}: rgb(${p.r},${p.g},${p.b})`,
+          );
+        }
+      }
+    });
+
+    it("rejects a divider with no color at all", () => {
+      assert.throws(
+        () =>
+          renderDividerPng({
+            shape: "wave",
+            topColor: "transparent",
+            bottomColor: "transparent",
+          }),
+        /at least one divider band/i,
+      );
+    });
+
+    it("parseBandColor maps transparent to null, keeps hex", () => {
+      assert.equal(parseBandColor("transparent"), null);
+      assert.equal(parseBandColor("  TRANSPARENT "), null);
+      assert.deepEqual(parseBandColor("#8B85D9"), { r: 139, g: 133, b: 217 });
+    });
   });
 });

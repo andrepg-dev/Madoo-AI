@@ -52,6 +52,7 @@ Rules for the divider image:
 6. alt="" — it is decorative, and a screen reader announcing it adds nothing.
 7. Do NOT add the divider URL to variableSchema; it is a fixed design asset, not user content.
 8. Works everywhere including Outlook, because it is just an image. No fallback needed.
+9. TRANSPARENCY: pass 'transparent' for a band whose background you cannot name — a photo, a gradient, or a hero whose colors come from the image. The PNG then carries an alpha channel and only the shaped band is painted. Use it only when you must: a solid two-color divider is safer, because a transparent PNG shows whatever is behind it, and Outlook Windows renders the containing table's background rather than a CSS background-image. When you do go transparent, set a real backgroundColor on the section behind the divider so there is always something sane underneath, and never make both bands transparent — that is a blank image.
 
 METHOD 2 — CSS RADIUS (fallback only)
 Use this only for a plain symmetric dome when an extra hosted image is genuinely unwanted. It is the basic look; it is not the professional one.
