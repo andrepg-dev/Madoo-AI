@@ -135,6 +135,26 @@ export const VisualEditOpSchema = z.discriminatedUnion("op", [
       }),
   }),
   z.object({
+    op: z.literal("setHref"),
+    nodeId: VisualEditNodeIdSchema,
+    /**
+     * Link destination. `http(s)` for normal links plus `mailto:`/`tel:` for
+     * contact CTAs. Everything else — notably `javascript:` and `data:` — is
+     * rejected: the value lands in the stored TSX and the exported HTML.
+     */
+    url: z
+      .string()
+      .trim()
+      .min(1)
+      .max(4096)
+      .refine((value) => /^(https?:\/\/|mailto:|tel:)/i.test(value), {
+        message: "Link must start with http://, https://, mailto: or tel:.",
+      })
+      .refine((value) => !/[\s<>"']/.test(value), {
+        message: "Link contains unsupported characters.",
+      }),
+  }),
+  z.object({
     op: z.literal("delete"),
     nodeId: VisualEditNodeIdSchema,
   }),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PromptSkillsSchema } from "./skills";
 import { SelectedEmailElementSchema } from "./visual-edit";
 
 const JsIdentifierSchema = z
@@ -345,6 +346,8 @@ export const GenerateEmailSchema = z.object({
   /** Optional replacement prompt when a chat-only first turn did not create a variant yet. */
   prompt: z.string().min(1).optional(),
   imageUrls: EmailImageUrlsSchema,
+  /** Design skills picked in the composer; loaded into the first request. */
+  skills: PromptSkillsSchema,
 });
 
 export type GenerateEmailInput = z.infer<typeof GenerateEmailSchema>;
@@ -497,6 +500,8 @@ export const EditEmailSchema = z.object({
   imageUrls: EmailImageUrlsSchema,
   /** Element picked in the visual editor so the AI edits exactly that node. */
   selectedElement: SelectedEmailElementSchema.optional(),
+  /** Design skills picked in the composer; loaded into this request. */
+  skills: PromptSkillsSchema,
 });
 
 export type EditEmailInput = z.infer<typeof EditEmailSchema>;

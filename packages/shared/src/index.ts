@@ -19,3 +19,4 @@ export * from "./connections";
 export * from "./testing";
 export * from "./admin";
 export * from "./public-generate";
+export * from "./skills";
