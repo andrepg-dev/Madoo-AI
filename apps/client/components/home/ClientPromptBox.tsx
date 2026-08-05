@@ -1007,10 +1007,28 @@ export function ClientPromptBox({
                     return (
                       <Tooltip
                         align="start"
-                        content={skill.example}
+                        content={
+                          <span className="flex w-52 flex-col gap-1.5">
+                            {/* Static asset, so it costs nothing until the
+                                tooltip renders. Regenerate with
+                                backend scripts/generate-skill-previews.ts. */}
+                            <img
+                              alt=""
+                              className="h-auto w-full rounded-md"
+                              loading="lazy"
+                              src={`/skill-previews/${skill.name}.png`}
+                            />
+                            <span className="block leading-snug">
+                              {skill.example}
+                            </span>
+                          </span>
+                        }
                         key={skill.name}
+                        // The wrapper is inline-flex w-max by default, which
+                        // would shrink each row to its content width.
+                        className="w-full!"
                         side="right"
-                        tone="ink"
+                        tone="light"
                       >
                         <DropdownItem
                           disabled={disabled}
