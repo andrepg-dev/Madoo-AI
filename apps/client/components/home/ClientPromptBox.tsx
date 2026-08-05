@@ -8,11 +8,14 @@ import {
   Cancel01Icon,
   Image01Icon,
   Mic02Icon,
+  SparklesIcon,
   StopIcon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchBillingOverview } from "@/actions/billing";
+import { fetchSkills } from "@/actions/skills";
 import { cn } from "@/lib/utils";
 import { buildLandingAuthUrl } from "@/lib/auth-redirect";
 import { useAuthStore } from "@/stores/auth-store";
@@ -24,7 +27,11 @@ import {
   DropdownItem,
   useToast,
 } from "@madoo/design-system";
-import { PLAN_DISPLAY_NAMES, getRecommendedUpgradePlan } from "@madoo/shared";
+import {
+  MAX_PROMPT_SKILLS,
+  PLAN_DISPLAY_NAMES,
+  getRecommendedUpgradePlan,
+} from "@madoo/shared";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -150,6 +157,8 @@ type ClientPromptBoxProps = {
 export type PromptSubmitInput = {
   prompt: string;
   images?: File[];
+  /** Design skill ids picked in the composer, applied to this turn. */
+  skills?: string[];
 };
 
 type PromptImage = {
@@ -222,6 +231,8 @@ export function ClientPromptBox({
   const [creditsAlertDismissed, setCreditsAlertDismissed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [skillMenuOpen, setSkillMenuOpen] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [images, setImages] = useState<PromptImage[]>([]);
   const [previewImage, setPreviewImage] = useState<PromptImage | null>(null);
   const [isListening, setIsListening] = useState(false);
@@ -252,6 +263,23 @@ export function ClientPromptBox({
     queryFn: fetchBillingOverview,
     enabled: Boolean(user),
   });
+  // Static catalog — fetched once and cached for the session.
+  const { data: skills = [] } = useQuery({
+    queryKey: ["design-skills"],
+    queryFn: fetchSkills,
+    enabled: Boolean(user),
+    staleTime: Infinity,
+  });
+  const skillsAtLimit = selectedSkills.length >= MAX_PROMPT_SKILLS;
+  const toggleSkill = (name: string) =>
+    setSelectedSkills((current) =>
+      current.includes(name)
+        ? current.filter((skill) => skill !== name)
+        : current.length >= MAX_PROMPT_SKILLS
+          ? current
+          : [...current, name],
+    );
+
   const aiUsage = billingOverview?.usage.aiGenerations;
   const currentPlan = billingOverview?.subscription.plan ?? "FREE";
   const recommendedUpgradePlan = getRecommendedUpgradePlan(currentPlan);
@@ -532,6 +560,7 @@ export function ClientPromptBox({
     const params = new URLSearchParams({ prompt: trimmedPrompt });
 
     if (images.length > 0) input.images = images.map((image) => image.file);
+    if (selectedSkills.length > 0) input.skills = [...selectedSkills];
 
     if (!user) {
       window.location.assign(
@@ -545,6 +574,7 @@ export function ClientPromptBox({
       // Clear instantly so the message feels sent before the backend responds.
       setPrompt("");
       resetImages();
+      setSelectedSkills([]);
       try {
         await onSubmit(input);
       } finally {
@@ -780,6 +810,49 @@ export function ClientPromptBox({
           </div>
         ) : null}
 
+        {selectedSkills.length > 0 ? (
+          <div
+            className={cn(
+              "flex flex-wrap gap-1.5 pb-1",
+              isChatVariant ? "px-4 pt-3" : "px-5 pt-4",
+            )}
+          >
+            {selectedSkills.map((name) => {
+              const skill = skills.find((entry) => entry.name === name);
+              return (
+                <span
+                  key={name}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-madoo-ink/[0.06] py-1 pl-2.5 pr-1.5 text-xs text-madoo-ink"
+                >
+                  <HugeiconsIcon
+                    icon={SparklesIcon}
+                    size={12}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  <span className="max-w-40 truncate">
+                    {skill?.label ?? name}
+                  </span>
+                  <button
+                    type="button"
+                    data-madoo-control
+                    onClick={() => toggleSkill(name)}
+                    aria-label={`Remove ${skill?.label ?? name} skill`}
+                    className="inline-flex size-4 cursor-pointer items-center justify-center rounded-full text-madoo-ink-muted transition hover:bg-white"
+                  >
+                    <HugeiconsIcon
+                      icon={Cancel01Icon}
+                      size={10}
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
+
         <textarea
           data-madoo-control
           ref={promptTextareaRef}
@@ -851,6 +924,86 @@ export function ClientPromptBox({
                 </DropdownItem>
               </DropdownContent>
             </Dropdown>
+
+            {skills.length > 0 ? (
+              <Dropdown open={skillMenuOpen} onOpenChange={setSkillMenuOpen}>
+                <button
+                  type="button"
+                  data-madoo-control
+                  onClick={() => setSkillMenuOpen((open) => !open)}
+                  aria-haspopup="menu"
+                  aria-expanded={skillMenuOpen}
+                  aria-label="Choose design skills"
+                  className={cn(
+                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-xs text-[#101114] transition hover:bg-[rgb(var(--rule-rgb)/0.06)]",
+                    isChatVariant ? "h-7" : "h-8",
+                    selectedSkills.length > 0 && "bg-[rgb(var(--rule-rgb)/0.08)]",
+                  )}
+                >
+                  <HugeiconsIcon
+                    icon={SparklesIcon}
+                    size={isChatVariant ? 14 : 16}
+                    strokeWidth={1.6}
+                    aria-hidden="true"
+                  />
+                  <span>
+                    Skills
+                    {selectedSkills.length > 0
+                      ? ` (${selectedSkills.length})`
+                      : ""}
+                  </span>
+                </button>
+
+                <DropdownContent
+                  side={isChatVariant ? "top" : "bottom"}
+                  align="start"
+                  className="max-h-88 w-80 overflow-y-auto"
+                >
+                  <p className="px-3 pb-1 pt-2 text-[11px] text-madoo-ink-muted">
+                    {skillsAtLimit
+                      ? `${MAX_PROMPT_SKILLS} skills max — deselect one to swap.`
+                      : "Applied to your next message."}
+                  </p>
+                  {skills.map((skill) => {
+                    const checked = selectedSkills.includes(skill.name);
+                    const disabled = !checked && skillsAtLimit;
+                    return (
+                      <DropdownItem
+                        key={skill.name}
+                        disabled={disabled}
+                        // DropdownItem closes on select unless the click's
+                        // default is prevented — keep it open so several
+                        // skills can be picked in one pass.
+                        onClick={(event) => {
+                          event.preventDefault();
+                          if (!disabled) toggleSkill(skill.name);
+                        }}
+                        className="items-start gap-2"
+                      >
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="truncate font-medium">
+                            {skill.label}
+                          </span>
+                          <span className="text-[11px] leading-snug text-madoo-ink-muted">
+                            {skill.summary}
+                          </span>
+                        </span>
+                        <HugeiconsIcon
+                          icon={Tick02Icon}
+                          size={15}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                          className={cn(
+                            "mt-0.5 shrink-0",
+                            checked ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </DropdownItem>
+                    );
+                  })}
+                </DropdownContent>
+              </Dropdown>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2">

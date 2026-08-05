@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Button, SegmentedControl, useToast } from "@madoo/design-system";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CrownPlusIcon, EyeIcon, FileExportIcon, Loading03Icon, PanelLeftIcon, PanelRightIcon, SourceCodeIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
+import { CrownPlusIcon, EyeIcon, FileExportIcon, Loading03Icon, PanelLeftIcon, PanelRightIcon, SparklesIcon, TestTube02Icon } from "@hugeicons/core-free-icons";
 import type { EmailDto, EmailVariantDto, SelectedEmailElement, VisualEditOp } from "@madoo/shared";
 import { cn } from "@/lib/utils";
-import { VariablesPanel } from "@/components/project/preview/VariablesPanel";
 import { defaultPreviewWidthVw, previewModeItems, previewThemeItems } from "./constants";
 import { clampPreviewWidth } from "./utils";
 import { latestVariant } from "./chat-utils";
@@ -79,7 +78,6 @@ export function EmailPreviewSidebar({
   width: number;
 }) {
   const [isResizing, setIsResizing] = useState(false);
-  const [variablesOpen, setVariablesOpen] = useState(true);
   // Design panel opens automatically with the first selection so designers
   // land straight in manual property editing; the close button opts out.
   const [stylesOpen, setStylesOpen] = useState(true);
@@ -155,7 +153,6 @@ export function EmailPreviewSidebar({
 
   const variants = email?.variants ?? [];
   const latestVariantId = latestVariant(email)?.id;
-  const canEditVariables = Boolean(emailId && variant);
 
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
@@ -176,17 +173,6 @@ export function EmailPreviewSidebar({
         force(theme === "light"),
       );
   }, [srcDoc, theme]);
-
-  useEffect(() => {
-    if (expanded) {
-      setVariablesOpen(false);
-      return;
-    }
-
-    if (canEditVariables) {
-      setVariablesOpen(true);
-    }
-  }, [canEditVariables, expanded]);
 
   const syncIframeHeight = useCallback(() => {
     const iframe = iframeRef.current;
@@ -412,26 +398,6 @@ export function EmailPreviewSidebar({
             )}
           >
             <div className="flex items-center gap-2">
-              {canEditVariables ? (
-                <Button
-                  aria-label="Toggle variables panel"
-                  aria-pressed={variablesOpen}
-                  className="h-8 gap-2 rounded-lg px-3 text-xs font-medium"
-                  onClick={() => setVariablesOpen((open) => !open)}
-                  size="sm"
-                  variant={variablesOpen ? "primary" : "secondary"}
-                >
-                  <HugeiconsIcon
-                    aria-hidden="true"
-                    icon={SourceCodeIcon}
-                    primaryColor="currentColor"
-                    size={15}
-                    strokeWidth={1.55}
-                  />
-                  <span>Variables</span>
-                </Button>
-              ) : null}
-
               {visualEdit?.applying ? (
                 <span
                   aria-live="polite"
@@ -478,16 +444,6 @@ export function EmailPreviewSidebar({
         </div>
 
         <div className="relative flex min-h-0 flex-1 overflow-hidden shadow-madoo-border">
-          {variablesOpen && canEditVariables && variant ? (
-            <VariablesPanel
-              emailId={emailId!}
-              key={variant.id}
-              onClose={() => setVariablesOpen(false)}
-              variables={variant.variableSchema.variables}
-              variantId={variant.id}
-            />
-          ) : null}
-
           <div
             className="madoo-preview-scrollbar mr-1 h-full min-w-0 flex-1 overflow-y-auto"
             ref={previewScrollRef}
@@ -559,10 +515,14 @@ export function EmailPreviewSidebar({
               isImage={selection.image}
               key={selection.nodeId}
               label={selection.label}
+              link={selection.link}
               nodeId={selection.nodeId}
               onClose={() => setStylesOpen(false)}
               onCommit={(nodeId, styles) =>
                 visualEdit.onApply([{ op: "setStyle", nodeId, styles }])
+              }
+              onCommitLink={(nodeId, url) =>
+                visualEdit.onApply([{ op: "setHref", nodeId, url }])
               }
               onPreview={applyElementStyles}
               readStyles={readElementStyles}

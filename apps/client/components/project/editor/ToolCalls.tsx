@@ -9,7 +9,9 @@ import {
   Globe02Icon,
   Image01Icon,
   Loading03Icon,
+  PaintBrush01Icon,
   Search01Icon,
+  TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import type { ToolCallView } from "./types";
@@ -21,6 +23,8 @@ function iconFor(name: string): IconSvgElement {
   if (name === "inspect_website_brand") return Globe02Icon;
   if (name === "get_email_version") return Clock01Icon;
   if (name === "generate_chart") return Chart01Icon;
+  if (name === "get_design_technique") return PaintBrush01Icon;
+  if (name === "get_font_pairing") return TextFontIcon;
   return Search01Icon;
 }
 

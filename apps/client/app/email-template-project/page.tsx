@@ -409,8 +409,9 @@ function EmailTemplateProjectInner() {
   // variant is persisted on the backend right before `done`, but a read replica
   // can briefly lag the write — and a plain invalidate fires a single refetch
   // that, if it lands on the lagging replica, caches an empty `variants: []` and
-  // never retries. That left the variant-gated Variables button + panel hidden
-  // until a manual reload, most visibly on the very first generation. Refetch
+  // never retries. That left the variant-gated preview controls (versions
+  // dropdown, export) hidden until a manual reload, most visibly on the very
+  // first generation. Refetch
   // directly and retry until the variant shows up, seeding the cache each pass.
   const refreshEmailWithVariant = useCallback(
     async (emailId: string) => {
@@ -443,6 +444,7 @@ function EmailTemplateProjectInner() {
       baseVariantId?: string,
       imageUrls?: string[],
       selectedElement?: SelectedEmailElement,
+      skills?: string[],
     ) => {
       const assistantId = `${mode}-${Date.now()}-assistant`;
       const timeline = createTimelineMessage(
@@ -632,7 +634,7 @@ function EmailTemplateProjectInner() {
               setMobileTab("preview");
             }
             // Pull the persisted variant into cache now (retrying past replica
-            // lag) so the Variables button + panel show without a reload.
+            // lag) so the variant-gated preview controls show without a reload.
             void refreshEmailWithVariant(emailId);
           } else {
             // Chat-only turn produced no variant — a plain refresh is enough.
@@ -705,6 +707,7 @@ function EmailTemplateProjectInner() {
 
       try {
         const hasImages = (imageUrls?.length ?? 0) > 0;
+        const hasSkills = (skills?.length ?? 0) > 0;
         const requestBody =
           mode === "edit"
             ? JSON.stringify({
@@ -712,11 +715,14 @@ function EmailTemplateProjectInner() {
               ...(baseVariantId ? { baseVariantId } : {}),
               ...(hasImages ? { imageUrls } : {}),
               ...(selectedElement ? { selectedElement } : {}),
+              ...(hasSkills ? { skills } : {}),
             })
-            : mode === "generate" && ((instruction?.trim().length ?? 0) > 0 || hasImages)
+            : mode === "generate" &&
+              ((instruction?.trim().length ?? 0) > 0 || hasImages || hasSkills)
               ? JSON.stringify({
                 ...(instruction?.trim() ? { prompt: instruction.trim() } : {}),
                 ...(hasImages ? { imageUrls } : {}),
+                ...(hasSkills ? { skills } : {}),
               })
               : undefined;
         const controller = new AbortController();
@@ -877,6 +883,7 @@ function EmailTemplateProjectInner() {
             target
               ? { nodeId: target.nodeId, label: target.label }
               : undefined,
+            input.skills,
           );
         } else {
           posthog.capture("email_generation_started", {
@@ -890,6 +897,8 @@ function EmailTemplateProjectInner() {
             input.prompt,
             undefined,
             uploaded,
+            undefined,
+            input.skills,
           );
         }
         return;

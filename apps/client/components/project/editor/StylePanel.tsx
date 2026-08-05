@@ -185,22 +185,45 @@ export function StylePanel({
   className,
   isImage,
   label,
+  link,
   nodeId,
   onClose,
   onCommit,
+  onCommitLink,
   onPreview,
   readStyles,
 }: {
   className?: string;
   isImage: boolean;
   label: string;
+  /** Current href when the selection is a link, else null. */
+  link: string | null;
   nodeId: string;
   onClose: () => void;
   onCommit: (nodeId: string, styles: VisualEditStylePatch) => void;
+  onCommitLink: (nodeId: string, url: string) => void;
   onPreview: (nodeId: string, styles: Record<string, string | null>) => void;
   readStyles: (nodeId: string) => CSSStyleDeclaration | null;
 }) {
   const [draft, setDraft] = useState<Draft>(() => draftFrom(readStyles(nodeId)));
+  // A placeholder "#" is what the generator emits when it has no destination —
+  // show it as empty so the field reads as "needs a URL" rather than as a value.
+  const [linkDraft, setLinkDraft] = useState(link === "#" ? "" : (link ?? ""));
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  const commitLink = () => {
+    const url = linkDraft.trim();
+    if (!url || url === link) {
+      setLinkError(null);
+      return;
+    }
+    if (!/^(https?:\/\/|mailto:|tel:)/i.test(url)) {
+      setLinkError("Use http://, https://, mailto: or tel:");
+      return;
+    }
+    setLinkError(null);
+    onCommitLink(nodeId, url);
+  };
 
   const pendingRef = useRef<Partial<
     Record<VisualEditStyleProperty, string | null>
@@ -333,6 +356,32 @@ export function StylePanel({
             />
           </Button>
         </header>
+
+        {link !== null ? (
+          <Section title="Link">
+            <Field label="URL">
+              <Input
+                onBlur={commitLink}
+                onChange={(event) => {
+                  setLinkDraft(event.target.value);
+                  if (linkError) setLinkError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    commitLink();
+                  }
+                }}
+                inputSize="sm"
+                placeholder="https://example.com"
+                value={linkDraft}
+              />
+            </Field>
+            {linkError ? (
+              <p className="text-[11px] leading-4 text-red-600">{linkError}</p>
+            ) : null}
+          </Section>
+        ) : null}
 
         {!isImage ? (
           <Section title="Text">

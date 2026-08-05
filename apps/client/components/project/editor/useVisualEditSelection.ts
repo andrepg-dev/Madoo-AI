@@ -16,6 +16,12 @@ export type VisualEditSelection = {
   dynamic: boolean;
   /** True when the selected rendered node is an image. */
   image: boolean;
+  /**
+   * Current link destination when the selection is a link, else null.
+   * <Button> and <Link> both render as <a>, so the href lives on the selected
+   * node itself; a nested <a> (an image wrapped in a link) is checked too.
+   */
+  link: string | null;
   /** Rendered text content, used to prefill the inline text editor. */
   currentText: string;
   /** Bounding box relative to the overlay host (the wrapper around the iframe). */
@@ -35,6 +41,19 @@ const EDITOR_STYLES = `
   [${SELECTED_ATTR}="1"] { outline: 2px solid #356bff !important; outline-offset: -2px; }
   [contenteditable] { outline: 2px solid #16a34a !important; outline-offset: -2px; cursor: text; }
 `;
+
+/**
+ * The href of a selected link. Only an href the TSX can actually own is
+ * reported: a placeholder "#" still counts (the user should be able to fix it),
+ * but an anchor with no href at all does not.
+ */
+function readLink(el: Element): string | null {
+  const anchor =
+    el.tagName.toLowerCase() === "a" ? el : el.querySelector(":scope > a");
+  if (!anchor) return null;
+  const href = anchor.getAttribute("href");
+  return href === null ? null : href;
+}
 
 function buildLabel(el: Element): string {
   const tag = el.tagName.toLowerCase();
@@ -333,6 +352,7 @@ export function useVisualEditSelection({
         textKind: el.getAttribute(VISUAL_EDIT_TEXT_ATTR),
         dynamic: el.getAttribute(VISUAL_EDIT_DYNAMIC_ATTR) === "1",
         image: el.tagName.toLowerCase() === "img",
+        link: readLink(el),
         currentText: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
         rect: computeRect(el),
       });
