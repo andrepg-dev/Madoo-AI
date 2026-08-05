@@ -74,7 +74,23 @@ function AppIcon({ icon, size = 16 }: { icon: IconSvgElement; size?: number }) {
   );
 }
 
-function getPlanCta(plan: PricingPlan, currentPlan: Plan, isCurrent: boolean) {
+/**
+ * A pricing card this drawer can actually act on. The Free card carries no
+ * `checkoutPlan` and is filtered out before render, so everything below can
+ * treat it as required rather than defending against undefined.
+ */
+type PaidPricingPlan = PricingPlan & {
+  checkoutPlan: NonNullable<PricingPlan["checkoutPlan"]>;
+};
+
+const isPaidPlan = (plan: PricingPlan): plan is PaidPricingPlan =>
+  Boolean(plan.checkoutPlan);
+
+function getPlanCta(
+  plan: PaidPricingPlan,
+  currentPlan: Plan,
+  isCurrent: boolean,
+) {
   if (isCurrent) return "Current plan";
   return planRank[plan.checkoutPlan] > planRank[currentPlan]
     ? `Upgrade to ${plan.name}`
@@ -176,14 +192,14 @@ function PlanCard({
   onSelect,
   onManage,
 }: {
-  plan: PricingPlan;
+  plan: PaidPricingPlan;
   billingInterval: BillingInterval;
   currentPlan: Plan;
   hasStripeCustomer: boolean;
   trialEligible: boolean;
   checkoutPending: boolean;
   portalPending: boolean;
-  onSelect: (plan: PricingPlan, claimTrial?: boolean) => void;
+  onSelect: (plan: PaidPricingPlan, claimTrial?: boolean) => void;
   onManage: () => void;
 }) {
   const interval = billingInterval === "ANNUAL" ? "yearly" : "monthly";
@@ -352,7 +368,7 @@ export function PricingDrawer({
 
   if (!open || typeof document === "undefined") return null;
 
-  const onSelectPlan = (plan: PricingPlan, claimTrial = false) => {
+  const onSelectPlan = (plan: PaidPricingPlan, claimTrial = false) => {
     if (!workspaceId) {
       toast({
         tone: "danger",
@@ -437,8 +453,11 @@ export function PricingDrawer({
             />
           </div>
 
+          {/* This drawer is an UPGRADE surface: the Free card has no checkout
+              and no downgrade flow, so it is filtered out here and only shown
+              on the public pricing page. */}
           <div className="grid gap-3 md:grid-cols-3">
-            {PRICING_PLANS.map((plan) => (
+            {PRICING_PLANS.filter(isPaidPlan).map((plan) => (
               <PlanCard
                 key={plan.id}
                 plan={plan}

@@ -3,11 +3,12 @@
  * landing page (`PricingPlans`) and the in-app upgrade modal (`PricingDrawer`).
  *
  * NOTE: the Stripe-backed billing plans live in `billing.ts` as
- * `Plan = FREE | BASIC | MEDIUM | PRO`. Free exists in billing; this list
- * only contains paid upgrade cards that can start Stripe checkout.
+ * `Plan = FREE | BASIC | MEDIUM | PRO`. The Free card here is the entry point
+ * shown alongside the paid tiers — it has no `checkoutPlan`, because there is
+ * nothing to charge for; its CTA just starts the signup flow.
  */
 
-export type PricingPlanId = "basic" | "medium" | "pro";
+export type PricingPlanId = "free" | "basic" | "medium" | "pro";
 
 export type PricingBillingInterval = "monthly" | "yearly";
 
@@ -28,8 +29,11 @@ export type PricingPlan = {
   monthlyPrice: number;
   cta: string;
   featured?: boolean;
-  /** Stripe-backed billing plan used when this card triggers checkout. */
-  checkoutPlan: "BASIC" | "MEDIUM" | "PRO";
+  /**
+   * Stripe-backed billing plan used when this card triggers checkout. Absent on
+   * the Free card, which signs the user up instead of opening checkout.
+   */
+  checkoutPlan?: "BASIC" | "MEDIUM" | "PRO";
   features: PricingFeature[];
 };
 
@@ -37,6 +41,21 @@ export type PricingPlan = {
 export const PRICING_YEARLY_RATE = 0.84;
 
 export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: "free",
+    name: "Free",
+    description: "Try Madoo and ship your first emails at no cost.",
+    monthlyPrice: 0,
+    cta: "Get started",
+    features: [
+      { value: "30", label: "monthly credits", emphasized: true },
+      { value: "5", label: "credits a day", emphasized: true },
+      { value: "10", label: "stored templates", emphasized: true },
+      { value: "10", label: "test emails a day", emphasized: true },
+      { label: "Export to HTML, JPEG, PDF" },
+      { label: "Sharing preview template links" },
+    ],
+  },
   {
     id: "basic",
     name: "Basic",

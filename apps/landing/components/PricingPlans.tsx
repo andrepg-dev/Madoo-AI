@@ -121,7 +121,8 @@ function PriceBlock({
         </span>
         <span className="flex items-center w-full justify-between gap-2 pb-1 text-sm text-madoo-muted">
           <span>/ month</span>
-          {billingInterval === "yearly" ? (
+          {/* A $0 plan has nothing to save on yearly billing. */}
+          {billingInterval === "yearly" && monthlyPrice > 0 ? (
             <span className="font-medium leading-none text-madoo-accent">
               Save ${getPlanYearlySavings(monthlyPrice)}
             </span>
@@ -177,6 +178,9 @@ function PlanCard({
           }`}
         href="/"
         onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+          // The Free card has nothing to charge for: always fall through to
+          // the default href ("/") and let the app sign the visitor up.
+          if (!plan.checkoutPlan) return;
           // Signed-in visitors skip the home/signup flow and go straight to
           // Stripe with this plan preselected. Anyone else keeps the default
           // href ("/"), where the app prompts them to sign up first.
@@ -219,7 +223,7 @@ export function PricingPlans() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {PRICING_PLANS.map((plan) => (
           <PlanCard
             key={plan.id}
