@@ -20,9 +20,9 @@ type PickerCopy = { summary: string; example: string };
 const PICKER_COPY: Record<string, PickerCopy> = {
   // Techniques — describe what the reader sees, not how it is built.
   arc_section_edge: {
-    summary: "Curved edge under a photo band",
+    summary: "Wave edge between sections",
     example:
-      "The hero photo ends in a soft dome instead of a straight line, like a food or skincare promo.",
+      "Sections meet on a flowing S-curve instead of a straight line \u2014 the modern DTC look.",
   },
   promo_code_pill: {
     summary: "Discount code as an inline chip",

@@ -2,6 +2,7 @@ import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import { EMAIL_ICON_NAMES } from "./email-icon-catalog.service";
 import { DESIGN_TECHNIQUE_NAMES } from "./design-techniques";
 import { FONT_PAIRING_NAMES } from "./font-pairings";
+import { DIVIDER_SHAPES } from "./section-divider";
 
 export const EMIT_EMAIL_TOOL: Tool = {
   name: "emit_email",
@@ -171,6 +172,44 @@ export const GET_FONT_PAIRING_TOOL: Tool = {
       },
     },
     required: ["name"],
+  },
+};
+
+export const GENERATE_SECTION_DIVIDER_TOOL: Tool = {
+  name: "generate_section_divider",
+  description:
+    "Render a shaped boundary between two colored sections (wave, tilt, dome) as a hosted PNG and return its URL for use as a full-bleed <Img>. Email clients cannot draw these shapes: SVG is stripped, clip-path is unsupported, and CSS border-radius can only make a symmetric dome that reads as a plain rounded corner. Call this whenever an email needs a curved or angled section transition. The PNG contains BOTH colors, so it drops in between the two sections with no transparency and no seam.",
+  input_schema: {
+    type: "object",
+    properties: {
+      shape: {
+        type: "string",
+        enum: [...DIVIDER_SHAPES],
+        description:
+          "wave = asymmetric editorial S-curve (the modern default); wave-soft = one shallow swell; arc = symmetric dome; slant = straight diagonal.",
+      },
+      topColor: {
+        type: "string",
+        description:
+          "Hex color of the section ABOVE the divider, e.g. '#FFFFFF'. Must match that section's background exactly.",
+      },
+      bottomColor: {
+        type: "string",
+        description:
+          "Hex color of the section BELOW the divider, e.g. '#8B85D9'. Must match that section's background exactly.",
+      },
+      height: {
+        type: "number",
+        description:
+          "Rendered height in px at 2x. 90-160 reads well; taller becomes a design element of its own.",
+      },
+      flip: {
+        type: "boolean",
+        description:
+          "Mirror the shape horizontally. Use so a section's entry and exit dividers are not identical.",
+      },
+    },
+    required: ["shape", "topColor", "bottomColor"],
   },
 };
 

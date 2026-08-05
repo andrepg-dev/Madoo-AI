@@ -26,8 +26,35 @@ export type DesignTechnique = {
 const ARC_SECTION_EDGE: DesignTechnique = {
   name: "arc_section_edge",
   teaser:
-    "arc_section_edge — curved/swoosh boundary between a full-bleed image band and the section below (lifestyle promo look).",
-  doc: `ARC SECTION EDGE — a curved boundary between a full-bleed hero band and the section under it.
+    "arc_section_edge — wave/curve boundary between two sections or under a photo band (modern DTC look).",
+  doc: `SHAPED SECTION EDGE — a curved or angled boundary between two sections, or under a full-bleed hero band.
+
+METHOD 1 — GENERATED DIVIDER IMAGE (use this by default)
+Call generate_section_divider with the shape and the two section colors, then drop the returned PNG in full-bleed between the sections. This is the only way to get a real editorial wave: an asymmetric S-curve, a shallow swell, or a diagonal. CSS cannot draw those in email — SVG is stripped by Gmail, clip-path is unsupported, and border-radius can ONLY make a symmetric dome, which reads as a plain rounded corner rather than a designed transition.
+
+<Section style={{ backgroundColor: '#FFFFFF', padding: '32px' }}>
+  {/* content of the upper section */}
+</Section>
+{/* divider: no padding, no background — the PNG carries both colors */}
+<Section style={{ padding: 0, fontSize: 0, lineHeight: 0 }}>
+  <Img src={dividerImage} alt="" width={600} style={{ display: 'block', width: '100%', maxWidth: '100%' }} />
+</Section>
+<Section style={{ backgroundColor: '#8B85D9', padding: '32px' }}>
+  {/* content of the lower section */}
+</Section>
+
+Rules for the divider image:
+1. topColor and bottomColor passed to the tool MUST equal the two adjacent section backgrounds exactly, or a seam appears.
+2. The divider <Section> takes no padding and no backgroundColor of its own; fontSize/lineHeight 0 kills the text-node gap Gmail adds under an image.
+3. Height 90-160px reads as a transition; taller becomes a design element competing with the content.
+4. Prefer shape 'wave' — the asymmetric curve is what makes it look designed. Use 'wave-soft' under dense content, 'slant' for a sharper brand, 'arc' only when a symmetric dome is genuinely wanted.
+5. When a section has a divider both above and below, pass flip:true to one of them so they are not identical.
+6. alt="" — it is decorative, and a screen reader announcing it adds nothing.
+7. Do NOT add the divider URL to variableSchema; it is a fixed design asset, not user content.
+8. Works everywhere including Outlook, because it is just an image. No fallback needed.
+
+METHOD 2 — CSS RADIUS (fallback only)
+Use this only for a plain symmetric dome when an extra hosted image is genuinely unwanted. It is the basic look; it is not the professional one.
 
 WHEN TO USE
 - Lifestyle, food, beauty, wellness, travel, or seasonal promos where the hero is a photo band and the brand feels soft/organic.
@@ -37,7 +64,7 @@ USE AT MOST ONE ARC PER EMAIL. Never arc a logo bar, a footer, a text-only secti
 HOW IT WORKS
 An arc is an elliptical border-radius on a solid block painted in the color of the section that follows the hero. Never use SVG (Gmail strips it) and never bake the curve into the photo (the color must follow the brand).
 
-PATTERN A — background-image hero (preferred; no negative margins, Outlook-safe)
+RADIUS PATTERN A — background-image hero (no negative margins, Outlook-safe)
 Note the scrim in backgroundImage: text over a photo is unreadable without one, and you cannot see the photo you were given. It is not optional.
 <Section style={{ padding: 0, backgroundImage: \`linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(\${heroImage})\`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#3A403C' }}>
   <Section className="section-pad" style={{ padding: '64px 32px 88px', textAlign: 'center' }}>
@@ -49,7 +76,7 @@ Note the scrim in backgroundImage: text over a photo is unreadable without one, 
   </Section>
 </Section>
 
-PATTERN B — plain <Img> hero (clip the image itself)
+RADIUS PATTERN B — plain <Img> hero (clip the image itself)
 <Img src={heroImage} width={600} alt="…" style={{ width: '100%', display: 'block', borderRadius: '0 0 50% 50% / 0 0 10% 10%' }} />
 
 CHOOSING THE RADIUS

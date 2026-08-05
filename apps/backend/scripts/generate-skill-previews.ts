@@ -17,6 +17,7 @@ import * as path from "node:path";
 import puppeteer from "puppeteer";
 import { ReactToHtmlService } from "../src/generation/react-to-html.service";
 import { FONT_PAIRINGS } from "../src/generation/font-pairings";
+import { renderDividerPng } from "../src/generation/section-divider";
 
 const OUT_DIR = path.resolve(
   __dirname,
@@ -44,16 +45,15 @@ export default Email;`;
 
 const TECHNIQUE_DEMOS: Record<string, string> = {
   arc_section_edge: demo(`
-    <Section style={{ padding: 0, backgroundImage: \`linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('${PHOTO}')\`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#3A403C' }}>
-      <Section style={{ padding: '26px 18px 30px', textAlign: 'center' }}>
-        <Heading as="h1" style={{ margin: 0, fontSize: 21, lineHeight: '24px', fontWeight: 800, color: '#FFFFFF', fontFamily: 'Helvetica, Arial, sans-serif' }}>5% off your cart</Heading>
-      </Section>
-      <Section style={{ padding: 0, fontSize: 0, lineHeight: 0 }}>
-        <div style={{ height: 26, backgroundColor: '#F2F0EC', borderRadius: '50% 50% 0 0 / 100% 100% 0 0' }} />
-      </Section>
+    <Section style={{ backgroundColor: '#FFFFFF', padding: '18px 18px 14px', textAlign: 'center' }}>
+      <Text style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#1B1B1B', fontFamily: 'Helvetica, Arial, sans-serif' }}>Spring drop is live</Text>
     </Section>
-    <Section style={{ backgroundColor: '#F2F0EC', padding: '6px 18px 18px', textAlign: 'center' }}>
-      <Text style={{ margin: 0, fontSize: 11, color: '#5C5C5C', fontFamily: 'Helvetica, Arial, sans-serif' }}>Free shipping included</Text>
+    <Section style={{ padding: 0, fontSize: 0, lineHeight: 0 }}>
+      <Img src="__DIVIDER__" alt="" width={260} style={{ display: 'block', width: '100%' }} />
+    </Section>
+    <Section style={{ backgroundColor: '#8B85D9', padding: '14px 18px 26px', textAlign: 'center' }}>
+      <Heading as="h2" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#FFFFFF', fontFamily: 'Helvetica, Arial, sans-serif' }}>Loved by families</Heading>
+      <Text style={{ margin: '6px 0 0', fontSize: 11, color: '#EFEDFA', fontFamily: 'Helvetica, Arial, sans-serif' }}>Over 12,000 five-star reviews</Text>
     </Section>`),
 
   promo_code_pill: demo(`
@@ -114,6 +114,19 @@ function fontDemo(name: string): string {
 
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  // The arc demo needs a real divider; inline it as a data URI so generating
+  // previews never depends on S3. Emails use a hosted URL instead.
+  const dividerDataUri = `data:image/png;base64,${renderDividerPng({
+    shape: "wave",
+    topColor: "#FFFFFF",
+    bottomColor: "#8B85D9",
+    width: 520,
+    height: 90,
+  }).toString("base64")}`;
+  TECHNIQUE_DEMOS.arc_section_edge = TECHNIQUE_DEMOS.arc_section_edge.replace(
+    "__DIVIDER__",
+    dividerDataUri,
+  );
   const service = new ReactToHtmlService();
   const browser = await puppeteer.launch();
 

@@ -55,6 +55,7 @@ import {
 import type { ChartToolInput } from "./generation.tools";
 import { auditContrast, formatContrastFeedback } from "./contrast-audit";
 import { buildSkillPreamble } from "./skills.catalog";
+import { renderDividerPng, type DividerShape } from "./section-divider";
 import {
   DESIGN_TECHNIQUE_NAMES,
   getDesignTechnique,
@@ -69,6 +70,7 @@ import {
   FIND_BRAND_IMAGES_TOOL,
   FIND_IMAGES_TOOL,
   GENERATE_CHART_TOOL,
+  GENERATE_SECTION_DIVIDER_TOOL,
   GET_DESIGN_TECHNIQUE_TOOL,
   GET_EMAIL_ICONS_TOOL,
   GET_FONT_PAIRING_TOOL,
@@ -1666,6 +1668,67 @@ export class GenerationService {
             summary: fontTitle,
           });
           toolResultContent = renderFontPairing(pairing);
+        } else if (requestedTool.name === "generate_section_divider") {
+          const input = requestedTool.input as {
+            shape?: DividerShape;
+            topColor?: string;
+            bottomColor?: string;
+            height?: number;
+            flip?: boolean;
+          };
+          if (!input.shape || !input.topColor || !input.bottomColor) {
+            throw new BadRequestException(
+              "generate_section_divider requires shape, topColor and bottomColor.",
+            );
+          }
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "generate_section_divider",
+            status: "running",
+            title: "Drawing section divider",
+            detail: input.shape,
+          });
+          let dividerUrl: string;
+          try {
+            const png = renderDividerPng({
+              shape: input.shape,
+              topColor: input.topColor,
+              bottomColor: input.bottomColor,
+              // 1200 = the 600px email width at 2x so the curve stays smooth
+              // on retina; the <Img> is rendered at width 600.
+              width: 1200,
+              height: Math.round((input.height ?? 120) * 2),
+              flip: input.flip,
+            });
+            dividerUrl = await this.s3.uploadBuffer(png, "image/png", "dividers");
+          } catch (err) {
+            throw new BadRequestException(
+              `Could not render the divider: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "generate_section_divider",
+            status: "done",
+            title: "Drew section divider",
+            detail: input.shape,
+            summary: `${input.shape} divider`,
+            images: [dividerUrl],
+          });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "generate_section_divider",
+            title: "Drew section divider",
+            detail: input.shape,
+            summary: `${input.shape} divider`,
+            images: [dividerUrl],
+          });
+          toolResultContent = JSON.stringify({
+            dividerUrl,
+            note: "Place it as a full-bleed image between the two sections, with no padding and no gap: <Section style={{ padding: 0, fontSize: 0, lineHeight: 0 }}><Img src=\"<url>\" alt=\"\" width={600} style={{ display: 'block', width: '100%', maxWidth: '100%' }} /></Section>. The PNG already contains both section colors, so do NOT add a background color to this section. Do not add it to variableSchema.",
+          });
         } else if (requestedTool.name === "generate_chart") {
           const input = requestedTool.input as ChartToolInput;
           if (
@@ -2372,6 +2435,7 @@ export class GenerationService {
               GET_EMAIL_VERSION_TOOL,
               VIEW_CURRENT_EMAIL_TOOL,
               GENERATE_CHART_TOOL,
+              GENERATE_SECTION_DIVIDER_TOOL,
               EMIT_EMAIL_TOOL,
             ],
             tool_choice: args.toolChoice ?? {
