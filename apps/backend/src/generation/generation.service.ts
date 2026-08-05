@@ -53,12 +53,25 @@ import {
   buildFewShotText,
 } from "./generation.prompts";
 import type { ChartToolInput } from "./generation.tools";
+import { auditContrast, formatContrastFeedback } from "./contrast-audit";
+import { buildSkillPreamble } from "./skills.catalog";
+import {
+  DESIGN_TECHNIQUE_NAMES,
+  getDesignTechnique,
+} from "./design-techniques";
+import {
+  FONT_PAIRING_NAMES,
+  getFontPairing,
+  renderFontPairing,
+} from "./font-pairings";
 import {
   EMIT_EMAIL_TOOL,
   FIND_BRAND_IMAGES_TOOL,
   FIND_IMAGES_TOOL,
   GENERATE_CHART_TOOL,
+  GET_DESIGN_TECHNIQUE_TOOL,
   GET_EMAIL_ICONS_TOOL,
+  GET_FONT_PAIRING_TOOL,
   GET_EMAIL_VERSION_TOOL,
   INSPECT_WEBSITE_BRAND_TOOL,
   VIEW_CURRENT_EMAIL_TOOL,
@@ -317,7 +330,7 @@ export class GenerationService {
   generateEmailStream(
     emailId: string,
     workspaceId: string,
-    body?: { prompt?: string; imageUrls?: string[] },
+    body?: { prompt?: string; imageUrls?: string[]; skills?: string[] },
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
       const ac = new AbortController();
@@ -340,6 +353,8 @@ export class GenerationService {
             body?.imageUrls,
             body?.prompt,
             ac.signal,
+            false,
+            body?.skills,
           );
           subscriber.complete();
         } catch (e) {
@@ -366,6 +381,7 @@ export class GenerationService {
       baseVariantId?: string;
       imageUrls?: string[];
       selectedElement?: { nodeId: string; label: string };
+      skills?: string[];
     },
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
@@ -609,6 +625,7 @@ export class GenerationService {
     promptOverride?: string,
     signal?: AbortSignal,
     anonymous = false,
+    skills?: string[],
   ): Promise<void> {
     // Anonymous (MCP acquisition) generations meter against their own IP/global
     // caps in PublicGenerateService, not the shared account credit pool.
@@ -704,6 +721,7 @@ export class GenerationService {
       workspaceId,
       kind: "INITIAL",
       briefForFewShot: ctx.prompt,
+      skills,
       modelMessages: [
         {
           role: "user",
@@ -773,6 +791,7 @@ export class GenerationService {
       baseVariantId?: string;
       imageUrls?: string[];
       selectedElement?: { nodeId: string; label: string };
+      skills?: string[];
     },
     emit: (p: Record<string, unknown>) => void,
     opts?: { groupId?: string; skipUserMessage?: boolean; contextUpTo?: Date },
@@ -924,6 +943,7 @@ export class GenerationService {
       workspaceId,
       kind: "EDIT",
       briefForFewShot: ctx.prompt,
+      skills: body.skills,
       modelMessages: [
         {
           role: "user",
@@ -989,6 +1009,8 @@ export class GenerationService {
     kind: GenerationRunKind;
     briefForFewShot: string;
     modelMessages: MessageParam[];
+    /** Skill ids the user attached in the composer for this turn. */
+    skills?: string[];
     fullCodeForRetry?: string;
     /** Base variant whose user-set variable values must survive the edit. */
     preserveVariablesFrom?: {
@@ -1026,6 +1048,7 @@ export class GenerationService {
       kind,
       briefForFewShot,
       modelMessages,
+      skills,
       fullCodeForRetry,
       preserveVariablesFrom,
       titleContext,
@@ -1075,6 +1098,14 @@ export class GenerationService {
           cache_control: { type: "ephemeral" },
         },
       ];
+
+      // Skills the user picked in the composer. Appended AFTER the two cached
+      // blocks so the cached prefix stays byte-identical across turns; this
+      // block varies per request and is deliberately left uncached.
+      const skillPreamble = buildSkillPreamble(skills);
+      if (skillPreamble) {
+        systemBlocks.push({ type: "text", text: skillPreamble });
+      }
 
       let response: Awaited<ReturnType<typeof this.runStream>> | null = null;
       let assistantText = "";
@@ -1584,6 +1615,57 @@ export class GenerationService {
               },
             ];
           }
+        } else if (requestedTool.name === "get_design_technique") {
+          const input = requestedTool.input as { name?: string };
+          const technique = getDesignTechnique(input.name ?? "");
+          if (!technique) {
+            throw new BadRequestException(
+              `get_design_technique requires one of: ${DESIGN_TECHNIQUE_NAMES.join(", ")}.`,
+            );
+          }
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "get_design_technique",
+            status: "done",
+            title: "Loaded design technique",
+            detail: technique.name,
+            summary: technique.name,
+          });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "get_design_technique",
+            title: "Loaded design technique",
+            detail: technique.name,
+            summary: technique.name,
+          });
+          toolResultContent = technique.doc;
+        } else if (requestedTool.name === "get_font_pairing") {
+          const input = requestedTool.input as { name?: string };
+          const pairing = getFontPairing(input.name ?? "");
+          if (!pairing) {
+            throw new BadRequestException(
+              `get_font_pairing requires one of: ${FONT_PAIRING_NAMES.join(", ")}.`,
+            );
+          }
+          const fontTitle = `${pairing.display.family} + ${pairing.body[0]?.family ?? pairing.display.family}`;
+          emit({
+            type: "tool_call",
+            id: requestedTool.id,
+            name: "get_font_pairing",
+            status: "done",
+            title: "Chose fonts",
+            detail: fontTitle,
+            summary: fontTitle,
+          });
+          toolCalls.push({
+            id: requestedTool.id,
+            name: "get_font_pairing",
+            title: "Chose fonts",
+            detail: fontTitle,
+            summary: fontTitle,
+          });
+          toolResultContent = renderFontPairing(pairing);
         } else if (requestedTool.name === "generate_chart") {
           const input = requestedTool.input as ChartToolInput;
           if (
@@ -1824,10 +1906,27 @@ export class GenerationService {
           });
           emit({ type: "subject", value: input.subject });
           emit({ type: "step", message: "Rendering HTML preview..." });
+          const renderVariables = buildRenderVariables(variableSchema);
           compiledHtml = this.reactToHtml.compile(
             input.componentCode,
-            buildRenderVariables(variableSchema),
+            renderVariables,
           );
+          // Contrast is checked here rather than in the prompt because prose
+          // rules did not hold: the model still shipped light text on light
+          // cards and dark buttons on dark sections. Only on the first attempt
+          // — a contrast finding must never be the reason a generation fails,
+          // so a second offending draft is accepted and logged instead.
+          if (attempts < 2) {
+            const contrastFindings = auditContrast(
+              this.reactToHtml.compileComponent(input.componentCode),
+              renderVariables,
+            );
+            if (contrastFindings.length > 0) {
+              throw new BadRequestException(
+                formatContrastFeedback(contrastFindings),
+              );
+            }
+          }
           validated = true;
           break;
         } catch (err) {
@@ -2268,6 +2367,8 @@ export class GenerationService {
               FIND_BRAND_IMAGES_TOOL,
               FIND_IMAGES_TOOL,
               GET_EMAIL_ICONS_TOOL,
+              GET_DESIGN_TECHNIQUE_TOOL,
+              GET_FONT_PAIRING_TOOL,
               GET_EMAIL_VERSION_TOOL,
               VIEW_CURRENT_EMAIL_TOOL,
               GENERATE_CHART_TOOL,

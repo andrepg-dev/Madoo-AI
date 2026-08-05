@@ -1,5 +1,7 @@
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import { EMAIL_ICON_NAMES } from "./email-icon-catalog.service";
+import { DESIGN_TECHNIQUE_NAMES } from "./design-techniques";
+import { FONT_PAIRING_NAMES } from "./font-pairings";
 
 export const EMIT_EMAIL_TOOL: Tool = {
   name: "emit_email",
@@ -135,6 +137,40 @@ export const GET_EMAIL_ICONS_TOOL: Tool = {
       },
     },
     required: ["names", "tone"],
+  },
+};
+
+export const GET_DESIGN_TECHNIQUE_TOOL: Tool = {
+  name: "get_design_technique",
+  description:
+    "Fetch the full recipe for one of Madoo's advanced email design techniques: when it fits, a copy-pasteable email-safe code pattern, its rules, and how it degrades in Outlook. Call this BEFORE writing the code whenever the brief, the brand, or an attached reference image calls for one of the catalogued techniques — the base instructions only list their names. These are opt-in moves for a minority of briefs, so do not fetch one on every email and never apply a technique you have not fetched.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: {
+        type: "string",
+        enum: [...DESIGN_TECHNIQUE_NAMES],
+        description: "Technique id from the design technique index.",
+      },
+    },
+    required: ["name"],
+  },
+};
+
+export const GET_FONT_PAIRING_TOOL: Tool = {
+  name: "get_font_pairing",
+  description:
+    "Fetch a curated font pairing with VERIFIED Google Fonts woff2 URLs, ready-to-paste <Font> tags, a fallback stack, and typographic guidance. Call this before writing the email whenever it should use web fonts — the URLs cannot be guessed, and an invented one fails silently (the email just renders in the fallback). Pick the pairing whose personality matches the brand and brief.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: {
+        type: "string",
+        enum: [...FONT_PAIRING_NAMES],
+        description: "Pairing id from the font pairing index.",
+      },
+    },
+    required: ["name"],
   },
 };
 

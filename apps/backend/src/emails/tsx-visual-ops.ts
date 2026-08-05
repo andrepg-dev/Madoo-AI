@@ -193,6 +193,64 @@ function imageSourceAttribute(
   return null;
 }
 
+/** Elements whose destination the link editor may retarget. */
+const LINKABLE_ELEMENTS = new Set(["Button", "Link", "a"]);
+
+function hrefAttribute(
+  element: recast.types.namedTypes.JSXElement,
+): recast.types.namedTypes.JSXAttribute | null {
+  for (const attribute of element.openingElement.attributes ?? []) {
+    if (
+      n.JSXAttribute.check(attribute) &&
+      n.JSXIdentifier.check(attribute.name) &&
+      attribute.name.name === "href"
+    ) {
+      return attribute;
+    }
+  }
+  return null;
+}
+
+/**
+ * Retargets a link. Mirrors setImageSource: when the href is bound to a prop
+ * (`href={ctaUrl}`) the prop's DEFAULT is rewritten and the variable name is
+ * returned so the variant's variableSchema stays in sync — otherwise editing a
+ * link in the UI would be silently reverted by the schema default on re-render.
+ */
+function setLinkHref(
+  element: recast.types.namedTypes.JSXElement,
+  name: string,
+  url: string,
+  propDefaults: Map<string, recast.types.namedTypes.AssignmentPattern>,
+): string | null {
+  if (!LINKABLE_ELEMENTS.has(name)) {
+    throw new BadRequestException(`<${name}> is not a link.`);
+  }
+
+  const href = hrefAttribute(element);
+  const expression =
+    href?.value && n.JSXExpressionContainer.check(href.value)
+      ? href.value.expression
+      : null;
+  if (expression && n.Identifier.check(expression)) {
+    const pattern = propDefaults.get(expression.name);
+    if (pattern && n.StringLiteral.check(pattern.right)) {
+      pattern.right = b.stringLiteral(url);
+      return expression.name;
+    }
+  }
+
+  if (href) {
+    href.value = b.stringLiteral(url);
+  } else {
+    element.openingElement.attributes = [
+      ...(element.openingElement.attributes ?? []),
+      b.jsxAttribute(b.jsxIdentifier("href"), b.stringLiteral(url)),
+    ];
+  }
+  return null;
+}
+
 /** Replaces an <Img>/<img> source while preserving a string prop binding. */
 function setImageSource(
   element: recast.types.namedTypes.JSXElement,
@@ -591,6 +649,15 @@ export function applyVisualOps(
       moveElementTo(path, element, targetPath, op.position, name);
       byId = findElementPaths(ast);
       summaries.push(`Moved <${name}>`);
+      continue;
+    }
+
+    if (op.op === "setHref") {
+      const variableName = setLinkHref(element, name, op.url, propDefaults);
+      if (variableName) {
+        variableUpdates.push({ name: variableName, value: op.url });
+      }
+      summaries.push(`Changed link on <${name}>`);
       continue;
     }
 

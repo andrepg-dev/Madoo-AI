@@ -198,6 +198,54 @@ describe("applyVisualOps", () => {
     assert.equal(result.variableUpdates.length, 0);
   });
 
+  it("setHref replaces a literal link destination", () => {
+    const id = idOf(tagged, 'href="#"');
+    const result = applyVisualOps(SAMPLE, [
+      { op: "setHref", nodeId: id, url: "https://example.com/pricing" },
+    ]);
+    assert.match(result.code, /href=['"]https:\/\/example\.com\/pricing['"]/);
+    assert.equal(result.variableUpdates.length, 0);
+    assert.deepEqual(result.summaries, ["Changed link on <Button>"]);
+  });
+
+  it("setHref preserves a prop binding and updates its default", () => {
+    // The generated CTA pattern: href={ctaUrl} with a schema default. Editing
+    // the link must move the DEFAULT, or the schema would revert the change.
+    const code = SAMPLE.replace(
+      "ctaLabel = 'Explore',",
+      "ctaLabel = 'Explore',\n  ctaUrl = 'https://example.com/old',",
+    ).replace('href="#"', "href={ctaUrl}");
+    const id = idOf(tagComponentSource(code), "href={ctaUrl}");
+    const result = applyVisualOps(code, [
+      { op: "setHref", nodeId: id, url: "https://example.com/new-landing" },
+    ]);
+    assert.match(result.code, /ctaUrl = ['"]https:\/\/example\.com\/new-landing['"]/);
+    assert.match(result.code, /href=\{ctaUrl\}/);
+    assert.deepEqual(result.variableUpdates, [
+      { name: "ctaUrl", value: "https://example.com/new-landing" },
+    ]);
+  });
+
+  it("setHref adds an href to a link element that has none", () => {
+    const code = SAMPLE.replace('href="#" ', "");
+    const id = idOf(tagComponentSource(code), "<Button");
+    const result = applyVisualOps(code, [
+      { op: "setHref", nodeId: id, url: "mailto:team@example.com" },
+    ]);
+    assert.match(result.code, /href=['"]mailto:team@example\.com['"]/);
+  });
+
+  it("setHref refuses elements that are not links", () => {
+    const id = idOf(tagged, "A hard-coded paragraph.");
+    assert.throws(
+      () =>
+        applyVisualOps(SAMPLE, [
+          { op: "setHref", nodeId: id, url: "https://example.com" },
+        ]),
+      /not a link/,
+    );
+  });
+
   it("setImage refuses non-image elements", () => {
     const id = idOf(tagged, "A hard-coded paragraph.");
     assert.throws(
