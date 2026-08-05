@@ -25,7 +25,7 @@ export type PlanLimits = {
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   // Each plan: daily credits reset at 00:00 UTC, capped at a monthly total.
   // members = teammates invitable beyond the owner; workspaces = total owned.
-  FREE:    { aiGenerations: 3,   dailyAiGenerations: 3,  storedTemplates: 10,  members: 0, workspaces: 0,  testEmailsPerDay: 10  },
+  FREE:    { aiGenerations: 30,  dailyAiGenerations: 5,  storedTemplates: 10,  members: 0, workspaces: 0,  testEmailsPerDay: 10  },
   BASIC:   { aiGenerations: 100, dailyAiGenerations: 15, storedTemplates: 50,  members: 2, workspaces: 5,  testEmailsPerDay: 50  },
   MEDIUM:  { aiGenerations: 250, dailyAiGenerations: 25, storedTemplates: 150, members: 3, workspaces: 15, testEmailsPerDay: 100 },
   PRO:     { aiGenerations: 550, dailyAiGenerations: 50, storedTemplates: 300, members: 5, workspaces: -1, testEmailsPerDay: 300 },
