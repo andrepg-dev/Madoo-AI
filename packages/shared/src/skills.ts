@@ -19,8 +19,10 @@ export const SkillDtoSchema = z.object({
   kind: SkillKindSchema,
   /** Short human label for the picker row. */
   label: z.string(),
-  /** One-line description shown under the label. */
+  /** Short one-line description shown under the label. Keep it scannable. */
   summary: z.string(),
+  /** Concrete example of the result, revealed on hover. */
+  example: z.string(),
 });
 export type SkillDto = z.infer<typeof SkillDtoSchema>;
 

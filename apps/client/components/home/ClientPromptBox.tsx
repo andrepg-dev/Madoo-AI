@@ -7,12 +7,25 @@ import {
   Camera01Icon,
   Cancel01Icon,
   Image01Icon,
+  BalloonIcon,
+  CakeIcon,
+  ChampionIcon,
+  Diamond01Icon,
+  Discount01Icon,
+  FlashIcon,
+  GiftCard02Icon,
+  Leaf01Icon,
+  Megaphone01Icon,
   Mic02Icon,
+  QuillWrite01Icon,
+  SourceCodeIcon,
   SparklesIcon,
   StopIcon,
+  SunriseIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchBillingOverview } from "@/actions/billing";
 import { fetchSkills } from "@/actions/skills";
@@ -25,6 +38,7 @@ import {
   Dropdown,
   DropdownContent,
   DropdownItem,
+  Tooltip,
   useToast,
 } from "@madoo/design-system";
 import {
@@ -42,6 +56,29 @@ const placeholders = [
   "shape the copy and structure for a newsletter that is easy to scan...",
   "build an email template that fits the audience and brand voice...",
 ] as const;
+
+/**
+ * Picker icon per skill. Kept on the client because icons are presentation:
+ * the backend catalog stays free of any component-library coupling. Unknown
+ * ids fall back to the generic sparkles mark, so a new skill still renders.
+ */
+const SKILL_ICONS: Record<string, IconSvgElement> = {
+  arc_section_edge: SunriseIcon,
+  promo_code_pill: Discount01Icon,
+  top_announcement_bar: Megaphone01Icon,
+  footer_offer_panel: GiftCard02Icon,
+  bold_retail: FlashIcon,
+  editorial_serif: QuillWrite01Icon,
+  modern_tech: SourceCodeIcon,
+  luxury_minimal: Diamond01Icon,
+  friendly_consumer: CakeIcon,
+  organic_wellness: Leaf01Icon,
+  neo_grotesque: ChampionIcon,
+  playful: BalloonIcon,
+};
+
+const skillIcon = (name: string): IconSvgElement =>
+  SKILL_ICONS[name] ?? SparklesIcon;
 
 const placeholderTypingDelay = 46;
 const placeholderDeletingDelay = 24;
@@ -825,7 +862,7 @@ export function ClientPromptBox({
                   className="inline-flex items-center gap-1.5 rounded-full bg-madoo-ink/[0.06] py-1 pl-2.5 pr-1.5 text-xs text-madoo-ink"
                 >
                   <HugeiconsIcon
-                    icon={SparklesIcon}
+                    icon={skillIcon(name)}
                     size={12}
                     strokeWidth={1.8}
                     aria-hidden="true"
@@ -968,37 +1005,53 @@ export function ClientPromptBox({
                     const checked = selectedSkills.includes(skill.name);
                     const disabled = !checked && skillsAtLimit;
                     return (
-                      <DropdownItem
+                      <Tooltip
+                        align="start"
+                        content={skill.example}
                         key={skill.name}
-                        disabled={disabled}
-                        // DropdownItem closes on select unless the click's
-                        // default is prevented — keep it open so several
-                        // skills can be picked in one pass.
-                        onClick={(event) => {
-                          event.preventDefault();
-                          if (!disabled) toggleSkill(skill.name);
-                        }}
-                        className="items-start gap-2"
+                        side="right"
+                        tone="ink"
                       >
-                        <span className="flex min-w-0 flex-col gap-0.5">
-                          <span className="truncate font-medium">
-                            {skill.label}
+                        <DropdownItem
+                          disabled={disabled}
+                          // DropdownItem closes on select unless the click's
+                          // default is prevented — keep it open so several
+                          // skills can be picked in one pass.
+                          onClick={(event) => {
+                            event.preventDefault();
+                            if (!disabled) toggleSkill(skill.name);
+                          }}
+                          className="items-center gap-2.5"
+                        >
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            <HugeiconsIcon
+                              aria-hidden="true"
+                              className="shrink-0 text-madoo-ink-muted"
+                              icon={skillIcon(skill.name)}
+                              size={17}
+                              strokeWidth={1.6}
+                            />
+                            <span className="flex min-w-0 flex-col gap-0.5">
+                              <span className="truncate font-medium">
+                                {skill.label}
+                              </span>
+                              <span className="truncate text-[11px] leading-snug text-madoo-ink-muted">
+                                {skill.summary}
+                              </span>
+                            </span>
                           </span>
-                          <span className="text-[11px] leading-snug text-madoo-ink-muted">
-                            {skill.summary}
-                          </span>
-                        </span>
-                        <HugeiconsIcon
-                          icon={Tick02Icon}
-                          size={15}
-                          strokeWidth={2}
-                          aria-hidden="true"
-                          className={cn(
-                            "mt-0.5 shrink-0",
-                            checked ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                      </DropdownItem>
+                          <HugeiconsIcon
+                            icon={Tick02Icon}
+                            size={15}
+                            strokeWidth={2}
+                            aria-hidden="true"
+                            className={cn(
+                              "shrink-0",
+                              checked ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                        </DropdownItem>
+                      </Tooltip>
                     );
                   })}
                 </DropdownContent>

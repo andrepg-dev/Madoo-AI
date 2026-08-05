@@ -11,42 +11,114 @@ import { FONT_PAIRINGS, renderFontPairing } from "./font-pairings";
  * depends on the model choosing to reach for the tool.
  *
  * The teasers in both catalogs are written as "id — description" for the
- * system-prompt index. The picker wants a readable label instead, so drop the
- * id half and title-case the id itself: "arc_section_edge" -> "Arc section
- * edge".
+ * system-prompt index. Those read as instructions to a model, not as picker
+ * copy, so the picker carries its own: a short scannable summary plus a
+ * concrete example of the result, shown on hover.
  */
+type PickerCopy = { summary: string; example: string };
+
+const PICKER_COPY: Record<string, PickerCopy> = {
+  // Techniques — describe what the reader sees, not how it is built.
+  arc_section_edge: {
+    summary: "Curved edge under a photo band",
+    example:
+      "The hero photo ends in a soft dome instead of a straight line, like a food or skincare promo.",
+  },
+  promo_code_pill: {
+    summary: "Discount code as an inline chip",
+    example:
+      "\u201cUse code SAVE10 at checkout\u201d \u2014 the code sits in a colored pill inside the sentence.",
+  },
+  top_announcement_bar: {
+    summary: "Thin strip above the header",
+    example:
+      "A dark band reading \u201cFree shipping on all US orders\u201d sitting above your logo.",
+  },
+  footer_offer_panel: {
+    summary: "Dark offer card above the footer",
+    example:
+      "\u201cSave this for your next order \u2014 10% off\u201d as an inverted card just before the footer.",
+  },
+  // Font pairings — the summary is the pairing, the example is where it fits.
+  bold_retail: {
+    summary: "Anton + Inter",
+    example: "Loud DTC promos: supplements, streetwear, flash sales.",
+  },
+  editorial_serif: {
+    summary: "Playfair Display + Lora",
+    example: "Founder letters, magazines, considered newsletters.",
+  },
+  modern_tech: {
+    summary: "Space Grotesk + Inter",
+    example: "SaaS launches, changelogs, developer tools, fintech.",
+  },
+  luxury_minimal: {
+    summary: "Cormorant Garamond + Jost",
+    example: "Jewellery, fragrance, fine dining, high-end travel.",
+  },
+  friendly_consumer: {
+    summary: "DM Serif Display + DM Sans",
+    example: "Consumer apps, food and drink, subscription boxes.",
+  },
+  organic_wellness: {
+    summary: "Fraunces + Karla",
+    example: "Skincare, organic food, coffee, sustainable brands.",
+  },
+  neo_grotesque: {
+    summary: "Archivo Black + Archivo",
+    example: "Sports, streetwear, agencies, bold event announcements.",
+  },
+  playful: {
+    summary: "Baloo 2 + Nunito",
+    example: "Kids and pets, games, casual apps, celebrations.",
+  },
+};
+
 function humanizeId(name: string): string {
   const spaced = name.replace(/_/g, " ");
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-function splitTeaser(teaser: string, name: string) {
-  const [, ...rest] = teaser.split(" — ");
-  const summary = rest.join(" — ").trim();
+/**
+ * Picker row copy. Falls back to the model-facing teaser when a catalog entry
+ * has no hand-written copy yet, so adding a skill never breaks the picker.
+ */
+function pickerRow(name: string, teaser: string) {
+  const copy = PICKER_COPY[name];
+  const fallback = teaser.split(" — ").slice(1).join(" — ").trim() || teaser;
   return {
     label: humanizeId(name),
-    summary: summary || teaser,
+    summary: copy?.summary ?? fallback,
+    example: copy?.example ?? fallback,
   };
 }
 
 export function listSkills(): SkillDto[] {
   return [
     ...DESIGN_TECHNIQUES.map((technique) => {
-      const { label, summary } = splitTeaser(technique.teaser, technique.name);
+      const { label, summary, example } = pickerRow(
+        technique.name,
+        technique.teaser,
+      );
       return {
         name: technique.name,
         kind: "technique" as const,
         label,
         summary,
+        example,
       };
     }),
     ...FONT_PAIRINGS.map((pairing) => {
-      const { label, summary } = splitTeaser(pairing.teaser, pairing.name);
+      const { label, summary, example } = pickerRow(
+        pairing.name,
+        pairing.teaser,
+      );
       return {
         name: pairing.name,
         kind: "font" as const,
         label,
         summary,
+        example,
       };
     }),
   ];
