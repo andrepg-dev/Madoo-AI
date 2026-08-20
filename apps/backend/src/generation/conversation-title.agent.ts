@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import Anthropic from "@anthropic-ai/sdk";
+import { GenerationLlmService } from "./generation.llm.service";
 
-const DEFAULT_TITLE_MODEL = "claude-haiku-4-5-20251001";
 const MAX_TITLE_LENGTH = 48;
 
 type GenerateConversationTitleInput = {
@@ -13,25 +11,14 @@ type GenerateConversationTitleInput = {
 
 @Injectable()
 export class ConversationTitleAgent {
-  private readonly anthropic: Anthropic | null;
-  private readonly model: string;
-
-  constructor(private readonly config: ConfigService) {
-    const key = this.config.get<string>("ANTHROPIC_API_KEY");
-    this.model =
-      this.config.get<string>("ANTHROPIC_TITLE_MODEL") ?? DEFAULT_TITLE_MODEL;
-    this.anthropic = key ? new Anthropic({ apiKey: key }) : null;
-  }
+  constructor(private readonly llm: GenerationLlmService) {}
 
   async generateTitle(input: GenerateConversationTitleInput): Promise<string> {
     const fallback = fallbackTitle(input.prompt);
-    if (!this.anthropic) return fallback;
+    if (!this.llm.isConfigured()) return fallback;
 
     try {
-      const message = await this.anthropic.messages.create({
-        model: this.model,
-        max_tokens: 32,
-        temperature: 0.2,
+      const raw = await this.llm.complete({
         system: [
           "You are Madoo's conversation title agent.",
           "Create a short private chat title for an email-template project.",
@@ -41,24 +28,19 @@ export class ConversationTitleAgent {
           "Return only the title, no quotes, no punctuation at the end.",
           "Use 2 to 6 words, max 48 characters.",
         ].join(" "),
-        messages: [
-          {
-            role: "user",
-            content: [
-              `User prompt: ${input.prompt}`,
-              input.subject ? `Email subject: ${input.subject}` : "",
-              input.assistantText
-                ? `Assistant summary: ${input.assistantText.slice(0, 600)}`
-                : "",
-              "Generate a private conversation title distinct from the email subject.",
-            ]
-              .filter(Boolean)
-              .join("\n"),
-          },
-        ],
+        user: [
+          `User prompt: ${input.prompt}`,
+          input.subject ? `Email subject: ${input.subject}` : "",
+          input.assistantText
+            ? `Assistant summary: ${input.assistantText.slice(0, 600)}`
+            : "",
+          "Generate a private conversation title distinct from the email subject.",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        maxTokens: 32,
+        temperature: 0.2,
       });
-      const raw =
-        message.content.find((block) => block.type === "text")?.text ?? "";
       return cleanTitle(raw, fallback);
     } catch {
       return fallback;

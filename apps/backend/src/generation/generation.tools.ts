@@ -1,10 +1,10 @@
-import type { Tool } from "@anthropic-ai/sdk/resources/messages";
+import type { GenerationToolDefinition } from "./generation.llm.types";
 import { EMAIL_ICON_NAMES } from "./email-icon-catalog.service";
 import { DESIGN_TECHNIQUE_NAMES } from "./design-techniques";
 import { FONT_PAIRING_NAMES } from "./font-pairings";
 import { DIVIDER_SHAPES } from "./section-divider";
 
-export const EMIT_EMAIL_TOOL: Tool = {
+export const EMIT_EMAIL_TOOL: GenerationToolDefinition = {
   name: "emit_email",
   description:
     "Return the final email as structured data: subject line, full TSX Madoo email component source with default export, and merge-field schema.",
@@ -55,7 +55,7 @@ export const EMIT_EMAIL_TOOL: Tool = {
   },
 };
 
-export const INSPECT_WEBSITE_BRAND_TOOL: Tool = {
+export const INSPECT_WEBSITE_BRAND_TOOL: GenerationToolDefinition = {
   name: "inspect_website_brand",
   description:
     "Inspect a public website and return compact brand context for email creation: brand name, copy snippets, CTAs, colors, fonts, logo URL, favicon URL, OpenGraph image URL, and useful image URLs. Never returns image bytes.",
@@ -77,7 +77,7 @@ export const INSPECT_WEBSITE_BRAND_TOOL: Tool = {
   },
 };
 
-export const FIND_IMAGES_TOOL: Tool = {
+export const FIND_IMAGES_TOOL: GenerationToolDefinition = {
   name: "find_images",
   description:
     "Search the web for real, publicly-hosted images and return direct image URLs (with short descriptions). Use this when the user asks to find, add, or pick an image/photo/illustration from the internet (e.g. 'find a good protein image', 'add a product photo') and no suitable attached image or brand image URL exists. Pick the most relevant returned URL and use it as the <Img src> default. Never invent image URLs — call this tool instead.",
@@ -94,7 +94,7 @@ export const FIND_IMAGES_TOOL: Tool = {
   },
 };
 
-export const FIND_BRAND_IMAGES_TOOL: Tool = {
+export const FIND_BRAND_IMAGES_TOOL: GenerationToolDefinition = {
   name: "find_brand_images",
   description:
     "Find images belonging to a specific brand/website the user referenced, including products, lifestyle shots, and banners. Prefer this over find_images whenever a brand URL is known.",
@@ -115,7 +115,7 @@ export const FIND_BRAND_IMAGES_TOOL: Tool = {
   },
 };
 
-export const GET_EMAIL_ICONS_TOOL: Tool = {
+export const GET_EMAIL_ICONS_TOOL: GenerationToolDefinition = {
   name: "get_email_icons",
   description:
     "Return stable, email-safe PNG URLs from Madoo's curated icon catalog. Use for compact feature rows, benefits, contact details, commerce, trust marks, and social links. Do not use icons as hero imagery or as a substitute for meaningful photos.",
@@ -141,7 +141,7 @@ export const GET_EMAIL_ICONS_TOOL: Tool = {
   },
 };
 
-export const GET_DESIGN_TECHNIQUE_TOOL: Tool = {
+export const GET_DESIGN_TECHNIQUE_TOOL: GenerationToolDefinition = {
   name: "get_design_technique",
   description:
     "Fetch the full recipe for one of Madoo's advanced email design techniques: when it fits, a copy-pasteable email-safe code pattern, its rules, and how it degrades in Outlook. Call this BEFORE writing the code whenever the brief, the brand, or an attached reference image calls for one of the catalogued techniques — the base instructions only list their names. These are opt-in moves for a minority of briefs, so do not fetch one on every email and never apply a technique you have not fetched.",
@@ -158,7 +158,7 @@ export const GET_DESIGN_TECHNIQUE_TOOL: Tool = {
   },
 };
 
-export const GET_FONT_PAIRING_TOOL: Tool = {
+export const GET_FONT_PAIRING_TOOL: GenerationToolDefinition = {
   name: "get_font_pairing",
   description:
     "Fetch a curated font pairing with VERIFIED Google Fonts woff2 URLs, ready-to-paste <Font> tags, a fallback stack, and typographic guidance. Call this before writing the email whenever it should use web fonts — the URLs cannot be guessed, and an invented one fails silently (the email just renders in the fallback). Pick the pairing whose personality matches the brand and brief.",
@@ -175,7 +175,7 @@ export const GET_FONT_PAIRING_TOOL: Tool = {
   },
 };
 
-export const GENERATE_SECTION_DIVIDER_TOOL: Tool = {
+export const GENERATE_SECTION_DIVIDER_TOOL: GenerationToolDefinition = {
   name: "generate_section_divider",
   description:
     "Render a shaped boundary between two colored sections (wave, tilt, dome) as a hosted PNG and return its URL for use as a full-bleed <Img>. Email clients cannot draw these shapes: SVG is stripped, clip-path is unsupported, and CSS border-radius can only make a symmetric dome that reads as a plain rounded corner. Call this whenever an email needs a curved or angled section transition. The PNG contains BOTH colors, so it drops in between the two sections with no transparency and no seam.",
@@ -213,7 +213,7 @@ export const GENERATE_SECTION_DIVIDER_TOOL: Tool = {
   },
 };
 
-export const GET_EMAIL_VERSION_TOOL: Tool = {
+export const GET_EMAIL_VERSION_TOOL: GenerationToolDefinition = {
   name: "get_email_version",
   description:
     "Fetch full TSX and variableSchema for a retained version of THIS email. The user sees numbered versions as 'Version N · latest'; only newest 20 are retained. Current edit prompt gives exact retained range. Call this for revert, restore, undo, or reuse requests, then emit_email with exact retrieved code. Never reconstruct old versions from memory.",
@@ -230,7 +230,7 @@ export const GET_EMAIL_VERSION_TOOL: Tool = {
   },
 };
 
-export const VIEW_CURRENT_EMAIL_TOOL: Tool = {
+export const VIEW_CURRENT_EMAIL_TOOL: GenerationToolDefinition = {
   name: "view_current_email",
   description:
     "Render the email and return a screenshot image so you can SEE the current visual result. Call this when the user complains about how the email looks ('looks off', 'too cramped', 'ugly'), when matching an attached reference image, before a major visual redesign, or after several accumulated layout edits. Do NOT call it on every turn or for pure copy changes. Optionally pass a version number to view an earlier saved version.",
@@ -246,7 +246,7 @@ export const VIEW_CURRENT_EMAIL_TOOL: Tool = {
   },
 };
 
-export const GENERATE_CHART_TOOL: Tool = {
+export const GENERATE_CHART_TOOL: GenerationToolDefinition = {
   name: "generate_chart",
   description:
     "Render a data chart as a static PNG image (hosted on our CDN) and return its URL for use as an <Img src>. Email clients cannot run JS/SVG, so charts MUST be images — call this whenever the user asks for a chart, graph, plot, or data visualization (revenue bars, growth line, breakdown pie/doughnut, etc.). Use brand colors. Return the URL as the <Img src> default with an explicit width and descriptive alt text.",
@@ -356,3 +356,17 @@ export function buildQuickChartUrl(input: ChartToolInput): string {
   });
   return `https://quickchart.io/chart?${params.toString()}`;
 }
+
+export const GENERATION_TOOLS: GenerationToolDefinition[] = [
+  INSPECT_WEBSITE_BRAND_TOOL,
+  FIND_BRAND_IMAGES_TOOL,
+  FIND_IMAGES_TOOL,
+  GET_EMAIL_ICONS_TOOL,
+  GET_DESIGN_TECHNIQUE_TOOL,
+  GET_FONT_PAIRING_TOOL,
+  GET_EMAIL_VERSION_TOOL,
+  VIEW_CURRENT_EMAIL_TOOL,
+  GENERATE_CHART_TOOL,
+  GENERATE_SECTION_DIVIDER_TOOL,
+  EMIT_EMAIL_TOOL,
+];

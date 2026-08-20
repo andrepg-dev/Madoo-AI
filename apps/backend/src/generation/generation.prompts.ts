@@ -142,7 +142,7 @@ export function buildFewShotText(brief: string): string {
 }
 
 export const CHAT_HISTORY_LIMIT = 8;
-export const CODE_CONTEXT_LIMIT = 24_000;
+export const CODE_CONTEXT_LIMIT = 12_000;
 export const CODE_CONTEXT_HEAD_RATIO = 0.65;
 export const PREVIEW_MAX_ATTEMPTS = 3;
 export const SUBJECT_PLACEHOLDER_PATTERNS = [

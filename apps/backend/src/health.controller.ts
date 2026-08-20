@@ -8,7 +8,7 @@ type HealthReport = {
   uptime: number;
   checks: {
     db: Check;
-    anthropic: Check;
+    llm: Check;
     stripe: Check;
   };
 };
@@ -24,13 +24,13 @@ export class HealthController {
   @Version("1")
   async health(): Promise<HealthReport> {
     const db = await this.checkDb();
-    const anthropic = this.checkConfig("ANTHROPIC_API_KEY");
+    const llm = this.checkLlm();
     const stripe = this.checkConfig("STRIPE_SECRET_KEY");
 
     return {
       status: db.ok ? "ok" : "degraded",
       uptime: process.uptime(),
-      checks: { db, anthropic, stripe },
+      checks: { db, llm, stripe },
     };
   }
 
@@ -46,6 +46,19 @@ export class HealthController {
         error: error instanceof Error ? error.message : "db ping failed",
       };
     }
+  }
+
+  private checkLlm(): Check {
+    const provider = (
+      this.config.get<string>("LLM_PROVIDER") ?? "anthropic"
+    ).toLowerCase();
+    const envName =
+      provider === "openai"
+        ? "OPENAI_API_KEY"
+        : provider === "groq"
+          ? "GROQ_API_KEY"
+          : "ANTHROPIC_API_KEY";
+    return this.checkConfig(envName);
   }
 
   private checkConfig(name: string): Check {

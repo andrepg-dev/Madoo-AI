@@ -1,11 +1,10 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { BadRequestException } from "@nestjs/common";
 import { createHash } from "node:crypto";
-import type {
-  ContentBlockParam,
-  MessageParam,
-} from "@anthropic-ai/sdk/resources/messages";
 import type { VariableSchemaRoot } from "@madoo/shared";
+import type {
+  LlmContentBlock,
+  LlmMessage,
+} from "./generation.llm.types";
 
 export class GenerationAbortedError extends Error {
   constructor() {
@@ -71,17 +70,17 @@ export function escapeRegExp(input: string): string {
 export function buildUserMessageContent(
   text: string,
   imageUrls?: string[],
-): MessageParam["content"] {
+): LlmMessage["content"] {
   const urls = (imageUrls ?? []).slice(0, MAX_ATTACHED_IMAGES);
   if (urls.length === 0) return text;
 
-  const imageBlocks: ContentBlockParam[] = urls.map((url) => ({
+  const imageBlocks: LlmContentBlock[] = urls.map((url) => ({
     type: "image",
     source: { type: "url", url },
   }));
 
   const urlList = urls.map((url, index) => `${index + 1}. ${url}`).join("\n");
-  const textBlock: ContentBlockParam = {
+  const textBlock: LlmContentBlock = {
     type: "text",
     text: [
       text,
@@ -137,21 +136,32 @@ export function assertStaticSubject(subject: string, variableSchema: VariableSch
   }
 }
 
-/** Transient Anthropic failures worth retrying: overloaded, 5xx, rate-limit,
- *  connection drops/timeouts. */
 /** Thrown when the user stops generation (stop button / client disconnect). */
 export function isAbortError(error: unknown): boolean {
   if (error instanceof GenerationAbortedError) return true;
-  if (error instanceof Anthropic.APIUserAbortError) return true;
-  return error instanceof Error && error.name === "AbortError";
+  if (error instanceof Error && error.name === "AbortError") return true;
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 export function isRetryableLlmError(error: unknown): boolean {
-  if (error instanceof Anthropic.APIConnectionError) return true;
-  if (error instanceof Anthropic.APIError) {
-    const status = error.status;
-    if (typeof status !== "number") return true;
-    return status === 408 || status === 409 || status === 429 || status >= 500;
+  const status = extractHttpStatus(error);
+  if (
+    status === 408 ||
+    status === 409 ||
+    status === 429 ||
+    (typeof status === "number" && status >= 500)
+  ) {
+    return true;
+  }
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes("timeout") ||
+      message.includes("network") ||
+      message.includes("connection") ||
+      message.includes("overloaded") ||
+      message.includes("rate limit")
+    );
   }
   return false;
 }
@@ -159,12 +169,10 @@ export function isRetryableLlmError(error: unknown): boolean {
 /** Turn an LLM/SDK failure into a short, human message — never the raw JSON
  *  error body, which otherwise lands verbatim in the chat. */
 export function formatLlmError(error: unknown): string {
-  if (error instanceof Anthropic.APIError) {
-    const status = error.status;
-    // Surface the real Anthropic reason server-side; the user only sees the
-    // short message below, but we need the raw body to diagnose 4xx rejections.
+  const status = extractHttpStatus(error);
+  if (typeof status === "number") {
     console.error(
-      `[GenerationService] Anthropic APIError status=${status}: ${error.message}`,
+      `[GenerationService] LLM APIError status=${status}: ${error instanceof Error ? error.message : String(error)}`,
     );
     if (status === 429) {
       return "The AI service is rate-limited right now. Please wait a moment and try again.";
@@ -172,10 +180,10 @@ export function formatLlmError(error: unknown): string {
     if (status === 529) {
       return "The AI service is overloaded right now. Please try again shortly.";
     }
-    if (typeof status === "number" && status >= 500) {
+    if (status >= 500) {
       return "The AI service hit a temporary error. Please try again.";
     }
-    if (typeof status === "number" && status >= 400) {
+    if (status >= 400) {
       return "The AI request was rejected. Please tweak your message and try again.";
     }
     return "The AI service is unavailable right now. Please try again.";
@@ -185,4 +193,18 @@ export function formatLlmError(error: unknown): string {
     return "Something went wrong while generating. Please try again.";
   }
   return message;
+}
+
+function extractHttpStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  if ("status" in error && typeof error.status === "number") return error.status;
+  if ("statusCode" in error && typeof error.statusCode === "number") {
+    return error.statusCode;
+  }
+  if ("response" in error && error.response && typeof error.response === "object") {
+    const response = error.response as { status?: number; statusCode?: number };
+    if (typeof response.status === "number") return response.status;
+    if (typeof response.statusCode === "number") return response.statusCode;
+  }
+  return undefined;
 }

@@ -1,11 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
-import type {
-  ContentBlockParam,
-  Message,
-  MessageCreateParams,
-  MessageParam,
-  ThinkingConfigParam,
-} from "@anthropic-ai/sdk/resources/messages";
 import {
   EmailChatToolCallPayloadSchema,
   buildRenderVariables,
@@ -65,20 +57,14 @@ import {
   getFontPairing,
   renderFontPairing,
 } from "./font-pairings";
-import {
-  EMIT_EMAIL_TOOL,
-  FIND_BRAND_IMAGES_TOOL,
-  FIND_IMAGES_TOOL,
-  GENERATE_CHART_TOOL,
-  GENERATE_SECTION_DIVIDER_TOOL,
-  GET_DESIGN_TECHNIQUE_TOOL,
-  GET_EMAIL_ICONS_TOOL,
-  GET_FONT_PAIRING_TOOL,
-  GET_EMAIL_VERSION_TOOL,
-  INSPECT_WEBSITE_BRAND_TOOL,
-  VIEW_CURRENT_EMAIL_TOOL,
-  buildQuickChartUrl,
-} from "./generation.tools";
+import { GENERATION_TOOLS, buildQuickChartUrl } from "./generation.tools";
+import { GenerationLlmService } from "./generation.llm.service";
+import type {
+  LlmContentBlock,
+  LlmMessage,
+  LlmSystemBlock,
+  LlmToolChoice,
+} from "./generation.llm.types";
 import {
   GenerationAbortedError,
   assertStaticSubject,
@@ -96,9 +82,6 @@ import { WebsiteBrandService } from "./website-brand.service";
 
 @Injectable()
 export class GenerationService {
-  private readonly anthropic: Anthropic | null;
-  private readonly model: string;
-
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
@@ -110,12 +93,8 @@ export class GenerationService {
     private readonly conversationTitleAgent: ConversationTitleAgent,
     private readonly variantRetention: EmailVariantRetentionService,
     private readonly emailIcons: EmailIconCatalogService,
-  ) {
-    const key = this.config.get<string>("ANTHROPIC_API_KEY");
-    this.model =
-      this.config.get<string>("ANTHROPIC_MODEL") ?? "claude-sonnet-5";
-    this.anthropic = key ? new Anthropic({ apiKey: key, maxRetries: 3 }) : null;
-  }
+    private readonly llm: GenerationLlmService,
+  ) {}
 
   /**
    * Web images (from find_images) are often hotlink-protected, expiring, or
@@ -183,40 +162,6 @@ export class GenerationService {
       return res;
     }
     throw new Error("Too many redirects.");
-  }
-
-  /** Extended thinking (model-level). Off if `ANTHROPIC_EXTENDED_THINKING=false`. */
-  private extendedThinkingConfig(): ThinkingConfigParam | undefined {
-    const raw = this.config.get<string>("ANTHROPIC_EXTENDED_THINKING");
-    if (raw === "0" || raw === "false") {
-      return undefined;
-    }
-    return { type: "adaptive", display: "summarized" };
-  }
-
-  /**
-   * Effort caps how much the model thinks/explores. It is the main cost driver,
-   * so route it per run kind: INITIAL drafts get `high` (worth the extra design
-   * quality on a blank canvas), EDIT and other kinds get `medium`. Override with
-   * `ANTHROPIC_EFFORT_INITIAL` / `ANTHROPIC_EFFORT_EDIT`, then the shared
-   * `ANTHROPIC_EFFORT`, then the per-kind default. Values: low|medium|high|max.
-   */
-  private effortLevel(
-    kind: GenerationRunKind,
-  ): "low" | "medium" | "high" | "max" {
-    const perKindDefault: "high" | "medium" =
-      kind === "INITIAL" ? "high" : "medium";
-    const perKindEnv =
-      kind === "INITIAL" ? "ANTHROPIC_EFFORT_INITIAL" : "ANTHROPIC_EFFORT_EDIT";
-    const raw = (
-      this.config.get<string>(perKindEnv) ??
-      this.config.get<string>("ANTHROPIC_EFFORT") ??
-      perKindDefault
-    ).toLowerCase();
-    if (raw === "low" || raw === "medium" || raw === "high" || raw === "max") {
-      return raw;
-    }
-    return perKindDefault;
   }
 
   /** Self-review is off unless `GENERATION_SELF_REVIEW=true`. */
@@ -702,17 +647,17 @@ export class GenerationService {
             "Fill any gap in the brief with sensible, specific choices instead of placeholders.",
           ].join("\n")
         : isFirstInitialDraftTurn
-        ? [
-            "This is the first turn for a brand-new initial email draft.",
-            "Decide whether the brief is specific enough to draft now.",
-            "If key specifics are missing, ask 3-5 short clarifying questions and do not call emit_email this turn.",
-            "If the brief is specific enough, draft immediately and call emit_email this turn.",
-            "When unsure, prefer drafting over asking more questions.",
-          ].join("\n")
-        : [
-            "This is not the first intake turn for this email.",
-            "If the user answered the intake questions or asked you to use best judgment, generate the email now.",
-          ].join("\n"),
+          ? [
+              "This is the first turn for a brand-new initial email draft.",
+              "Decide whether the brief is specific enough to draft now.",
+              "If key specifics are missing, ask 3-5 short clarifying questions and do not call emit_email this turn.",
+              "If the brief is specific enough, draft immediately and call emit_email this turn.",
+              "When unsure, prefer drafting over asking more questions.",
+            ].join("\n")
+          : [
+              "This is not the first intake turn for this email.",
+              "If the user answered the intake questions or asked you to use best judgment, generate the email now.",
+            ].join("\n"),
       `User brief:\n${ctx.prompt}`,
       hasPriorChat
         ? `Conversation context (most recent first):\n${recentChat}`
@@ -725,7 +670,7 @@ export class GenerationService {
       .filter(Boolean)
       .join("\n");
 
-    const result = await this.executeAnthropicTurn({
+    const result = await this.executeGenerationTurn({
       emailId,
       workspaceId,
       kind: "INITIAL",
@@ -948,7 +893,7 @@ export class GenerationService {
       });
     }
 
-    const result = await this.executeAnthropicTurn({
+    const result = await this.executeGenerationTurn({
       emailId,
       workspaceId,
       kind: "EDIT",
@@ -1013,12 +958,12 @@ export class GenerationService {
     });
   }
 
-  private async executeAnthropicTurn(params: {
+  private async executeGenerationTurn(params: {
     emailId: string;
     workspaceId: string;
     kind: GenerationRunKind;
     briefForFewShot: string;
-    modelMessages: MessageParam[];
+    modelMessages: LlmMessage[];
     /** Skill ids the user attached in the composer for this turn. */
     skills?: string[];
     fullCodeForRetry?: string;
@@ -1067,9 +1012,9 @@ export class GenerationService {
       anonymous = false,
     } = params;
 
-    if (!this.anthropic) {
+    if (!this.llm.isConfigured()) {
       throw new InternalServerErrorException(
-        "ANTHROPIC_API_KEY is not configured.",
+        `${this.llm.configuredApiKeyEnv()} is not configured.`,
       );
     }
 
@@ -1096,7 +1041,7 @@ export class GenerationService {
     };
 
     try {
-      const systemBlocks: MessageCreateParams["system"] = [
+      const systemBlocks: LlmSystemBlock[] = [
         {
           type: "text",
           text: STATIC_INSTRUCTION,
@@ -1167,7 +1112,7 @@ export class GenerationService {
         if (!requestedTool || requestedTool.type !== "tool_use") break;
         if (requestedTool.name === "emit_email") break;
 
-        let toolResultContent: string | ContentBlockParam[];
+        let toolResultContent: string | LlmContentBlock[];
         if (requestedTool.name === "inspect_website_brand") {
           const input = requestedTool.input as {
             url?: unknown;
@@ -1709,7 +1654,11 @@ export class GenerationService {
               height: Math.round((input.height ?? 120) * 2),
               flip: input.flip,
             });
-            dividerUrl = await this.s3.uploadBuffer(png, "image/png", "dividers");
+            dividerUrl = await this.s3.uploadBuffer(
+              png,
+              "image/png",
+              "dividers",
+            );
           } catch (err) {
             throw new BadRequestException(
               `Could not render the divider: ${err instanceof Error ? err.message : String(err)}`,
@@ -1793,7 +1742,7 @@ export class GenerationService {
           {
             role: "assistant",
             content: response.content,
-          } as MessageParam,
+          } as LlmMessage,
           {
             role: "user",
             content: [
@@ -1803,7 +1752,7 @@ export class GenerationService {
                 content: toolResultContent,
               },
             ],
-          } as MessageParam,
+          } as LlmMessage,
         ];
       }
 
@@ -1973,7 +1922,7 @@ export class GenerationService {
             type: "meta",
             attempt: attempts,
             maxAttempts: 2,
-            model: this.model,
+            model: this.llm.model,
           });
           emit({ type: "subject", value: input.subject });
           emit({ type: "step", message: "Rendering HTML preview..." });
@@ -2222,7 +2171,7 @@ export class GenerationService {
   private async runSelfReview(args: {
     emailId: string;
     workspaceId: string;
-    systemBlocks: MessageCreateParams["system"];
+    systemBlocks: LlmSystemBlock[];
     componentCode: string;
     compiledHtml: string;
     emit: (p: Record<string, unknown>) => void;
@@ -2244,7 +2193,7 @@ export class GenerationService {
         highlightVariables: false,
         maxHeight: 2400,
       });
-      const reviewMessages: MessageParam[] = [
+      const reviewMessages: LlmMessage[] = [
         {
           role: "user",
           content: [
@@ -2348,20 +2297,20 @@ export class GenerationService {
   }
 
   /**
-   * Run a model turn, retrying transient Anthropic errors (overloaded / 5xx /
+   * Run a model turn, retrying transient LLM errors (overloaded / 5xx /
    * rate limit / connection drops). A restart is only attempted while nothing
    * user-visible has streamed yet, so a retry can never duplicate assistant
    * text, the subject, or the email code that already reached the client.
    */
   private async runStreamWithRetry(args: {
-    modelMessages: MessageParam[];
-    systemBlocks: MessageCreateParams["system"];
+    modelMessages: LlmMessage[];
+    systemBlocks: LlmSystemBlock[];
     kind: GenerationRunKind;
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
-    toolChoice?: MessageCreateParams["tool_choice"];
+    toolChoice?: LlmToolChoice;
     allowTools?: boolean;
-  }): Promise<Awaited<ReturnType<typeof this.runStream>>> {
+  }) {
     const maxAttempts = 3;
     for (let attempt = 1; ; attempt += 1) {
       let emittedVisible = false;
@@ -2380,7 +2329,6 @@ export class GenerationService {
       try {
         return await this.runStream({ ...args, emit: guardedEmit });
       } catch (error) {
-        // User aborted (stop button / disconnect) — don't retry, just bubble up.
         if (args.signal?.aborted || isAbortError(error)) {
           throw error;
         }
@@ -2393,7 +2341,7 @@ export class GenerationService {
         }
         const message = error instanceof Error ? error.message : String(error);
         console.warn(
-          `[GenerationService] Anthropic stream attempt ${attempt} failed (retryable): ${message}; retrying`,
+          `[GenerationService] LLM stream attempt ${attempt} failed (retryable): ${message}; retrying`,
         );
         args.emit({ type: "step", message: "Retrying the AI service…" });
         await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
@@ -2401,120 +2349,24 @@ export class GenerationService {
     }
   }
 
-  private async runStream(args: {
-    modelMessages: MessageParam[];
-    systemBlocks: MessageCreateParams["system"];
+  private runStream(args: {
+    modelMessages: LlmMessage[];
+    systemBlocks: LlmSystemBlock[];
     kind: GenerationRunKind;
     emit: (p: Record<string, unknown>) => void;
     signal?: AbortSignal;
-    toolChoice?: MessageCreateParams["tool_choice"];
+    toolChoice?: LlmToolChoice;
     allowTools?: boolean;
-  }): Promise<{
-    content: Message["content"];
-    usage: Message["usage"] | undefined;
-    assistantText: string;
-    thinkingText: string;
-  }> {
-    if (!this.anthropic) {
-      throw new InternalServerErrorException(
-        "ANTHROPIC_API_KEY is not configured.",
-      );
-    }
-
-    // Forcing a specific tool (or "any") is incompatible with extended thinking
-    // on Anthropic — it 400s. Disable thinking when we force emit_email.
-    const forcedTool =
-      args.toolChoice?.type === "tool" || args.toolChoice?.type === "any";
-    const thinking = forcedTool ? undefined : this.extendedThinkingConfig();
-    // Sonnet 5 tokenizes ~30% heavier than 4.6, so give both paths more headroom
-    // (previously 20k / 16k). Still streams, so latency is unaffected.
-    const maxTokens = thinking ? 32_000 : 24_000;
-    const toolConfig =
-      args.allowTools === false
-        ? {}
-        : {
-            tools: [
-              INSPECT_WEBSITE_BRAND_TOOL,
-              FIND_BRAND_IMAGES_TOOL,
-              FIND_IMAGES_TOOL,
-              GET_EMAIL_ICONS_TOOL,
-              GET_DESIGN_TECHNIQUE_TOOL,
-              GET_FONT_PAIRING_TOOL,
-              GET_EMAIL_VERSION_TOOL,
-              VIEW_CURRENT_EMAIL_TOOL,
-              GENERATE_CHART_TOOL,
-              GENERATE_SECTION_DIVIDER_TOOL,
-              EMIT_EMAIL_TOOL,
-            ],
-            tool_choice: args.toolChoice ?? {
-              type: "auto",
-              disable_parallel_tool_use: true,
-            },
-          };
-
-    const stream = this.anthropic.messages.stream(
-      {
-        model: this.model,
-        max_tokens: maxTokens,
-        ...(thinking ? { thinking } : {}),
-        output_config: { effort: this.effortLevel(args.kind) },
-        system: args.systemBlocks,
-        // The tool loop pairs a tool_result for exactly one tool_use per turn.
-        // Parallel tool use (e.g. inspect_website_brand + emit_email together)
-        // leaves the second tool_use unpaired on replay → Anthropic 400. Force
-        // at most one tool call per assistant turn.
-        ...toolConfig,
-        messages: args.modelMessages,
-      },
-      args.signal ? { signal: args.signal } : undefined,
-    );
-
-    let lastComponentCode = "";
-    let subjectEmitted = false;
-    let thinkingText = "";
-    let assistantText = "";
-
-    stream.on("thinking", (delta: string) => {
-      if (delta) {
-        thinkingText += delta;
-        args.emit({ type: "thinking-chunk", value: delta });
-      }
+  }) {
+    return this.llm.stream({
+      modelMessages: args.modelMessages,
+      systemBlocks: args.systemBlocks,
+      kind: args.kind,
+      tools: GENERATION_TOOLS,
+      toolChoice: args.toolChoice,
+      allowTools: args.allowTools,
+      emit: args.emit,
+      signal: args.signal,
     });
-
-    stream.on("text", (delta: string) => {
-      if (delta) {
-        assistantText += delta;
-        args.emit({ type: "assistant-chunk", value: delta });
-      }
-    });
-
-    stream.on("inputJson", (_partial: string, snapshot: unknown) => {
-      if (!snapshot || typeof snapshot !== "object") return;
-      const view = snapshot as { subject?: unknown; componentCode?: unknown };
-      if (
-        !subjectEmitted &&
-        typeof view.subject === "string" &&
-        view.subject.length > 0
-      ) {
-        args.emit({ type: "subject", value: view.subject });
-        subjectEmitted = true;
-      }
-      if (
-        typeof view.componentCode === "string" &&
-        view.componentCode.length > lastComponentCode.length
-      ) {
-        const delta = view.componentCode.slice(lastComponentCode.length);
-        lastComponentCode = view.componentCode;
-        if (delta) args.emit({ type: "code-chunk", value: delta });
-      }
-    });
-
-    const finalMessage = (await stream.finalMessage()) as unknown as Message;
-    return {
-      content: finalMessage.content,
-      usage: finalMessage.usage,
-      assistantText,
-      thinkingText,
-    };
   }
 }

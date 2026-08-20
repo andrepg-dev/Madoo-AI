@@ -365,10 +365,10 @@ function applyStylePatch(
     if (index >= 0) {
       (
         objectExpr.properties[index] as recast.types.namedTypes.ObjectProperty
-      ).value = b.stringLiteral(value);
+      ).value = b.stringLiteral(String(value));
     } else {
       objectExpr.properties.push(
-        b.objectProperty(b.identifier(prop), b.stringLiteral(value)),
+        b.objectProperty(b.identifier(prop), b.stringLiteral(String(value))),
       );
     }
   }
